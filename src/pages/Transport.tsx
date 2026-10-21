@@ -123,8 +123,8 @@ export default function Transport() {
           const sc = scores[v.id];
           return (
             /* уся плитка відкриває вікно транспорту; кнопки всередині (оцінка, фото) працюють як і раніше */
-            <article className="card vcard" key={v.id} onClick={e => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) setOpenId(v.id); }}>
-              <div className="vpic">{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}
+            <article className={'card vcard' + (v.exclusive ? ' excl' : '')} key={v.id} onClick={e => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) setOpenId(v.id); }}>
+              <div className="vpic">{v.exclusive && <span className="excl-badge" title="Ексклюзивний транспорт — у салоні не купити"><Icon name="star" size={14} />Ексклюзив</span>}{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}
                 {isAdmin && <span className="vpic-up"><PicUpload label={'Фото транспорту ' + v.name} path={`vehicles/${v.id}.webp`} frame={{ w: 640, h: 360 }} onDone={async url => {
                   const { error } = await supabase!.from('vehicles').update({ image_url: url }).eq('id', v.id); if (error) throw error;
                   setList(l => l.map(x => (x.id === v.id ? { ...x, image_url: url } : x)));
