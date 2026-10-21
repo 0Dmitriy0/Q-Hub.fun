@@ -7,11 +7,11 @@ import { CYCLE_H, GOOD, cycleStart, nextCycle, priceRange, rangePos, series, typ
 import { dur, kyHM } from '../lib/events';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
+import { groupUpdates, type Update } from '../lib/updates';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
-interface Update { id: number; buyer_id: string; item_id: number; price: number; created_at: string; reporter_name: string }
 
 interface Hist { buyer_id: string; item_id: number; price: number; at: string }
 
@@ -66,7 +66,7 @@ export default function Prices() {
     const [b, r, u, c] = await Promise.all([
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)'),
-      supabase.from('price_updates').select('id,buyer_id,item_id,price,created_at,reporter_name').order('created_at', { ascending: false }).limit(500),
+      supabase.from('price_updates').select('id,buyer_id,item_id,price,created_at,cycle,reporter_name').order('created_at', { ascending: false }).limit(500),
       supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500)
     ]);
     if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Онови сторінку.'); return; }
@@ -135,7 +135,9 @@ export default function Prices() {
   const cs = cycleStart(tick), nc = nextCycle(tick);
   const fresh = cur.filter(r => ms(r.at) >= cs).length;
   const [allUps, setAllUps] = useState(false);
-  const recent = ups.slice(0, allUps ? 40 : 8);
+  const groups = useMemo(() => groupUpdates(ups), [ups]);
+  const recent = groups.slice(0, allUps ? 30 : 8);
+  const buyerSize = (id: string) => rows.filter(r => r.buyer_id === id).length;
   const buyerName = (id: string) => buyers.find(b => b.id === id)?.name || '';
   const itemName = (id: number) => rows.find(r => r.item_id === id)?.items?.name || '—';
 
@@ -148,14 +150,25 @@ export default function Prices() {
       {buyers.length > 0 && (
         <>
           <section className="card recent">
-            <div className="row between"><h2>Останні оновлення цін</h2><Leaderboard list={top} cycleH={CYCLE_H} /></div>
+            <div className="row between rhead"><h2>Останні оновлення цін</h2><Leaderboard list={top} cycleH={CYCLE_H} /></div>
             {recent.length
               ? <div className="scroll"><table className="t"><thead><tr><th>Товар</th><th>Скупник</th><th className="n">Ціна</th><th>Хто оновив</th><th>Коли</th></tr></thead>
-                  <tbody>{recent.map(u => <tr key={u.id}><td>{itemName(u.item_id)}</td>
-                    <td><a href={'#' + u.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(u.buyer_id); }}>{buyerName(u.buyer_id)}</a></td>
-                    <td className="n">{money(u.price)}</td><td>{u.reporter_name || 'гравець'}</td><td className={ms(u.created_at) < cs ? 'muted' : ''}>{when(u.created_at)}</td></tr>)}</tbody></table></div>
+                  <tbody>{recent.map(g => {
+                    const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
+                    const old = ms(g.at) < cs ? 'muted' : '';
+                    if (g.items.length === 1) {
+                      const u = g.items[0];
+                      return <tr key={g.key} className="usingle"><td className="u-item">{itemName(u.item_id)}</td><td className="u-buyer">{buyerLink}</td><td className="n u-price">{money(u.price)}</td><td className="u-who">{g.who || 'гравець'}</td><td className={'u-at ' + old}>{when(g.at)}</td></tr>;
+                    }
+                    /* кілька товарів одним заходом: нік жирним, під ним лише назви, без цін */
+                    const all = g.items.length >= buyerSize(g.buyer_id);
+                    return <tr key={g.key} className="ugroup"><td colSpan={5}>
+                      <div className="ug-head"><b>{g.who || 'гравець'}</b><span className="muted">{all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span><span className={'ug-at ' + old}>{when(g.at)}</span></div>
+                      <div className="ug-items">{g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
+                    </td></tr>;
+                  })}</tbody></table></div>
               : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
-            {ups.length > 8 && <button type="button" className="btn sm ghost" onClick={() => setAllUps(v => !v)}>{allUps ? 'Згорнути' : 'Показати більше'}</button>}
+            {groups.length > 8 && <button type="button" className="btn sm ghost" onClick={() => setAllUps(v => !v)}>{allUps ? 'Згорнути' : 'Показати більше'}</button>}
           </section>
           <div className="fld"><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
           {!q && <div className="tabs" role="tablist">{buyers.map(b => (

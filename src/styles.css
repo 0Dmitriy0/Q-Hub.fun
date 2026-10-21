@@ -214,3 +214,25 @@ tr.podium td { font-weight: 700; }
 .modal-box > .row.between { flex-wrap: nowrap; align-items: flex-start; gap: 12px; }
 .modal-box > .row.between h2 { flex: 1; min-width: 0; }
 .modal-box > .row.between .btn { flex: none; }
+/* кілька цін від одного гравця — один компактний запис */
+tr.ugroup td { padding: 10px; }
+.ug-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.ug-head b { font-size: 15px; }
+.ug-head .muted { font-size: 13.5px; }
+.ug-at { margin-left: auto; font-size: 14px; white-space: nowrap; }
+.ug-items { margin-top: 4px; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+/* телефон: стрічка оновлень картками замість широкої таблиці */
+@media (max-width: 600px) {
+  .rhead { flex-wrap: nowrap; }
+  .recent .scroll table, .recent .scroll tbody { display: block; }
+  .recent .scroll thead { display: none; }
+  .recent tr.usingle { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .recent tr.usingle td { display: block; padding: 0; border: 0; }
+  .recent .u-item { font-weight: 700; grid-column: 1; grid-row: 1; }
+  .recent .u-price { grid-column: 2; grid-row: 1; }
+  .recent .u-who, .recent .u-buyer { grid-column: 1; font-size: 13px; color: var(--muted); }
+  .recent .u-who { grid-row: 2; } .recent .u-buyer { grid-row: 3; }
+  .recent .u-at { grid-column: 2; grid-row: 2; font-size: 13px; text-align: right; white-space: nowrap; }
+  .recent tr.ugroup { display: block; border-top: 1px solid var(--line); }
+  .recent tr.ugroup td { display: block; padding: 10px 0; border: 0; }
+}
