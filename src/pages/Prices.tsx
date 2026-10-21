@@ -146,7 +146,9 @@ export default function Prices() {
   const lastAt = cur.reduce((m, r) => Math.max(m, ms(r.at)), 0);
   const [allUps, setAllUps] = useState(false);
   const groups = useMemo(() => groupUpdates(ups), [ups]);
-  const recent = groups.slice(0, allUps ? 30 : 8);
+  /* видно лише два останні оновлення, решта — під кнопкою */
+  const SHOWN = 2;
+  const recent = groups.slice(0, allUps ? 30 : SHOWN);
   const buyerSize = (id: string) => rows.filter(r => r.buyer_id === id).length;
   const buyerName = (id: string) => buyers.find(b => b.id === id)?.name || '';
   const itemName = (id: number) => rows.find(r => r.item_id === id)?.items?.name || '—';
@@ -176,7 +178,7 @@ export default function Prices() {
                   </li>;
                 })}</ul>
               : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
-            {groups.length > 8 && <button type="button" className="btn sm ghost" onClick={() => setAllUps(v => !v)}>{allUps ? 'Згорнути' : 'Показати більше'}</button>}
+            {groups.length > SHOWN && <button type="button" className="btn sm ghost" aria-expanded={allUps} onClick={() => setAllUps(v => !v)}>{allUps ? 'Сховати' : `Показати ще ${Math.min(groups.length, 30) - SHOWN}`}</button>}
           </section>
           <div className="fld"><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
           {!q && <div className="tabs" role="tablist">{buyers.map(b => (

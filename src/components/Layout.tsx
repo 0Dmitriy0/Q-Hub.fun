@@ -4,7 +4,7 @@ import ThemeToggle from './ThemeToggle';
 import StaticGate from './StaticGate';
 
 const NAV: [string, string][] = [
-  ['/', 'Головна'], ['/tsiny', 'Ціни'], ['/iventy', 'Івенти'], ['/transport', 'Транспорт'],
+  ['/', 'Головна'], ['/tsiny', 'Скупник'], ['/iventy', 'Івенти'], ['/transport', 'Транспорт'],
   ['/roboty', 'Роботи'], ['/mapa', 'Мапа'], ['/programa', 'Програма']
 ];
 
