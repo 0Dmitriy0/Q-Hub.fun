@@ -14,19 +14,32 @@ const SORTS: [Sort, string][] = [['price', 'Ціна'], ['speed', 'Швидкі�
 
 const seatsWord = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'місце' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'місця' : 'місць'; };
 
-/* зірки: показують середню оцінку; увійшовши, гравець ставить свою (клік по зірці), повторний клік — змінює */
-function Stars({ avg, votes, mine, onRate }: { avg: number; votes: number; mine: number; onRate?: (n: number) => void }) {
-  const [hover, setHover] = useState(0);
-  const shown = hover || mine || Math.round(avg);
+/* середня оцінка всіх гравців — зірки з дробовим заповненням (3,5 = три з половиною) */
+function AvgStars({ avg, votes }: { avg: number; votes: number }) {
+  const pct = Math.max(0, Math.min(100, (avg / 5) * 100));
   return (
-    <div className="stars">
-      <div className="stars-row" role={onRate ? 'radiogroup' : undefined} aria-label={onRate ? 'Твоя оцінка' : undefined} onMouseLeave={() => setHover(0)}>
-        {[1, 2, 3, 4, 5].map(n => onRate
-          ? <button key={n} type="button" role="radio" aria-checked={mine === n} aria-label={`${n} з 5`} className={'star' + (n <= shown ? ' on' : '') + (mine ? ' mine' : '')}
-              onMouseEnter={() => setHover(n)} onFocus={() => setHover(n)} onBlur={() => setHover(0)} onClick={() => onRate(n)}><Icon name="star" size={18} /></button>
-          : <span key={n} className={'star' + (n <= shown ? ' on' : '')}><Icon name="star" size={18} /></span>)}
+    <div className="avg" aria-label={votes ? `Середня оцінка ${avg.toFixed(1)} з 5, ${votes} ${votesWord(votes)}` : 'Ще без оцінок'}>
+      <span className="avg-stars" aria-hidden="true">
+        <span className="avg-bg">{[1, 2, 3, 4, 5].map(n => <Icon key={n} name="star" size={20} />)}</span>
+        <span className="avg-fg" style={{ width: pct + '%' }}>{[1, 2, 3, 4, 5].map(n => <Icon key={n} name="star" size={20} />)}</span>
+      </span>
+      {votes ? <span><b className="mono">{avg.toFixed(1)}</b><span className="muted"> з 5 · {votes} {votesWord(votes)}</span></span> : <span className="muted">ще без оцінок</span>}
+    </div>
+  );
+}
+const votesWord = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'оцінка' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'оцінки' : 'оцінок'; };
+
+/* своя оцінка — окремо від середньої: клік по зірці ставить або змінює */
+function MyStars({ mine, onRate }: { mine: number; onRate: (n: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const shown = hover || mine;
+  return (
+    <div className="mine-row">
+      <small className="muted">{mine ? 'Твоя оцінка' : 'Оціни'}</small>
+      <div className="stars-row" role="radiogroup" aria-label="Твоя оцінка" onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map(n => <button key={n} type="button" role="radio" aria-checked={mine === n} aria-label={`${n} з 5`} className={'star sm' + (n <= shown ? ' on' : '')}
+          onMouseEnter={() => setHover(n)} onFocus={() => setHover(n)} onBlur={() => setHover(0)} onClick={() => onRate(n)}><Icon name="star" size={16} /></button>)}
       </div>
-      <small className="muted">{votes ? <><b className="mono">{avg.toFixed(1)}</b> · {votes} {votes === 1 ? 'оцінка' : votes < 5 ? 'оцінки' : 'оцінок'}</> : 'ще без оцінок'}{mine ? ' · твоя ' + mine : ''}</small>
     </div>
   );
 }
@@ -61,6 +74,10 @@ export default function Transport() {
 
   async function rate(id: number, stars: number) {
     if (!supabase || !session) return;
+    /* середня перераховується одразу; потім база дасть точне значення */
+    const prev = mine[id] ?? 0, cur = scores[id] ?? { vehicle_id: id, avg: 0, votes: 0 };
+    const votes = cur.votes + (prev ? 0 : 1), avg = (cur.avg * cur.votes - prev + stars) / votes;
+    setScores(sc => ({ ...sc, [id]: { vehicle_id: id, avg, votes } }));
     setMine(m => ({ ...m, [id]: stars }));
     const { error } = await supabase.from('vehicle_ratings').upsert({ vehicle_id: id, user_id: session.user.id, stars, updated_at: new Date().toISOString() });
     if (error) { alert('Не вдалося зберегти оцінку. Спробуй ще раз.'); return; }
@@ -80,7 +97,7 @@ export default function Transport() {
 
   return (
     <>
-      <div><h1>Транспорт</h1><p className="muted">Каталог автосалонів: держ. ціна й характеристики. Гравці оцінюють транспорт від 1 до 5 зірок — увійди, щоб поставити свою оцінку.</p></div>
+      <div><h1>Транспорт</h1><p className="muted">Каталог автосалонів: держ. ціна й характеристики. Зірки на картці — середня оцінка всіх гравців. Увійди, щоб поставити свою від 1 до 5: вона одразу врахується в середній.</p></div>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
       {err && <div className="card err">{err}</div>}
       <div className="tbar">
@@ -111,7 +128,10 @@ export default function Transport() {
                 {v.tank != null && <li><Icon name="fuel" size={15} />{v.tank} л</li>}
                 {v.seats != null && <li><Icon name="user" size={15} />{v.seats} {seatsWord(v.seats)}</li>}
               </ul>
-              <Stars avg={sc?.avg ?? 0} votes={sc?.votes ?? 0} mine={mine[v.id] ?? 0} onRate={session ? n => rate(v.id, n) : undefined} />
+              <div className="stars">
+                <AvgStars avg={sc?.avg ?? 0} votes={sc?.votes ?? 0} />
+                {session && <MyStars mine={mine[v.id] ?? 0} onRate={n => rate(v.id, n)} />}
+              </div>
             </article>);
         })}</div>
       )}

@@ -304,3 +304,13 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .start-foot .btn { text-transform: uppercase; letter-spacing: .03em; min-width: 150px; }
 .ibub.big { width: 52px; height: 52px; border-radius: 16px; }
 @media (max-width: 860px) { .start-grid { grid-template-columns: 1fr; gap: 26px; } }
+/* середня оцінка (дробові зірки) і своя окремим рядком */
+.avg { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
+.avg-stars { position: relative; display: inline-flex; line-height: 0; }
+.avg-bg, .avg-fg { display: inline-flex; gap: 2px; }
+.avg-bg { color: var(--line2); }
+.avg-fg { position: absolute; inset: 0 auto 0 0; overflow: hidden; color: #f5b301; white-space: nowrap; }
+.avg-fg .ico { fill: currentColor; }
+.mine-row { display: flex; align-items: center; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.mine-row small { font-size: 12.5px; min-width: 78px; }
+.star.sm { min-width: 30px; min-height: 30px; padding: 3px; }
