@@ -1,3 +1,4 @@
+import { kyParts, kyTs } from './events';
 /* Статистика ціни скупника, як у хабі: межі, положення ціни в межах і точки для графіка.
    Межі вписує редактор (з гри); поки їх немає — беремо мінімум і максимум, що траплялися за період. */
 export interface Pt { t: number; p: number }
@@ -34,3 +35,19 @@ export function series(pts: Pt[], now = Date.now(), period = PERIOD): Pt[] {
 /* скупники міняють ціни в різний час — ціна, якій більше 3 годин, підсвічується як «може бути застаріла» */
 export const STALE = 3 * 36e5;
 
+
+/* вікна графіка: «сьогодні» і «вчора» — за київською добою (як у грі), місяць — 30 днів, рік — 365 */
+export type ChartPeriod = 'today' | 'yesterday' | 'month' | 'year';
+export function chartWindow(p: ChartPeriod, now = Date.now()): { from: number; to: number } {
+  const k = kyParts(now), midnight = kyTs(k.y, k.mo, k.d, 0, 0);
+  if (p === 'today') return { from: midnight, to: now };
+  if (p === 'yesterday') { const d = new Date(Date.UTC(k.y, k.mo - 1, k.d - 1)); return { from: kyTs(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), 0, 0), to: midnight }; }
+  return { from: now - (p === 'month' ? 30 : 365) * DAY, to: now };
+}
+/* точки в довільному вікні: остання ціна перед вікном стає його першою точкою, остання — тягнеться до кінця вікна */
+export function seriesIn(pts: Pt[], from: number, to: number): Pt[] {
+  const sorted = [...pts].sort((a, b) => a.t - b.t);
+  const before = sorted.filter(x => x.t < from).pop();
+  const inside = sorted.filter(x => x.t >= from && x.t <= to);
+  return before ? [{ t: from, p: before.p }, ...inside] : inside;
+}

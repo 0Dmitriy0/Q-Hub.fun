@@ -19,8 +19,8 @@ interface Row { buyer_id: string; item_id: number; min_price: number; max_price:
 interface Hist { buyer_id: string; item_id: number; price: number; at: string }
 
 const DAY = 864e5;
-/* історію тягнемо з запасом: остання ціна до 30-денного вікна стає початком лінії */
-const HIST_DAYS = 90;
+/* історію тягнемо за рік із запасом: остання ціна до вікна графіка стає початком лінії */
+const HIST_DAYS = 400;
 const ms = (ts: string | null) => (ts ? new Date(ts).getTime() : 0);
 
 function Pic({ url, alt, size = 40 }: { url: string; alt: string; size?: number }) {
@@ -249,7 +249,7 @@ export default function Prices() {
                           <div><small>Положення</small><b className="mono">{pos === null ? '—' : pos + '%'}</b></div>
                         </div>
                         <p className="muted note">{range?.from === 'editor' ? 'Межі мінімум і максимум вписав редактор з гри.' : range ? 'Межі — найнижча і найвища ціна, що траплялися за 30 днів. Коли редактор впише межі з гри, вони будуть точнішими.' : 'Меж поки немає: потрібно щонайменше дві різні ціни за 30 днів або межі від редактора.'}</p>
-                        <PriceChart pts={pts} range={range} now={now} name={r.items!.name} />
+                        <PriceChart raw={raw} range={range} name={r.items!.name} />
                         {isStaff && (
                           <form className="row lims" onSubmit={e => { e.preventDefault(); saveLimits(r); }}>
                             <label className="fld"><span>Мінімум скупника</span><input inputMode="numeric" value={lim.min} onChange={e => setLim({ ...lim, min: e.target.value })} style={{ width: 120 }} /></label>

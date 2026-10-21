@@ -408,3 +408,13 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .excl-c { color: var(--gold) !important; display: inline-flex; align-items: center; gap: 6px; }
 .excl-c .ico { fill: currentColor; }
 .tbar-row .sortf { flex: 0 0 210px; }
+/* графік ціни: плавна лінія, точки на змінах, легка суцільна заливка */
+.chart-head { gap: 10px; flex-wrap: wrap; }
+.chart-seg { grid-template-columns: repeat(4, minmax(0, auto)); display: inline-grid; }
+.chart-seg button { padding: 7px 14px; min-height: 34px; }
+.chart .grid.v { opacity: .28; }
+.chart .area { fill: var(--chart); opacity: .12; }
+.chart .line { stroke-width: 3; stroke-linecap: round; }
+.chart .pt { fill: var(--surface); stroke: var(--chart); stroke-width: 3; transition: r .12s; }
+.chart .pt.on { fill: var(--chart); stroke: var(--surface); stroke-width: 3; filter: drop-shadow(0 0 6px var(--chart)); }
+.spark path { stroke-width: 2; }
