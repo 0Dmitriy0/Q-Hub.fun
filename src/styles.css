@@ -123,3 +123,25 @@ table.t td.n { text-align: right; font-family: var(--mono); white-space: nowrap;
 :root[data-theme="light"] .hero:not(.solid) { background: radial-gradient(140% 120% at 100% 0%, rgba(240, 100, 24, .12), transparent 55%), var(--surface); }
 :root[data-theme="light"] .ev { background: var(--surface2); }
 :root[data-theme="light"] .ev.on { background: var(--good-soft); }
+
+/* ціни: картинки скупників і товарів */
+.pic { border-radius: 12px; object-fit: cover; background: var(--surface2); flex: none; display: block; }
+.pic.none { display: grid; place-items: center; color: var(--faint); font: 700 14px var(--disp); }
+.tabs a.tabpic { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; }
+.tabs a.tabpic .pic { border-radius: 50%; }
+.plist { display: flex; flex-direction: column; }
+.prow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.prow:last-child { border-bottom: 0; }
+.pname { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pname b { font-size: 15px; }
+.pname small { font-size: 12.5px; color: var(--muted); }
+.pval { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.pval b { font-size: 16px; }
+.pval small { font-size: 12px; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+label.btn { position: relative; cursor: pointer; }
+.btn.busy { opacity: .6; }
+@media (max-width: 520px) {
+  .prow { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .prow > label.btn { grid-column: 2 / -1; justify-self: start; }
+}

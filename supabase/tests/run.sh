@@ -17,6 +17,13 @@ create table auth.users (id uuid primary key, raw_user_meta_data jsonb not null 
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
+-- мінімальна імітація Supabase Storage: таблиці, на які посилаються міграції
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets, name text, owner uuid);
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated;
+grant select, insert, update, delete on storage.objects to anon, authenticated;
 SQL
 for f in supabase/migrations/*.sql; do $P -f "$f"; done
 # Supabase видає ці права за замовчуванням; без них тест не відображав би реальної поведінки
@@ -26,3 +33,6 @@ $P -c "grant usage on schema public to anon, authenticated;
        grant update (name, avatar_url) on public.profiles to authenticated;
        grant select on public.prices_confirmed to anon, authenticated;"
 $P -f supabase/tests/rls_test.sql
+$P -f supabase/seed/catalog_from_hub.sql
+$P -f supabase/seed/catalog_from_hub.sql   # повторний запуск нічого не дублює
+$P -f supabase/tests/catalog_test.sql
