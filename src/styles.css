@@ -366,3 +366,9 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .excl-badge { position: absolute; top: 8px; left: 8px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: var(--gold); color: #1a1200; font: 800 11.5px var(--sans); letter-spacing: .03em; text-transform: uppercase; }
 .excl-badge .ico { fill: currentColor; stroke: currentColor; }
 .excl-badge.inline { position: static; margin-left: 4px; vertical-align: middle; }
+/* тип двигуна */
+:root { --electric: #38bdf8; --electric-soft: rgba(56, 189, 248, .14); }
+:root[data-theme="light"] { --electric: #0369a1; --electric-soft: rgba(3, 105, 161, .10); }
+.fuel-tag { display: inline-flex; align-items: center; gap: 5px; }
+.fuel-tag.el { color: var(--electric); font-weight: 700; background: var(--electric-soft); padding: 1px 8px 1px 6px; border-radius: 999px; }
+.fuel-tag.el .ico { fill: currentColor; }

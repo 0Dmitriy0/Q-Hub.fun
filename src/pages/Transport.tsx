@@ -55,6 +55,7 @@ export default function Transport() {
   const [kind, setKind] = useState<Kind | 'all'>('all');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<Sort>('price');
+  const [fuel, setFuel] = useState<'all' | 'petrol' | 'electric'>('all');
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
@@ -92,12 +93,12 @@ export default function Transport() {
   const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length }), [list]);
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    const r = list.filter(v => (kind === 'all' || v.kind === kind) && (!ql || (v.name + ' ' + v.brand).toLowerCase().includes(ql)));
+    const r = list.filter(v => (kind === 'all' || v.kind === kind) && (fuel === 'all' || (v.fuel || 'petrol') === fuel) && (!ql || (v.name + ' ' + v.brand).toLowerCase().includes(ql)));
     const num = (x: number | null) => x ?? -1;
     return r.sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name, 'uk')
       : sort === 'rating' ? (scores[b.id]?.avg ?? 0) - (scores[a.id]?.avg ?? 0) || (scores[b.id]?.votes ?? 0) - (scores[a.id]?.votes ?? 0)
       : sort === 'speed' ? num(b.speed) - num(a.speed) : sort === 'trunk' ? num(b.trunk) - num(a.trunk) : b.price - a.price);
-  }, [list, kind, q, sort, scores]);
+  }, [list, kind, q, sort, scores, fuel]);
 
   return (
     <>
@@ -111,6 +112,10 @@ export default function Transport() {
           </a>))}</div>
         <div className="tbar-row">
           <div className="fld has-ico grow"><Icon name="search" /><input type="search" placeholder="Пошук за назвою або маркою" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук транспорту" /></div>
+          <label className="fld sortf"><span className="vh">Двигун</span>
+            <select value={fuel} onChange={e => setFuel(e.target.value as typeof fuel)} aria-label="Двигун">
+              <option value="all">Пальне й електро</option><option value="petrol">Лише на пальному</option><option value="electric">Лише електро</option></select>
+          </label>
           <label className="fld sortf"><span className="vh">Сортування</span>
             <select value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="Сортування">{SORTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           </label>
@@ -135,7 +140,7 @@ export default function Transport() {
               <ul className="vspec">
                 {v.speed != null && <li><Icon name="speed" size={15} />{v.speed} км/год</li>}
                 {v.trunk != null && <li><Icon name="box" size={15} />{v.trunk} слот(ів)</li>}
-                {v.tank != null && <li><Icon name="fuel" size={15} />{v.tank} л</li>}
+                {v.fuel === 'electric' ? <li className="fuel-tag el"><Icon name="bolt" size={15} />Електро</li> : <li className="fuel-tag"><Icon name="fuel" size={15} />Пальне{v.tank != null ? ` · ${v.tank} л` : ''}</li>}
                 {v.seats != null && <li><Icon name="user" size={15} />{v.seats} {seatsWord(v.seats)}</li>}
               </ul>
               <div className="stars">

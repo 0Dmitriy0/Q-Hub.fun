@@ -6,7 +6,7 @@ import Icon from './Icon';
 export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
-  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean;
+  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric';
 }
 
 /* вікно транспорту як у грі: фото, тюнінг з калькулятором і характеристики.
@@ -72,7 +72,8 @@ export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; o
             {speeds.length > 0 && <div className="vd-stages"><b>Максимальна швидкість з чіпами для автотюнінгу:</b>
               <ul>{speeds.map((s, i) => <li key={i}><b>Stage {i + 1}:</b> {s} км/год</li>)}</ul></div>}
             <dl className="vd-info">
-              {v.tank != null && <><dt>Бак</dt><dd>{v.tank} л</dd></>}
+              <dt>Двигун</dt><dd>{v.fuel === 'electric' ? <span className="fuel-tag el"><Icon name="bolt" size={14} />Електро</span> : <span className="fuel-tag"><Icon name="fuel" size={14} />Пальне</span>}</dd>
+              {v.tank != null && <><dt>{v.fuel === 'electric' ? 'Батарея' : 'Бак'}</dt><dd>{v.tank}{v.fuel === 'electric' ? '' : ' л'}</dd></>}
               {v.trunk != null && <><dt>Багажник</dt><dd>{v.trunk} слот(ів)</dd></>}
               {v.seats != null && <><dt>Місць</dt><dd>{v.seats}</dd></>}
               {v.vinyl && <><dt>Підтримка вінілів</dt><dd className="good">✓ так</dd></>}
