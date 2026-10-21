@@ -10,6 +10,7 @@ import Characters from './Characters';
 import ImportPage from './ImportPage';
 import { useState } from 'react';
 import { StaticForm } from '../../components/StaticGate';
+import Select from '../../components/Select';
 
 const TABS: [string, string][] = [['', 'Дашборд'], ['oblik', 'Облік'], ['uhody', 'Угоди'], ['sklad', 'Склад'], ['harazh', 'Гараж'], ['personazhi', 'Персонажі'], ['import', 'Імпорт з хабу']];
 
@@ -31,8 +32,8 @@ export default function Cabinet() {
         <div><span className="lbl">{name}{staticId ? <> · <b>{gameName}</b> <b className="mono">#{staticId}</b> <button type="button" className="link" onClick={() => setEditStatic(v => !v)}>{editStatic ? 'скасувати' : 'змінити'}</button></> : null}</span><h1>{current ? current.name : 'Кабінет'}</h1></div>
         <div className="row">
           {characters.length > 1 && (
-            <label className="fld" style={{ minWidth: 180 }}><span>Персонаж</span>
-              <select value={current?.id || ''} onChange={e => setCurrent(e.target.value)}>{characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+            <label className="fld" style={{ minWidth: 200 }}><span>Персонаж</span>
+              <Select value={current?.id || ''} onChange={setCurrent} options={characters.map(c => ({ value: c.id, label: c.name, icon: 'user' }))} />
             </label>)}
           <button className="btn ghost sm" onClick={signOut}>Вийти</button>
         </div>

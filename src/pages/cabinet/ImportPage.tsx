@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { parseHubBackup, type HubImport } from '../../lib/importHub';
 import { money } from '../../lib/format';
+import Select from '../../components/Select';
 
 /* Імпорт копії Quant Hub. Порядок: персонаж → облік → угоди (з посиланням на транзакції й чеки) → гараж, документи, сесії.
    upsert з ignoreDuplicates за (character_id, external_id): повторний імпорт того самого файлу нічого не дублює. */
@@ -64,7 +65,7 @@ export default function ImportPage() {
         <li><span>Натисни «Перенести». Повторний імпорт того самого файлу нічого не дублює.</span></li>
       </ol>
       <div className="form cols">
-        <label className="fld">Куди<select value={target} onChange={e => setTarget(e.target.value)}><option value="new">Новий персонаж</option>{characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label className="fld">Куди<Select value={target} onChange={setTarget} options={[{ value: 'new', label: 'Новий персонаж', icon: 'user' }, ...characters.map(c => ({ value: c.id, label: c.name, icon: 'user' }))]} /></label>
         {target === 'new' && <label className="fld">Ім'я персонажа<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} /></label>}
         <label className="fld">Файл копії<input type="file" accept="application/json,.json" onChange={e => onFile(e.target.files?.[0])} /></label>
       </div>

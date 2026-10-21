@@ -267,7 +267,7 @@ h2.ih .ico { color: var(--accent-hi); }
 .tbar { display: flex; flex-direction: column; gap: 10px; }
 .tbar-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .tbar-row .grow { flex: 1 1 260px; }
-.sortf { flex: 0 0 200px; }
+.sortf { flex: 0 0 220px; }
 .tabs a .cnt { font: 600 12px var(--mono); opacity: .7; margin-left: 2px; }
 .tabs a.tabpic .ico { margin-left: 4px; }
 .vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
@@ -324,7 +324,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .drop small { font-size: 12.5px; }
 .shot-t select, .shot-t input { background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 10px; padding: 7px 9px; font: 600 14px var(--sans); }
 .shot-t input[inputmode] { width: 96px; text-align: right; font-family: var(--mono); }
-.shot-t select { min-width: 190px; }
+.shot-item { min-width: 210px; }
 .shot-t tr.bad td { background: var(--bad-soft); }
 .shot-t tr.warn td { background: var(--warn-soft); }
 .shot-t td small { font-size: 12.5px; }
@@ -372,3 +372,33 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .fuel-tag { display: inline-flex; align-items: center; gap: 5px; }
 .fuel-tag.el { color: var(--electric); font-weight: 700; background: var(--electric-soft); padding: 1px 8px 1px 6px; border-radius: 999px; }
 .fuel-tag.el .ico { fill: currentColor; }
+
+/* випадні списки в стилі сайту */
+.sel { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 14px; padding: 0 12px 0 14px; min-height: 44px; font: 600 15px var(--sans); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.sel:hover { border-color: var(--faint); }
+.sel.open, .sel:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); outline: 0; }
+.sel > .ico { color: var(--accent-hi); }
+.sel-v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-v.ph { color: var(--faint); font-weight: 500; }
+.sel-chev { flex: none; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.sel.open .sel-chev { transform: rotate(180deg); }
+.sel.sm { min-height: 38px; border-radius: 10px; font-size: 14px; padding: 0 10px; }
+.sel-pop { position: fixed; z-index: 1000; background: var(--surface); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 18px 48px -12px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .12); padding: 6px; outline: 0; animation: sel-in .12s ease-out; }
+.sel-pop.up { animation-name: sel-up; }
+@keyframes sel-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes sel-up { from { opacity: 0; transform: translateY(4px); } }
+.sel-pop ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; scrollbar-width: thin; }
+.sel-pop li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 14.5px; min-height: 40px; }
+.sel-pop li .ico { color: var(--muted); }
+.sel-pop li.act { background: var(--hover); }
+.sel-pop li.on { color: var(--accent-hi); font-weight: 700; }
+.sel-pop li.on .ico { color: var(--accent-hi); }
+.sel-l { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sel-l small { color: var(--muted); font-weight: 500; font-size: 12px; }
+.sel-ok { flex: none; fill: none; stroke: var(--accent-hi); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.sel-none { color: var(--faint); cursor: default !important; }
+.sel-find { position: relative; margin-bottom: 6px; }
+.sel-find .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--faint); }
+.sel-find input { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 10px; padding: 9px 10px 9px 34px; font: 500 14px var(--sans); }
+.sel-find input:focus { border-color: var(--accent); outline: 0; }
+@media (prefers-reduced-motion: reduce) { .sel-pop { animation: none; } .sel-chev { transition: none; } }

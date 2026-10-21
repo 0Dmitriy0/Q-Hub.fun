@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { money, parseMoney } from '../lib/format';
 import { detectBuyer, parseShot, type CatalogItem, type OcrLine } from '../lib/shotParse';
 import Icon from './Icon';
+import Select from './Select';
 
 export interface ShotCatalog extends CatalogItem { min: number; max: number; price: number }
 interface Draft { key: string; item_id: number | ''; price: string; read: string; on: boolean; status?: 'ok' | string }
@@ -111,8 +112,8 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
             const same = it && p === it.price;
             return <tr key={r.key} className={!r.item_id ? 'bad' : out ? 'warn' : ''}>
               <td><input type="checkbox" aria-label="Вносити цей рядок" checked={r.on} onChange={e => set(r.key, { on: e.target.checked })} /></td>
-              <td><select aria-label="Товар" value={r.item_id} onChange={e => set(r.key, { item_id: e.target.value ? Number(e.target.value) : '', on: true })}>
-                <option value="">— вибери товар —</option>{items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}</select></td>
+              <td className="shot-item"><Select className="sm" label="Товар" placeholder="— вибери товар —" value={r.item_id} onChange={v => set(r.key, { item_id: v, on: true })}
+                options={items.map(i => ({ value: i.id, label: i.name }))} /></td>
               <td className="n"><input aria-label="Ціна" inputMode="numeric" value={r.price} onChange={e => set(r.key, { price: e.target.value })} /></td>
               <td><small>{r.status === 'ok' ? '✓ внесено' : r.status ? r.status : !r.item_id ? 'товар не впізнано' : !p ? 'немає ціни' : out ? `поза межами ${money(it!.min)}–${money(it!.max)}` : same ? 'така ж, як зараз' : 'готово'}</small></td>
             </tr>;

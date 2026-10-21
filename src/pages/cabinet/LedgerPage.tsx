@@ -5,6 +5,7 @@ import { balance } from '../../lib/ledger';
 import { money, parseMoney, signed, when } from '../../lib/format';
 import { TX_CATS } from '../../lib/cats';
 import type { Character, Tx } from './types';
+import Select from '../../components/Select';
 
 export default function LedgerPage({ c }: { c: Character }) {
   const { rows, error, reload } = useRows<Tx>('transactions', c.id);
@@ -41,7 +42,7 @@ export default function LedgerPage({ c }: { c: Character }) {
           <div className="seg" role="group" aria-label="Тип"><button type="button" aria-pressed={type === 'in'} onClick={() => { setType('in'); setCat(TX_CATS.in[0]); }}>Прибуток</button><button type="button" aria-pressed={type === 'out'} onClick={() => { setType('out'); setCat(TX_CATS.out[0]); }}>Витрата</button></div>
           <form className="form cols" onSubmit={add}>
             <label className="fld">Сума, $<input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" placeholder="150к або 150 000" /></label>
-            <label className="fld">Категорія<select value={cat} onChange={e => setCat(e.target.value)}>{TX_CATS[type].map(x => <option key={x}>{x}</option>)}</select></label>
+            <label className="fld">Категорія<Select value={cat} onChange={setCat} options={TX_CATS[type].map(x => ({ value: x, label: x }))} /></label>
             <label className="fld">Нотатка<input value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="необов'язково" /></label>
             <button className="btn acc">Записати</button>
           </form>

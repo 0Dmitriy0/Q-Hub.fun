@@ -5,6 +5,7 @@ import { money } from '../lib/format';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
 import VehicleDialog, { type VehicleFull } from '../components/VehicleDialog';
+import Select from '../components/Select';
 
 type Kind = 'auto' | 'moto' | 'avia';
 type Vehicle = VehicleFull;
@@ -12,6 +13,7 @@ interface Score { vehicle_id: number; avg: number; votes: number }
 type Sort = 'price' | 'speed' | 'trunk' | 'rating' | 'name';
 
 const KINDS: [Kind | 'all', string, string][] = [['all', 'Усі', 'car'], ['auto', 'Авто', 'car'], ['moto', 'Мото', 'moto'], ['avia', 'Авіа', 'plane']];
+const SORT_ICON: Record<Sort, string> = { price: 'tag', speed: 'speed', trunk: 'box', rating: 'star', name: 'search' };
 const SORTS: [Sort, string][] = [['price', 'Ціна'], ['speed', 'Швидкість'], ['trunk', 'Багажник'], ['rating', 'Оцінка гравців'], ['name', 'Назва']];
 
 const seatsWord = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'місце' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'місця' : 'місць'; };
@@ -112,13 +114,9 @@ export default function Transport() {
           </a>))}</div>
         <div className="tbar-row">
           <div className="fld has-ico grow"><Icon name="search" /><input type="search" placeholder="Пошук за назвою або маркою" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук транспорту" /></div>
-          <label className="fld sortf"><span className="vh">Двигун</span>
-            <select value={fuel} onChange={e => setFuel(e.target.value as typeof fuel)} aria-label="Двигун">
-              <option value="all">Пальне й електро</option><option value="petrol">Лише на пальному</option><option value="electric">Лише електро</option></select>
-          </label>
-          <label className="fld sortf"><span className="vh">Сортування</span>
-            <select value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="Сортування">{SORTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-          </label>
+          <div className="fld sortf"><Select label="Двигун" value={fuel} onChange={setFuel}
+            options={[{ value: 'all', label: 'Пальне й електро', icon: 'car' }, { value: 'petrol', label: 'Лише на пальному', icon: 'fuel' }, { value: 'electric', label: 'Лише електро', icon: 'bolt' }]} /></div>
+          <div className="fld sortf"><Select label="Сортування" value={sort} onChange={setSort} options={SORTS.map(([k, l]) => ({ value: k, label: l, icon: SORT_ICON[k] }))} /></div>
         </div>
       </div>
       {!session && list.length > 0 && <div className="card row between"><span>Увійди через Discord, щоб оцінювати транспорт.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}

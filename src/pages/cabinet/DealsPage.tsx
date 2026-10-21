@@ -5,6 +5,7 @@ import { ledger } from '../../lib/ledger';
 import { money, parseMoney, qty as fq, signed, when } from '../../lib/format';
 import { DEAL_CATS, OPS } from '../../lib/cats';
 import type { Character, DealRow } from './types';
+import Select from '../../components/Select';
 
 export default function DealsPage({ c }: { c: Character }) {
   const { rows, error, reload } = useRows<DealRow>('deals', c.id, 'ts', false);
@@ -55,7 +56,7 @@ export default function DealsPage({ c }: { c: Character }) {
           <datalist id="items">{names.map(n => <option key={n} value={n} />)}</datalist>
           <label className="fld">Кількість<input value={q} onChange={e => setQ(e.target.value)} inputMode="decimal" placeholder="1" /></label>
           {op !== 'farm' && <label className="fld">Ціна за шт, $<input value={price} onChange={e => setPrice(e.target.value)} inputMode="numeric" placeholder="150к" /></label>}
-          <label className="fld">Категорія<select value={cat} onChange={e => setCat(e.target.value)}>{DEAL_CATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+          <label className="fld">Категорія<Select value={cat} onChange={setCat} options={DEAL_CATS.map(([k, l]) => ({ value: k, label: l }))} /></label>
           {op !== 'farm' && <label className="row" style={{ gap: 8 }}><input type="checkbox" checked={toLedger} onChange={e => setToLedger(e.target.checked)} /> Записати в облік</label>}
           <button className="btn acc" disabled={busy}>{op === 'buy' ? 'Записати покупку' : op === 'sell' ? 'Записати продаж' : 'Додати на склад'}</button>
         </form>
