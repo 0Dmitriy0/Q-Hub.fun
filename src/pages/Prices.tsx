@@ -162,21 +162,19 @@ export default function Prices() {
           <section className="card recent">
             <div className="row between rhead"><h2>Останні оновлення цін</h2><Leaderboard list={top} cycleH={CYCLE_H} /></div>
             {recent.length
-              ? <div className="scroll"><table className="t"><thead><tr><th>Товар</th><th>Скупник</th><th className="n">Ціна</th><th>Хто оновив</th><th>Коли</th></tr></thead>
-                  <tbody>{recent.map(g => {
-                    const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
-                    const old = ms(g.at) < cs ? 'muted' : '';
-                    if (g.items.length === 1) {
-                      const u = g.items[0];
-                      return <tr key={g.key} className="usingle"><td className="u-item">{itemName(u.item_id)}</td><td className="u-buyer">{buyerLink}</td><td className="n u-price">{money(u.price)}</td><td className="u-who">{g.who || 'гравець'}</td><td className={'u-at ' + old}>{when(g.at)}</td></tr>;
-                    }
-                    /* кілька товарів одним заходом: нік жирним, під ним лише назви, без цін */
-                    const all = g.items.length >= buyerSize(g.buyer_id);
-                    return <tr key={g.key} className="ugroup"><td colSpan={5}>
-                      <div className="ug-head"><b>{g.who || 'гравець'}</b><span className="muted">{all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span><span className={'ug-at ' + old}>{when(g.at)}</span></div>
-                      <div className="ug-items">{g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
-                    </td></tr>;
-                  })}</tbody></table></div>
+              ? <ul className="ulist">{recent.map(g => {
+                  /* один стиль для всіх записів: нік жирним на початку, під ним що саме оновлено */
+                  const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
+                  const one = g.items.length === 1, all = !one && g.items.length >= buyerSize(g.buyer_id);
+                  return <li key={g.key}>
+                    <div className="ug-head"><b>{g.who || 'гравець'}</b>
+                      <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
+                      <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
+                    <div className="ug-items">{one
+                      ? <>{itemName(g.items[0].item_id)} — <b className="mono">{money(g.items[0].price)}</b></>
+                      : g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
+                  </li>;
+                })}</ul>
               : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
             {groups.length > 8 && <button type="button" className="btn sm ghost" onClick={() => setAllUps(v => !v)}>{allUps ? 'Згорнути' : 'Показати більше'}</button>}
           </section>
