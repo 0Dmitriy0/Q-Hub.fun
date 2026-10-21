@@ -105,4 +105,5 @@ jobs:
           q "оновлення гравців (0004)" "price_updates?select=id"
           q "рейтинг (0004)" "contributors?select=id"
           echo "сховище картинок: $(curl -s "$VITE_SUPABASE_URL/storage/v1/object/public/catalog/__check__.webp" | head -c 120)"
+          echo "транспорт (назва, двигун, ексклюзив): $(curl -s -H "apikey: $K" "$R/vehicles?select=name,fuel,exclusive&order=name" | head -c 1500)"
           echo "цикл (0004): $(curl -s -X POST -H "apikey: $K" -H 'Content-Type: application/json' -d '{}' "$R/rpc/price_cycle_start" | head -c 160)"
