@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="rusty-pistol-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b07650"/><stop offset="1" stop-color="#6a3f26"/></linearGradient></defs>
+<path d="M300 230h84l40 186c2 14-6 24-20 24h-60c-12 0-20-8-22-18z" fill="#5a3a22"/>
+<path d="M330 290l20 100M362 286l20 100" stroke="#3e2716" stroke-width="10" stroke-linecap="round"/>
+<path d="M210 236c-4 56 20 86 66 86h28" stroke="#6a3f26" stroke-width="20" fill="none" stroke-linecap="round"/>
+<path d="M262 236l6 44" stroke="#4a2e1a" stroke-width="16" stroke-linecap="round"/>
+<path d="M98 158H404c10 0 18 8 18 18v52c0 10-8 18-18 18H98c-10 0-18-8-18-18v-52c0-10 8-18 18-18z" fill="url(#rusty-pistol-g)"/>
+<rect x="64" y="176" width="24" height="36" rx="6" fill="#3e2716"/>
+<path d="M330 172v58M350 172v58M370 172v58" stroke="#5a3520" stroke-width="8" stroke-linecap="round"/>
+<circle cx="140" cy="200" r="16" fill="#d9662a"/><circle cx="196" cy="222" r="12" fill="#c4521a"/><circle cx="252" cy="180" r="18" fill="#d9662a"/><circle cx="290" cy="216" r="10" fill="#e8823a"/><circle cx="372" cy="360" r="14" fill="#a0461a"/><circle cx="350" cy="410" r="10" fill="#c4521a"/>
+<rect x="100" y="168" width="200" height="10" rx="5" fill="#f0c49a" opacity=".45"/></svg>

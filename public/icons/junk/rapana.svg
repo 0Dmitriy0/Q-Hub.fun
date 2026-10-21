@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="rapana-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0b678"/><stop offset="1" stop-color="#9a5a26"/></linearGradient><linearGradient id="rapana-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a2a"/><stop offset="1" stop-color="#ffd8a0"/></linearGradient></defs>
+<path d="M296 64l40 70-70 6z" fill="#c98a5a" stroke="#7a4a20" stroke-width="10" stroke-linejoin="round"/>
+<ellipse cx="300" cy="140" rx="70" ry="34" fill="#d99a62" stroke="#7a4a20" stroke-width="10"/>
+<path d="M150 200C220 150 380 150 412 220c34 74-14 170-90 208-34 16-74 12-84-10C186 400 128 350 120 290c-4-40 8-72 30-90z" fill="url(#rapana-b)" stroke="#7a4a20" stroke-width="10"/>
+<path d="M176 196l10-34 22 28M240 176l14-34 18 30M310 172l18-32 14 32M370 186l26-24 4 36" stroke="#7a4a20" stroke-width="10" fill="#d99a62" stroke-linejoin="round"/>
+<path d="M300 240c50 10 90 30 106 50M300 320c40 10 70 30 86 50" stroke="#7a4a20" stroke-width="10" fill="none" stroke-linecap="round"/>
+<path d="M152 222c-36 54-20 154 78 190 40 14 64-20 54-62-12-56-56-110-132-128z" fill="url(#rapana-a)" stroke="#b85a14" stroke-width="10"/>
+<path d="M176 262c-8 40 8 90 52 110" stroke="#fff4e0" stroke-width="12" fill="none" stroke-linecap="round" opacity=".8"/></svg>

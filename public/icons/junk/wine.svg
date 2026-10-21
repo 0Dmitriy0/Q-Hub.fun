@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="wine-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1d4a2a"/><stop offset="0.35" stop-color="#3d7a4a"/><stop offset="1" stop-color="#163a20"/></linearGradient></defs>
+<path d="M182 130h36v52c0 30 52 40 52 92v150c0 14-12 24-26 24h-88c-14 0-26-10-26-24V274c0-52 52-62 52-92z" fill="url(#wine-g)"/>
+<rect x="178" y="60" width="44" height="78" rx="6" fill="#8a1028"/>
+<rect x="130" y="300" width="140" height="86" fill="#f3e6c4"/><rect x="152" y="320" width="96" height="16" fill="#8a1028"/><rect x="164" y="350" width="72" height="10" fill="#c9a24a"/>
+<rect x="148" y="200" width="14" height="80" rx="7" fill="#fff" opacity=".35"/>
+<path d="M296 214h116c0 82-24 126-58 126s-58-44-58-126z" fill="#e8f2f6" opacity=".9" stroke="#8fa9b6" stroke-width="8"/>
+<path d="M304 262h100c-6 46-24 70-50 70s-44-24-50-70z" fill="#b0122e"/>
+<rect x="346" y="338" width="16" height="74" fill="#cfdde4"/><ellipse cx="354" cy="418" rx="50" ry="14" fill="#cfdde4" stroke="#8fa9b6" stroke-width="6"/></svg>

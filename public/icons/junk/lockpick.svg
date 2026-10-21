@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="lockpick-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0a8"/><stop offset="0.45" stop-color="#ffc93a"/><stop offset="1" stop-color="#c98a12"/></linearGradient></defs>
+<path d="M232 230v-50c0-40 28-70 68-70s68 30 68 70v50" stroke="#9aa3ad" stroke-width="34" fill="none"/>
+<rect x="196" y="220" width="208" height="180" rx="28" fill="url(#lockpick-g)"/>
+<circle cx="300" cy="290" r="24" fill="#5a3a10"/><path d="M290 296h20l8 56h-36z" fill="#5a3a10"/>
+<path d="M300 300L120 400" stroke="#e8ecf0" stroke-width="16" stroke-linecap="round"/>
+<path d="M300 300l-6-30" stroke="#e8ecf0" stroke-width="16" stroke-linecap="round"/>
+<path d="M160 378L80 422" stroke="#2c64cf" stroke-width="40" stroke-linecap="round"/>
+<path d="M288 352L136 438" stroke="#c4cad1" stroke-width="16" stroke-linecap="round"/><path d="M288 352l12 14" stroke="#c4cad1" stroke-width="16" stroke-linecap="round"/></svg>
