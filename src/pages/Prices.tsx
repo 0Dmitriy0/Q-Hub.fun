@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { uploadCatalogImage } from '../lib/images';
 import { money, parseMoney, when } from '../lib/format';
-import { GOOD, STALE, nextKyivAt, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
+import { GOOD, STALE, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
 import { dur } from '../lib/events';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
 import Icon from '../components/Icon';
@@ -62,7 +62,8 @@ export default function Prices() {
   const [top, setTop] = useState<Contributor[]>([]);
   const [saving, setSaving] = useState('');
   const [next, setNext] = useState<NextChange[]>([]);
-  const [nextEdit, setNextEdit] = useState<string | null>(null);
+  /* «через скільки» зміна цін: години й хвилини, як показує гра; null — форма закрита */
+  const [nextEdit, setNextEdit] = useState<{ h: string; m: string } | null>(null);
   const [nextErr, setNextErr] = useState('');
   const [tick, setTick] = useState(Date.now());
   useEffect(() => { const id = setInterval(() => setTick(Date.now()), 30000); return () => clearInterval(id); }, []);
@@ -155,8 +156,9 @@ export default function Prices() {
   const nx = next.find(x => x.buyer_id === tab), nxAt = ms(nx?.next_change_at ?? null);
   const nxState = !nxAt ? 'none' : nxAt > tick ? 'soon' : tick - nxAt < STALE ? 'passed' : 'none';
   async function saveNext() {
-    const at = nextKyivAt(nextEdit || '', Date.now());
-    if (!at) { setNextErr('Вкажи час як у грі, наприклад 21:40.'); return; }
+    const h = Number(nextEdit?.h || 0), m = Number(nextEdit?.m || 0), mins = h * 60 + m;
+    if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || m < 0 || m > 59 || mins < 1 || mins > 24 * 60) { setNextErr('Вкажи, через скільки зміна: від 1 хв до 24 год, наприклад 1 год 25 хв.'); return; }
+    const at = Date.now() + mins * 60000;
     const { error } = await supabase!.rpc('set_next_change', { p_buyer: tab, p_at: new Date(at).toISOString() });
     if (error) { setNextErr(/^(Спершу|Час|Немає)/.test(error.message) ? error.message : 'Не вдалося зберегти час. Спробуй ще раз.'); return; }
     setNextEdit(null); setNextErr(''); load();
@@ -220,14 +222,16 @@ export default function Prices() {
                   <small><Icon name="clock" size={14} /> Наступна зміна цін</small>
                   {nextEdit !== null
                     ? <form className="row upd" onSubmit={e => { e.preventDefault(); saveNext(); }}>
-                        <label className="fld"><input type="time" aria-label="Час наступної зміни цін (київський)" value={nextEdit} onChange={e => { setNextEdit(e.target.value); setNextErr(''); }} required autoFocus /></label>
+                        <span className="muted">через</span>
+                        <label className="fld dur"><input type="number" inputMode="numeric" min={0} max={24} aria-label="Годин до зміни цін" value={nextEdit.h} onChange={e => { setNextEdit({ ...nextEdit, h: e.target.value }); setNextErr(''); }} autoFocus /><span>год</span></label>
+                        <label className="fld dur"><input type="number" inputMode="numeric" min={0} max={59} aria-label="Хвилин до зміни цін" value={nextEdit.m} onChange={e => { setNextEdit({ ...nextEdit, m: e.target.value }); setNextErr(''); }} /><span>хв</span></label>
                         <button className="btn sm acc">Зберегти</button>
                         <button type="button" className="btn sm ghost" onClick={() => { setNextEdit(null); setNextErr(''); }}>Скасувати</button>
                       </form>
                     : <b className="mono">{nxState === 'soon' ? `${when(nxAt).slice(-5)} · через ${dur(nxAt - tick)}` : nxState === 'passed' ? `була о ${when(nxAt).slice(-5)} — онови ціни` : 'невідомо'}</b>}
                   {nextEdit === null && nxState !== 'none' && nx?.game_name && <small className="muted">вписав {nx.game_name}{nx.static_id ? ' #' + nx.static_id : ''}</small>}
                   {nextErr && <small className="err" role="alert">{nextErr}</small>}
-                  {nextEdit === null && session && <button type="button" className="btn sm ghost" onClick={() => setNextEdit(nxState === 'soon' ? when(nxAt).slice(-5) : '')}>{nxState === 'soon' ? 'Змінити час' : 'Вписати час'}</button>}
+                  {nextEdit === null && session && <button type="button" className="btn sm ghost" onClick={() => setNextEdit({ h: '', m: '' })}>{nxState === 'soon' ? 'Оновити' : 'Вписати, через скільки'}</button>}
                 </div>
               </div>
             )}

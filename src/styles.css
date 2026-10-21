@@ -289,3 +289,6 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .stars small { font-size: 12.5px; }
 @media (max-width: 520px) { .sortf { flex: 1 1 100%; } }
 @media (max-width: 520px) { .vpic { aspect-ratio: 16 / 7; } }
+.fld.dur { flex-direction: row; align-items: center; gap: 4px; }
+.fld.dur input { width: 64px; text-align: center; }
+.fld.dur span { color: var(--muted); font-size: 13px; }
