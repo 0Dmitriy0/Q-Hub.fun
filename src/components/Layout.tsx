@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import ThemeToggle from './ThemeToggle';
 
 const NAV: [string, string][] = [
   ['/', 'Головна'], ['/tsiny', 'Ціни'], ['/iventy', 'Івенти'], ['/transport', 'Транспорт'],
@@ -16,6 +17,7 @@ export default function Layout() {
           {NAV.map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}
         </nav>
         <div className="who">
+          <ThemeToggle />
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}

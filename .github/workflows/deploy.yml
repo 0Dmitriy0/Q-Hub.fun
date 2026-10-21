@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      HAS_FTP: ${{ secrets.FTP_SERVER != '' }}
+      HAS_FTP: ${{ secrets.FTP_SERVER != '' || vars.FTP_SERVER != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,13 +24,84 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
           bash supabase/tests/run.sh
       - run: npm run build   # адреса й публічний ключ Supabase — у .env.production
+      - name: Which FTP settings GitHub can see (names only, no values)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "FTP_SERVER   secret=${{ secrets.FTP_SERVER != '' }} variable=${{ vars.FTP_SERVER != '' }}"
+          echo "FTP_USERNAME secret=${{ secrets.FTP_USERNAME != '' }} variable=${{ vars.FTP_USERNAME != '' }} | FTP_USER secret=${{ secrets.FTP_USER != '' }} variable=${{ vars.FTP_USER != '' }}"
+          echo "FTP_PASSWORD secret=${{ secrets.FTP_PASSWORD != '' }} | FTP_PASS secret=${{ secrets.FTP_PASS != '' }}"
+          echo "FTP_DIR      secret=${{ secrets.FTP_DIR != '' }} variable=${{ vars.FTP_DIR != '' }}"
+      - name: Check FTP values for typos (no values printed)
+        if: github.event_name != 'pull_request'
+        env:
+          U: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          P: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
+          H: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+        run: |
+          chk() { v="$2"; ws=no; case "$v" in *[[:space:]]*) ws=YES;; esac; eq=no; case "$v" in *=*) eq=YES;; esac
+                  echo "$1: length=${#v} spaces/newlines=$ws has '='=$eq"; }
+          chk FTP_SERVER "$H"; chk FTP_USERNAME "$U"; chk FTP_PASSWORD "$P"
+          case "$U" in *@q-hub.fun) echo "FTP_USERNAME ends with @q-hub.fun: yes";; *) echo "FTP_USERNAME ends with @q-hub.fun: NO";; esac
+          [ "$H" = "ftp.q-hub.fun" ] && echo "FTP_SERVER is exactly ftp.q-hub.fun: yes" || echo "FTP_SERVER is exactly ftp.q-hub.fun: NO"
+      # Викладання: з main автоматично або вручну (Run workflow) з будь-якої гілки.
+      # Дані беремо з Secrets або Variables — щоб не залежати від того, на якій вкладці їх додали.
       - name: Deploy to Hostiq (FTP)
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.HAS_FTP == 'true'
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && env.HAS_FTP == 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
           protocol: ftps
           local-dir: ./dist/
-          server-dir: ${{ secrets.FTP_DIR || './public_html/' }}
+          server-dir: ${{ secrets.FTP_DIR || vars.FTP_DIR || './' }}
+      # Розвідка: яка папка на FTP справді є коренем сайту (там лежить index.html, який зараз віддає q-hub.fun).
+      # Пароль бере з Secrets і в лог не потрапляє.
+      - name: Find the site folder on FTP
+        if: github.event_name != 'pull_request' && env.HAS_FTP == 'true'
+        continue-on-error: true
+        env:
+          U: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          P: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
+          H: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+        run: |
+          set +e
+          live=$(curl -s https://q-hub.fun/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1); echo "сайт зараз віддає: $live"
+          f() { curl -s --ssl-reqd --insecure -u "$U:$P" "$@"; }
+          echo "== корінь FTP-акаунта"; f --list-only "ftp://$H/" | sort
+          for d in "" public_html/ www/ q-hub.fun/ q-hub.fun/public_html/ ../ ../public_html/ ../q-hub.fun/ ../../public_html/; do
+            idx=$(f "ftp://$H/${d}index.html" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+            [ -n "$idx" ] && echo "папка '${d:-./}': index.html -> $idx $( [ "$idx" = "$live" ] && echo '<<< ЦЕ ПАПКА САЙТУ')"
+          done
+          true
+      # Перевірка після викладання: чи сайт віддає саме цю збірку і чи в базі є все, що потрібно сторінці цін.
+      # Ключ — публічний (той самий, що в браузері гравця), тож тут видно лише те, що бачить будь-хто.
+      - name: Check live site and database
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: |
+          set +e
+          echo "== сайт"
+          for u in https://q-hub.fun/tsiny http://q-hub.fun/tsiny; do echo "$u -> $(curl -s -o /tmp/i.html -w '%{http_code}' "$u")"; done
+          curl -s https://q-hub.fun/tsiny -o /tmp/i.html
+          live=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' /tmp/i.html | head -1); built=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html | head -1)
+          echo "на сайті: $live | у збірці: $built"; [ "$live" = "$built" ] && echo "САЙТ: актуальна версія" || echo "САЙТ: СТАРА ВЕРСІЯ або інша папка"
+          echo "cache-control: $(curl -sI https://q-hub.fun/tsiny | grep -i '^cache-control' | tr -d '\r')"
+          # SPA-правило віддає index.html на будь-який відсутній файл, тож дивимось і на тип відповіді
+          echo "нова збірка js -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "https://q-hub.fun/$built")"
+          echo "стара збірка js -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "https://q-hub.fun/$live")"
+          echo "-- заголовки /index.html"; curl -sI "https://q-hub.fun/index.html?nocache=$RANDOM" | grep -iE '^(server|cache|age|x-|last-modified|etag|cf-)' | tr -d '\r'
+          echo "index.html без кешу: $(curl -s -H 'Cache-Control: no-cache' "https://q-hub.fun/index.html?v=$RANDOM" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)"
+          echo "файл стану FTP-деплою -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' https://q-hub.fun/.ftp-deploy-sync-state.json)"
+          echo "== база"
+          set -a; . ./.env.production; set +a
+          R="$VITE_SUPABASE_URL/rest/v1"; K="$VITE_SUPABASE_ANON_KEY"
+          q() { code=$(curl -s -o /tmp/r -w '%{http_code}' -H "apikey: $K" -H "Prefer: count=exact" -D /tmp/h "$R/$2");
+                n=$(grep -i '^content-range' /tmp/h | sed 's/.*\///' | tr -d '\r'); echo "$1: HTTP $code, рядків=${n:-?} $( [ "$code" = 200 ] || head -c 160 /tmp/r)"; }
+          q "скупники (0001)" "buyers?select=id"
+          q "ціни редактора (0002)" "buyer_items?select=price&price=gt.0"
+          q "межі мін/макс NPC" "buyer_items?select=min_price&min_price=gt.0"
+          q "історія цін (0003)" "price_history?select=id"
+          q "оновлення гравців (0004)" "price_updates?select=id"
+          q "рейтинг (0004)" "contributors?select=id"
+          echo "цикл (0004): $(curl -s -X POST -H "apikey: $K" -H 'Content-Type: application/json' -d '{}' "$R/rpc/price_cycle_start" | head -c 160)"

@@ -8,6 +8,8 @@ interface Auth {
   session: Session | null;
   name: string;
   avatar: string;
+  role: string;
+  isStaff: boolean;
   characters: Character[];
   current: Character | null;
   setCurrent: (id: string) => void;
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supabase);
   const [session, setSession] = useState<Session | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [role, setRole] = useState('user');
   const [curId, setCurId] = useState<string>(() => { try { return localStorage.getItem(CUR_KEY) || ''; } catch { return ''; } });
 
   useEffect(() => {
@@ -37,6 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCharacters((data as Character[]) || []);
   }, [session]);
   useEffect(() => { reloadCharacters(); }, [reloadCharacters]);
+  /* роль видно лише собі (RLS); змінити її з сайту не можна */
+  useEffect(() => {
+    if (!supabase || !session) { setRole('user'); return; }
+    supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(({ data }) => setRole((data?.role as string) || 'user'));
+  }, [session]);
 
   const setCurrent = useCallback((id: string) => { setCurId(id); try { localStorage.setItem(CUR_KEY, id); } catch { /* приватний режим */ } }, []);
   const current = characters.find(c => c.id === curId) || characters[0] || null;
@@ -44,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Auth>(() => ({
     ready, session, characters, current, setCurrent, reloadCharacters,
+    role, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
     name: String(meta.full_name || meta.name || meta.custom_claims?.global_name || ''),
     avatar: String(meta.avatar_url || ''),
     signIn: async () => {
@@ -51,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + '/kabinet' } });
     },
     signOut: async () => { if (supabase) await supabase.auth.signOut(); setCharacters([]); }
-  }), [ready, session, characters, current, setCurrent, reloadCharacters, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
+  }), [ready, session, characters, current, setCurrent, reloadCharacters, role, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
