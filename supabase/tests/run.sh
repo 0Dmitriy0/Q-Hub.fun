@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Накочує міграції на тимчасовий локальний Postgres з імітацією Supabase і проганяє rls_test.sql.
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+BIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)
+DIR=$(mktemp -d); PORT=${PGPORT_TEST:-55432}
+# initdb не запускається від root — тоді сервер працює від користувача postgres
+AS=(); if [ "$(id -u)" = 0 ]; then chown postgres "$DIR"; AS=(runuser -u postgres --); fi
+"${AS[@]}" "$BIN/initdb" -D "$DIR" -U postgres -A trust >/dev/null
+"${AS[@]}" "$BIN/pg_ctl" -D "$DIR" -o "-p $PORT -k $DIR" -l "$DIR/log" start >/dev/null
+trap '"${AS[@]}" "$BIN/pg_ctl" -D "$DIR" stop -m fast >/dev/null; rm -rf "$DIR"' EXIT
+P="psql -X -q -h $DIR -p $PORT -U postgres -v ON_ERROR_STOP=1"
+$P <<'SQL'
+create role anon nologin; create role authenticated nologin;
+create schema auth;
+create table auth.users (id uuid primary key, raw_user_meta_data jsonb not null default '{}');
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+grant usage on schema auth to anon, authenticated;
+grant execute on function auth.uid() to anon, authenticated;
+SQL
+for f in supabase/migrations/*.sql; do $P -f "$f"; done
+# Supabase видає ці права за замовчуванням; без них тест не відображав би реальної поведінки
+$P -c "grant usage on schema public to anon, authenticated;
+       grant select, insert, update, delete on all tables in schema public to anon, authenticated;
+       revoke update on public.profiles from anon, authenticated;
+       grant update (name, avatar_url) on public.profiles to authenticated;
+       grant select on public.prices_confirmed to anon, authenticated;"
+$P -f supabase/tests/rls_test.sql
