@@ -1,3 +1,4 @@
+import { kyParts, kyTs } from './events';
 /* Статистика ціни скупника, як у хабі: межі, положення ціни в межах і точки для графіка.
    Межі вписує редактор (з гри); поки їх немає — беремо мінімум і максимум, що траплялися за період. */
 export interface Pt { t: number; p: number }
@@ -30,3 +31,12 @@ export function series(pts: Pt[], now = Date.now(), period = PERIOD): Pt[] {
   const inside = sorted.filter(x => x.t >= from && x.t <= now);
   return before ? [{ t: from, p: before.p }, ...inside] : inside;
 }
+
+/* Скупник-NPC міняє ціни кожні 3 години за київським часом: 00:00, 03:00, 06:00…
+   Те саме правило рахує база (price_cycle_start), тож сайт і база погоджуються, який цикл зараз. */
+export const CYCLE_H = 3;
+export function cycleStart(now = Date.now()) {
+  const p = kyParts(now);
+  return kyTs(p.y, p.mo, p.d, p.h - (p.h % CYCLE_H), 0);
+}
+export const nextCycle = (now = Date.now()) => cycleStart(now) + CYCLE_H * 36e5;

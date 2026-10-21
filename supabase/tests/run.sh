@@ -40,3 +40,4 @@ $P -f supabase/seed/history_from_hub.sql   # і тут повтор без ду�
 $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/tests/catalog_test.sql
+$P -f supabase/tests/player_prices_test.sql
