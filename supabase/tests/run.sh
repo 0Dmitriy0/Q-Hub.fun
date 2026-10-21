@@ -41,3 +41,6 @@ $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/tests/catalog_test.sql
 $P -f supabase/tests/player_prices_test.sql
+$P -f supabase/seed/vehicles.sql >/dev/null; $P -f supabase/seed/vehicles.sql >/dev/null   # шаблон транспорту: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 4, 'шаблон транспорту дублюється'; assert (select exclusive and salon_price is null from public.vehicles where name = 'Karin Priu'), 'ексклюзив не записався'; end \$\$;"
+echo 'Шаблон транспорту ok'

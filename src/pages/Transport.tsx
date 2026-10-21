@@ -4,9 +4,10 @@ import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
+import VehicleDialog, { type VehicleFull } from '../components/VehicleDialog';
 
 type Kind = 'auto' | 'moto' | 'avia';
-interface Vehicle { id: number; kind: Kind; name: string; brand: string; salon: string; price: number; speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string }
+type Vehicle = VehicleFull;
 interface Score { vehicle_id: number; avg: number; votes: number }
 type Sort = 'price' | 'speed' | 'trunk' | 'rating' | 'name';
 
@@ -56,11 +57,12 @@ export default function Transport() {
   const [sort, setSort] = useState<Sort>('price');
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [openId, setOpenId] = useState<number | null>(null);
 
   async function load() {
     if (!supabase) return;
     const [v, s] = await Promise.all([
-      supabase.from('vehicles').select('id,kind,name,brand,salon,price,speed,trunk,tank,seats,image_url').order('price', { ascending: false }).limit(1000),
+      supabase.from('vehicles').select('*').order('price', { ascending: false }).limit(1000),
       supabase.from('vehicle_scores').select('*')
     ]);
     setLoaded(true);
@@ -120,18 +122,19 @@ export default function Transport() {
         <div className="vgrid">{shown.map(v => {
           const sc = scores[v.id];
           return (
-            <article className="card vcard" key={v.id}>
+            /* уся плитка відкриває вікно транспорту; кнопки всередині (оцінка, фото) працюють як і раніше */
+            <article className="card vcard" key={v.id} onClick={e => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) setOpenId(v.id); }}>
               <div className="vpic">{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}
                 {isAdmin && <span className="vpic-up"><PicUpload label={'Фото транспорту ' + v.name} path={`vehicles/${v.id}.webp`} frame={{ w: 640, h: 360 }} onDone={async url => {
                   const { error } = await supabase!.from('vehicles').update({ image_url: url }).eq('id', v.id); if (error) throw error;
                   setList(l => l.map(x => (x.id === v.id ? { ...x, image_url: url } : x)));
                 }} /></span>}
               </div>
-              <div className="vhead"><h3>{v.name}</h3>{v.brand && <small className="muted">{v.brand}{v.salon ? ' · ' + v.salon : ''}</small>}</div>
+              <div className="vhead"><h3><button type="button" className="vopen" onClick={() => setOpenId(v.id)}>{v.name}</button></h3>{v.brand && <small className="muted">{v.brand}{v.salon ? ' · ' + v.salon : ''}</small>}</div>
               <b className="mono vprice">{v.price ? money(v.price) : '—'}</b>
               <ul className="vspec">
                 {v.speed != null && <li><Icon name="speed" size={15} />{v.speed} км/год</li>}
-                {v.trunk != null && <li><Icon name="box" size={15} />{v.trunk} кг</li>}
+                {v.trunk != null && <li><Icon name="box" size={15} />{v.trunk} слот(ів)</li>}
                 {v.tank != null && <li><Icon name="fuel" size={15} />{v.tank} л</li>}
                 {v.seats != null && <li><Icon name="user" size={15} />{v.seats} {seatsWord(v.seats)}</li>}
               </ul>
@@ -142,6 +145,7 @@ export default function Transport() {
             </article>);
         })}</div>
       )}
+      <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} />
       {loaded && list.length > 0 && !shown.length && <div className="card empty">Нічого не знайдено. Спробуй іншу назву або тип.</div>}
     </>
   );
