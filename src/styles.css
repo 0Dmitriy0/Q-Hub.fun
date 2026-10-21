@@ -188,7 +188,7 @@ label.btn { position: relative; cursor: pointer; }
 }
 
 /* цикл цін скупника, оновлення гравцями, рейтинг */
-.cycle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 4px; }
+.cycle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 4px; }
 .cycle div { background: var(--surface2); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cycle small { color: var(--muted); font-size: 12px; }
 .cycle b { font-size: 15px; }
@@ -230,3 +230,5 @@ tr.podium td { font-weight: 700; }
 .static-form { display: flex; flex-direction: column; gap: 10px; }
 .static-form .btn { align-self: flex-start; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-hi); font: inherit; text-decoration: underline; cursor: pointer; }
+.stat { color: var(--muted); font-size: 13px; }
+.who-cell .muted { font-size: 12.5px; }

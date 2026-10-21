@@ -12,7 +12,8 @@ interface Auth {
   isStaff: boolean;
   /* статік (ігровий ID): null — ще не вказаний, undefined — профіль ще вантажиться */
   staticId: number | null | undefined;
-  saveStatic: (v: number) => Promise<string | null>;
+  gameName: string;
+  saveProfile: (game: string, stat: number) => Promise<string | null>;
   characters: Character[];
   current: Character | null;
   setCurrent: (id: string) => void;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [role, setRole] = useState('user');
   const [staticId, setStaticId] = useState<number | null | undefined>(undefined);
+  const [gameName, setGameName] = useState('');
   const [curId, setCurId] = useState<string>(() => { try { return localStorage.getItem(CUR_KEY) || ''; } catch { return ''; } });
 
   useEffect(() => {
@@ -48,22 +50,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase || !session) { setRole('user'); setStaticId(undefined); return; }
     const id = session.user.id, db = supabase;
-    db.from('profiles').select('role,static_id').eq('id', id).maybeSingle().then(async ({ data, error }) => {
+    db.from('profiles').select('role,static_id,game_name').eq('id', id).maybeSingle().then(async ({ data, error }) => {
       if (error) {
-        /* у базі ще немає стовпця static_id (міграцію 0007 не запущено) — роль беремо окремо й сайт не блокуємо */
+        /* у базі ще немає стовпців static_id/game_name (міграції 0007–0008 не запущено) — роль беремо окремо й сайт не блокуємо */
         const r = await db.from('profiles').select('role').eq('id', id).maybeSingle();
         setRole((r.data?.role as string) || 'user'); setStaticId(0); return;
       }
       setRole((data?.role as string) || 'user');
-      setStaticId((data?.static_id as number | null) ?? null);
+      const g = String(data?.game_name ?? '').trim(); setGameName(g);
+      /* без ніка персонажа профіль теж неповний — вікно попросить обидва */
+      setStaticId(g ? (data?.static_id as number | null) ?? null : null);
     });
   }, [session?.user.id]);
 
-  const saveStatic = useCallback(async (v: number) => {
+  const saveProfile = useCallback(async (game: string, stat: number) => {
     if (!supabase || !session) return 'Спершу увійди через Discord.';
-    const { error } = await supabase.from('profiles').update({ static_id: v }).eq('id', session.user.id);
-    if (error) return error.code === '23505' ? 'Цей статік уже вказав інший гравець. Якщо це твій — напиши адміну.' : 'Не вдалося зберегти статік. Спробуй ще раз.';
-    setStaticId(v); return null;
+    const { error } = await supabase.from('profiles').update({ game_name: game, static_id: stat }).eq('id', session.user.id);
+    if (error) return error.code === '23505' ? 'Цей статік уже вказав інший гравець. Якщо це твій — напиши адміну.' : 'Не вдалося зберегти. Спробуй ще раз.';
+    setGameName(game); setStaticId(stat); return null;
   }, [session]);
 
   const setCurrent = useCallback((id: string) => { setCurId(id); try { localStorage.setItem(CUR_KEY, id); } catch { /* приватний режим */ } }, []);
@@ -72,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Auth>(() => ({
     ready, session, characters, current, setCurrent, reloadCharacters,
-    role, staticId, saveStatic, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
+    role, staticId, gameName, saveProfile, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
     name: String(meta.full_name || meta.name || meta.custom_claims?.global_name || ''),
     avatar: String(meta.avatar_url || ''),
     signIn: async () => {
@@ -80,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + '/kabinet' } });
     },
     signOut: async () => { if (supabase) await supabase.auth.signOut(); setCharacters([]); }
-  }), [ready, session, characters, current, setCurrent, reloadCharacters, role, staticId, saveStatic, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
+  }), [ready, session, characters, current, setCurrent, reloadCharacters, role, staticId, gameName, saveProfile, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

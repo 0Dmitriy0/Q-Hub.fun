@@ -3,11 +3,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { uploadCatalogImage } from '../lib/images';
 import { money, parseMoney, when } from '../lib/format';
-import { CYCLE_H, GOOD, cycleStart, nextCycle, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
-import { dur, kyHM } from '../lib/events';
+import { GOOD, STALE, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
-import { groupUpdates, type Update } from '../lib/updates';
+import { groupUpdates, who, type Update } from '../lib/updates';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface Item { id: number; name: string; unit: string; image_url: string }
@@ -76,7 +75,7 @@ export default function Prices() {
     const [b, r, u, c] = await Promise.all([
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)'),
-      supabase.from('price_updates').select('id,buyer_id,item_id,price,created_at,cycle,reporter_name').order('created_at', { ascending: false }).limit(500),
+      supabase.from('price_updates').select('*').order('created_at', { ascending: false }).limit(500),
       supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500)
     ]);
     if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Онови сторінку.'); return; }
@@ -108,7 +107,7 @@ export default function Prices() {
         /* автор поточної ціни — останнє внесення гравця, якщо воно і є цією ціною; інакше ціна з імпорту */
         const u = ups.find(x => x.buyer_id === r.buyer_id && x.item_id === r.item_id);
         const mine = u && Math.abs(ms(u.created_at) - ms(r.price_at)) < 2000;
-        return { ...r, shown: r.price, at: r.price_at, by: mine ? u!.reporter_name || 'гравець' : r.price_at ? 'редактор' : '' };
+        return { ...r, shown: r.price, at: r.price_at, by: mine ? who(u!) + (u!.reporter_static ? ' #' + u!.reporter_static : '') : r.price_at ? 'редактор' : '' };
       })
       .sort((a, b) => a.items!.name.localeCompare(b.items!.name, 'uk'));
   }, [rows, ups, tab, q]);
@@ -142,8 +141,9 @@ export default function Prices() {
     setMsg(m => { const n = { ...m }; delete n[key]; return n; });
     reload(r.buyer_id);
   }
-  const cs = cycleStart(tick), nc = nextCycle(tick);
+  const cs = tick - STALE;
   const fresh = cur.filter(r => ms(r.at) >= cs).length;
+  const lastAt = cur.reduce((m, r) => Math.max(m, ms(r.at)), 0);
   const [allUps, setAllUps] = useState(false);
   const groups = useMemo(() => groupUpdates(ups), [ups]);
   const recent = groups.slice(0, allUps ? 30 : 8);
@@ -153,21 +153,21 @@ export default function Prices() {
 
   return (
     <>
-      <div><h1>Ціни скупників</h1><p className="muted">Скупники міняють ціни кожні {CYCLE_H} години. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік за 30 днів.</p></div>
+      <div><h1>Ціни скупників</h1><p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік за 30 днів.</p></div>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
       {err && <div className="card err">{err}</div>}
       {supabase && !err && !buyers.length && <div className="card empty">Каталог скупників ще порожній. Адміну: запусти <span className="mono">supabase/seed/catalog_from_hub.sql</span> у Supabase → SQL Editor.</div>}
       {buyers.length > 0 && (
         <>
           <section className="card recent">
-            <div className="row between rhead"><h2>Останні оновлення цін</h2><Leaderboard list={top} cycleH={CYCLE_H} /></div>
+            <div className="row between rhead"><h2>Останні оновлення цін</h2><Leaderboard list={top} /></div>
             {recent.length
               ? <ul className="ulist">{recent.map(g => {
                   /* один стиль для всіх записів: нік жирним на початку, під ним що саме оновлено */
                   const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
                   const one = g.items.length === 1, all = !one && g.items.length >= buyerSize(g.buyer_id);
                   return <li key={g.key}>
-                    <div className="ug-head"><b>{g.who || 'гравець'}</b>
+                    <div className="ug-head"><b>{g.who}</b>{g.stat ? <span className="mono stat">#{g.stat}</span> : null}
                       <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
                       <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
                     <div className="ug-items">{one
@@ -195,9 +195,8 @@ export default function Prices() {
             )}
             {!q && buyer && (
               <div className="cycle" role="status">
-                <div><small>Цей цикл цін</small><b className="mono">{kyHM(cs)}–{kyHM(nc)}</b></div>
-                <div><small>Нова зміна цін</small><b className="mono">через {dur(nc - tick)}</b></div>
-                <div><small>Оновлено в цьому циклі</small><b className="mono">{fresh} з {cur.length}</b></div>
+                <div><small>Свіжі ціни (до 3 год)</small><b className="mono">{fresh} з {cur.length}</b></div>
+                <div><small>Останнє оновлення</small><b className="mono">{lastAt ? when(lastAt) : '—'}</b></div>
               </div>
             )}
             {cur.length ? (
@@ -208,7 +207,7 @@ export default function Prices() {
                   <div className={'prow' + (isOpen ? ' open' : '')} key={key}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
                     <button type="button" className="pname" aria-expanded={isOpen} aria-controls={'pd-' + key} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
-                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · з минулого циклу' : ''}</span> : 'ціни ще немає'}</small>
+                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}</small>
                       <RangeBar pos={pos} range={range} /></button>
                     <Spark pts={pts} now={now} />
                     <div className="pval">

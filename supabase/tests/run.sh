@@ -30,7 +30,7 @@ for f in supabase/migrations/*.sql; do $P -f "$f"; done
 $P -c "grant usage on schema public to anon, authenticated;
        grant select, insert, update, delete on all tables in schema public to anon, authenticated;
        revoke update on public.profiles from anon, authenticated;
-       grant update (name, avatar_url, static_id) on public.profiles to authenticated;
+       grant update (name, avatar_url, static_id, game_name) on public.profiles to authenticated;
        grant select on public.prices_confirmed to anon, authenticated;"
 $P -f supabase/tests/rls_test.sql
 $P -f supabase/seed/catalog_from_hub.sql

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { when } from '../lib/format';
 
-export interface Contributor { id: string; name: string; avatar_url: string | null; week: number; month?: number; year?: number; total: number; last_at: string }
+export interface Contributor { id: string; name: string; avatar_url: string | null; week: number; month?: number; year?: number; total: number; last_at: string; game_name?: string | null; static_id?: number | null }
 type Period = 'week' | 'month' | 'year' | 'total';
 const PERIODS: [Period, string][] = [['week', '7 днів'], ['month', 'Місяць'], ['year', 'Рік'], ['total', 'Весь час']];
 
 /* рейтинг у вікні: кнопка в блоці оновлень, перемикач періоду, Esc або клік повз вікно закриває */
-export default function Leaderboard({ list, cycleH }: { list: Contributor[]; cycleH: number }) {
+export default function Leaderboard({ list }: { list: Contributor[] }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [period, setPeriod] = useState<Period>('week');
   const [open, setOpen] = useState(false);
@@ -27,11 +27,11 @@ export default function Leaderboard({ list, cycleH }: { list: Contributor[]; cyc
           <div className="seg" role="group" aria-label="Період">
             {PERIODS.map(([p, label]) => <button key={p} type="button" aria-pressed={period === p} className={period === p ? 'on' : ''} disabled={!has(p)} onClick={() => setPeriod(p)}>{label}</button>)}
           </div>
-          <p className="muted note">Бал — за кожне оновлення ціни. Один товар у скупника рахується раз за цикл ({cycleH} год), виправлення в тому ж циклі бала не додає.</p>
+          <p className="muted note">Бал — за кожне оновлення ціни. Виправлення впродовж 10 хв бала не додає, а ту саму свіжу ціну повторно внести не можна.</p>
           {rows.length
             ? <div className="scroll"><table className="t"><thead><tr><th>#</th><th>Гравець</th><th className="n">Оновлень</th><th>Останнє</th></tr></thead>
                 <tbody>{rows.map(({ c, n }, i) => <tr key={c.id} className={i < 3 ? 'podium' : ''}><td className="mono">{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</td>
-                  <td><span className="row who-cell">{c.avatar_url && <img src={c.avatar_url} alt="" width={22} height={22} className="ava" />}{c.name || 'гравець'}</span></td>
+                  <td><span className="row who-cell">{c.avatar_url && <img src={c.avatar_url} alt="" width={22} height={22} className="ava" />}<b>{(c.game_name || '').trim() || c.name || 'гравець'}</b>{c.static_id ? <span className="muted mono">#{c.static_id}</span> : null}</span></td>
                   <td className="n">{n}</td><td>{when(c.last_at)}</td></tr>)}</tbody></table></div>
             : <div className="empty">{list.length ? 'За цей період ще ніхто не оновлював ціни.' : 'Рейтинг поки порожній. Перше оновлення ціни — і ти на першому місці.'}</div>}
         </div>
