@@ -7,6 +7,7 @@ import { GOOD, STALE, priceRange, rangePos, series, type Pt } from '../lib/price
 import { dur } from '../lib/events';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
 import Icon from '../components/Icon';
+import ShotImport from '../components/ShotImport';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
 
@@ -199,6 +200,9 @@ export default function Prices() {
               : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
             {groups.length > SHOWN && <button type="button" className="btn sm ghost" aria-expanded={allUps} onClick={() => setAllUps(v => !v)}>{allUps ? 'Сховати' : `Показати ще ${Math.min(groups.length, 30) - SHOWN}`}</button>}
           </section>
+          {session && <div className="shot-wrap"><ShotImport
+            catalog={rows.filter(r => r.items).map(r => ({ id: r.item_id, name: r.items!.name, buyer_id: r.buyer_id, min: r.min_price, max: r.max_price, price: r.price }))}
+            buyerName={buyerName} onBuyer={id => { setQ(''); setTab(id); }} onDone={() => load()} /></div>}
           <div className="fld has-ico"><Icon name="search" /><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
           {!q && <div className="tabs" role="tablist">{buyers.map(b => (
             <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>

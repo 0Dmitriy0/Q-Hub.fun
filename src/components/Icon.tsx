@@ -19,6 +19,7 @@ const P: Record<string, string> = {
   fuel: 'M5 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15M4 20h11M5 10h9M14 8l3 2v7a1.5 1.5 0 0 0 3 0V9l-3-3',
   tag: 'M3 12V4h8l9 9-8 8zM7.5 7.5h.01',
   bolt: 'M13 3L5 13h6l-1 8 8-10h-6z',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   shield: 'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z'
 };
 
