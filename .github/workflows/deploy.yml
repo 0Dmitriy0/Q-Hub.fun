@@ -31,6 +31,18 @@ jobs:
           echo "FTP_USERNAME secret=${{ secrets.FTP_USERNAME != '' }} variable=${{ vars.FTP_USERNAME != '' }} | FTP_USER secret=${{ secrets.FTP_USER != '' }} variable=${{ vars.FTP_USER != '' }}"
           echo "FTP_PASSWORD secret=${{ secrets.FTP_PASSWORD != '' }} | FTP_PASS secret=${{ secrets.FTP_PASS != '' }}"
           echo "FTP_DIR      secret=${{ secrets.FTP_DIR != '' }} variable=${{ vars.FTP_DIR != '' }}"
+      - name: Check FTP values for typos (no values printed)
+        if: github.event_name != 'pull_request'
+        env:
+          U: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          P: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
+          H: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+        run: |
+          chk() { v="$2"; ws=no; case "$v" in *[[:space:]]*) ws=YES;; esac; eq=no; case "$v" in *=*) eq=YES;; esac
+                  echo "$1: length=${#v} spaces/newlines=$ws has '='=$eq"; }
+          chk FTP_SERVER "$H"; chk FTP_USERNAME "$U"; chk FTP_PASSWORD "$P"
+          case "$U" in *@q-hub.fun) echo "FTP_USERNAME ends with @q-hub.fun: yes";; *) echo "FTP_USERNAME ends with @q-hub.fun: NO";; esac
+          [ "$H" = "ftp.q-hub.fun" ] && echo "FTP_SERVER is exactly ftp.q-hub.fun: yes" || echo "FTP_SERVER is exactly ftp.q-hub.fun: NO"
       # Викладання: з main автоматично або вручну (Run workflow) з будь-якої гілки.
       # Дані беремо з Secrets або Variables — щоб не залежати від того, на якій вкладці їх додали.
       - name: Deploy to Hostiq (FTP)
