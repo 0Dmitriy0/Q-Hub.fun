@@ -32,12 +32,36 @@ export default function Home() {
           </ul>
         </section>
       </div>
-      <section className="card">
+      <section className="start">
         <h2 className="ih"><Icon name="shield" />Як почати грати на QuantRP</h2>
-        <ol className="steps">
-          <li><span>Потрібна ліцензійна GTA V для ПК.</span></li>
-          <li><span>Встанови RAGE:MP або лаунчер QuantRP — посилання й адреса сервера на офіційних сторінках проєкту.</span></li>
-          <li><span>Зайди на сервер, створи персонажа, а тут — увійди через Discord і додай його в кабінеті.</span></li>
+        <ol className="start-grid">
+          <li className="card start-card">
+            <span className="start-n" aria-hidden="true">1</span>
+            <h3>Придбай гру з останнім патчем</h3>
+            <p className="muted">Потрібна ліцензійна Grand Theft Auto V від Rockstar з офіційних магазинів: Steam, Epic Games або Social Club.</p>
+            <div className="start-foot">
+              <a className="btn acc" href="https://store.steampowered.com/app/271590/Grand_Theft_Auto_V_Legacy/" target="_blank" rel="noopener noreferrer">Купити гру<span className="vh"> у Steam (відкриється в новій вкладці)</span></a>
+              <span className="ibub big"><Icon name="tag" size={26} /></span>
+            </div>
+          </li>
+          <li className="card start-card">
+            <span className="start-n" aria-hidden="true">2</span>
+            <h3>Встанови лаунчер QuantRP</h3>
+            <p className="muted">Завантаж і встанови офіційний лаунчер проєкту — через нього заходиш на сервер.</p>
+            <div className="start-foot">
+              <a className="btn acc" href="https://quant5.com.ua/quant-install.exe" download>Завантажити<span className="vh"> лаунчер QuantRP (.exe)</span></a>
+              <span className="ibub big"><Icon name="download" size={26} /></span>
+            </div>
+          </li>
+          <li className="card start-card">
+            <span className="start-n" aria-hidden="true">3</span>
+            <h3>Розпочни гру</h3>
+            <p className="muted">Отримай останні оновлення в лаунчері й починай гру на <b>Quant RP — GTA V</b>. А тут увійди через Discord і додай персонажа в кабінеті.</p>
+            <div className="start-foot">
+              <span />
+              <span className="ibub big"><Icon name="bolt" size={26} /></span>
+            </div>
+          </li>
         </ol>
       </section>
     </>
