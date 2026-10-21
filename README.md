@@ -19,7 +19,7 @@
 ### 1. Supabase
 1. [supabase.com](https://supabase.com) → **New project** (регіон — Frankfurt або найближчий). Збережи пароль бази.
 2. **SQL Editor** → встав увесь вміст `supabase/migrations/0001_init.sql` → **Run**.
-3. **Project Settings → API**: скопіюй `Project URL` і `anon public` key. Обидва значення публічні.
+3. Адреса проєкту й publishable key уже записані в `.env.production` — обидва значення публічні.
 
 ### 2. Discord (вхід)
 1. [discord.com/developers/applications](https://discord.com/developers/applications) → **New Application** → назва «Q-Hub».
@@ -35,8 +35,6 @@
 
 | Секрет | Звідки |
 |---|---|
-| `VITE_SUPABASE_URL` | Supabase → Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase → anon public key |
 | `FTP_SERVER` | Hostiq → панель → FTP (наприклад `ftp.q-hub.fun`) |
 | `FTP_USERNAME`, `FTP_PASSWORD` | FTP-акаунт Hostiq |
 | `FTP_DIR` | папка сайту, якщо не `./public_html/` (наприклад `./q-hub.fun/`) |
