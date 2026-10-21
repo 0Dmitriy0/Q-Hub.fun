@@ -26,7 +26,16 @@ function Pic({ url, alt, size = 40 }: { url: string; alt: string; size?: number 
     : <span className="pic none" style={{ width: size, height: size }} aria-hidden="true">{alt.slice(0, 1)}</span>;
 }
 
-/* кнопка-файл для редактора: вибрав картинку → стиснулась → у сховище → адреса в рядок каталогу */
+/* зрозуміле пояснення замість технічної помилки сховища */
+function imageError(x: unknown) {
+  const m = x instanceof Error ? x.message : String((x as { message?: string })?.message ?? x);
+  if (/row-level security|unauthorized|403|лише адмін/i.test(m)) return 'Завантажувати картинки може лише адмін. Увійди тим акаунтом Discord, який є адміном сайту.';
+  if (/bucket not found/i.test(m)) return 'У базі немає сховища для картинок. Запусти q-hub-images.sql у Supabase → SQL Editor.';
+  if (/too large|maximum allowed size/i.test(m)) return 'Картинка завелика. Обери файл до 1 МБ.';
+  return 'Не вдалося завантажити картинку: ' + m;
+}
+
+/* кнопка-файл для адміна: вибрав картинку → стиснулась → у сховище → адреса в рядок каталогу */
 function PicUpload({ label, path, onDone }: { label: string; path: string; onDone: (url: string) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -35,7 +44,7 @@ function PicUpload({ label, path, onDone }: { label: string; path: string; onDon
       <input type="file" accept="image/*" className="vh" disabled={busy} onChange={async e => {
         const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
         setBusy(true);
-        try { await onDone(await uploadCatalogImage(f, path)); } catch (x) { alert('Не вдалося завантажити картинку: ' + (x instanceof Error ? x.message : x)); }
+        try { await onDone(await uploadCatalogImage(f, path)); } catch (x) { alert(imageError(x)); }
         setBusy(false);
       }} />
     </label>
@@ -43,7 +52,8 @@ function PicUpload({ label, path, onDone }: { label: string; path: string; onDon
 }
 
 export default function Prices() {
-  const { isStaff, session, signIn } = useAuth();
+  const { isStaff, role, session, signIn } = useAuth();
+  const isAdmin = role === 'admin';
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [ups, setUps] = useState<Update[]>([]);
@@ -180,7 +190,7 @@ export default function Prices() {
             {!q && buyer && (
               <div className="row between">
                 <div className="row"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span></div></div>
-                {isStaff && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
+                {isAdmin && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
                   const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
                 }} />}
               </div>
@@ -215,7 +225,7 @@ export default function Prices() {
                       {!editing && session && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
                       {msg[key] && <small className="err" role="alert">{msg[key]}</small>}
                     </div>
-                    {isStaff && <PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
+                    {isAdmin && <PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
                       const { error } = await supabase!.from('items').update({ image_url: url }).eq('id', r.item_id); if (error) throw error; load();
                     }} />}
                     {isOpen && (

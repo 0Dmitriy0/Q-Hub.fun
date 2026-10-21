@@ -38,8 +38,32 @@ update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-0
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
 update public.buyer_items set price = 177 where buyer_id = 'fish' and item_id = (select id from public.items where name = 'Окунь');
-insert into storage.objects (bucket_id, name) values ('catalog', 'buyers/fish.webp');
+-- редактор картинки вже не вантажить і не міняє — це лише для адміна
+do $$ begin
+  begin
+    insert into storage.objects (bucket_id, name) values ('catalog', 'buyers/fish.webp');
+    raise exception 'редактор завантажив картинку';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    update public.buyers set image_url = 'x' where id = 'fish';
+    raise exception 'редактор змінив картинку';
+  exception when raise_exception then
+    if sqlerrm <> 'Картинки змінює лише адмін.' then raise; end if;
+  end;
+end $$;
 reset role;
+-- адмін: вантажить, бачить свій файл (потрібно для заміни) і ставить адресу
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00000000000a';
+set role authenticated;
+insert into storage.objects (bucket_id, name) values ('catalog', 'buyers/fish.webp');
+do $$ begin
+  assert (select count(*) from storage.objects where name = 'buyers/fish.webp') = 1, 'адмін не бачить свою картинку — заміна не спрацює';
+end $$;
+update public.buyers set image_url = 'https://x/fish.webp' where id = 'fish';
+reset role;
+do $$ begin assert (select image_url from public.buyers where id = 'fish') = 'https://x/fish.webp', 'адмін не поставив картинку'; end $$;
+update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000a';
 do $$ declare r record; begin
   select bi.price, bi.price_by, bi.price_at, b.updated_at into r
     from public.buyer_items bi join public.buyers b on b.id = bi.buyer_id
@@ -51,4 +75,4 @@ do $$ begin
   assert (select count(*) from public.price_history) = current_setting('t.hist')::int + 1, 'зміна ціни не потрапила в історію';
   assert exists (select 1 from public.price_history where buyer_id = 'fish' and price = 177 and at > now() - interval '1 minute'), 'нової точки 177 немає';
 end $$;
-\echo 'Каталог ok: 10 скупників, 122 товари, 59 цін власника, межі мін/макс для 108; повтор без дублів; ціну й картинки змінює лише редактор; кожна зміна ціни йде в історію'
+\echo 'Каталог ok: 10 скупників, 122 товари, 59 цін власника, межі мін/макс для 108; повтор без дублів; ціну змінює лише редактор, картинки — лише адмін; кожна зміна ціни йде в історію'
