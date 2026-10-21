@@ -35,4 +35,6 @@ $P -c "grant usage on schema public to anon, authenticated;
 $P -f supabase/tests/rls_test.sql
 $P -f supabase/seed/catalog_from_hub.sql
 $P -f supabase/seed/catalog_from_hub.sql   # повторний запуск нічого не дублює
+$P -f supabase/seed/history_from_hub.sql
+$P -f supabase/seed/history_from_hub.sql   # і тут повтор без дублів
 $P -f supabase/tests/catalog_test.sql
