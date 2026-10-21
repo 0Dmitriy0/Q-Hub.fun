@@ -68,7 +68,12 @@ jobs:
           live=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' /tmp/i.html | head -1); built=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html | head -1)
           echo "на сайті: $live | у збірці: $built"; [ "$live" = "$built" ] && echo "САЙТ: актуальна версія" || echo "САЙТ: СТАРА ВЕРСІЯ або інша папка"
           echo "cache-control: $(curl -sI https://q-hub.fun/tsiny | grep -i '^cache-control' | tr -d '\r')"
-          echo "js -> $(curl -s -o /dev/null -w '%{http_code}' "https://q-hub.fun/$built")"
+          # SPA-правило віддає index.html на будь-який відсутній файл, тож дивимось і на тип відповіді
+          echo "нова збірка js -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "https://q-hub.fun/$built")"
+          echo "стара збірка js -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "https://q-hub.fun/$live")"
+          echo "-- заголовки /index.html"; curl -sI "https://q-hub.fun/index.html?nocache=$RANDOM" | grep -iE '^(server|cache|age|x-|last-modified|etag|cf-)' | tr -d '\r'
+          echo "index.html без кешу: $(curl -s -H 'Cache-Control: no-cache' "https://q-hub.fun/index.html?v=$RANDOM" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)"
+          echo "файл стану FTP-деплою -> $(curl -s -o /dev/null -w '%{http_code} %{content_type}' https://q-hub.fun/.ftp-deploy-sync-state.json)"
           echo "== база"
           set -a; . ./.env.production; set +a
           R="$VITE_SUPABASE_URL/rest/v1"; K="$VITE_SUPABASE_ANON_KEY"
