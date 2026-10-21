@@ -3,12 +3,15 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { uploadCatalogImage } from '../lib/images';
 import { money, parseMoney, when } from '../lib/format';
-import { GOOD, STALE, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
+import { GOOD, STALE, nextKyivAt, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
+import { dur } from '../lib/events';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
+import Icon from '../components/Icon';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
+interface NextChange { buyer_id: string; next_change_at: string | null; game_name: string | null; static_id: number | null }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
 
@@ -58,6 +61,9 @@ export default function Prices() {
   const [ups, setUps] = useState<Update[]>([]);
   const [top, setTop] = useState<Contributor[]>([]);
   const [saving, setSaving] = useState('');
+  const [next, setNext] = useState<NextChange[]>([]);
+  const [nextEdit, setNextEdit] = useState<string | null>(null);
+  const [nextErr, setNextErr] = useState('');
   const [tick, setTick] = useState(Date.now());
   useEffect(() => { const id = setInterval(() => setTick(Date.now()), 30000); return () => clearInterval(id); }, []);
   const [tab, setTab] = useState('');
@@ -72,16 +78,17 @@ export default function Prices() {
 
   async function load() {
     if (!supabase) return;
-    const [b, r, u, c] = await Promise.all([
+    const [b, r, u, c, n] = await Promise.all([
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)'),
       supabase.from('price_updates').select('*').order('created_at', { ascending: false }).limit(500),
-      supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500)
+      supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500),
+      supabase.from('buyer_next_change').select('*')
     ]);
     if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Онови сторінку.'); return; }
     setBuyers(b.data as Buyer[]); setRows(r.data as unknown as Row[]);
     /* хто оновлював і рейтинг — доповнення: без них ціни все одно показуються */
-    setUps(u.error ? [] : (u.data as Update[])); setTop(c.error ? [] : (c.data as Contributor[]));
+    setUps(u.error ? [] : (u.data as Update[])); setTop(c.error ? [] : (c.data as Contributor[])); setNext(n.error ? [] : (n.data as NextChange[]));
     if (b.data?.length) setTab(t => t || (b.data[0] as Buyer).id);
   }
   useEffect(() => { load(); }, []);
@@ -144,6 +151,16 @@ export default function Prices() {
   const cs = tick - STALE;
   const fresh = cur.filter(r => ms(r.at) >= cs).length;
   const lastAt = cur.reduce((m, r) => Math.max(m, ms(r.at)), 0);
+  /* час наступної зміни цін, який вписав гравець; після нього три години показуємо «мала бути» */
+  const nx = next.find(x => x.buyer_id === tab), nxAt = ms(nx?.next_change_at ?? null);
+  const nxState = !nxAt ? 'none' : nxAt > tick ? 'soon' : tick - nxAt < STALE ? 'passed' : 'none';
+  async function saveNext() {
+    const at = nextKyivAt(nextEdit || '', Date.now());
+    if (!at) { setNextErr('Вкажи час як у грі, наприклад 21:40.'); return; }
+    const { error } = await supabase!.rpc('set_next_change', { p_buyer: tab, p_at: new Date(at).toISOString() });
+    if (error) { setNextErr(/^(Спершу|Час|Немає)/.test(error.message) ? error.message : 'Не вдалося зберегти час. Спробуй ще раз.'); return; }
+    setNextEdit(null); setNextErr(''); load();
+  }
   const [allUps, setAllUps] = useState(false);
   const groups = useMemo(() => groupUpdates(ups), [ups]);
   /* видно лише два останні оновлення, решта — під кнопкою */
@@ -162,7 +179,7 @@ export default function Prices() {
       {buyers.length > 0 && (
         <>
           <section className="card recent">
-            <div className="row between rhead"><h2>Останні оновлення цін</h2><Leaderboard list={top} /></div>
+            <div className="row between rhead"><h2 className="ih"><Icon name="clock" />Останні оновлення цін</h2><Leaderboard list={top} /></div>
             {recent.length
               ? <ul className="ulist">{recent.map(g => {
                   /* один стиль для всіх записів: нік жирним на початку, під ним що саме оновлено */
@@ -180,7 +197,7 @@ export default function Prices() {
               : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
             {groups.length > SHOWN && <button type="button" className="btn sm ghost" aria-expanded={allUps} onClick={() => setAllUps(v => !v)}>{allUps ? 'Сховати' : `Показати ще ${Math.min(groups.length, 30) - SHOWN}`}</button>}
           </section>
-          <div className="fld"><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
+          <div className="fld has-ico"><Icon name="search" /><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
           {!q && <div className="tabs" role="tablist">{buyers.map(b => (
             <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>
               <Pic url={b.image_url} alt={b.name} size={24} />{b.name}
@@ -199,6 +216,19 @@ export default function Prices() {
               <div className="cycle" role="status">
                 <div><small>Свіжі ціни (до 3 год)</small><b className="mono">{fresh} з {cur.length}</b></div>
                 <div><small>Останнє оновлення</small><b className="mono">{lastAt ? when(lastAt) : '—'}</b></div>
+                <div className={'nextc' + (nxState === 'passed' ? ' due' : '')}>
+                  <small><Icon name="clock" size={14} /> Наступна зміна цін</small>
+                  {nextEdit !== null
+                    ? <form className="row upd" onSubmit={e => { e.preventDefault(); saveNext(); }}>
+                        <label className="fld"><input type="time" aria-label="Час наступної зміни цін (київський)" value={nextEdit} onChange={e => { setNextEdit(e.target.value); setNextErr(''); }} required autoFocus /></label>
+                        <button className="btn sm acc">Зберегти</button>
+                        <button type="button" className="btn sm ghost" onClick={() => { setNextEdit(null); setNextErr(''); }}>Скасувати</button>
+                      </form>
+                    : <b className="mono">{nxState === 'soon' ? `${when(nxAt).slice(-5)} · через ${dur(nxAt - tick)}` : nxState === 'passed' ? `була о ${when(nxAt).slice(-5)} — онови ціни` : 'невідомо'}</b>}
+                  {nextEdit === null && nxState !== 'none' && nx?.game_name && <small className="muted">вписав {nx.game_name}{nx.static_id ? ' #' + nx.static_id : ''}</small>}
+                  {nextErr && <small className="err" role="alert">{nextErr}</small>}
+                  {nextEdit === null && session && <button type="button" className="btn sm ghost" onClick={() => setNextEdit(nxState === 'soon' ? when(nxAt).slice(-5) : '')}>{nxState === 'soon' ? 'Змінити час' : 'Вписати час'}</button>}
+                </div>
               </div>
             )}
             {cur.length ? (

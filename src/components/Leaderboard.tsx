@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { when } from '../lib/format';
+import Icon from './Icon';
 
 export interface Contributor { id: string; name: string; avatar_url: string | null; week: number; month?: number; year?: number; total: number; last_at: string; game_name?: string | null; static_id?: number | null }
 type Period = 'week' | 'month' | 'year' | 'total';
@@ -18,7 +19,7 @@ export default function Leaderboard({ list }: { list: Contributor[] }) {
 
   return (
     <>
-      <button type="button" className="btn sm" onClick={() => setOpen(true)} aria-haspopup="dialog">🏆 Рейтинг</button>
+      <button type="button" className="btn sm" onClick={() => setOpen(true)} aria-haspopup="dialog"><Icon name="trophy" />Рейтинг</button>
       <dialog ref={dlg} className="modal" aria-labelledby="lb-title" onClose={() => setOpen(false)}
         onClick={e => { if (e.target === dlg.current) setOpen(false); }}>
         <div className="modal-box">

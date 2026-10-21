@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DAY, priceRange, rangePos, series } from './pricestats';
+import { DAY, nextKyivAt, priceRange, rangePos, series } from './pricestats';
+import { kyHM, kyTs } from './events';
 
 const now = 100 * DAY;
 const pts = [{ t: now - 40 * DAY, p: 50 }, { t: now - 10 * DAY, p: 120 }, { t: now - 2 * DAY, p: 200 }, { t: now - DAY, p: 160 }];
@@ -33,4 +34,14 @@ describe('series', () => {
     expect(s.map(x => x.p)).toEqual([50, 120, 200, 160]);
     expect(s[0].t).toBe(now - 30 * DAY);
   });
+});
+
+describe('nextKyivAt', () => {
+  const now = kyTs(2026, 10, 21, 20, 30);
+  it('час пізніше сьогодні — сьогодні, раніше — завтра', () => {
+    expect(nextKyivAt('21:40', now)! - now).toBe(70 * 60000);
+    expect(kyHM(nextKyivAt('09:05', now)!)).toBe('09:05');
+    expect(nextKyivAt('09:05', now)! - now).toBe((12 * 60 + 35) * 60000);
+  });
+  it('нісенітниця — null', () => { expect(nextKyivAt('25:00', now)).toBeNull(); expect(nextKyivAt('abc', now)).toBeNull(); });
 });

@@ -1,3 +1,4 @@
+import { kyParts, kyTs } from './events';
 /* Статистика ціни скупника, як у хабі: межі, положення ціни в межах і точки для графіка.
    Межі вписує редактор (з гри); поки їх немає — беремо мінімум і максимум, що траплялися за період. */
 export interface Pt { t: number; p: number }
@@ -33,3 +34,13 @@ export function series(pts: Pt[], now = Date.now(), period = PERIOD): Pt[] {
 
 /* скупники міняють ціни в різний час — ціна, якій більше 3 годин, підсвічується як «може бути застаріла» */
 export const STALE = 3 * 36e5;
+
+/* «21:40» з гри → найближчий такий момент за київським часом (сьогодні або завтра) */
+export function nextKyivAt(hm: string, now = Date.now()): number | null {
+  const m = hm.match(/^(\d{1,2}):(\d{2})$/); if (!m) return null;
+  const h = +m[1], mi = +m[2]; if (h > 23 || mi > 59) return null;
+  const p = kyParts(now);
+  let t = kyTs(p.y, p.mo, p.d, h, mi);
+  if (t <= now) { const d = new Date(Date.UTC(p.y, p.mo - 1, p.d + 1)); t = kyTs(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), h, mi); }
+  return t;
+}

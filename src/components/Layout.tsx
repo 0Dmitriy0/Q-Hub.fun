@@ -2,20 +2,23 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import ThemeToggle from './ThemeToggle';
 import StaticGate from './StaticGate';
+import Icon from './Icon';
+import Backdrop from './Backdrop';
 
-const NAV: [string, string][] = [
-  ['/', 'Головна'], ['/tsiny', 'Скупник'], ['/iventy', 'Івенти'], ['/transport', 'Транспорт'],
-  ['/roboty', 'Роботи'], ['/mapa', 'Мапа'], ['/programa', 'Програма']
+const NAV: [string, string, string][] = [
+  ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/transport', 'Транспорт', 'car'],
+  ['/roboty', 'Роботи', 'jobs'], ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
 ];
 
 export default function Layout() {
   const { session, name, avatar, signIn } = useAuth();
   return (
     <div className="app">
+      <Backdrop />
       <header className="top">
         <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><span className="logo" aria-hidden="true">Q</span><b>Q-Hub</b></NavLink>
         <nav className="nav" aria-label="Розділи">
-          {NAV.map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}
+          {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
         </nav>
         <div className="who">
           <ThemeToggle />
