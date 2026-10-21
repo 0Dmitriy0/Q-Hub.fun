@@ -45,6 +45,7 @@ set role anon;
 do $$ begin
   assert (select reporter_name from public.price_updates order by created_at desc limit 1) <> '', 'немає імені в оновленнях';
   assert (select total from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 1, 'рейтинг рахує не так';
+  assert (select week + month + year from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 3, 'рейтинг за періоди рахує не так';
 end $$;
 reset role;
 \echo 'Ціни гравців ok: цикл 3 год; гість не вносить; межі ±10%; один раз за цикл (виправлення замінює); автор у ціні, історії й рейтингу'

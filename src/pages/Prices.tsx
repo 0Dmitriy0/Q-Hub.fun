@@ -6,12 +6,12 @@ import { money, parseMoney, when } from '../lib/format';
 import { CYCLE_H, GOOD, cycleStart, nextCycle, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
 import { dur, kyHM } from '../lib/events';
 import { PriceChart, RangeBar, Spark } from '../components/PriceChart';
+import Leaderboard, { type Contributor } from '../components/Leaderboard';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
 interface Update { id: number; buyer_id: string; item_id: number; price: number; created_at: string; reporter_name: string }
-interface Contributor { id: string; name: string; avatar_url: string | null; week: number; total: number; last_at: string }
 
 interface Hist { buyer_id: string; item_id: number; price: number; at: string }
 
@@ -67,7 +67,7 @@ export default function Prices() {
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)'),
       supabase.from('price_updates').select('id,buyer_id,item_id,price,created_at,reporter_name').order('created_at', { ascending: false }).limit(500),
-      supabase.from('contributors').select('*').order('week', { ascending: false }).order('total', { ascending: false }).limit(20)
+      supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500)
     ]);
     if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Онови сторінку.'); return; }
     setBuyers(b.data as Buyer[]); setRows(r.data as unknown as Row[]);
@@ -134,7 +134,9 @@ export default function Prices() {
   }
   const cs = cycleStart(tick), nc = nextCycle(tick);
   const fresh = cur.filter(r => ms(r.at) >= cs).length;
-  const recent = ups.filter(u => u.buyer_id === tab).slice(0, 15);
+  const [allUps, setAllUps] = useState(false);
+  const recent = ups.slice(0, allUps ? 40 : 8);
+  const buyerName = (id: string) => buyers.find(b => b.id === id)?.name || '';
   const itemName = (id: number) => rows.find(r => r.item_id === id)?.items?.name || '—';
 
   return (
@@ -145,6 +147,16 @@ export default function Prices() {
       {supabase && !err && !buyers.length && <div className="card empty">Каталог скупників ще порожній. Адміну: запусти <span className="mono">supabase/seed/catalog_from_hub.sql</span> у Supabase → SQL Editor.</div>}
       {buyers.length > 0 && (
         <>
+          <section className="card recent">
+            <div className="row between"><h2>Останні оновлення цін</h2><Leaderboard list={top} cycleH={CYCLE_H} /></div>
+            {recent.length
+              ? <div className="scroll"><table className="t"><thead><tr><th>Товар</th><th>Скупник</th><th className="n">Ціна</th><th>Хто оновив</th><th>Коли</th></tr></thead>
+                  <tbody>{recent.map(u => <tr key={u.id}><td>{itemName(u.item_id)}</td>
+                    <td><a href={'#' + u.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(u.buyer_id); }}>{buyerName(u.buyer_id)}</a></td>
+                    <td className="n">{money(u.price)}</td><td>{u.reporter_name || 'гравець'}</td><td className={ms(u.created_at) < cs ? 'muted' : ''}>{when(u.created_at)}</td></tr>)}</tbody></table></div>
+              : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
+            {ups.length > 8 && <button type="button" className="btn sm ghost" onClick={() => setAllUps(v => !v)}>{allUps ? 'Згорнути' : 'Показати більше'}</button>}
+          </section>
           <div className="fld"><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
           {!q && <div className="tabs" role="tablist">{buyers.map(b => (
             <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>
@@ -215,23 +227,6 @@ export default function Prices() {
                   </div>);
               })}</div>
             ) : <div className="empty">{q ? 'Нічого не знайдено.' : 'У цього скупника ще немає товарів.'}</div>}
-          </section>
-          {!q && buyer && (
-            <section className="card">
-              <h2>Останні оновлення · {buyer.name}</h2>
-              {recent.length
-                ? <div className="scroll"><table className="t"><thead><tr><th>Товар</th><th className="n">Ціна</th><th>Хто оновив</th><th>Коли</th></tr></thead>
-                    <tbody>{recent.map(u => <tr key={u.id}><td>{itemName(u.item_id)}</td><td className="n">{money(u.price)}</td><td>{u.reporter_name || 'гравець'}</td><td className={ms(u.created_at) < cs ? 'muted' : ''}>{when(u.created_at)}</td></tr>)}</tbody></table></div>
-                : <div className="empty">Гравці ще не оновлювали ціни цього скупника. Будь першим — натисни «Оновити ціну» біля товару.</div>}
-            </section>
-          )}
-          <section className="card">
-            <h2>Рейтинг тих, хто вносить ціни</h2>
-            <p className="muted note">Бал — за кожне оновлення ціни. Один товар у скупника рахується раз за цикл ({CYCLE_H} год), виправлення в тому ж циклі бала не додає.</p>
-            {top.length
-              ? <div className="scroll"><table className="t"><thead><tr><th>#</th><th>Гравець</th><th className="n">За 7 днів</th><th className="n">Усього</th><th>Останнє</th></tr></thead>
-                  <tbody>{top.map((c, i) => <tr key={c.id}><td className="mono">{i + 1}</td><td><span className="row who-cell">{c.avatar_url && <img src={c.avatar_url} alt="" width={22} height={22} className="ava" />}{c.name || 'гравець'}</span></td><td className="n">{c.week}</td><td className="n">{c.total}</td><td>{when(c.last_at)}</td></tr>)}</tbody></table></div>
-              : <div className="empty">Рейтинг поки порожній. Перше оновлення ціни — і ти на першому місці.</div>}
           </section>
         </>
       )}
