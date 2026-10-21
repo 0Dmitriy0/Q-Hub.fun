@@ -55,3 +55,29 @@ jobs:
           protocol: ftps
           local-dir: ./dist/
           server-dir: ${{ secrets.FTP_DIR || vars.FTP_DIR || './' }}
+      # Перевірка після викладання: чи сайт віддає саме цю збірку і чи в базі є все, що потрібно сторінці цін.
+      # Ключ — публічний (той самий, що в браузері гравця), тож тут видно лише те, що бачить будь-хто.
+      - name: Check live site and database
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: |
+          set +e
+          echo "== сайт"
+          for u in https://q-hub.fun/tsiny http://q-hub.fun/tsiny; do echo "$u -> $(curl -s -o /tmp/i.html -w '%{http_code}' "$u")"; done
+          curl -s https://q-hub.fun/tsiny -o /tmp/i.html
+          live=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' /tmp/i.html | head -1); built=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html | head -1)
+          echo "на сайті: $live | у збірці: $built"; [ "$live" = "$built" ] && echo "САЙТ: актуальна версія" || echo "САЙТ: СТАРА ВЕРСІЯ або інша папка"
+          echo "cache-control: $(curl -sI https://q-hub.fun/tsiny | grep -i '^cache-control' | tr -d '\r')"
+          echo "js -> $(curl -s -o /dev/null -w '%{http_code}' "https://q-hub.fun/$built")"
+          echo "== база"
+          set -a; . ./.env.production; set +a
+          R="$VITE_SUPABASE_URL/rest/v1"; K="$VITE_SUPABASE_ANON_KEY"
+          q() { code=$(curl -s -o /tmp/r -w '%{http_code}' -H "apikey: $K" -H "Prefer: count=exact" -D /tmp/h "$R/$2");
+                n=$(grep -i '^content-range' /tmp/h | sed 's/.*\///' | tr -d '\r'); echo "$1: HTTP $code, рядків=${n:-?} $( [ "$code" = 200 ] || head -c 160 /tmp/r)"; }
+          q "скупники (0001)" "buyers?select=id"
+          q "ціни редактора (0002)" "buyer_items?select=price&price=gt.0"
+          q "межі мін/макс NPC" "buyer_items?select=min_price&min_price=gt.0"
+          q "історія цін (0003)" "price_history?select=id"
+          q "оновлення гравців (0004)" "price_updates?select=id"
+          q "рейтинг (0004)" "contributors?select=id"
+          echo "цикл (0004): $(curl -s -X POST -H "apikey: $K" -H 'Content-Type: application/json' -d '{}' "$R/rpc/price_cycle_start" | head -c 160)"
