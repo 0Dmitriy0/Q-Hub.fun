@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { money } from '../lib/format';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
 import VehicleDialog, { type VehicleFull } from '../components/VehicleDialog';
 import Select from '../components/Select';
+import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
 
 type Kind = 'auto' | 'moto' | 'avia';
 type Vehicle = VehicleFull;
@@ -58,6 +58,7 @@ export default function Transport() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<Sort>('price');
   const [fuel, setFuel] = useState<'all' | 'petrol' | 'electric'>('all');
+  const [cur, setCur] = useState<'all' | PriceKind>('all');
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
@@ -95,12 +96,12 @@ export default function Transport() {
   const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length }), [list]);
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    const r = list.filter(v => (kind === 'all' || v.kind === kind) && (fuel === 'all' || (v.fuel || 'petrol') === fuel) && (!ql || (v.name + ' ' + v.brand).toLowerCase().includes(ql)));
+    const r = list.filter(v => (kind === 'all' || v.kind === kind) && (fuel === 'all' || (v.fuel || 'petrol') === fuel) && (cur === 'all' || priceKind(v) === cur) && (!ql || (v.name + ' ' + v.brand).toLowerCase().includes(ql)));
     const num = (x: number | null) => x ?? -1;
     return r.sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name, 'uk')
       : sort === 'rating' ? (scores[b.id]?.avg ?? 0) - (scores[a.id]?.avg ?? 0) || (scores[b.id]?.votes ?? 0) - (scores[a.id]?.votes ?? 0)
-      : sort === 'speed' ? num(b.speed) - num(a.speed) : sort === 'trunk' ? num(b.trunk) - num(a.trunk) : b.price - a.price);
-  }, [list, kind, q, sort, scores, fuel]);
+      : sort === 'speed' ? num(b.speed) - num(a.speed) : sort === 'trunk' ? num(b.trunk) - num(a.trunk) : (() => { const x = priceSortKey(a), y = priceSortKey(b); return x[0] - y[0] || y[1] - x[1]; })());
+  }, [list, kind, q, sort, scores, fuel, cur]);
 
   return (
     <>
@@ -114,6 +115,8 @@ export default function Transport() {
           </a>))}</div>
         <div className="tbar-row">
           <div className="fld has-ico grow"><Icon name="search" /><input type="search" placeholder="Пошук за назвою або маркою" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук транспорту" /></div>
+          <div className="fld sortf"><Select label="Валюта" value={cur} onChange={setCur}
+            options={[{ value: 'all', label: 'Будь-яка валюта', icon: 'tag' }, { value: 'game', label: 'Ігрова валюта', icon: 'tag' }, { value: 'donate', label: 'Донатна валюта', icon: 'coin' }, { value: 'exclusive', label: 'Ексклюзив', icon: 'star' }]} /></div>
           <div className="fld sortf"><Select label="Двигун" value={fuel} onChange={setFuel}
             options={[{ value: 'all', label: 'Пальне й електро', icon: 'car' }, { value: 'petrol', label: 'Лише на пальному', icon: 'fuel' }, { value: 'electric', label: 'Лише електро', icon: 'bolt' }]} /></div>
           <div className="fld sortf"><Select label="Сортування" value={sort} onChange={setSort} options={SORTS.map(([k, l]) => ({ value: k, label: l, icon: SORT_ICON[k] }))} /></div>
@@ -134,7 +137,8 @@ export default function Transport() {
                 }} /></span>}
               </div>
               <div className="vhead"><h3><button type="button" className="vopen" onClick={() => setOpenId(v.id)}>{v.name}</button></h3>{v.brand && <small className="muted">{v.brand}{v.salon ? ' · ' + v.salon : ''}</small>}</div>
-              <b className="mono vprice">{v.price ? money(v.price) : '—'}</b>
+              <b className={'mono vprice' + (priceKind(v) === 'donate' ? ' donate-c' : priceKind(v) === 'exclusive' ? ' excl-c' : '')} title={priceKind(v) === 'donate' ? 'Купується за донатну валюту' : undefined}>
+                {priceKind(v) === 'donate' && <Icon name="coin" size={17} />}{priceKind(v) === 'exclusive' && <Icon name="star" size={16} />}{salonLabel(v)}</b>
               <ul className="vspec">
                 {v.speed != null && <li><Icon name="speed" size={15} />{v.speed} км/год</li>}
                 {v.trunk != null && <li><Icon name="box" size={15} />{v.trunk} слот(ів)</li>}

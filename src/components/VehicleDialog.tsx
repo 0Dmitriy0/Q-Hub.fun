@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { money, parseMoney } from '../lib/format';
 import { DRIFT_CHIP, TUNING, XENON_DEFAULT, stageSpeeds, tuningCost } from '../lib/tuning';
 import Icon from './Icon';
+import { priceKind, salonLabel } from '../lib/vehiclePrice';
 
 export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
-  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric';
+  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric'; currency?: 'game' | 'donate';
 }
 
 /* вікно транспорту як у грі: фото, тюнінг з калькулятором і характеристики.
@@ -57,7 +58,7 @@ export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; o
                 </tbody></table>
               <button type="button" className="btn acc vd-calc" onClick={calc}><Icon name="chart" />Обрахувати вартість тюнінгу</button>
               {total !== null && <div className="vd-total" role="status"><span>Тюнінг: <b className="mono">{money(total)}</b></span><span className="muted">Разом з авто (держ.): <b className="mono">{money(total + gov)}</b></span></div>}
-            </> : <p className="muted">Держ. вартість ще не вписана — тюнінг порахувати не можна.</p>}
+            </> : <p className="muted">Держ. вартість ще не вписана — тюнінг рахується від неї, тож поки порахувати не можна.</p>}
           </section>
           <section>
             <h3 className="ih"><Icon name="shield" size={16} />Інформація</h3>
@@ -65,8 +66,9 @@ export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; o
               {v.min_level != null && <><dt>Мінімальний рівень</dt><dd>{v.min_level}</dd></>}
               <dt>Назва</dt><dd>{v.name}</dd>
               {v.real_name ? <><dt>Реальна назва</dt><dd>{v.real_name}</dd></> : null}
-              <dt>Вартість у салоні</dt><dd>{v.exclusive || v.salon_price == null ? <span className="muted">Ексклюзивний транспорт — у салоні придбати неможливо.</span> : <b className="mono">{money(v.salon_price)}</b>}</dd>
-              <dt>Державна вартість</dt><dd><b className="mono">{gov ? money(gov) : '—'}</b></dd>
+              <dt>Вартість у салоні</dt><dd>{priceKind(v) === 'exclusive' ? <span className="muted">Ексклюзивний транспорт — у салоні придбати неможливо.</span>
+                : <><b className={'mono' + (priceKind(v) === 'donate' ? ' donate-c' : '')}>{priceKind(v) === 'donate' && <Icon name="coin" size={15} />}{salonLabel(v)}</b>{priceKind(v) === 'donate' && <small className="muted"> · донатна валюта</small>}</>}</dd>
+              <dt>Державна вартість</dt><dd>{gov ? <b className="mono">{money(gov)}</b> : <span className="muted">невідома</span>}</dd>
               {v.speed != null && <><dt>Максимальна швидкість</dt><dd>{v.speed} км/год</dd></>}
             </dl>
             {speeds.length > 0 && <div className="vd-stages"><b>Максимальна швидкість з чіпами для автотюнінгу:</b>
