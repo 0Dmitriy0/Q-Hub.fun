@@ -129,3 +129,22 @@ end $$;
 reset role;
 delete from public.vehicles where name like 'Test %';
 \echo 'Транспорт ok: читають усі, пишуть редактори; одна оцінка від гравця (змінюється), середню бачать усі'
+
+-- фото транспорту: редактор не ставить, адмін ставить
+insert into public.vehicles (kind, name) values ('auto', 'Pic Car');
+update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000b';
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
+do $$ begin
+  begin update public.vehicles set image_url = 'x' where name = 'Pic Car'; raise exception 'редактор поставив фото транспорту';
+  exception when raise_exception then if sqlerrm <> 'Картинки змінює лише адмін.' then raise; end if; end;
+end $$;
+reset role;
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00000000000b';
+set role authenticated;
+update public.vehicles set image_url = 'https://x/v.webp' where name = 'Pic Car';
+reset role;
+do $$ begin assert (select image_url from public.vehicles where name = 'Pic Car') = 'https://x/v.webp', 'адмін не поставив фото'; end $$;
+delete from public.vehicles where name = 'Pic Car';
+update public.profiles set role = 'user' where id = '00000000-0000-0000-0000-00000000000b';
+\echo 'Фото транспорту ok: ставить лише адмін'

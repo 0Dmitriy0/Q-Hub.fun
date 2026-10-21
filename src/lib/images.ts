@@ -10,15 +10,18 @@ async function decode(file: File): Promise<ImageBitmap | HTMLImageElement> {
   }
 }
 
-/* картинка → квадрат до 256 px у WebP (≈10–30 КБ) і в публічне сховище «catalog»; повертає адресу */
-export async function uploadCatalogImage(file: File, path: string): Promise<string> {
+/* картинка → кадр потрібних пропорцій (за замовчуванням квадрат 256 px; для транспорту 640×360) у WebP
+   і в публічне сховище «catalog»; обрізається по центру; повертає адресу */
+export async function uploadCatalogImage(file: File, path: string, frame: { w: number; h: number } = { w: 256, h: 256 }): Promise<string> {
   if (!supabase) throw new Error('немає бази');
   if (!file.type.startsWith('image/')) throw new Error('Це не картинка');
   const bmp = await decode(file);
-  const side = Math.min(bmp.width, bmp.height), size = Math.min(256, side);
-  const c = document.createElement('canvas'); c.width = size; c.height = size;
-  const ctx = c.getContext('2d')!;
-  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+  const ratio = frame.w / frame.h;
+  const sw = Math.min(bmp.width, bmp.height * ratio), sh = sw / ratio;
+  const k = Math.min(1, frame.w / sw);
+  const c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+  const ctx = c.getContext('2d')!; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, (bmp.width - sw) / 2, (bmp.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
   const blob: Blob = await new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('не вдалося стиснути'))), 'image/webp', 0.85));
   /* Safari не вміє кодувати WebP і віддає PNG — тоді й тип ставимо справжній */
   const { error } = await supabase.storage.from('catalog').upload(path, blob, { upsert: true, contentType: blob.type || 'image/png', cacheControl: '3600' });

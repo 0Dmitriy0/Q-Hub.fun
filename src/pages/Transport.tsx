@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
 import Icon from '../components/Icon';
+import PicUpload from '../components/PicUpload';
 
 type Kind = 'auto' | 'moto' | 'avia';
 interface Vehicle { id: number; kind: Kind; name: string; brand: string; salon: string; price: number; speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string }
@@ -45,7 +46,8 @@ function MyStars({ mine, onRate }: { mine: number; onRate: (n: number) => void }
 }
 
 export default function Transport() {
-  const { session, signIn } = useAuth();
+  const { session, signIn, role } = useAuth();
+  const isAdmin = role === 'admin';
   const [list, setList] = useState<Vehicle[]>([]);
   const [scores, setScores] = useState<Record<number, Score>>({});
   const [mine, setMine] = useState<Record<number, number>>({});
@@ -119,7 +121,12 @@ export default function Transport() {
           const sc = scores[v.id];
           return (
             <article className="card vcard" key={v.id}>
-              <div className="vpic">{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}</div>
+              <div className="vpic">{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}
+                {isAdmin && <span className="vpic-up"><PicUpload label={'Фото транспорту ' + v.name} path={`vehicles/${v.id}.webp`} frame={{ w: 640, h: 360 }} onDone={async url => {
+                  const { error } = await supabase!.from('vehicles').update({ image_url: url }).eq('id', v.id); if (error) throw error;
+                  setList(l => l.map(x => (x.id === v.id ? { ...x, image_url: url } : x)));
+                }} /></span>}
+              </div>
               <div className="vhead"><h3>{v.name}</h3>{v.brand && <small className="muted">{v.brand}{v.salon ? ' · ' + v.salon : ''}</small>}</div>
               <b className="mono vprice">{v.price ? money(v.price) : '—'}</b>
               <ul className="vspec">
