@@ -226,3 +226,7 @@ tr.podium td { font-weight: 700; }
 .ulist li:first-child { border-top: 0; }
 .ug-items b { color: var(--fg); }
 .rhead { flex-wrap: nowrap; gap: 10px; } .rhead .btn { flex: none; }
+/* статік */
+.static-form { display: flex; flex-direction: column; gap: 10px; }
+.static-form .btn { align-self: flex-start; }
+button.link { background: none; border: 0; padding: 0; color: var(--accent-hi); font: inherit; text-decoration: underline; cursor: pointer; }

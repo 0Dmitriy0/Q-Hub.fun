@@ -20,6 +20,35 @@ end $$;
 -- гравець B (звичайний, не редактор) вносить ціну Окуня (межі 35–267)
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
+-- без статіка ціну не прийме
+do $$ begin
+  begin
+    insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 150 from public.items where name = 'Окунь';
+    raise exception 'ціну прийнято без статіка';
+  exception when raise_exception then
+    if sqlerrm <> 'Спершу вкажи свій статік у профілі.' then raise; end if;
+  end;
+end $$;
+-- статік вписує сам гравець; чужий (уже зайнятий) не візьме, роль собі не підніме
+update public.profiles set static_id = 12345 where id = auth.uid();
+do $$ begin
+  assert (select static_id from public.profiles where id = auth.uid()) = 12345, 'статік не зберігся';
+  begin
+    update public.profiles set role = 'admin' where id = auth.uid();
+    raise exception 'гравець підняв собі роль';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+update public.profiles set static_id = 777 where id = '00000000-0000-0000-0000-00000000000a';
+set role authenticated;
+do $$ begin
+  begin
+    update public.profiles set static_id = 777 where id = auth.uid();
+    raise exception 'взяв чужий статік';
+  exception when unique_violation then null;
+  end;
+end $$;
 insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 150 from public.items where name = 'Окунь';
 do $$ begin
   begin
@@ -48,4 +77,4 @@ do $$ begin
   assert (select week + month + year from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 3, 'рейтинг за періоди рахує не так';
 end $$;
 reset role;
-\echo 'Ціни гравців ok: цикл 3 год; гість не вносить; межі ±10%; один раз за цикл (виправлення замінює); автор у ціні, історії й рейтингу'
+\echo 'Ціни гравців ok: цикл 3 год; гість не вносить; межі ±10%; один раз за цикл (виправлення замінює); без статіка не приймає, статік унікальний; автор у ціні, історії й рейтингу'

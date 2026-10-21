@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import ThemeToggle from './ThemeToggle';
+import StaticGate from './StaticGate';
 
 const NAV: [string, string][] = [
   ['/', 'Головна'], ['/tsiny', 'Ціни'], ['/iventy', 'Івенти'], ['/transport', 'Транспорт'],
@@ -24,6 +25,7 @@ export default function Layout() {
         </div>
       </header>
       <main><Outlet /></main>
+      <StaticGate />
       <footer className="foot">Q-Hub — фан-проєкт гравців, не пов'язаний з адміністрацією QuantRP. Ціни вносять гравці й перевіряють одне одного.</footer>
     </div>
   );

@@ -10,6 +10,9 @@ interface Auth {
   avatar: string;
   role: string;
   isStaff: boolean;
+  /* статік (ігровий ID): null — ще не вказаний, undefined — профіль ще вантажиться */
+  staticId: number | null | undefined;
+  saveStatic: (v: number) => Promise<string | null>;
   characters: Character[];
   current: Character | null;
   setCurrent: (id: string) => void;
@@ -25,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [role, setRole] = useState('user');
+  const [staticId, setStaticId] = useState<number | null | undefined>(undefined);
   const [curId, setCurId] = useState<string>(() => { try { return localStorage.getItem(CUR_KEY) || ''; } catch { return ''; } });
 
   useEffect(() => {
@@ -42,8 +46,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { reloadCharacters(); }, [reloadCharacters]);
   /* роль видно лише собі (RLS); змінити її з сайту не можна */
   useEffect(() => {
-    if (!supabase || !session) { setRole('user'); return; }
-    supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(({ data }) => setRole((data?.role as string) || 'user'));
+    if (!supabase || !session) { setRole('user'); setStaticId(undefined); return; }
+    const id = session.user.id, db = supabase;
+    db.from('profiles').select('role,static_id').eq('id', id).maybeSingle().then(async ({ data, error }) => {
+      if (error) {
+        /* у базі ще немає стовпця static_id (міграцію 0007 не запущено) — роль беремо окремо й сайт не блокуємо */
+        const r = await db.from('profiles').select('role').eq('id', id).maybeSingle();
+        setRole((r.data?.role as string) || 'user'); setStaticId(0); return;
+      }
+      setRole((data?.role as string) || 'user');
+      setStaticId((data?.static_id as number | null) ?? null);
+    });
+  }, [session?.user.id]);
+
+  const saveStatic = useCallback(async (v: number) => {
+    if (!supabase || !session) return 'Спершу увійди через Discord.';
+    const { error } = await supabase.from('profiles').update({ static_id: v }).eq('id', session.user.id);
+    if (error) return error.code === '23505' ? 'Цей статік уже вказав інший гравець. Якщо це твій — напиши адміну.' : 'Не вдалося зберегти статік. Спробуй ще раз.';
+    setStaticId(v); return null;
   }, [session]);
 
   const setCurrent = useCallback((id: string) => { setCurId(id); try { localStorage.setItem(CUR_KEY, id); } catch { /* приватний режим */ } }, []);
@@ -52,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Auth>(() => ({
     ready, session, characters, current, setCurrent, reloadCharacters,
-    role, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
+    role, staticId, saveStatic, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
     name: String(meta.full_name || meta.name || meta.custom_claims?.global_name || ''),
     avatar: String(meta.avatar_url || ''),
     signIn: async () => {
@@ -60,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + '/kabinet' } });
     },
     signOut: async () => { if (supabase) await supabase.auth.signOut(); setCharacters([]); }
-  }), [ready, session, characters, current, setCurrent, reloadCharacters, role, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
+  }), [ready, session, characters, current, setCurrent, reloadCharacters, role, staticId, saveStatic, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
