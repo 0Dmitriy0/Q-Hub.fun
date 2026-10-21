@@ -55,6 +55,24 @@ jobs:
           protocol: ftps
           local-dir: ./dist/
           server-dir: ${{ secrets.FTP_DIR || vars.FTP_DIR || './' }}
+      # Розвідка: яка папка на FTP справді є коренем сайту (там лежить index.html, який зараз віддає q-hub.fun).
+      # Пароль бере з Secrets і в лог не потрапляє.
+      - name: Find the site folder on FTP
+        if: github.event_name != 'pull_request' && env.HAS_FTP == 'true'
+        continue-on-error: true
+        env:
+          U: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          P: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
+          H: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+        run: |
+          set +e
+          live=$(curl -s https://q-hub.fun/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1); echo "сайт зараз віддає: $live"
+          f() { curl -s --ssl-reqd --insecure -u "$U:$P" "$@"; }
+          echo "== корінь FTP-акаунта"; f --list-only "ftp://$H/" | sort
+          for d in "" public_html/ www/ q-hub.fun/ q-hub.fun/public_html/ ../ ../public_html/ ../q-hub.fun/ ../../public_html/; do
+            idx=$(f "ftp://$H/${d}index.html" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+            [ -n "$idx" ] && echo "папка '${d:-./}': index.html -> $idx $( [ "$idx" = "$live" ] && echo '<<< ЦЕ ПАПКА САЙТУ')"
+          done
       # Перевірка після викладання: чи сайт віддає саме цю збірку і чи в базі є все, що потрібно сторінці цін.
       # Ключ — публічний (той самий, що в браузері гравця), тож тут видно лише те, що бачить будь-хто.
       - name: Check live site and database
