@@ -163,14 +163,20 @@ function runsOf(im: HTMLImageElement | null, n = 24): IconRuns {
   try { return iconRuns(x.getImageData(0, 0, n, n).data, n); } catch { return []; }   // чужа картинка без CORS
 }
 
+/* список об'єктів частини мапи (minimap_C_R.odd): усі її .odr за алфавітом — без нього гра нові файли не підхопить */
+export const oddText = (k: string, odrs: string[]) =>
+  `Version 165 32\n{\n${[...new Set(odrs)].sort().map(n => `\tminimap_${k}\\${n}`).join('\n')}\n}`;
+
 /* файли значків для вектора мінікарти: у кожній частині мапи — supertile_fore_C_R_tile_2_2 (далі 2_3…, якщо значків забагато) */
-async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLImageElement | null>): Promise<ZipEntry[]> {
+async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLImageElement | null>, added: Map<string, string[]>, taken: Set<string>): Promise<ZipEntry[]> {
   const runs = new Map<string, IconRuns>(); for (const [src, im] of imgs) runs.set(src, runsOf(im));
   const groups = new Map<string, GamePin[]>();
   for (const p of pins) { const [c, r] = supertileOf(p.x, p.y); const k = c + '_' + r; groups.set(k, [...(groups.get(k) || []), p]); }
   const out: ZipEntry[] = []; const enc = new TextEncoder();
   for (const [k, list] of groups) {
-    let part = 2, m = new IconMesh();
+    /* у базі вже лежать назви й зони (tile_2_2, 2_3…) — значки йдуть у наступні вільні файли */
+    let part = 2; while (taken.has(`minimap_${k}/supertile_fore_${k}_tile_2_${part}.odr`)) part++;
+    let m = new IconMesh();
     const flush = async () => {
       if (!m.size) return;
       const tile = `supertile_fore_${k}_tile_2_${part}`, dir = `minimap_${k}/`;
@@ -179,7 +185,9 @@ async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLI
         const raw = enc.encode(text); const z = await deflate(raw);
         out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
       }
-      part++; m = new IconMesh();
+      added.set(k, [...(added.get(k) || []), tile + '.odr']);
+      part++; while (taken.has(`minimap_${k}/supertile_fore_${k}_tile_2_${part}.odr`)) part++;
+      m = new IconMesh();
     };
     for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM, p.color, runs.get(p.icon) || []); }
     await flush();
@@ -187,7 +195,7 @@ async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLI
   return out;
 }
 
-/* повний пак для гри: файли експорту Hydra (наша мапа) + значки вибраних міток + 6 текстур */
+/* повний пак для гри: наша мапа (експорт Hydra з назвами й зеленими зонами в стилі сайту) + значки вибраних міток + 6 текстур */
 export async function buildGamePack(pins: GamePin[], opt: { iconM: number; texSize: number; texPin: number }, step?: (s: string) => void): Promise<Blob> {
   step?.('Завантажую мапу…');
   const res = await fetch('/map/game/base.zip'); if (!res.ok) throw new Error('немає файлів мапи');
@@ -196,9 +204,18 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; texSi
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
-  const icons = await iconFiles(pins, opt.iconM, imgs);
+  const added = new Map<string, string[]>();
+  const icons = await iconFiles(pins, opt.iconM, imgs, added, new Set(base.map(e => e.name)));
+  /* .odd змінених частин: старі .odr з експорту + нові файли значків */
+  const enc = new TextEncoder(), odds: ZipEntry[] = [];
+  for (const [k, list] of added) {
+    const own = base.filter(e => e.name.startsWith(`minimap_${k}/`) && /^minimap_[\d_]+\/[^/]+\.odr$/.test(e.name)).map(e => e.name.split('/')[1]);
+    const raw = enc.encode(oddText(k, [...own, ...list])); const z = await deflate(raw);
+    odds.push({ name: `minimap_${k}.odd`, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
+  }
+  const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
   const tex = await textures(pins, opt.texSize, opt.texPin, imgs);
   step?.('Пакую архів…');
-  return new Blob([makeZip([...base, ...icons, ...tex]) as BlobPart], { type: 'application/zip' });
+  return new Blob([makeZip([...base.filter(e => !replaced.has(e.name)), ...odds, ...icons, ...tex]) as BlobPart], { type: 'application/zip' });
 }

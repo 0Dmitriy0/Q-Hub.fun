@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import type { MapCategory, MapMark } from '../lib/mapData';
 
+/* ці мітки адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію сховано */
+const PRESET = new Set(['graffiti', 'ufo-land', 'oil']);
+
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур) */
 export default function GameMapExport({ groups, marks, catById, isOn }: {
   groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean;
 }) {
   /* поки галочку не чіпали — як у фільтрі мапи (категорії з бази приходять уже після відкриття сторінки) */
   const [sel, setSel] = useState<Record<string, boolean>>({});
-  const on = (c: MapCategory) => sel[c.id] ?? isOn(c);
+  const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
+  const list = groups;
   const [iconM, setIconM] = useState(12);
   const [tex, setTex] = useState(512);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const count: Record<string, number> = {}; for (const m of marks) count[m.category] = (count[m.category] || 0) + 1;
-  const all = groups.flatMap(g => g.cats);
+  const all = list.flatMap(g => g.cats);
   const picked = marks.filter(m => catById[m.category] && on(catById[m.category]));
   const set = (ids: string[], v: boolean) => setSel(s => { const n = { ...s }; for (const id of ids) n[id] = v; return n; });
 
@@ -36,7 +40,8 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
         <button type="button" onClick={() => set(all.map(c => c.id), false)}>Жодної</button>
       </div>
-      {groups.map(({ grp, cats }) => (
+      <p className="muted">Назви місць і зелені зони вже є на мапі; графіті, НЛО на суші й нафтокачки вибрані одразу.</p>
+      {list.map(({ grp, cats }) => (
         <fieldset key={grp} className="mgame-grp">
           <legend>{grp}</legend>
           {cats.map(c => (

@@ -18,7 +18,7 @@ describe('карта для гри', () => {
   });
 });
 
-import { IconMesh, iconRuns, meshText, odrText, readZip, supertileOf } from './gameMap';
+import { IconMesh, iconRuns, meshText, oddText, odrText, readZip, supertileOf } from './gameMap';
 
 describe('значки міток як у Hydra', () => {
   it('частина мапи за координатами (графіті з експорту Hydra лежить у minimap_3_4)', () => {
@@ -50,5 +50,9 @@ describe('значки міток як у Hydra', () => {
     const r = readZip(z);
     expect(r.map(e => e.name)).toEqual(['a/', 'a/b.txt']);
     expect(r[1]).toMatchObject({ method: 8, crc: 7, size: 9 }); expect([...r[1].data]).toEqual([1, 2, 3]);
+  });
+  it('.odd частини мапи — точнісінько як у Hydra після додавання значка', () => {
+    expect(oddText('3_4', ['supertile_sea_3_4.odr', 'supertile_back_3_4.odr', 'supertile_fore_3_4_tile_0_0.odr', 'supertile_fore_3_4_tile_2_2.odr']))
+      .toBe('Version 165 32\n{\n\tminimap_3_4\\supertile_back_3_4.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_0_0.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_2_2.odr\n\tminimap_3_4\\supertile_sea_3_4.odr\n}');
   });
 });
