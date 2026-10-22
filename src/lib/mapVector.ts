@@ -59,9 +59,23 @@ const getNames = () => names ??= Promise.all([fetch('/map/game/export.json').the
     return { xy, c, pal: meta.namesPalette as string[], cells };
   }).catch(() => null);
 
+let namesIndex: Promise<{ n: number; have: Record<number, number[]> } | null> | null = null;
+const getNamesIndex = () => namesIndex ??= fetch('/map/n/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
+
 export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds) {
   const Layer = L.GridLayer.extend({
     createTile(coords: L.Coords, done: L.DoneCallback) {
+      /* до z6 — готові картинки (scripts/map-names-tiles.py): 200 тис. трикутників на дальньому зумі вішали браузер */
+      if (coords.z <= zmax) {
+        const box = document.createElement('div');   // img без src браузер обводить рамкою — у порожні тайли картинка не кладеться
+        getNamesIndex().then(ix => {
+          if (!ix || !ix.have[coords.z]?.includes(coords.x * ix.n + coords.y)) return done(undefined, box);
+          const img = document.createElement('img'); img.alt = ''; img.width = img.height = 256; img.style.display = 'block';
+          img.onload = () => done(undefined, box); img.onerror = () => done(undefined, box);
+          img.src = `/map/n/${coords.z}/${coords.x}/${coords.y}.webp`; box.append(img);
+        });
+        return box;
+      }
       const t = document.createElement('canvas'); const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const size = this.getTileSize(); t.width = size.x * dpr; t.height = size.y * dpr;
       getNames().then(nm => {
@@ -71,15 +85,22 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
         const ids: number[] = [];
         for (let cx = Math.floor(u0 / NB) - 1; cx <= Math.floor(u1 / NB) + 1; cx++)
           for (let cy = Math.floor(v0 / NB) - 1; cy <= Math.floor(v1 / NB) + 1; cy++) { const a = nm.cells.get(cx * 4096 + cy); if (a) for (const i of a) ids.push(i); }
-        if (!ids.length) return done(undefined, t);
-        ids.sort((a, b) => a - b);
-        const ctx = t.getContext('2d')!, { xy, c, pal } = nm;
+        const { xy, c, pal } = nm, m = 2 / s;   // лише трикутники, що зачіпають тайл (з запасом у 2 px)
+        const vis = ids.filter(i => {
+          const o = i * 6, a = Math.min(xy[o], xy[o + 2], xy[o + 4]), b = Math.max(xy[o], xy[o + 2], xy[o + 4]);
+          if (b < u0 - m || a > u1 + m) return false;
+          const e = Math.min(xy[o + 1], xy[o + 3], xy[o + 5]), f = Math.max(xy[o + 1], xy[o + 3], xy[o + 5]);
+          return f >= v0 - m && e <= v1 + m;
+        });
+        if (!vis.length) return done(undefined, t);
+        vis.sort((a, b) => a - b);
+        const ctx = t.getContext('2d')!;
         ctx.setTransform(s * dpr, 0, 0, s * dpr, -u0 * s * dpr, -v0 * s * dpr);
         ctx.lineWidth = 0.6 / s; ctx.lineJoin = 'round';
-        for (let j = 0; j < ids.length;) {
-          const col = c[ids[j]]; ctx.beginPath();
-          for (; j < ids.length && c[ids[j]] === col; j++) {
-            const o = ids[j] * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath();
+        for (let j = 0; j < vis.length;) {
+          const col = c[vis[j]]; ctx.beginPath();
+          for (; j < vis.length && c[vis[j]] === col; j++) {
+            const o = vis[j] * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath();
           }
           ctx.fillStyle = ctx.strokeStyle = pal[col]; ctx.fill(); ctx.stroke();
         }
@@ -88,5 +109,5 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
       return t;
     },
   });
-  return new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1, pane: 'names' });
+  return new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: 3, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1, updateWhenZooming: false, pane: 'names' });
 }

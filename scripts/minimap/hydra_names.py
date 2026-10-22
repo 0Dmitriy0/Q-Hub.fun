@@ -46,20 +46,93 @@ def write_zip(name, files):   # files: {path: text}; папки — окреми
         for p in sorted(files): z.writestr(p, files[p].encode())
 
 # ---- назви ----
-names = {}; allT = []
+# з тексту прибираємо кільця-обводки зелених зон (суцільні й пунктирні): зелені шматки, що цілком лежать
+# на межі зони з src/data/mapZones.json — інакше кільця ставились навіть без шару «Зелені зони»
+from shapely.geometry import Polygon, Point
+from shapely.ops import unary_union
+from shapely.prepared import prep
+ZJ = json.load(open(os.path.join(os.path.dirname(__file__), '../../src/data/mapZones.json')))
+EDGE = prep(unary_union([Polygon(p[0], p[1:]) for p in ZJ]).boundary.buffer(9))
+def comps(T):   # зв'язні шматки за спільними вершинами
+    key = {}; par = []
+    def find(a):
+        while par[a] != a: par[a] = par[par[a]]; a = par[a]
+        return a
+    ids = np.empty((len(T), 3), int)
+    for i, t in enumerate(T):
+        for j, p in enumerate(t):
+            k = (round(p[0], 3), round(p[1], 3), round(p[2], 3))
+            if k not in key: key[k] = len(par); par.append(len(par))
+            ids[i, j] = key[k]
+    for a, b, c in ids:
+        ra = find(a); par[find(b)] = ra; par[find(c)] = ra
+    root = np.array([find(a) for a in ids[:, 0]])
+    return [np.where(root == r)[0] for r in np.unique(root)]
+
+# ---- логотип Q-Hub під «ГОРА "ЧІЛІАД"» (public/brand/q-hub-logo.svg): скруглений квадрат і «Q», з тінню як у тексту Hydra ----
+import mapbox_earcut as earcut
+from shapely.geometry import box
+LOGO_X, LOGO_Y, LOGO_M = 675.0, 5478.0, 64.0   # центр і розмір, м; назва «"ЧІЛІАД"» — y 5537, висота 35 м
+def svg_q():
+    d = re.search(r' d="([^"]+)"', open(os.path.join(os.path.dirname(__file__), '../../public/brand/q-hub-logo.svg')).read()).group(1)
+    tok = re.findall(r'[MHLQZ]|-?[\d.]+', d); rings = []; cur = []; i = 0; x = y = 0.0
+    while i < len(tok):
+        c = tok[i]; i += 1
+        if c == 'M': x, y = float(tok[i]), float(tok[i + 1]); i += 2; cur = [(x, y)]
+        elif c == 'H': x = float(tok[i]); i += 1; cur.append((x, y))
+        elif c == 'L': x, y = float(tok[i]), float(tok[i + 1]); i += 2; cur.append((x, y))
+        elif c == 'Q':
+            cx, cy, ex, ey = map(float, tok[i:i + 4]); i += 4
+            for t in np.linspace(0, 1, 7)[1:]: cur.append(((1 - t) ** 2 * x + 2 * (1 - t) * t * cx + t * t * ex, (1 - t) ** 2 * y + 2 * (1 - t) * t * cy + t * t * ey))
+            x, y = ex, ey
+        elif c == 'Z': rings.append(cur); cur = []
+    # у SVG: translate(130.69 346.752) scale(0.256 -0.256) у квадраті 512
+    return [[(130.69 + 0.256 * a, 346.752 - 0.256 * b) for a, b in r] for r in rings]
+def tri(poly):   # shapely-полігон (з дірками) -> трикутники (N,3,2)
+    out = []
+    for g in getattr(poly, 'geoms', [poly]):
+        rings = [np.array(g.exterior.coords[:-1])] + [np.array(h.coords[:-1]) for h in g.interiors]
+        v = np.concatenate(rings); ends = np.cumsum([len(r) for r in rings]).astype(np.uint32)
+        out.append(v[np.array(earcut.triangulate_float64(v, ends)).reshape(-1, 3)])
+    return np.concatenate(out)
+def logo_tris(z):
+    k = LOGO_M / 512
+    to = lambda P: np.stack([LOGO_X + (P[..., 0] - 256) * k, LOGO_Y - (P[..., 1] - 256) * k], -1)
+    sq = box(0, 0, 512, 512).buffer(-146).buffer(146, resolution=8)
+    rings = svg_q(); outer = Polygon(rings[1], [rings[2]]); tail = Polygon(rings[0])
+    q = outer.union(tail)
+    def pack(P, col, zz, dx=0.0, dy=0.0):
+        T = to(P); T[..., 0] += dx; T[..., 1] += dy
+        return np.concatenate([T, np.full(T.shape[:2] + (1,), zz), np.broadcast_to(np.array(col, float), T.shape[:2] + (3,))], -1)
+    sh = LOGO_M * 0.06
+    return np.concatenate([pack(tri(sq), (13, 13, 13), z, sh, -sh), pack(tri(sq), (255, 106, 31), z + 0.05), pack(tri(q), (20, 7, 0), z + 0.1)])
+LOGO = logo_tris(36.0)
+LOGO_K = f'{int((LOGO_X + 4500) // 1175)}_{int((8000 - LOGO_Y) // 1388)}'
+greenish = lambda c: c[1] > c[0] + 25 and c[1] > c[2] and c[1] > 60
+area = lambda T: 0.5 * np.abs((T[:, 1, 0] - T[:, 0, 0]) * (T[:, 2, 1] - T[:, 0, 1]) - (T[:, 2, 0] - T[:, 0, 0]) * (T[:, 1, 1] - T[:, 0, 1])).sum()
+names = {}; allT = []; rings = 0
 for f in sorted(glob.glob('new/*/supertile_fore_*_tile_2_2/*.mesh')):
     k = re.search(r'minimap_(\d+_\d+)', f).group(1)
     T = tris_of(f); T = T[T[:, :, 2].mean(1) >= 20]
     if not len(T): continue
+    keep = np.ones(len(T), bool)
+    for ix in comps(T):
+        Tc = T[ix]; w = np.ptp(Tc[:, :, 0]); h = np.ptp(Tc[:, :, 1])
+        hollow = area(Tc) / max(1.0, w * h) < 0.2 and max(w, h) > 8   # тонке кільце чи дуга, а не літера
+        if greenish(T[ix[0], 0, 3:6]) and (hollow or all(EDGE.contains(Point(p[0], p[1])) for p in Tc[:, :, :2].reshape(-1, 2))):
+            keep[ix] = False; rings += 1
+    T = T[keep]
+    if k == LOGO_K: T = np.concatenate([T, LOGO])
+    if not len(T): continue
     T = T[np.argsort(T[:, :, 2].mean(1), kind='stable')]   # спершу тінь, потім літери
     allT.append(T)
-    for part, s in enumerate(range(0, len(T), 20000)):
+    for part, s0 in enumerate(range(0, len(T), 60000)):
         tile = f'supertile_fore_{k}_tile_3_{part}'
-        mesh, odr = mesh_odr(tile, T[s:s + 20000])
+        mesh, odr = mesh_odr(tile, T[s0:s0 + 60000])
         names[f'minimap_{k}/{tile}/{tile}_high.mesh'] = mesh; names[f'minimap_{k}/{tile}.odr'] = odr
 write_zip(P + 'names.zip', names)
 T = np.concatenate(allT); T = T[np.argsort(T[:, :, 2].mean(1), kind='stable')]   # увесь текст за висотою: тінь під літерами й на межах частин
-print('names tris', len(T), 'folders', len({p.split('/')[0] for p in names}), 'bytes', os.path.getsize(P + 'names.zip'))
+print('names tris', len(T), 'rings removed', rings, 'folders', len({p.split('/')[0] for p in names}), 'files', sum(p.endswith('.odr') for p in names), 'bytes', os.path.getsize(P + 'names.zip'))
 
 # names.bin — у проєкції текстур гри, як export.bin
 GX0, GYT, W, H, Q = -4140.0, 8400.0, 9000.0, 13500.0, 4
@@ -73,18 +146,29 @@ json.dump(meta, open(P + 'export.json', 'w'), separators=(',', ':'))
 print('names.bin', os.path.getsize(P + 'names.bin'), 'colors', len(pal))
 
 # ---- база: висота нових локацій і червоний залишок ----
-src = zipfile.ZipFile(P + 'base.zip'); out = {}
+src = zipfile.ZipFile(P + 'base.zip'); out = {}; moved = set()
 for f in sorted(glob.glob('base/*/supertile_fore_*_tile_2_2/*.mesh')):
     k = re.search(r'minimap_(\d+_\d+)', f).group(1); T = tris_of(f)
     T = T[~((T[:, 0, 3] == 255) & (T[:, 0, 4] == 0) & (T[:, 0, 5] == 0))]
     hi = T[:, :, 2] >= 20; T[:, :, 2] = np.where(hi, T[:, :, 2] - 16, T[:, :, 2])
     T = T[np.argsort(T[:, :, 2].mean(1), kind='stable')]
-    tile = f'supertile_fore_{k}_tile_2_2'; mesh, odr = mesh_odr(tile, T)
-    out[f'minimap_{k}/{tile}/{tile}_high.mesh'] = mesh; out[f'minimap_{k}/{tile}.odr'] = odr
+    # гра, схоже, малює частини в порядку номерів (tile_0_0, 0_1 … 2_2), а не за висотою: локація — одразу після
+    # мапи (tile_0_1), щоб назви, зони й значки у старших номерах лягали поверх неї
+    tile = f'supertile_fore_{k}_tile_0_1'; mesh, odr = mesh_odr(tile, T)
+    out[f'minimap_{k}/{tile}/{tile}_high.mesh'] = mesh; out[f'minimap_{k}/{tile}.odr'] = odr; moved.add(k)
     print('base', k, 'tris', len(T), 'z', round(T[:, :, 2].min(), 1), round(T[:, :, 2].max(), 1))
 tmp = P + 'base.new.zip'
 with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    gone = re.compile(r'minimap_(\d+_\d+)/supertile_fore_\1_tile_2_2')
     for info in src.infolist():
-        if info.filename in out: z.writestr(info.filename, out[info.filename].encode())
-        else: z.writestr(info, src.read(info.filename))
+        m = gone.match(info.filename)
+        if m and m.group(1) in moved: continue
+        if info.filename.endswith('.odd') and info.filename[8:-4] in moved:
+            txt = src.read(info.filename).decode().replace('_tile_2_2.odr', '_tile_0_1.odr')
+            head, body = txt.split('{', 1); lines = sorted(l for l in body.rsplit('}', 1)[0].split('\n') if l.strip())
+            z.writestr(info, head + '{\n' + '\n'.join(lines) + '\n}'); continue
+        z.writestr(info, src.read(info.filename))
+    for k in sorted(moved):
+        z.writestr(zipfile.ZipInfo(f'minimap_{k}/supertile_fore_{k}_tile_0_1/'), '')
+    for name, text in out.items(): z.writestr(name, text.encode())
 src.close(); os.replace(tmp, P + 'base.zip'); print('base.zip', os.path.getsize(P + 'base.zip'))
