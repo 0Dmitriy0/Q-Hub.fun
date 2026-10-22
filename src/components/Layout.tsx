@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import ThemeToggle from './ThemeToggle';
 import StaticGate from './StaticGate';
@@ -10,8 +11,18 @@ const NAV: [string, string, string][] = [
   ['/roboty', 'Роботи', 'jobs'], ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
 ];
 
+/* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
+const TITLES: Record<string, string> = {
+  '/tsiny': 'Ціни скупників', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет',
+};
+
 export default function Layout() {
   const { session, name, avatar, signIn } = useAuth();
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const key = '/' + (pathname.split('/')[1] || '');
+    document.title = key === '/' ? 'Q-Hub — ціни, мапа й облік для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
+  }, [pathname]);
   return (
     <div className="app">
       <Backdrop />

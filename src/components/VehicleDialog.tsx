@@ -3,6 +3,7 @@ import { money, parseMoney } from '../lib/format';
 import { DRIFT_CHIP, TUNING, XENON_DEFAULT, stageSpeeds, tuningCost } from '../lib/tuning';
 import Icon from './Icon';
 import { priceKind, salonLabel } from '../lib/vehiclePrice';
+import VehicleEdit from './VehicleEdit';
 
 export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia'; name: string; brand: string; salon: string; price: number;
@@ -12,7 +13,8 @@ export interface VehicleFull {
 
 /* вікно транспорту як у грі: фото, тюнінг з калькулятором і характеристики.
    Тюнінг рахується від держ. вартості; ціну чіпа STAGE і ксенону гравець вписує сам (їх купують у гравців) */
-export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; onClose: () => void }) {
+export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: VehicleFull | null; onClose: () => void; canEdit?: boolean; onSaved?: (v: VehicleFull) => void }) {
+  const [edit, setEdit] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [drift, setDrift] = useState(false);
@@ -23,7 +25,7 @@ export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; o
   const [total, setTotal] = useState<number | null>(null);
 
   useEffect(() => {
-    if (v) { setPicked(new Set()); setDrift(false); setStage('none'); setStagePrice(''); setXenon(false); setXenonPrice(String(XENON_DEFAULT)); setTotal(null); dlg.current?.showModal(); }
+    if (v) { setEdit(false); setPicked(new Set()); setDrift(false); setStage('none'); setStagePrice(''); setXenon(false); setXenonPrice(String(XENON_DEFAULT)); setTotal(null); dlg.current?.showModal(); }
     else dlg.current?.close();
   }, [v?.id]);
   if (!v) return <dialog ref={dlg} className="modal vmodal" onClose={onClose} />;
@@ -38,7 +40,9 @@ export default function VehicleDialog({ v, onClose }: { v: VehicleFull | null; o
     <dialog ref={dlg} className="modal vmodal" aria-labelledby="vd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
       <div className="modal-box">
         <div className="row between"><h2 id="vd-title" className="ih"><Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} />{v.name}{v.exclusive && <span className="excl-badge inline"><Icon name="star" size={14} />Ексклюзив</span>}{v.real_name ? <span className="muted vd-real"> ({v.real_name})</span> : null}</h2>
-          <button type="button" className="btn sm ghost" onClick={onClose} aria-label="Закрити">✕</button></div>
+          <span className="row">{canEdit && !edit && <button type="button" className="btn sm" onClick={() => setEdit(true)}><Icon name="tag" size={15} />Редагувати</button>}
+            <button type="button" className="btn sm ghost" onClick={onClose} aria-label="Закрити">✕</button></span></div>
+        {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
         <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={56} />}</div>
         <div className="vd-cols">
           <section>

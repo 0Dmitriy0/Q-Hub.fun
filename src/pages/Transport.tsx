@@ -154,7 +154,8 @@ export default function Transport() {
             </article>);
         })}</div>
       )}
-      <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} />
+      <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin || role === 'editor'}
+        onSaved={nv => setList(l => l.map(x => (x.id === nv.id ? nv : x)))} />
       {loaded && list.length > 0 && !shown.length && <div className="card empty">Нічого не знайдено. Спробуй іншу назву або тип.</div>}
     </>
   );

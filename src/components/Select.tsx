@@ -56,7 +56,8 @@ export default function Select<T extends string | number>({ value, options, onCh
         <span className={'sel-v' + (cur ? '' : ' ph')}>{cur ? cur.label : placeholder}</span>
         <svg className="sel-chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </button>
-      {/* вікно — в кінці сторінки (portal): так клік по пункту не «пробивається» в <label>, що обгортає кнопку */}
+      {/* вікно — в кінці сторінки (portal): так клік по пункту не «пробивається» в <label>, що обгортає кнопку.
+          Усередині модального <dialog> — у сам dialog: він лежить над усією сторінкою, і список поза ним був би під ним */}
       {open && createPortal(
         <div ref={pop} className={'sel-pop' + (pos.up ? ' up' : '')} tabIndex={-1} onKeyDown={key}
           style={{ left: pos.left, width: pos.width, ...(pos.up ? { bottom: innerHeight - pos.top } : { top: pos.top }) }}>
@@ -72,7 +73,7 @@ export default function Select<T extends string | number>({ value, options, onCh
               </li>))}
             {!list.length && <li className="sel-none" aria-disabled="true">Нічого не знайдено</li>}
           </ul>
-        </div>, document.body
+        </div>, btn.current?.closest('dialog') ?? document.body
       )}
     </>
   );
