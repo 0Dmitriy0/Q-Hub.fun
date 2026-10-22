@@ -71,7 +71,9 @@ export default function Transport() {
     ]);
     setLoaded(true);
     if (v.error) { setErr('Не вдалося завантажити транспорт. Онови сторінку.'); return; }
-    setList(v.data as Vehicle[]);
+    /* фото з маркетплейсу гри лежать на самому сайті (public/vehicles/map.json); фото, завантажене адміном, важливіше */
+    const pics: Record<string, string> = await fetch('/vehicles/map.json').then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+    setList((v.data as Vehicle[]).map(x => (x.image_url || !pics[x.name] ? x : { ...x, image_url: pics[x.name] })));
     setScores(Object.fromEntries(((s.data || []) as Score[]).map(x => [x.vehicle_id, { ...x, avg: Number(x.avg), votes: Number(x.votes) }])));
   }
   useEffect(() => { load(); }, []);
