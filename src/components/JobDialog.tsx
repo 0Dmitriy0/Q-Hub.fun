@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Job } from '../data/jobs';
+import { FORUM_FAQ, type Job } from '../data/jobs';
 import Icon from './Icon';
 import Profit from './Profit';
 
@@ -27,11 +27,12 @@ export default function JobDialog({ job, onClose }: { job: Job | null; onClose: 
           </div>
           <button type="button" className="btn sm ghost" onClick={onClose} aria-label="Закрити">✕</button>
         </div>
-        <section className="jd-sec"><h3>Опис</h3>{job.description ? <p>{job.description}</p> : <p className="muted">Опис ще додаємо.</p>}</section>
-        {job.pay && <section className="jd-sec"><h3>Заробіток</h3><p>{job.pay}</p></section>}
+        <section className="jd-sec"><h3>Опис</h3>{job.description ? <p className="jd-text">{job.description}</p> : <p className="muted">Опис ще додаємо.</p>}</section>
+        {job.pay && <section className="jd-sec"><h3>Заробіток</h3><p className="jd-text">{job.pay}</p></section>}
         <div className="jd-cols">{SECTIONS.filter(([k]) => list(k).length).map(([k, t]) => (
           <section className="jd-sec" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
         ))}</div>
+        {job.forum && <p className="muted jd-src">Джерело: <a href={FORUM_FAQ} target="_blank" rel="noopener noreferrer">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></p>}
       </div>
     </dialog>
   );
