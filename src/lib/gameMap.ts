@@ -215,14 +215,14 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
   return files;
 }
 
-/* текстури як у грі: minimap_R_C 512 px (море з глибиною, назви, зони й мітки), minimap_sea_R_C 1024 px (суша й море з глибиною,
+/* текстури як у грі: minimap_R_C 512 px (море з глибиною, назви, зони й мітки), minimap_sea_R_C 1024 px (те саме у вдвічі більшому розмірі,
    як на мапі сайту),
    minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
 const TEX = 512, SEA = 1024, LOD = 128;
 const SEA_SHORE = 1, SEA_DEEP = 0;
 async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
   const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, true), TEX, 'minimap_');
-  const sea = await drawMap(SEA, [], 0, imgs, [], true);
+  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, true);
   files.push(...await tiles(sea, SEA, 'minimap_sea_'));
   const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
