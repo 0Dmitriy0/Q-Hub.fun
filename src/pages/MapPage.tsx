@@ -30,6 +30,9 @@ const BUILTIN_MARKS: MapMark[] = POINTS.map(p => {
 function readOn(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(ON_KEY) || '{}'); } catch { return {}; } }
 function saveOn(v: Record<string, boolean>) { try { localStorage.setItem(ON_KEY, JSON.stringify(v)); } catch { /* приватний режим */ } }
 
+/* з якого зуму під мітками видно їхні назви */
+const LABEL_ZOOM = 5;
+
 export default function MapPage() {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -119,6 +122,8 @@ export default function MapPage() {
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
       pickRef.current = false; setPicking(false);
     });
+    const labels = () => el.classList.toggle('mlabels-on', m.getZoom() >= LABEL_ZOOM);
+    m.on('zoomend', labels); labels();
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
     return () => { m.remove(); map.current = null; layers.current = {}; markers.current = {}; };
@@ -140,6 +145,8 @@ export default function MapPage() {
         + (mk.link ? `<a data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
+      /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
+      if (mk.name) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
   }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps

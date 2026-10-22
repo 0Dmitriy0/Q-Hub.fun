@@ -29,18 +29,21 @@ export function IconGrid({ value, onChange, catIcon, label }: { value: string | 
 export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats: MapCategory[]; onDone: (m: MapMark) => void; onCancel: () => void }) {
   const own = cats.filter(c => !c.builtin);
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
+  const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const catIcon = cats.find(c => c.id === cat)?.icon || '';
   async function save() {
     setBusy(true); setMsg('');
-    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon }).eq('id', mark.dbId!);
+    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim() }).eq('id', mark.dbId!);
     setBusy(false);
     if (error) return setMsg(/icon/i.test(error.message) ? 'У базі ще немає колонки для іконки мітки. Запусти q-hub-map-icon.sql у Supabase → SQL Editor.' : dbErr(error.message));
-    onDone({ ...mark, category: cat, icon: icon || undefined });
+    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim() });
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити мітку">
       <h4>Змінити мітку{mark.name ? ` «${mark.name}»` : ''}</h4>
+      <input className="min" placeholder="Назва (видно під міткою на мапі)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" maxLength={160} />
+      <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" maxLength={600} />
       <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
       <p className="muted">Іконка: перша — як у категорії, або будь-яка інша лише для цієї мітки</p>
       <IconGrid value={icon} onChange={setIcon} catIcon={catIcon} label="Іконка мітки" />
