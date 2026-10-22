@@ -1,5 +1,6 @@
 import L from 'leaflet';
-import { cellOf, parseChunk, type Chunk, type Index } from './mapChunk';
+import { cellOf, parseChunk, triPath, type Chunk, type Index } from './mapChunk';
+import { mapUrl } from './mapGeo';
 
 /* Чітке наближення (z7+): замість розтягнутих картинок браузер сам малює трикутники мінікарти.
    Дані — шматки 800x800 м у /map/v (scripts/map-chunks.py). Тайл z>=7 завжди лежить в одному шматку,
@@ -8,10 +9,10 @@ export const VZ = 7;
 
 let index: Promise<Index | null> | null = null;
 const chunks = new Map<string, Promise<Chunk | null>>();
-const getIndex = () => index ??= fetch('/map/v/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
+const getIndex = () => index ??= fetch(mapUrl('/map/v/index.json')).then(r => r.ok ? r.json() : null).catch(() => null);
 function getChunk(cx: number, cy: number) {
   const k = cx + '_' + cy;
-  if (!chunks.has(k)) chunks.set(k, fetch(`/map/v/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && parseChunk(b)).catch(() => null));
+  if (!chunks.has(k)) chunks.set(k, fetch(mapUrl(`/map/v/${k}.bin`)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && parseChunk(b)).catch(() => null));
   return chunks.get(k)!;
 }
 
@@ -33,7 +34,7 @@ export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bound
         for (let i = 0; i < n;) {
           const col = c[i]; ctx.beginPath();
           for (; i < n && c[i] === col; i++) {
-            const o = i * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath();
+            const o = i * 6; triPath(ctx, xy, o);
           }
           ctx.fillStyle = ctx.strokeStyle = ix.palette[col]; ctx.fill(); ctx.stroke();
         }
@@ -51,7 +52,7 @@ export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bound
 const NQ = 4, NOX = -4140 + 5996, NOY = 8470 - 8400, NB = 1024;   // NOX/NOY — зсув кута текстур від кута мапи сайту, м; NB — клітинка 256 м
 type Names = { xy: Uint16Array; c: Uint8Array; pal: string[]; cells: Map<number, number[]> };
 let names: Promise<Names | null> | null = null;
-const getNames = () => names ??= Promise.all([fetch('/map/game/export.json').then(r => r.json()), fetch('/map/game/names.bin').then(r => r.arrayBuffer())])
+const getNames = () => names ??= Promise.all([fetch(mapUrl('/map/game/export.json')).then(r => r.json()), fetch(mapUrl('/map/game/names.bin')).then(r => r.arrayBuffer())])
   .then(([meta, buf]) => {
     const n = new DataView(buf).getUint32(0, true), xy = new Uint16Array(buf, 4, n * 6), c = new Uint8Array(buf, 4 + n * 12, n);
     const cells = new Map<number, number[]>();
@@ -60,7 +61,7 @@ const getNames = () => names ??= Promise.all([fetch('/map/game/export.json').the
   }).catch(() => null);
 
 let namesIndex: Promise<{ n: number; have: Record<number, number[]> } | null> | null = null;
-const getNamesIndex = () => namesIndex ??= fetch('/map/n/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
+const getNamesIndex = () => namesIndex ??= fetch(mapUrl('/map/n/index.json')).then(r => r.ok ? r.json() : null).catch(() => null);
 
 export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds) {
   const Layer = L.GridLayer.extend({
@@ -72,7 +73,7 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
           if (!ix || !ix.have[coords.z]?.includes(coords.x * ix.n + coords.y)) return done(undefined, box);
           const img = document.createElement('img'); img.alt = ''; img.width = img.height = 256; img.style.display = 'block';
           img.onload = () => done(undefined, box); img.onerror = () => done(undefined, box);
-          img.src = `/map/n/${coords.z}/${coords.x}/${coords.y}.webp`; box.append(img);
+          img.src = mapUrl(`/map/n/${coords.z}/${coords.x}/${coords.y}.webp`); box.append(img);
         });
         return box;
       }
@@ -88,6 +89,8 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
         const { xy, c, pal } = nm, m = 2 / s;   // лише трикутники, що зачіпають тайл (з запасом у 2 px)
         const vis = ids.filter(i => {
           const o = i * 6, a = Math.min(xy[o], xy[o + 2], xy[o + 4]), b = Math.max(xy[o], xy[o + 2], xy[o + 4]);
+          /* сплющені трикутники (у тексті Hydra їх багато): гра їх не малює, а обводка робила з них рисочки */
+          if (Math.abs((xy[o + 2] - xy[o]) * (xy[o + 5] - xy[o + 1]) - (xy[o + 4] - xy[o]) * (xy[o + 3] - xy[o + 1])) < 0.5) return false;
           if (b < u0 - m || a > u1 + m) return false;
           const e = Math.min(xy[o + 1], xy[o + 3], xy[o + 5]), f = Math.max(xy[o + 1], xy[o + 3], xy[o + 5]);
           return f >= v0 - m && e <= v1 + m;
@@ -96,11 +99,11 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
         vis.sort((a, b) => a - b);
         const ctx = t.getContext('2d')!;
         ctx.setTransform(s * dpr, 0, 0, s * dpr, -u0 * s * dpr, -v0 * s * dpr);
-        ctx.lineWidth = 0.6 / s; ctx.lineJoin = 'round';
+        ctx.lineWidth = 0.5 / s; ctx.lineJoin = 'round';   // тонка обводка тим самим кольором закриває шви
         for (let j = 0; j < vis.length;) {
           const col = c[vis[j]]; ctx.beginPath();
           for (; j < vis.length && c[vis[j]] === col; j++) {
-            const o = vis[j] * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath();
+            const o = vis[j] * 6; triPath(ctx, xy, o);
           }
           ctx.fillStyle = ctx.strokeStyle = pal[col]; ctx.fill(); ctx.stroke();
         }

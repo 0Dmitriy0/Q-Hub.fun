@@ -1,3 +1,5 @@
+import { mapUrl } from './mapGeo';
+import { triPath } from './mapChunk';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>.png, 2x3 тайли),
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -142,7 +144,7 @@ async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: strin
   ctx.setTransform(s, 0, 0, s, 0, 0); ctx.lineWidth = 0.6 / s; ctx.lineJoin = 'round';
   for (let i = 0; i < n;) {   // підряд однакові кольори — одним шляхом; порядок як у файлі (тло, потім передній план)
     const c = col[i]; ctx.beginPath();
-    for (; i < n && col[i] === c; i++) { const o = i * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath(); }
+    for (; i < n && col[i] === c; i++) { const o = i * 6; triPath(ctx, xy, o); }
     ctx.fillStyle = ctx.strokeStyle = palette[c]; ctx.fill(); ctx.stroke();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -150,7 +152,7 @@ async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: strin
 
 /* мапа одним полотном 2x3 тайли по size px: (море з рівнями глибини,) суша, потім шари й мітки (якщо передані) */
 async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], sea = false): Promise<HTMLCanvasElement> {
-  const meta = await fetch('/map/game/export.json').then(r => r.json());
+  const meta = await fetch(mapUrl('/map/game/export.json')).then(r => r.json());
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
@@ -159,7 +161,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   if (sea && meta.seaPalette) {
     const sc = document.createElement('canvas'); sc.width = W; sc.height = H;
     const sx = sc.getContext('2d', { willReadFrequently: true })!;
-    await drawTris(sx, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
+    await drawTris(sx, size, mapUrl('/map/game/sea.bin'), meta.seaPalette, meta.q);
     const lum = (h: string) => { const v = parseInt(h.slice(1), 16); return ((v >> 16) & 255) + ((v >> 8) & 255) + (v & 255); };
     const ls = (meta.seaPalette as string[]).map(lum), lo = Math.min(...ls), hi = Math.max(...ls);
     const img = sx.getImageData(0, 0, W, H), d = img.data;
@@ -169,7 +171,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     }
     sx.putImageData(img, 0, 0); ctx.drawImage(sc, 0, 0);
   }
-  await drawTris(ctx, size, '/map/game/export.bin', meta.palette, meta.q);
+  await drawTris(ctx, size, mapUrl('/map/game/export.bin'), meta.palette, meta.q);
   /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — текст Hydra */
   if (layers.includes('zones')) {
     const zones = (await import('../data/mapZones.json')).default as number[][][][];
@@ -181,7 +183,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     }
   }
   /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
-  if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, '/map/game/names.bin', meta.namesPalette, meta.q);
+  if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
   const r = pinPx / 2;
@@ -265,7 +267,7 @@ export const GAME_LAYERS = { names: '/map/game/names.zip', zones: '/map/game/zon
 export type GameLayer = keyof typeof GAME_LAYERS;
 
 async function zipAt(url: string) {
-  const res = await fetch(url); if (!res.ok) throw new Error('немає файлів мапи');
+  const res = await fetch(mapUrl(url)); if (!res.ok) throw new Error('немає файлів мапи');
   const ab: ArrayBuffer = await res.arrayBuffer(); return readZip(new Uint8Array(ab));
 }
 

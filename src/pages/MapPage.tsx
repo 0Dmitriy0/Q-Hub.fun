@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
+import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, mapUrl, parseHash, toGame, toPx } from '../lib/mapGeo';
 import { namesLayer, vectorLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapCategory, type MapMark } from '../lib/mapData';
 import { POINTS } from '../data/mapPoints';
@@ -126,7 +126,7 @@ export default function MapPage() {
     const full = TILE * 2 ** ZMAX;
     const bounds = L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX));
     m.setMaxBounds(bounds.pad(0.05));
-    L.tileLayer('/map/{z}/{x}/{y}.webp', { maxNativeZoom: ZMAX, maxZoom: ZMAX + 2, tileSize: TILE, noWrap: true, bounds,
+    L.tileLayer(mapUrl('/map/{z}/{x}/{y}.webp'), { maxNativeZoom: ZMAX, maxZoom: ZMAX + 2, tileSize: TILE, noWrap: true, bounds,
       errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }).addTo(m);
     /* ближче за z6 растр лише розтягувався б — поверх нього малюємо векторну мапу */
     vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds).addTo(m);

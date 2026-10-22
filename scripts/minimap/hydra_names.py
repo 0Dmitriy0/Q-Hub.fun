@@ -119,6 +119,7 @@ for f in sorted(glob.glob('new/*/supertile_fore_*_tile_2_2/*.mesh')):
     for ix in comps(T):
         Tc = T[ix]; w = np.ptp(Tc[:, :, 0]); h = np.ptp(Tc[:, :, 1])
         hollow = area(Tc) / max(1.0, w * h) < 0.2 and max(w, h) > 8   # тонке кільце чи дуга, а не літера
+        hollow = hollow or (tuple(T[ix[0], 0, 3:6]) == (0, 255, 145) and max(w, h) < 3)   # рисочка пунктирного кола (менша за будь-яку літеру)
         if greenish(T[ix[0], 0, 3:6]) and (hollow or all(EDGE.contains(Point(p[0], p[1])) for p in Tc[:, :, :2].reshape(-1, 2))):
             keep[ix] = False; rings += 1
     T = T[keep]

@@ -19,3 +19,8 @@ export const makeHash = (x: number, y: number, z: number) => `#${Math.round(x)},
 export const QF_SCALE = 1.81992, QF_X0 = -4141.618, QF_YT = 8403.567;
 export const fromQuantFun = (px: number, py: number): [number, number] =>
   [Math.round((px / QF_SCALE + QF_X0) * 10) / 10, Math.round((QF_YT - py / QF_SCALE) * 10) / 10];
+
+/* версія даних мапи (тайли, шматки, назви, файли гри): міняти при кожній перебудові public/map — інакше браузер
+   показує старі тайли зі свого кешу (адреси ті самі), і нових локацій не видно навіть після Ctrl+F5 */
+export const MAP_V = '2026-10-22c';
+export const mapUrl = (path: string) => `${path}?v=${MAP_V}`;

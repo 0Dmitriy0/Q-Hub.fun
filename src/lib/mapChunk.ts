@@ -11,3 +11,12 @@ export function parseChunk(buf: ArrayBuffer): Chunk {
   const n = new DataView(buf).getUint32(0, true);
   return { n, xy: new Uint16Array(buf, 4, n * 6), c: new Uint8Array(buf, 4 + n * 12, n) };
 }
+
+/* трикутник у спільний шлях завжди в один бік обходу: трикутники з протилежним обходом, що перекриваються,
+   при заливці одним шляхом (правило nonzero) взаємно гасяться — у тексті Hydra від цього були дірки-сітка */
+export function triPath(ctx: CanvasRenderingContext2D, xy: ArrayLike<number>, o: number) {
+  const ax = xy[o], ay = xy[o + 1], bx = xy[o + 2], by = xy[o + 3], cx = xy[o + 4], cy = xy[o + 5];
+  ctx.moveTo(ax, ay);
+  if ((bx - ax) * (cy - ay) - (cx - ax) * (by - ay) >= 0) { ctx.lineTo(bx, by); ctx.lineTo(cx, cy); } else { ctx.lineTo(cx, cy); ctx.lineTo(bx, by); }
+  ctx.closePath();
+}
