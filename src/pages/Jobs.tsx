@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { JOBS } from '../data/jobs';
 import { filterJobs, type JobKind, type JobSort } from '../lib/jobs';
 import Icon from '../components/Icon';
@@ -13,7 +14,10 @@ export default function Jobs() {
   const [kind, setKind] = useState<JobKind>('all');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<JobSort>('name');
-  const [openId, setOpenId] = useState('');
+  /* ?job=<id> відкриває вікно роботи одразу — так веде посилання з мапи */
+  const [params, setParams] = useSearchParams();
+  const [openId, setOpenIdRaw] = useState(() => params.get('job') || '');
+  const setOpenId = (id: string) => { setOpenIdRaw(id); if (!id && params.has('job')) { params.delete('job'); setParams(params, { replace: true }); } };
   const counts = useMemo(() => ({ all: JOBS.length, legal: JOBS.filter(j => j.legal).length, illegal: JOBS.filter(j => !j.legal).length }), []);
   const shown = useMemo(() => filterJobs(JOBS, kind, q, sort), [kind, q, sort]);
 
