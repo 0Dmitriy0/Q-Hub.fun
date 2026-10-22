@@ -58,8 +58,8 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
         </fieldset>
       ))}
       <div className="mrow">
-        <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[8, 12, 20, 30].map(v => <option key={v} value={v}>{v}{v === 12 ? ' (як у Hydra)' : ''}</option>)}</select></label>
-        <label className="mcheck">Текстури <select className="min" value={tex} onChange={e => setTex(+e.target.value)}>{[512, 1024, 2048].map(v => <option key={v} value={v}>{v}{v === 512 ? ' (як у Hydra)' : ''}</option>)}</select></label>
+        <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[8, 12, 20, 30].map(v => <option key={v} value={v}>{v}{v === 12 ? ' (рекомендовано)' : ''}</option>)}</select></label>
+        <label className="mcheck">Текстури <select className="min" value={tex} onChange={e => setTex(+e.target.value)}>{[512, 1024, 2048].map(v => <option key={v} value={v}>{v}{v === 512 ? ' (рекомендовано)' : ''}</option>)}</select></label>
       </div>
       <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток`}</button>
       {picked.length > 1500 && !busy && <p className="muted">Багато міток — значки на мінікарті злипатимуться, а архів буде великим.</p>}
