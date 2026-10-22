@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="458" rx="160" ry="22" fill="#000" opacity=".18"/>
+<path d="M70 330c0-130 84-230 186-230s186 100 186 230z" fill="#d62f24" stroke="#1f2329" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><path d="M256 100v230" stroke="#a51f17" stroke-width="22"/>
+<path d="M40 330h432c0 30-20 54-50 60H90c-30-6-50-30-50-60z" fill="#b5251c" stroke="#1f2329" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M206 170h100l-10 110h-80z" fill="#f2c94c" stroke="#1f2329" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/><text x="256" y="250" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="64" text-anchor="middle" fill="#8a2a10">LS</text>
+<path d="M120 300c10-80 50-140 100-170" stroke="#f47a6e" stroke-width="14" fill="none" stroke-linecap="round"/></svg>
