@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
 import { MAP_ICONS } from '../data/mapIcons';
 import Select from './Select';
 import PicUpload from './PicUpload';
 
-const dbErr = (m: string) => /relation .*map_(points|categories)|schema cache/i.test(m)
+const dbErr = (m: string) => /owner_static|column .* does not exist/i.test(m)
+  ? 'У базі стара версія таблиць мапи. Запусти оновлений q-hub-map.sql у Supabase → SQL Editor ще раз.'
+  : /relation .*map_(points|categories)|schema cache/i.test(m)
   ? 'У базі ще немає таблиць мапи. Запусти q-hub-map.sql у Supabase → SQL Editor.'
   : /row-level security|permission/i.test(m) ? 'Це може лише адмін.' : m;
 
@@ -16,6 +18,8 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
 }) {
   const own = cats.filter(c => !c.builtin);
   const [cat, setCat] = useState(own[0]?.id || '');
+  /* категорії з бази приходять уже після відкриття форми — тоді вибираємо першу */
+  useEffect(() => { if (!cat && own.length) setCat(own[0].id); }, [own.length]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [name, setName] = useState(''); const [note, setNote] = useState(''); const [owner, setOwner] = useState('');
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [bulk, setBulk] = useState('');

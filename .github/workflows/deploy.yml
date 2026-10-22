@@ -99,6 +99,9 @@ jobs:
           q() { code=$(curl -s -o /tmp/r -w '%{http_code}' -H "apikey: $K" -H "Prefer: count=exact" -D /tmp/h "$R/$2");
                 n=$(grep -i '^content-range' /tmp/h | sed 's/.*\///' | tr -d '\r'); echo "$1: HTTP $code, рядків=${n:-?} $( [ "$code" = 200 ] || head -c 160 /tmp/r)"; }
           q "скупники (0001)" "buyers?select=id"
+          q "мапа: категорії (0015)" "map_categories?select=id"
+          q "мапа: мітки (0015)" "map_points?select=id"
+          q "мапа: власник бізнесу (0015)" "map_points?select=owner_static&limit=1"
           q "ціни редактора (0002)" "buyer_items?select=price&price=gt.0"
           q "межі мін/макс NPC" "buyer_items?select=min_price&min_price=gt.0"
           q "історія цін (0003)" "price_history?select=id"

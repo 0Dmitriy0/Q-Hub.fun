@@ -51,6 +51,16 @@ export default function MapPage() {
   const [owners, setOwners] = useState<Record<number, string>>({});
   /* на телефоні фільтри згорнуті, щоб мапу було видно одразу */
   const [wide] = useState(() => typeof matchMedia === 'function' && matchMedia('(min-width: 861px)').matches);
+  /* мапа на весь екран під шапкою сайту; панель фільтрів — поверх мапи, згортається */
+  const [panel, setPanel] = useState(wide);
+  const [top, setTop] = useState(64);
+  useEffect(() => {
+    const h = document.querySelector('header.top'); if (!h) return;
+    const upd = () => { setTop(Math.round(h.getBoundingClientRect().height)); map.current?.invalidateSize(); };
+    upd(); const ro = new ResizeObserver(upd); ro.observe(h);
+    document.body.classList.add('map-open');
+    return () => { ro.disconnect(); document.body.classList.remove('map-open'); };
+  }, []);
 
   const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? c.shown;
   const count = useMemo(() => { const n: Record<string, number> = {}; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
@@ -75,7 +85,8 @@ export default function MapPage() {
 
   useEffect(() => {
     const el = box.current; if (!el) return;
-    const m = L.map(el, { crs: L.CRS.Simple, minZoom: 1, maxZoom: ZMAX + 2, zoomSnap: 0.5, attributionControl: false });
+    const m = L.map(el, { crs: L.CRS.Simple, minZoom: 1, maxZoom: ZMAX + 2, zoomSnap: 0.5, attributionControl: false, zoomControl: false });
+    L.control.zoom({ position: 'bottomright' }).addTo(m);
     const full = TILE * 2 ** ZMAX;
     const bounds = L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX));
     m.setMaxBounds(bounds.pad(0.05));
@@ -92,6 +103,7 @@ export default function MapPage() {
       pickMarker.current?.remove();
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
       pickRef.current = false; setPicking(false);
+      if (!wide) setPanel(true);   // на телефоні панель ховалась, щоб клікнути по мапі
     });
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
@@ -124,11 +136,12 @@ export default function MapPage() {
   }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
-  function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) box.current?.focus(); }
+  function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) setPanel(false); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
     const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
     m.flyTo(m.unproject(toPx(mk.x, mk.y), ZMAX), 5, { duration: 0.8 });
+    if (!wide) setPanel(false);
     setTimeout(() => markers.current[mk.id]?.openPopup(), 850);
     setQ('');
   }
@@ -159,14 +172,27 @@ export default function MapPage() {
 
   const allIds = visibleCats.map(c => c.id);
   return (
-    <>
-      <div><h1>Мапа</h1><p className="muted">Мапа штату. Увімкни потрібні категорії ліворуч і натисни на мітку — для робіт і скупників відкриються опис і ціни. Посилання в адресному рядку веде саме туди, де ти зараз дивишся.</p></div>
-      <div className="mapgrid">
-        <aside className="mside">
+    <div className="mapfull" style={{ top }}>
+      <h1 className="vh">Мапа штату</h1>
+      <div className={'mapbox' + (picking ? ' picking' : '')} style={{ background: OCEAN }}
+        onClick={e => {
+          const t = e.target as HTMLElement;
+          const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
+          const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
+          const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
+        }}>
+        <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
+        {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
+        {pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
+        <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
+      </div>
+      <button type="button" className="mtoggle btn sm" onClick={() => setPanel(v => !v)} aria-expanded={panel} aria-controls="map-panel">
+        <Icon name="map" size={16} />{panel ? 'Сховати панель' : 'Фільтри'}</button>
+        <aside id="map-panel" className={'mside' + (panel ? '' : ' hidden')}>
           <div className="fld has-ico msearch"><Icon name="search" /><input type="search" placeholder="Знайти мітку" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук на мапі" />
             {found.length > 0 && <ul className="mfound">{found.map(mk => <li key={mk.id}><button type="button" onClick={() => go(mk)}><img src={mk.icon || catById[mk.category]?.icon} alt="" width={18} height={18} />{mk.name || catById[mk.category]?.name}<small>{mk.name ? catById[mk.category]?.name : ''}</small></button></li>)}</ul>}
           </div>
-          <details className="mfilters" open={wide}>
+          <details className="mfilters" open>
             <summary>Фільтри</summary>
             <div className="mrow"><button type="button" className="btn sm ghost" onClick={() => setMany(allIds, true)}>Показати все</button><button type="button" className="btn sm ghost" onClick={() => setMany(allIds, false)}>Сховати все</button></div>
             {groups.map(({ grp, cats: gc }) => {
@@ -188,23 +214,10 @@ export default function MapPage() {
             })}
           </details>
           {isAdmin && (dbMissing
-            ? <p className="card err">Таблиць мапи в базі ще немає. Запусти q-hub-map.sql у Supabase → SQL Editor — тоді тут з'являться інструменти адміна.</p>
+            ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
             : <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
                 onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />)}
         </aside>
-        <div className={'mapbox' + (picking ? ' picking' : '')} style={{ background: OCEAN }}
-          onClick={e => {
-            const t = e.target as HTMLElement;
-            const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
-            const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
-            const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
-          }}>
-          <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
-          {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
-          {pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
-          <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
