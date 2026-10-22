@@ -46,6 +46,7 @@ export default function Prices() {
   const [tab, setTab] = useState('');
   const [q, setQ] = useState('');
   const [err, setErr] = useState('');
+  const [loaded, setLoaded] = useState(false);
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [hist, setHist] = useState<Record<string, Pt[]>>({});
   const [histFor, setHistFor] = useState<Set<string>>(new Set());
@@ -62,13 +63,14 @@ export default function Prices() {
       supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500),
       supabase.from('buyer_next_change').select('*')
     ]);
-    if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Онови сторінку.'); return; }
-    setBuyers(b.data as Buyer[]); setRows(r.data as unknown as Row[]);
+    setLoaded(true);
+    if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Перевір інтернет і онови сторінку.'); return; }
+    setErr(''); setBuyers(b.data as Buyer[]); setRows(r.data as unknown as Row[]);
     /* хто оновлював і рейтинг — доповнення: без них ціни все одно показуються */
     setUps(u.error ? [] : (u.data as Update[])); setTop(c.error ? [] : (c.data as Contributor[])); setNext(n.error ? [] : (n.data as NextChange[]));
     if (b.data?.length) setTab(t => t || (b.data[0] as Buyer).id);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load().catch(() => { setLoaded(true); setErr('Не вдалося завантажити ціни. Перевір інтернет і онови сторінку.'); }); }, []);
 
   async function loadHist(ids: string[]) {
     if (!supabase || !ids.length) return;
@@ -153,7 +155,8 @@ export default function Prices() {
       <div><h1>Ціни скупників</h1><p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік за 30 днів.</p></div>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
       {err && <div className="card err">{err}</div>}
-      {supabase && !err && !buyers.length && <div className="card empty">Каталог скупників ще порожній. Адміну: запусти <span className="mono">supabase/seed/catalog_from_hub.sql</span> у Supabase → SQL Editor.</div>}
+      {supabase && !loaded && <div className="card empty" role="status">Завантажуємо ціни…</div>}
+      {loaded && !err && !buyers.length && <div className="card empty">Скупників поки немає — скоро з'являться.</div>}
       {buyers.length > 0 && (
         <>
           <section className="card recent">
