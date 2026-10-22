@@ -28,6 +28,7 @@ export default function Home() {
             <li><span className="ibub"><Icon name="tag" /></span><div><b>Скільки дати гравцю.</b> <span className="muted">Пишеш товар — бачиш, за скільки його брати і кому продати дорожче.</span></div></li>
             <li><span className="ibub"><Icon name="chart" /></span><div><b>Облік і склад.</b> <span className="muted">Купив, продав, нафармив — Q-Hub рахує собівартість, прибуток і баланс.</span></div></li>
             <li><span className="ibub"><Icon name="car" /></span><div><b>Гараж.</b> <span className="muted">Авто, тюнінг, держ. і ринкова вартість.</span></div></li>
+            <li><span className="ibub"><Icon name="map" /></span><div><b><Link to="/mapa">Мапа штату.</Link></b> <span className="muted">Магазини, банди, роботи, графіті, НЛО й зелені зони — вмикаєш галочками лише потрібне. Можна скачати свою мінікарту для гри.</span></div></li>
             <li><span className="ibub"><Icon name="download" /></span><div><b>Програма поверх гри.</b> <span className="muted">Бачить твій баланс на екрані й пропонує записати зміну в облік.</span></div></li>
           </ul>
         </section>
