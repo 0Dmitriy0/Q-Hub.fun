@@ -4,3 +4,7 @@ dist/
 .env.local
 public/ocr/
 public/snapshot/
+# вихід tsc -b: Vite брав би ці копії замість .ts/.tsx
+src/**/*.js
+vite.config.js
+*.tsbuildinfo
