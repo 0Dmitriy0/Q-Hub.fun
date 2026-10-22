@@ -81,3 +81,23 @@ export function parseShot(lines: OcrLine[], items: CatalogItem[]): ShotRow[] {
     return false;
   });
 }
+
+/* Відео: кожен кадр розібрано окремо. Товар бере ціну, яку прочитали найчастіше (помилки розпізнавання
+   випадкові, а правильна ціна повторюється з кадру в кадр); при рівності — з пізнішого кадру. Ціни без назви
+   з відео не беремо: на сусідніх кадрах той самий товар зазвичай впізнається з назвою */
+export function mergeFrames(frames: ShotRow[][]): ShotRow[] {
+  const by = new Map<number, { row: ShotRow; votes: Map<number, { n: number; last: number }> }>();
+  frames.forEach((rows, f) => {
+    for (const r of rows) {
+      if (!r.item) continue;
+      let e = by.get(r.item.id);
+      if (!e) { e = { row: { ...r, price: null }, votes: new Map() }; by.set(r.item.id, e); }
+      if (r.score > e.row.score) e.row = { ...r, price: e.row.price };
+      if (r.price != null) { const v = e.votes.get(r.price) || { n: 0, last: 0 }; v.n++; v.last = f; e.votes.set(r.price, v); }
+    }
+  });
+  return [...by.values()].map(({ row, votes }) => {
+    const top = [...votes.entries()].sort((a, b) => b[1].n - a[1].n || b[1].last - a[1].last)[0];
+    return { ...row, price: top ? top[0] : null };
+  });
+}

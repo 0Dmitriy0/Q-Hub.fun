@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { money, parseMoney } from '../lib/format';
-import { detectBuyer, parseShot, type CatalogItem, type OcrLine } from '../lib/shotParse';
+import { detectBuyer, mergeFrames, parseShot, type CatalogItem, type OcrLine } from '../lib/shotParse';
 import Icon from './Icon';
 import Select from './Select';
 
@@ -19,7 +19,7 @@ async function ocrWorker(onProgress: (p: string) => void) {
 }
 
 /* лишаємо тільки білий текст (назви й ціни білі, опис сірий, фото кольорові) і ділимо на дві колонки карток */
-async function prepare(file: Blob): Promise<HTMLCanvasElement[]> {
+async function prepare(file: ImageBitmapSource): Promise<HTMLCanvasElement[]> {
   const bmp = await createImageBitmap(file);
   const src = document.createElement('canvas'); src.width = bmp.width; src.height = bmp.height;
   const sx = src.getContext('2d', { willReadFrequently: true })!; sx.drawImage(bmp, 0, 0);
@@ -37,6 +37,43 @@ async function prepare(file: Blob): Promise<HTMLCanvasElement[]> {
   });
 }
 
+/* кадри відео: беремо кадр кожні півсекунди й пропускаємо ті, що майже не відрізняються від попереднього
+   взятого (гравець не гортав) — порівнюємо зменшені до 48x27 сірі копії */
+const STEP = 0.5, MAX_FRAMES = 40, SAME = 6;
+async function videoFrames(file: Blob, onProgress: (p: string) => void): Promise<HTMLCanvasElement[]> {
+  const url = URL.createObjectURL(file), v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+  try {
+    await new Promise<void>((ok, bad) => { v.onloadeddata = () => ok(); v.onerror = () => bad(new Error('браузер не відкрив це відео')); });
+    const dur = v.duration;
+    if (!isFinite(dur) || dur <= 0 || !v.videoWidth) throw new Error('браузер не відкрив це відео');
+    const k = Math.min(1, 2560 / v.videoWidth), W = Math.round(v.videoWidth * k), H = Math.round(v.videoHeight * k);
+    const tiny = document.createElement('canvas'); tiny.width = 48; tiny.height = 27;
+    const tx = tiny.getContext('2d', { willReadFrequently: true })!;
+    const out: HTMLCanvasElement[] = []; let prev: Uint8ClampedArray | null = null;
+    for (let t = Math.min(0.1, dur / 2); t < dur && out.length < MAX_FRAMES; t += STEP) {
+      onProgress(`Дивлюсь відео… ${Math.round((t / dur) * 100)}%`);
+      await new Promise<void>(ok => { v.onseeked = () => ok(); v.currentTime = t; });
+      tx.drawImage(v, 0, 0, 48, 27);
+      const g = tx.getImageData(0, 0, 48, 27).data;
+      if (prev) { let d = 0; for (let i = 0; i < g.length; i += 4) d += Math.abs(g[i] - prev[i]) + Math.abs(g[i + 1] - prev[i + 1]) + Math.abs(g[i + 2] - prev[i + 2]); if (d / (48 * 27 * 3) < SAME) continue; }
+      prev = g;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.getContext('2d')!.drawImage(v, 0, 0, W, H); out.push(cv);
+    }
+    return out;
+  } finally { v.removeAttribute('src'); v.load(); URL.revokeObjectURL(url); }
+}
+
+async function readLines(w: import('tesseract.js').Worker, src: ImageBitmapSource, onPart: (c: number, n: number) => void): Promise<OcrLine[]> {
+  const parts = await prepare(src), lines: OcrLine[] = [];
+  for (let c = 0; c < parts.length; c++) {
+    onPart(c, parts.length);
+    const { data } = await w.recognize(parts[c], {}, { blocks: true });
+    for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) lines.push({ text: l.text, y: l.bbox.y0, col: c });
+  }
+  return lines;
+}
+
 export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
   catalog: ShotCatalog[]; buyerName: (id: string) => string; onBuyer: (id: string) => void; onDone: () => void;
 }) {
@@ -49,22 +86,24 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
 
   async function handle(file: Blob) {
     setMsg(''); setRows([]);
+    const video = file.type.startsWith('video/');
     try {
       setBusy('Готую розпізнавання…');
       const w = await ocrWorker(setBusy);
-      const parts = await prepare(file), lines: OcrLine[] = [];
-      for (let c = 0; c < parts.length; c++) {
-        setBusy(`Читаю скрін… ${c + 1} з ${parts.length}`);
-        const { data } = await w.recognize(parts[c], {}, { blocks: true });
-        for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) lines.push({ text: l.text, y: l.bbox.y0, col: c });
-      }
-      const b = detectBuyer(lines, catalog);
-      if (!b) { setBusy(''); setMsg('Не вдалося впізнати товари на скріні. Зроби скрін меню скупника цілком, без обрізання, і спробуй ще раз.'); return; }
+      let frames: OcrLine[][];
+      if (video) {
+        const shots = await videoFrames(file, setBusy);
+        frames = [];
+        for (let f = 0; f < shots.length; f++) frames.push(await readLines(w, shots[f], () => setBusy(`Читаю кадри відео… ${f + 1} з ${shots.length}`)));
+      } else frames = [await readLines(w, file, (c, n) => setBusy(`Читаю скрін… ${c + 1} з ${n}`))];
+      const b = detectBuyer(frames.flat(), catalog);
+      if (!b) { setBusy(''); setMsg(video ? 'Не вдалося впізнати товари на відео. Запиши меню скупника на весь екран і гортай повільно.' : 'Не вдалося впізнати товари на скріні. Зроби скрін меню скупника цілком, без обрізання, і спробуй ще раз.'); return; }
       const mine = catalog.filter(i => i.buyer_id === b);
       setBuyer(b); onBuyer(b);
-      setRows(parseShot(lines, mine).map((r, i) => ({ key: String(i), item_id: r.item?.id ?? '', price: r.price ? String(r.price) : '', read: r.read, on: !!(r.item && r.price) })));
+      const found = video ? mergeFrames(frames.map(l => parseShot(l, mine))) : parseShot(frames[0], mine);
+      setRows(found.map((r, i) => ({ key: String(i), item_id: r.item?.id ?? '', price: r.price ? String(r.price) : '', read: r.read, on: !!(r.item && r.price) })));
       setBusy('');
-    } catch (e) { setBusy(''); setMsg('Не вдалося прочитати скрін: ' + (e instanceof Error ? e.message : String(e))); }
+    } catch (e) { setBusy(''); setMsg((video ? 'Не вдалося прочитати відео: ' : 'Не вдалося прочитати скрін: ') + (e instanceof Error ? e.message : String(e)) + (video ? '. Спробуй відео у форматі MP4 або скріншоти.' : '')); }
   }
 
   /* Ctrl+V зі скріном, поки панель відкрита */
@@ -90,16 +129,16 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
     if (ok) onDone();
   }
 
-  if (!open) return <button type="button" className="btn sm" onClick={() => setOpen(true)}><Icon name="camera" />Внести скріншотом</button>;
+  if (!open) return <button type="button" className="btn sm" onClick={() => setOpen(true)}><Icon name="camera" />Внести скріном або відео</button>;
   return (
-    <section className="card shot" ref={box} aria-label="Внесення цін скріншотом">
-      <div className="row between"><h2 className="ih"><Icon name="camera" />Ціни зі скріншота</h2>
+    <section className="card shot" ref={box} aria-label="Внесення цін скріном або відео">
+      <div className="row between"><h2 className="ih"><Icon name="camera" />Ціни зі скріна або відео</h2>
         <button type="button" className="btn sm ghost" onClick={() => { setOpen(false); setRows([]); setMsg(''); }}>Закрити</button></div>
-      <label className="drop" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handle(f); }}>
-        <input type="file" accept="image/*" className="vh" onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) handle(f); }} />
+      <label className="drop" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /^(image|video)\//.test(f.type)) handle(f); }}>
+        <input type="file" accept="image/*,video/*" className="vh" onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) handle(f); }} />
         <Icon name="camera" size={22} />
-        <span><b>Встав скрін (Ctrl+V)</b>, перетягни його сюди або натисни, щоб вибрати файл.</span>
-        <small className="muted">Скрін меню скупника цілком. Розпізнавання йде у твоєму браузері — скрін нікуди не надсилається.</small>
+        <span><b>Встав скрін (Ctrl+V)</b>, перетягни сюди скрін чи відео або натисни, щоб вибрати файл.</span>
+        <small className="muted">Скрін меню скупника цілком або відео, де ти повільно гортаєш усе меню. Розпізнавання йде у твоєму браузері — файл нікуди не надсилається.</small>
       </label>
       {busy && <p className="muted" role="status">{busy}</p>}
       {msg && <p className={rows.length ? 'muted' : 'err'} role="status">{msg}</p>}

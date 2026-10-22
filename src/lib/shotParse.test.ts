@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectBuyer, parseShot, readPrice, type CatalogItem, type OcrLine } from './shotParse';
+import { detectBuyer, mergeFrames, parseShot, readPrice, type CatalogItem, type OcrLine, type ShotRow } from './shotParse';
 import ocr from './fixtures/shot-ocr.json';
 import catalog from './fixtures/catalog.json';
 
@@ -44,5 +44,18 @@ describe('ціни зі скріншота скупника (реальні ск
     const { buyer, got } = run('15');
     expect(buyer).toBe('fuel');
     expect(got).toEqual({ Бензин: 351, Дизель: 405, Гас: 327 });
+  });
+});
+
+describe('ціни з відео: зведення кадрів', () => {
+  const a: CatalogItem = { id: 1, name: 'Акула', buyer_id: 'fish' }, b: CatalogItem = { id: 2, name: 'Скат', buyer_id: 'fish' };
+  const r = (item: CatalogItem | null, price: number | null, score = 0.9): ShotRow => ({ item, read: item?.name || '', price, score });
+  it('бере ціну, що повторюється найчастіше, і товари з усіх кадрів', () => {
+    const out = mergeFrames([[r(a, 446)], [r(a, 448), r(b, 120)], [r(a, 446), r(b, null)], [r(null, 999)]]);
+    expect(out.map(x => [x.item!.id, x.price])).toEqual([[1, 446], [2, 120]]);
+  });
+  it('при рівній кількості — ціна з пізнішого кадру; без жодної ціни — null', () => {
+    expect(mergeFrames([[r(a, 440)], [r(a, 446)]])[0].price).toBe(446);
+    expect(mergeFrames([[r(b, null)]])[0].price).toBeNull();
   });
 });
