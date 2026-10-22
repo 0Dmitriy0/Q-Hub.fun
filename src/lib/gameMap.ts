@@ -138,12 +138,15 @@ async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<
     ctx.fillStyle = ctx.strokeStyle = meta.palette[c]; ctx.fill(); ctx.stroke();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка кольору категорії,
+     іконка всередині малюється лише коли їй вистачає пікселів */
   const r = pinPx / 2;
   for (const p of pins) {
     const [px, py] = gamePx(p.x, p.y, size); if (px < 0 || py < 0 || px > W || py > H) continue;
+    if (r < 2) { ctx.beginPath(); ctx.arc(px, py, Math.max(r, 0.75), 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); continue; }
     ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill();
     ctx.lineWidth = Math.max(1, pinPx / 12); ctx.strokeStyle = p.color; ctx.stroke();
-    const im = imgs.get(p.icon); if (im) ctx.drawImage(im, px - r * 0.72, py - r * 0.72, r * 1.44, r * 1.44);
+    const im = imgs.get(p.icon); if (im && r >= 4) ctx.drawImage(im, px - r * 0.72, py - r * 0.72, r * 1.44, r * 1.44);
   }
   const files: ZipEntry[] = [];
   const t = document.createElement('canvas'); t.width = t.height = size; const tc = t.getContext('2d')!;
