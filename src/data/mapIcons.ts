@@ -92,6 +92,8 @@ export const MAP_ICONS: string[] = [
  "/icons/map/school-water.svg",
  "/icons/map/school-air.svg",
  "/icons/map/ls-customs.svg",
+ "/icons/map/ls-customs-air.svg",
+ "/icons/map/ls-customs-water.svg",
  "/icons/map/chip-tuning.svg",
  "/icons/map/moto-salon.svg",
  "/icons/map/boat-salon.svg",
