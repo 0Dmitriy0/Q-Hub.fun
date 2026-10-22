@@ -94,7 +94,15 @@ export default function MapPage() {
   useEffect(() => {
     if (!supabase) return;
     /* '*' — нові колонки (icon, show_label) додає новіший SQL; без них мітки все одно завантажуються */
-    const pts = () => supabase!.from('map_points').select('*').limit(20000);
+    /* Supabase віддає максимум 1000 рядків за запит — беремо частинами, поки не прийде неповна сторінка */
+    const pts = async () => {
+      const all: Record<string, unknown>[] = [];
+      for (let from = 0; ; from += 1000) {
+        const r = await supabase!.from('map_points').select('*').order('id').range(from, from + 999);
+        if (r.error) return { data: null, error: r.error };
+        all.push(...(r.data || [])); if (!r.data || r.data.length < 1000) return { data: all, error: null };
+      }
+    };
     Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
       if (c.error || p.error) { setDbMissing(true); return; }
       if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
