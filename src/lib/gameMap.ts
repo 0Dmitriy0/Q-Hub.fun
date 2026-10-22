@@ -6,7 +6,8 @@ export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
 export const gamePx = (x: number, y: number, size: number): [number, number] =>
   [(x - GAME.x0) * size / GAME.tile, (GAME.yt - y) * size / GAME.tile];
 
-export const tileName = (row: number, col: number) => `minimap_${row}_${col}.png`;
+
+export const tileName = (row: number, col: number, prefix = 'minimap_') => `${prefix}${row}_${col}.png`;
 
 /* CRC-32 для zip */
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -123,21 +124,28 @@ async function deflate(data: Uint8Array): Promise<{ data: Uint8Array; method: 0 
   return { data: new Uint8Array(out), method: 8 };
 }
 
-/* 6 текстур мапи (як пак Hydra) з мітками, намальованими поверх */
-async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
-  const [meta, buf] = await Promise.all([fetch('/map/game/export.json').then(r => r.json()), fetch('/map/game/export.bin').then(r => r.arrayBuffer())]);
+/* трикутники з export.bin / sea.bin (u16 у чвертях метра від кута текстур) у кольорах палітри */
+async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: string, palette: string[], q: number) {
+  const buf = await fetch(file).then(r => r.arrayBuffer());
   const n = new DataView(buf).getUint32(0, true), xy = new Uint16Array(buf, 4, n * 6), col = new Uint8Array(buf, 4 + n * 12, n);
-  const W = size * GAME.cols, H = size * GAME.rows;
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d')!;
-  const s = size / GAME.tile / meta.q;
+  const s = size / GAME.tile / q;
   ctx.setTransform(s, 0, 0, s, 0, 0); ctx.lineWidth = 0.6 / s; ctx.lineJoin = 'round';
   for (let i = 0; i < n;) {   // підряд однакові кольори — одним шляхом; порядок як у файлі (тло, потім передній план)
     const c = col[i]; ctx.beginPath();
     for (; i < n && col[i] === c; i++) { const o = i * 6; ctx.moveTo(xy[o], xy[o + 1]); ctx.lineTo(xy[o + 2], xy[o + 3]); ctx.lineTo(xy[o + 4], xy[o + 5]); ctx.closePath(); }
-    ctx.fillStyle = ctx.strokeStyle = meta.palette[c]; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle = palette[c]; ctx.fill(); ctx.stroke();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* мапа одним полотном 2x3 тайли по size px: (море з рівнями глибини,) суша, потім шари й мітки (якщо передані) */
+async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], sea = false): Promise<HTMLCanvasElement> {
+  const meta = await fetch('/map/game/export.json').then(r => r.json());
+  const W = size * GAME.cols, H = size * GAME.rows;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d')!;
+  if (sea && meta.seaPalette) await drawTris(ctx, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
+  await drawTris(ctx, size, '/map/game/export.bin', meta.palette, meta.q);
   /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — дрібним текстом у їхньому розмірі в метрах */
   if (layers.includes('zones')) {
     const zones = (await import('../data/mapZones.json')).default as number[][][][];
@@ -168,13 +176,35 @@ async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<
     ctx.lineWidth = Math.max(1, pinPx / 12); ctx.strokeStyle = p.color; ctx.stroke();
     const im = imgs.get(p.icon); if (im && r >= 4) ctx.drawImage(im, px - r * 0.72, py - r * 0.72, r * 1.44, r * 1.44);
   }
+  return cv;
+}
+
+const png = (c: HTMLCanvasElement) => new Promise<Blob>((res, rej) => c.toBlob(x => (x ? res(x) : rej(new Error('PNG'))), 'image/png'))
+  .then(async b => new Uint8Array(await b.arrayBuffer()));
+
+async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promise<ZipEntry[]> {
   const files: ZipEntry[] = [];
   const t = document.createElement('canvas'); t.width = t.height = size; const tc = t.getContext('2d')!;
   for (let row = 0; row < GAME.rows; row++) for (let c = 0; c < GAME.cols; c++) {
     tc.clearRect(0, 0, size, size); tc.drawImage(cv, c * size, row * size, size, size, 0, 0, size, size);
-    const b = await new Promise<Blob>((res, rej) => t.toBlob(x => (x ? res(x) : rej(new Error('PNG'))), 'image/png'));
-    files.push({ name: 'textures/' + tileName(row, c), data: new Uint8Array(await b.arrayBuffer()) });
+    files.push({ name: 'textures/' + tileName(row, c, prefix), data: await png(t) });
   }
+  return files;
+}
+
+/* текстури як у грі: minimap_R_C 512 px (з назвами, зонами й мітками), minimap_sea_R_C 1024 px (суша й море з глибиною,
+   як на мапі сайту),
+   minimap_lod_128 — уся мапа одним квадратом 128 px на тлі глибокого моря */
+const TEX = 512, SEA = 1024, LOD = 128, DEEP = '#0a0e11';
+async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
+  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers), TEX, 'minimap_');
+  const sea = await drawMap(SEA, [], 0, imgs, [], true);
+  files.push(...await tiles(sea, SEA, 'minimap_sea_'));
+  const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
+  lc.fillStyle = DEEP; lc.fillRect(0, 0, LOD, LOD);
+  const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
+  lc.imageSmoothingQuality = 'high'; lc.drawImage(sea, (LOD - w) / 2, (LOD - h) / 2, w, h);
+  files.push({ name: 'textures/minimap_lod_128.png', data: await png(l) });
   return files;
 }
 
@@ -228,7 +258,7 @@ async function zipAt(url: string) {
 }
 
 /* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + значки вибраних міток + 6 текстур */
-export async function buildGamePack(pins: GamePin[], opt: { iconM: number; texSize: number; texPin: number; layers: GameLayer[] }, step?: (s: string) => void): Promise<Blob> {
+export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[] }, step?: (s: string) => void): Promise<Blob> {
   step?.('Завантажую мапу…');
   const base = await zipAt('/map/game/base.zip');
   const extra: ZipEntry[] = [];
@@ -250,7 +280,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; texSi
   }
   const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
-  const tex = await textures(pins, opt.texSize, opt.texPin, imgs, opt.layers);
+  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...icons, ...tex]) as BlobPart], { type: 'application/zip' });
 }

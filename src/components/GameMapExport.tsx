@@ -18,7 +18,6 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
   const list = groups;
   const [iconM, setIconM] = useState(7);
-  const [tex, setTex] = useState(512);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of marks) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
@@ -31,7 +30,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
       const { buildGamePack } = await import('../lib/gameMap');
       const pins = picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color }; });
       const layers = (['names', 'zones'] as const).filter(id => catById[id] && on(catById[id]));
-      const blob = await buildGamePack(pins, { iconM, texSize: tex, texPin: iconM * tex / 4500, layers }, setBusy);
+      const blob = await buildGamePack(pins, { iconM, layers }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
     } catch (e) { setErr('Не вдалося зібрати архів: ' + (e as Error).message); }
@@ -59,7 +58,6 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
       ))}
       <div className="mrow">
         <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[5, 7, 12, 20].map(v => <option key={v} value={v}>{v}{v === 7 ? ' (рекомендовано)' : ''}</option>)}</select></label>
-        <label className="mcheck">Текстури <select className="min" value={tex} onChange={e => setTex(+e.target.value)}>{[512, 1024, 2048].map(v => <option key={v} value={v}>{v}{v === 512 ? ' (рекомендовано)' : ''}</option>)}</select></label>
       </div>
       <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток`}</button>
       {picked.length > 1500 && !busy && <p className="muted">Багато міток — значки на мінікарті злипатимуться, а архів буде великим.</p>}
