@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { money, parseMoney } from '../../lib/format';
@@ -23,7 +22,7 @@ export default function Characters({ first }: { first?: boolean }) {
     <div className="grid side">
       <section className="card">
         <h2>{first ? 'Додай свого персонажа' : 'Новий персонаж'}</h2>
-        {first && <p className="muted">У кожного персонажа свій облік, склад і гараж. Вже користувався Quant Hub? Створи персонажа через <Link to="/kabinet/import">імпорт копії</Link> — перенесеться все.</p>}
+        {first && <p className="muted">У кожного персонажа свій облік, склад і гараж.</p>}
         <form className="form cols" onSubmit={add}>
           <label className="fld">Ім'я в грі<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} /></label>
           <label className="fld">Баланс зараз (готівка + банк)<input value={start} onChange={e => setStart(e.target.value)} inputMode="numeric" placeholder="6 900 661" /></label>

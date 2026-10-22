@@ -592,3 +592,6 @@ body.map-open .foot { display: none; }
 .vedit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
 .vedit-grid label, .vedit-sel { display: flex; flex-direction: column; gap: 4px; font: 600 12.5px var(--sans); color: var(--muted); }
 .vedit-grid input:disabled { opacity: .5; }
+.btn.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.btn.bad:hover { background: var(--bad); color: #fff; }
+.danger-zone { border-color: var(--bad); }
