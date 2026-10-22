@@ -30,7 +30,7 @@ export default function Dashboard({ c }: { c: Character }) {
           <section className="card"><span className="lbl">Прибуток з перекупу</span><div className="big" style={{ fontSize: 26 }}>{signed(L.resale)}</div><span className="muted">за всі угоди</span></section>
           <section className="card"><span className="lbl">На складі</span><div className="big" style={{ fontSize: 26 }}>{st.length} поз.</div><span className="muted">вкладено {money(cost)}</span></section>
         </div>
-        <div className="row"><Link className="btn acc" to="/kabinet/uhody">+ Угода</Link><Link className="btn" to="/kabinet/oblik">+ Запис в облік</Link><Link className="btn ghost" to="/kabinet/sklad">Склад</Link></div>
+        <div className="row edit-only"><Link className="btn acc" to="/kabinet/uhody">+ Угода</Link><Link className="btn" to="/kabinet/oblik">+ Запис в облік</Link><Link className="btn ghost" to="/kabinet/sklad">Склад</Link></div>
       </div>
       <section className="card"><h2>Найближче</h2><EventList compact /></section>
     </div>

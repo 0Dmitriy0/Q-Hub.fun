@@ -12,5 +12,5 @@ function show(s) {
 $('login').onclick = async () => { $('login').disabled = true; $('wait').hidden = false; show(await window.qhub.login()); };
 $('logout').onclick = async () => show(await window.qhub.logout());
 $('chars').onchange = e => window.qhub.character(e.target.value);
-$('cabinet').onclick = () => window.qhub.site('/kabinet');
+$('cabinet').onclick = () => window.qhub.cabinet();
 window.qhub.state().then(show);

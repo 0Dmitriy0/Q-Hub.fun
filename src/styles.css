@@ -595,3 +595,8 @@ body.map-open .foot { display: none; }
 .btn.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
 .btn.bad:hover { background: var(--bad); color: #fff; }
 .danger-zone { border-color: var(--bad); }
+
+/* кабінет на сайті — лише перегляд (редагування в програмі Q-Hub): форми додавання й небезпечні дії сховано */
+fieldset.ro, fieldset.rw { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ro section.card:has(form), .ro .danger-zone, .ro .edit-only { display: none; }
+.ro .grid.side:has(> section.card:has(form)) { grid-template-columns: 1fr; }

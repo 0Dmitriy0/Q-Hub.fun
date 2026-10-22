@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { desktop, type AppTokens } from './app';
 
 export interface Character { id: string; name: string; start_balance: number; goal_name: string; goal: number }
 interface Auth {
@@ -35,6 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
+    if (desktop) {
+      /* сесія з програми: перша при відкритті, далі — щоразу, як програма оновить токени */
+      const db = supabase;
+      const use = async (t: AppTokens | null) => {
+        if (!t) { await db.auth.signOut({ scope: 'local' }); setSession(null); setReady(true); return; }
+        if (t.character) setCurId(t.character);
+        const { data } = await db.auth.setSession({ access_token: t.access_token, refresh_token: t.refresh_token });
+        setSession(data.session); setReady(true);
+      };
+      desktop.session().then(use);
+      desktop.onSession(use);
+      return;
+    }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
     const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => data.subscription.unsubscribe();
@@ -70,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setGameName(game); setStaticId(stat); return null;
   }, [session]);
 
-  const setCurrent = useCallback((id: string) => { setCurId(id); try { localStorage.setItem(CUR_KEY, id); } catch { /* приватний режим */ } }, []);
+  const setCurrent = useCallback((id: string) => { setCurId(id); desktop?.character(id); try { localStorage.setItem(CUR_KEY, id); } catch { /* приватний режим */ } }, []);
   const current = characters.find(c => c.id === curId) || characters[0] || null;
   const meta = session?.user.user_metadata || {};
 
@@ -80,10 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: String(meta.full_name || meta.name || meta.custom_claims?.global_name || ''),
     avatar: String(meta.avatar_url || ''),
     signIn: async () => {
+      /* у програмі вхід — на її власному екрані */
+      if (desktop) { await desktop.logout(); return; }
       if (!supabase) return;
       await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + '/kabinet' } });
     },
-    signOut: async () => { if (supabase) await supabase.auth.signOut(); setCharacters([]); }
+    signOut: async () => {
+      /* у програмі виходить сама програма (анулює свою сесію й повертає на екран входу) */
+      if (desktop) { await desktop.logout(); return; }
+      if (supabase) await supabase.auth.signOut(); setCharacters([]);
+    }
   }), [ready, session, characters, current, setCurrent, reloadCharacters, role, staticId, gameName, saveProfile, meta.full_name, meta.name, meta.avatar_url, meta.custom_claims?.global_name]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

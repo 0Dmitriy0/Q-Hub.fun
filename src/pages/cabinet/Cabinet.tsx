@@ -1,6 +1,7 @@
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { canEdit } from '../../lib/app';
 import Dashboard from './Dashboard';
 import LedgerPage from './LedgerPage';
 import StockPage from './StockPage';
@@ -36,7 +37,12 @@ export default function Cabinet() {
         </div>
       </div>
       <nav className="tabs" aria-label="Кабінет">{TABS.map(([p, l]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end>{l}</NavLink>)}</nav>
-      {!current ? <Characters first /> : (
+      {!canEdit && (
+        <p className="card note" role="note">Тут — лише перегляд статистики. Записувати угоди, облік, склад і гараж — у програмі Q-Hub для Windows.</p>
+      )}
+      {!current ? (canEdit ? <Characters first /> : <div className="card empty">Персонажів ще немає. Додай першого в програмі Q-Hub.</div>) : (
+        /* на сайті всі поля й кнопки кабінету вимкнено, форми додавання сховано (.ro у styles.css) */
+        <fieldset className={canEdit ? 'rw' : 'ro'} disabled={!canEdit}>
         <Routes>
           <Route index element={<Dashboard c={current} />} />
           <Route path="oblik" element={<LedgerPage c={current} />} />
@@ -47,6 +53,7 @@ export default function Cabinet() {
           <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
           <Route path="import" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
         </Routes>
+        </fieldset>
       )}
     </>
   );

@@ -13,6 +13,25 @@ const saveSettings = () => fs.writeFileSync(settingsFile(), JSON.stringify(setti
 
 /* лише адреси сайту й Discord відкриваються в браузері; все інше — ні */
 const openExternal = url => { if (/^https:\/\//.test(url)) shell.openExternal(url); };
+/* сторінки сайту q-hub.fun відкриваються у вікні програми (кабінет), решта — у браузері */
+const isSite = url => url === cfg.site || url.startsWith(cfg.site + '/');
+/* токени — лише нашому вікну входу та сторінкам сайту */
+const trusted = e => { const u = e.senderFrame?.url || ''; return u.startsWith('file:') || isSite(u); };
+
+/* сесія для кабінету: оновлює її лише програма, сторінка отримує готові токени */
+async function tokens() {
+  const { data: { session } } = await sb.auth.getSession();
+  return session ? { access_token: session.access_token, refresh_token: session.refresh_token, character: settings.character || null } : null;
+}
+
+function showLogin() {
+  win.setResizable(false); win.setMinimumSize(420, 560); win.setSize(420, 560); win.center();
+  win.loadFile(path.join(__dirname, 'index.html'));
+}
+function showCabinet() {
+  win.setResizable(true); win.setMinimumSize(800, 600); win.setSize(1280, 820); win.center();
+  win.loadURL(cfg.site + '/kabinet');
+}
 
 async function state() {
   const { data: { session } } = await sb.auth.getSession();
@@ -38,8 +57,8 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
   win.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
-  win.webContents.on('will-navigate', e => e.preventDefault());
-  win.loadFile(path.join(__dirname, 'index.html'));
+  win.webContents.on('will-navigate', (e, url) => { if (!isSite(url)) { e.preventDefault(); openExternal(url); } });
+  showLogin();
 }
 
 /* помилка запуску — повідомлення замість тихого виходу без вікна */
@@ -52,13 +71,26 @@ app.whenReady().then(() => {
   const dec = b => (safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : b.toString());
   sb = makeClient(cfg, fileStorage(path.join(dir(), 'session.bin'), enc, dec));
 
+  /* оновлені токени — одразу в кабінет, інакше він за годину лишиться з простроченим ключем */
+  sb.auth.onAuthStateChange((ev) => {
+    if (!win || !isSite(win.webContents.getURL())) return;
+    if (ev === 'TOKEN_REFRESHED' || ev === 'SIGNED_IN') tokens().then(t => win.webContents.send('session', t));
+    if (ev === 'SIGNED_OUT') { win.webContents.send('session', null); showLogin(); }
+  });
+
   ipcMain.handle('state', () => state());
+  ipcMain.handle('session', e => (trusted(e) ? tokens() : null));
+  ipcMain.handle('cabinet', () => showCabinet());
   ipcMain.handle('login', async () => {
     try { await login(sb, openExternal); win?.show(); win?.focus(); return await state(); }
     catch (e) { return { user: null, error: 'Вхід не вдався: ' + e.message }; }
   });
-  ipcMain.handle('logout', async () => { await sb.auth.signOut(); return { user: null }; });
-  ipcMain.handle('character', (_e, id) => { settings.character = id; saveSettings(); return true; });
+  ipcMain.handle('logout', async () => {
+    await sb.auth.signOut();
+    if (isSite(win.webContents.getURL())) showLogin();
+    return { user: null };
+  });
+  ipcMain.handle('character', (_e, id) => { if (typeof id === 'string') { settings.character = id; saveSettings(); } return true; });
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));
   createWindow();
 }).catch(fail);
