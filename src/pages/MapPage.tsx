@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OCEAN, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
-import { groupCategories, type MapCategory, type MapMark } from '../lib/mapData';
+import { groupCategories, ownerLabel, type MapCategory, type MapMark } from '../lib/mapData';
 import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
 import { supabase } from '../lib/supabase';
@@ -48,6 +48,7 @@ export default function MapPage() {
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<[number, number] | null>(null);
   const [dbMissing, setDbMissing] = useState(false);
+  const [owners, setOwners] = useState<Record<number, string>>({});
   /* на телефоні фільтри згорнуті, щоб мапу було видно одразу */
   const [wide] = useState(() => typeof matchMedia === 'function' && matchMedia('(min-width: 861px)').matches);
 
@@ -64,10 +65,11 @@ export default function MapPage() {
 
   useEffect(() => {
     if (!supabase) return;
-    Promise.all([supabase.from('map_categories').select('*').order('sort'), supabase.from('map_points').select('id,category_id,name,note,x,y').limit(20000)]).then(([c, p]) => {
+    Promise.all([supabase.from('map_categories').select('*').order('sort'), supabase.from('map_points').select('id,category_id,name,note,x,y,owner_static').limit(20000), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
       if (c.error || p.error) { setDbMissing(true); return; }
+      if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
       setCats([...BUILTIN, ...(c.data as MapCategory[])]);
-      setMarks([...BUILTIN_MARKS, ...(p.data || []).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number }))]);
+      setMarks([...BUILTIN_MARKS, ...(p.data || []).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null }))]);
     });
   }, []);
 
@@ -107,13 +109,14 @@ export default function MapPage() {
       const icon = L.divIcon({ className: 'mpin-wrap', iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -18],
         html: `<span class="mpin" style="border-color:${c.color};box-shadow:0 0 0 3px ${c.color}38,0 6px 14px rgba(0,0,0,.5)"><img src="${esc(mk.icon || c.icon)}" alt="" width="24" height="24"></span>` });
       const html = `<div class="mpop"><b>${esc(mk.name || c.name)}</b>${mk.name ? `<span>${esc(c.name)}</span>` : ''}${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
+        + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy">X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         + (mk.link ? `<a data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
-        + (isAdmin && mk.dbId ? `<button type="button" class="mdel" data-del="${mk.dbId}">Видалити мітку</button>` : '') + '</div>';
+        + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
     }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
-  }, [cats, marks, isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current; if (!m) return;
@@ -134,6 +137,18 @@ export default function MapPage() {
     const { error } = await supabase!.from('map_points').delete().eq('id', id);
     if (error) { alert('Не вдалося видалити: ' + error.message); return; }
     map.current?.closePopup(); setMarks(ms => ms.filter(x => x.dbId !== id));
+  }
+  async function setOwner(id: number) {
+    const cur = marks.find(x => x.dbId === id)?.owner;
+    const v = prompt('Статік власника бізнесу (порожньо — прибрати власника):', cur ? String(cur) : '');
+    if (v === null) return;
+    const st = v.trim() ? Number(v.trim().replace('#', '')) : null;
+    if (st !== null && !(Number.isInteger(st) && st > 0)) { alert('Статік — ціле число, напр. 12345.'); return; }
+    const { error } = await supabase!.from('map_points').update({ owner_static: st }).eq('id', id);
+    if (error) { alert('Не вдалося зберегти: ' + error.message); return; }
+    map.current?.closePopup(); setMarks(ms => ms.map(x => (x.dbId === id ? { ...x, owner: st } : x)));
+    const o = await supabase!.from('map_owners').select('static_id,game_name');
+    if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
   }
   async function delCat(c: MapCategory) {
     if (!confirm(`Видалити категорію «${c.name}» разом з усіма її мітками (${count[c.id] || 0})?`)) return;
@@ -182,6 +197,7 @@ export default function MapPage() {
             const t = e.target as HTMLElement;
             const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
             const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
+            const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
           }}>
           <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
           {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}

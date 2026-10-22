@@ -24,6 +24,16 @@ create table if not exists public.map_points (
 );
 create index if not exists map_points_category on public.map_points (category_id);
 
+-- власник бізнесу на мітці (магазин, АЗС тощо): статік персонажа; файл можна запускати повторно
+alter table public.map_points add column if not exists owner_static integer check (owner_static between 1 and 999999999);
+
+-- нік власника для мапи: лише ті профілі, чий статік стоїть на якійсь мітці, і лише нік зі статіком
+create or replace view public.map_owners as
+select distinct p.static_id, p.game_name
+from public.profiles p join public.map_points m on m.owner_static = p.static_id
+where p.static_id is not null;
+grant select on public.map_owners to anon, authenticated;
+
 alter table public.map_categories enable row level security;
 alter table public.map_points enable row level security;
 drop policy if exists "map_categories: read all" on public.map_categories;

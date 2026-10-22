@@ -16,7 +16,7 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
 }) {
   const own = cats.filter(c => !c.builtin);
   const [cat, setCat] = useState(own[0]?.id || '');
-  const [name, setName] = useState(''); const [note, setNote] = useState('');
+  const [name, setName] = useState(''); const [note, setNote] = useState(''); const [owner, setOwner] = useState('');
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [bulk, setBulk] = useState('');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
@@ -27,12 +27,12 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
   const [seen, setSeen] = useState<[number, number] | null>(null);
   if (picked && picked !== seen) { setSeen(picked); setX(String(Math.round(picked[0] * 10) / 10)); setY(String(Math.round(picked[1] * 10) / 10)); }
 
-  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number }): MapMark =>
-    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y });
+  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number; owner_static: number | null }): MapMark =>
+    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y, owner: r.owner_static });
 
-  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number }[]) {
+  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number; owner_static?: number | null }[]) {
     setBusy(true); setMsg('');
-    const { data, error } = await supabase!.from('map_points').insert(rows).select('id,category_id,name,note,x,y');
+    const { data, error } = await supabase!.from('map_points').insert(rows).select('id,category_id,name,note,x,y,owner_static');
     setBusy(false);
     if (error) { setMsg(dbErr(error.message)); return false; }
     onMarks((data || []).map(toMark)); setMsg(`Додано міток: ${data?.length || 0}`); return true;
@@ -41,7 +41,9 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
     const xv = parseFloat(x.replace(',', '.')), yv = parseFloat(y.replace(',', '.'));
     if (!cat) return setMsg('Вибери категорію.');
     if (!Number.isFinite(xv) || !Number.isFinite(yv)) return setMsg('Впиши X і Y або візьми їх кліком по мапі.');
-    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv }])) { setName(''); setNote(''); }
+    const st = owner.trim() ? Number(owner.trim().replace('#', '')) : null;
+    if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
+    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st }])) { setName(''); setNote(''); setOwner(''); }
   }
   async function addBulk() {
     if (!cat) return setMsg('Вибери категорію.');
@@ -69,6 +71,7 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
         <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
         <input className="min" placeholder="Назва (необов'язково)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" />
         <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" />
+        <input className="min mono" inputMode="numeric" placeholder="Статік власника бізнесу (необов'язково)" value={owner} onChange={e => setOwner(e.target.value)} aria-label="Статік власника" />
         <div className="mrow">
           <input className="min mono" inputMode="decimal" placeholder="X" value={x} onChange={e => setX(e.target.value)} aria-label="X" />
           <input className="min mono" inputMode="decimal" placeholder="Y" value={y} onChange={e => setY(e.target.value)} aria-label="Y" />

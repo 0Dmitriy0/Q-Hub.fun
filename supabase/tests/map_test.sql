@@ -34,8 +34,21 @@ do $$ begin
   begin insert into public.map_categories (id, name, color) values ('bad', 'Погана', 'red'); raise exception 'колір не HEX прийнято';
   exception when check_violation then null; end;
 end $$;
+-- власник бізнесу: статік на мітці, нік з профілю видно на мапі (а пошта й інше — ні)
+update public.map_points set owner_static = 777 where name = 'Бак біля пірсу';
+do $$ begin
+  assert (select owner_static from public.map_points where name = 'Бак біля пірсу') = 777, 'власник не записався';
+  begin update public.map_points set owner_static = 0 where name = 'Скриня 1'; raise exception 'статік 0 прийнято';
+  exception when check_violation then null; end;
+end $$;
 delete from public.map_categories where id = 'boxes';
 do $$ begin assert (select count(*) from public.map_points) = 1, 'мітки видаленої категорії лишились'; end $$;
 reset role;
+set role anon;
+do $$ begin
+  assert (select count(*) from public.map_owners) = 1, 'власника не видно гостю';
+  assert (select static_id from public.map_owners) = 777, 'не той статік власника';
+end $$;
+reset role;
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000a';
-\echo 'Мапа ok: 35 категорій; бачать усі; гість і гравець нічого не додають; адмін додає категорії й мітки; координати й колір перевіряються; мітки йдуть разом з категорією'
+\echo 'Мапа ok: 35 категорій; бачать усі; гість і гравець нічого не додають; адмін додає категорії й мітки; координати й колір перевіряються; мітки йдуть разом з категорією; власника бізнесу видно за статіком'
