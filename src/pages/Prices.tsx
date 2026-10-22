@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { money, parseMoney, when } from '../lib/format';
@@ -10,11 +10,14 @@ import ShotImport from '../components/ShotImport';
 import PicUpload from '../components/PicUpload';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
+import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface NextChange { buyer_id: string; next_change_at: string | null; game_name: string | null; static_id: number | null }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
+
+type Data = PriceData<Buyer, Row, Update, Contributor, NextChange>;
 
 interface Hist { buyer_id: string; item_id: number; price: number; at: string }
 
@@ -32,21 +35,27 @@ function Pic({ url, alt, size = 40 }: { url: string; alt: string; size?: number 
 export default function Prices() {
   const { isStaff, role, session, signIn } = useAuth();
   const isAdmin = role === 'admin';
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [ups, setUps] = useState<Update[]>([]);
-  const [top, setTop] = useState<Contributor[]>([]);
+  /* останні ціни з цього браузера видно одразу, без очікування бази */
+  const [cached] = useState(() => readCache<Data>());
+  const [buyers, setBuyers] = useState<Buyer[]>(cached?.buyers || []);
+  const [rows, setRows] = useState<Row[]>(cached?.rows || []);
+  const [ups, setUps] = useState<Update[]>(cached?.ups || []);
+  const [top, setTop] = useState<Contributor[]>(cached?.top || []);
   const [saving, setSaving] = useState('');
-  const [next, setNext] = useState<NextChange[]>([]);
+  const [next, setNext] = useState<NextChange[]>(cached?.next || []);
   /* «через скільки» зміна цін: години й хвилини, як показує гра; null — форма закрита */
   const [nextEdit, setNextEdit] = useState<{ h: string; m: string } | null>(null);
   const [nextErr, setNextErr] = useState('');
   const [tick, setTick] = useState(Date.now());
   useEffect(() => { const id = setInterval(() => setTick(Date.now()), 30000); return () => clearInterval(id); }, []);
-  const [tab, setTab] = useState('');
+  const [tab, setTab] = useState(cached?.buyers[0]?.id || '');
   const [q, setQ] = useState('');
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
+  /* звідки зараз ціни: жива база, збережені в браузері чи знімок сайту */
+  const [from, setFrom] = useState<'live' | 'saved' | ''>(cached ? 'saved' : '');
+  const [savedAt, setSavedAt] = useState(cached?.at || '');
+  const gotLive = useRef(false);
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [hist, setHist] = useState<Record<string, Pt[]>>({});
   const [histFor, setHistFor] = useState<Set<string>>(new Set());
@@ -65,12 +74,21 @@ export default function Prices() {
     ]);
     setLoaded(true);
     if (b.error || r.error) { setErr('Не вдалося завантажити ціни. Перевір інтернет і онови сторінку.'); return; }
-    setErr(''); setBuyers(b.data as Buyer[]); setRows(r.data as unknown as Row[]);
     /* хто оновлював і рейтинг — доповнення: без них ціни все одно показуються */
-    setUps(u.error ? [] : (u.data as Update[])); setTop(c.error ? [] : (c.data as Contributor[])); setNext(n.error ? [] : (n.data as NextChange[]));
-    if (b.data?.length) setTab(t => t || (b.data[0] as Buyer).id);
+    show({ at: new Date().toISOString(), buyers: b.data as Buyer[], rows: r.data as unknown as Row[],
+      ups: u.error ? [] : (u.data as Update[]), top: c.error ? [] : (c.data as Contributor[]), next: n.error ? [] : (n.data as NextChange[]) }, 'live');
   }
-  useEffect(() => { load().catch(() => { setLoaded(true); setErr('Не вдалося завантажити ціни. Перевір інтернет і онови сторінку.'); }); }, []);
+  function show(d: Data, src: 'live' | 'saved') {
+    if (src === 'live') setErr(''); setBuyers(d.buyers); setRows(d.rows); setUps(d.ups || []); setTop(d.top || []); setNext(d.next || []);
+    setFrom(src); setSavedAt(d.at);
+    if (d.buyers.length) setTab(t => t || d.buyers[0].id);
+    if (src === 'live') { gotLive.current = true; writeCache(d); }
+  }
+  useEffect(() => {
+    load().catch(() => { setLoaded(true); setErr('Не вдалося завантажити ціни. Перевір інтернет і онови сторінку.'); });
+    /* знімок сайту — для першого відкриття; новіших збережених чи живих цін він не перекриває */
+    readSnapshot<Data>().then(s => { if (s && !gotLive.current && s.at > (cached?.at || '')) show(s, 'saved'); });
+  }, []);
 
   async function loadHist(ids: string[]) {
     if (!supabase || !ids.length) return;
@@ -154,8 +172,9 @@ export default function Prices() {
     <>
       <div><h1>Ціни скупників</h1><p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік за 30 днів.</p></div>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
-      {err && <div className="card err">{err}</div>}
-      {supabase && !loaded && <div className="card empty" role="status">Завантажуємо ціни…</div>}
+      {err && !buyers.length && <div className="card err">{err}</div>}
+      {supabase && !loaded && !buyers.length && <div className="card empty" role="status">Завантажуємо ціни…</div>}
+      {from === 'saved' && err && <p className="muted" role="status">Показуємо ціни станом на {when(ms(savedAt))} — свіжі завантажаться, щойно з'явиться зв'язок.</p>}
       {loaded && !err && !buyers.length && <div className="card empty">Скупників поки немає — скоро з'являться.</div>}
       {buyers.length > 0 && (
         <>

@@ -6,7 +6,7 @@
   "description": "Q-Hub — база цін і довідник QuantRP + особистий кабінет гравця (облік, склад, гараж)",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/copy-ocr.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/copy-ocr.mjs && node scripts/snapshot.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
