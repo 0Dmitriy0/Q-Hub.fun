@@ -1,0 +1,17 @@
+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Link } from 'react-router-dom';
+import { useRows } from '../../lib/useRows';
+import { balance, ledger, stock } from '../../lib/ledger';
+import { money, signed } from '../../lib/format';
+import EventList from '../../components/EventList';
+export default function Dashboard({ c }) {
+    const tx = useRows('transactions', c.id);
+    const deals = useRows('deals', c.id, 'ts', true);
+    const bal = balance(c.start_balance, tx.rows);
+    const d0 = new Date();
+    d0.setHours(0, 0, 0, 0);
+    const today = tx.rows.filter(t => new Date(t.ts) >= d0).reduce((s, t) => s + (t.type === 'in' ? t.amount : -t.amount), 0);
+    const L = ledger(deals.rows), st = stock(L), cost = st.reduce((s, i) => s + i.boughtCost, 0);
+    const pct = c.goal ? Math.min(100, Math.max(0, bal / c.goal * 100)) : 0;
+    return (_jsxs("div", { className: "grid side", children: [_jsxs("div", { className: "grid", children: [_jsxs("section", { className: "card hero solid", children: [_jsx("span", { className: "muted", children: "\u0411\u0430\u043B\u0430\u043D\u0441" }), _jsx("div", { className: "big", children: money(bal) }), _jsx("div", { className: "row", children: _jsxs("span", { className: "pill", style: { background: 'rgba(20,7,0,.16)' }, children: [signed(today), " \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456"] }) }), c.goal > 0 && _jsxs(_Fragment, { children: [_jsxs("div", { className: "row between", children: [_jsx("b", { children: c.goal_name || 'Ціль' }), _jsxs("b", { className: "mono", children: [pct.toFixed(1), "%"] })] }), _jsx("div", { style: { height: 10, borderRadius: 99, background: 'rgba(20,7,0,.2)' }, children: _jsx("div", { style: { width: pct + '%', height: '100%', borderRadius: 99, background: '#140700' } }) }), _jsxs("span", { className: "muted", children: ["\u0417\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ", money(Math.max(0, c.goal - bal))] })] })] }), _jsxs("div", { className: "grid two", children: [_jsxs("section", { className: "card", children: [_jsx("span", { className: "lbl", children: "\u041F\u0440\u0438\u0431\u0443\u0442\u043E\u043A \u0437 \u043F\u0435\u0440\u0435\u043A\u0443\u043F\u0443" }), _jsx("div", { className: "big", style: { fontSize: 26 }, children: signed(L.resale) }), _jsx("span", { className: "muted", children: "\u0437\u0430 \u0432\u0441\u0456 \u0443\u0433\u043E\u0434\u0438" })] }), _jsxs("section", { className: "card", children: [_jsx("span", { className: "lbl", children: "\u041D\u0430 \u0441\u043A\u043B\u0430\u0434\u0456" }), _jsxs("div", { className: "big", style: { fontSize: 26 }, children: [st.length, " \u043F\u043E\u0437."] }), _jsxs("span", { className: "muted", children: ["\u0432\u043A\u043B\u0430\u0434\u0435\u043D\u043E ", money(cost)] })] })] }), _jsxs("div", { className: "row", children: [_jsx(Link, { className: "btn acc", to: "/kabinet/uhody", children: "+ \u0423\u0433\u043E\u0434\u0430" }), _jsx(Link, { className: "btn", to: "/kabinet/oblik", children: "+ \u0417\u0430\u043F\u0438\u0441 \u0432 \u043E\u0431\u043B\u0456\u043A" }), _jsx(Link, { className: "btn ghost", to: "/kabinet/sklad", children: "\u0421\u043A\u043B\u0430\u0434" })] })] }), _jsxs("section", { className: "card", children: [_jsx("h2", { children: "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435" }), _jsx(EventList, { compact: true })] })] }));
+}

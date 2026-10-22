@@ -14,3 +14,8 @@ export function parseHash(h: string): { x: number; y: number; z: number } | null
   return m ? { x: +m[1], y: +m[2], z: m[3] ? +m[3] : 6 } : null;
 }
 export const makeHash = (x: number, y: number, z: number) => `#${Math.round(x)},${Math.round(y)},${z}`;
+
+/* пікселі мапи QuantFun -> метри гри. Звірено по 23 заправках, похибка ~3 м */
+export const QF_SCALE = 1.81992, QF_X0 = -4141.618, QF_YT = 8403.567;
+export const fromQuantFun = (px: number, py: number): [number, number] =>
+  [Math.round((px / QF_SCALE + QF_X0) * 10) / 10, Math.round((QF_YT - py / QF_SCALE) * 10) / 10];

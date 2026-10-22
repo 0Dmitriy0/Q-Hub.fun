@@ -26,13 +26,13 @@ export function slugify(name: string): string {
 }
 
 /* масове додавання: рядок «X, Y, назва» або «X Y назва»; коми в числах не плутаємо з роздільником */
-export function parseBulk(text: string): { ok: { x: number; y: number; name: string }[]; bad: number[] } {
+export function parseBulk(text: string, conv?: (x: number, y: number) => [number, number]): { ok: { x: number; y: number; name: string }[]; bad: number[] } {
   const ok: { x: number; y: number; name: string }[] = [], bad: number[] = [];
   text.split('\n').forEach((line, i) => {
     const t = line.trim(); if (!t) return;
     const m = /^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*(?:[,;\s]\s*(.*))?$/.exec(t);
     if (!m) { bad.push(i + 1); return; }
-    const x = +m[1], y = +m[2];
+    const [x, y] = conv ? conv(+m[1], +m[2]) : [+m[1], +m[2]];
     if (x < -6000 || x > 6800 || y < -4400 || y > 8500) { bad.push(i + 1); return; }
     ok.push({ x, y, name: (m[3] || '').trim() });
   });

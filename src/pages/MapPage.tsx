@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,18 +49,26 @@ export default function MapPage() {
   const [picked, setPicked] = useState<[number, number] | null>(null);
   const [dbMissing, setDbMissing] = useState(false);
   const [owners, setOwners] = useState<Record<number, string>>({});
-  /* на телефоні фільтри згорнуті, щоб мапу було видно одразу */
-  const [wide] = useState(() => typeof matchMedia === 'function' && matchMedia('(min-width: 861px)').matches);
-  /* мапа на весь екран під шапкою сайту; панель фільтрів — поверх мапи, згортається */
-  const [panel, setPanel] = useState(wide);
+  /* комп'ютер: мапа на весь екран під шапкою, панель фільтрів поверх мапи і згортається.
+     телефон: звичайна сторінка — мапа зверху, фільтри під нею */
+  const mq = typeof matchMedia === 'function' ? matchMedia('(min-width: 861px)') : null;
+  const [wide, setWide] = useState(() => !!mq?.matches);
+  const [panel, setPanel] = useState(true);
   const [top, setTop] = useState(64);
   useEffect(() => {
+    if (!mq) return;
+    const f = () => setWide(mq.matches); mq.addEventListener('change', f);
+    return () => mq.removeEventListener('change', f);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    map.current?.invalidateSize();
+    if (!wide) return;
     const h = document.querySelector('header.top'); if (!h) return;
     const upd = () => { setTop(Math.round(h.getBoundingClientRect().height)); map.current?.invalidateSize(); };
     upd(); const ro = new ResizeObserver(upd); ro.observe(h);
     document.body.classList.add('map-open');
     return () => { ro.disconnect(); document.body.classList.remove('map-open'); };
-  }, []);
+  }, [wide]);
 
   const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? c.shown;
   const count = useMemo(() => { const n: Record<string, number> = {}; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
@@ -103,7 +111,6 @@ export default function MapPage() {
       pickMarker.current?.remove();
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
       pickRef.current = false; setPicking(false);
-      if (!wide) setPanel(true);   // на телефоні панель ховалась, щоб клікнути по мапі
     });
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
@@ -136,12 +143,12 @@ export default function MapPage() {
   }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
-  function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) setPanel(false); } }
+  function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
     const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
     m.flyTo(m.unproject(toPx(mk.x, mk.y), ZMAX), 5, { duration: 0.8 });
-    if (!wide) setPanel(false);
+    if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => markers.current[mk.id]?.openPopup(), 850);
     setQ('');
   }
@@ -172,7 +179,7 @@ export default function MapPage() {
 
   const allIds = visibleCats.map(c => c.id);
   return (
-    <div className="mapfull" style={{ top }}>
+    <div className={wide ? 'mapfull' : 'mapflow'} style={wide ? { top } : undefined}>
       <h1 className="vh">Мапа штату</h1>
       <div className={'mapbox' + (picking ? ' picking' : '')} style={{ background: OCEAN }}
         onClick={e => {
@@ -186,29 +193,38 @@ export default function MapPage() {
         {pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
         <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
       </div>
-      <button type="button" className="mtoggle btn sm" onClick={() => setPanel(v => !v)} aria-expanded={panel} aria-controls="map-panel">
-        <Icon name="map" size={16} />{panel ? 'Сховати панель' : 'Фільтри'}</button>
-        <aside id="map-panel" className={'mside' + (panel ? '' : ' hidden')}>
+      {wide && <button type="button" className="mtoggle btn sm" onClick={() => setPanel(v => !v)} aria-expanded={panel} aria-controls="map-panel">
+        <Icon name="map" size={16} />{panel ? 'Сховати панель' : 'Фільтри'}</button>}
+        <aside id="map-panel" className={'mside' + (panel || !wide ? '' : ' hidden')}>
           <div className="fld has-ico msearch"><Icon name="search" /><input type="search" placeholder="Знайти мітку" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук на мапі" />
             {found.length > 0 && <ul className="mfound">{found.map(mk => <li key={mk.id}><button type="button" onClick={() => go(mk)}><img src={mk.icon || catById[mk.category]?.icon} alt="" width={18} height={18} />{mk.name || catById[mk.category]?.name}<small>{mk.name ? catById[mk.category]?.name : ''}</small></button></li>)}</ul>}
           </div>
           <details className="mfilters" open>
             <summary>Фільтри</summary>
-            <div className="mrow"><button type="button" className="btn sm ghost" onClick={() => setMany(allIds, true)}>Показати все</button><button type="button" className="btn sm ghost" onClick={() => setMany(allIds, false)}>Сховати все</button></div>
+            <div className="mseg" role="group" aria-label="Усі категорії">
+              <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Показати все</button>
+              <button type="button" onClick={() => setMany(allIds, false)} aria-pressed={visibleCats.length > 0 && !visibleCats.some(isOn)}>Сховати все</button>
+            </div>
             {groups.map(({ grp, cats: gc }) => {
               const allOn = gc.every(isOn);
               return (
                 <section key={grp} className="mgrp">
-                  <button type="button" className="mgrp-h" onClick={() => setMany(gc.map(c => c.id), !allOn)} aria-pressed={allOn} title={allOn ? 'Сховати групу' : 'Показати групу'}>
-                    <span>{grp}</span><span className={'meye' + (allOn ? ' on' : '')}>{allOn ? 'видно' : 'сховано'}</span>
+                  <button type="button" className="mgrp-h" onClick={() => setMany(gc.map(c => c.id), !allOn)} role="switch" aria-checked={allOn} title={allOn ? 'Сховати групу' : 'Показати групу'}>
+                    <span>{grp}</span><span className="msw" aria-hidden="true" />
                   </button>
-                  {gc.map(c => (
-                    <label key={c.id} className="mcat">
-                      <input type="checkbox" checked={isOn(c)} onChange={e => setMany([c.id], e.target.checked)} />
-                      <img src={c.icon} alt="" width={20} height={20} loading="lazy" /><span className="mcat-n">{c.name}</span><span className="cnt">{count[c.id] || 0}</span>
-                      {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={e => { e.preventDefault(); delCat(c); }} aria-label={'Видалити категорію ' + c.name}>✕</button>}
-                    </label>
-                  ))}
+                  <div className="mchips">
+                    {gc.map(c => {
+                      const v = isOn(c);
+                      return (
+                        <span key={c.id} className={'mchip' + (v ? ' on' : '')} style={{ '--c': c.color } as CSSProperties}>
+                          <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
+                            <img src={c.icon} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}</span><span className="cnt">{count[c.id] || 0}</span>
+                          </button>
+                          {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </section>
               );
             })}

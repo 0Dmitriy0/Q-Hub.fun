@@ -483,17 +483,33 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .mrow > .btn, .mrow > .min { flex: 1; }
 .mgrp { border-top: 1px solid var(--line); padding: 8px 0 4px; }
-.mgrp-h { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; background: none; color: var(--fg); font: 700 13.5px var(--sans); padding: 2px 0 6px; cursor: pointer; text-align: left; }
-.meye { font: 600 11px var(--sans); padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--muted); }
-.meye.on { color: #4ade80; background: color-mix(in srgb, #22c55e 15%, transparent); }
-.mcat { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13.5px; cursor: pointer; border-radius: 8px; }
-.mcat:hover { background: var(--surface2); }
-.mcat input { accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
-.mcat img { flex: none; }
-.mcat-n { flex: 1; min-width: 0; }
-.mcat .cnt { font: 600 11.5px var(--mono); color: var(--faint); }
-.mcat-del { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 0 2px; font-size: 13px; }
-.mcat-del:hover { color: #ef4444; }
+.mgrp-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: var(--fg); font: 700 13px var(--sans); letter-spacing: .01em; padding: 2px 0 8px; cursor: pointer; text-align: left; }
+.mgrp-h:focus-visible, .mchip-b:focus-visible, .mseg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* перемикач групи */
+.msw { position: relative; flex: none; width: 34px; height: 20px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--line2); transition: background .15s, border-color .15s; }
+.msw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--faint); transition: transform .15s, background .15s; }
+.mgrp-h[aria-checked="true"] .msw { background: var(--accent); border-color: var(--accent); }
+.mgrp-h[aria-checked="true"] .msw::after { transform: translateX(14px); background: #fff; }
+/* категорії — кнопки-плитки з кольором категорії */
+.mchips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.mchip { position: relative; display: flex; min-width: 0; }
+.mchip-b { display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2); color: var(--muted); font: 600 12.5px/1.2 var(--sans); text-align: left; cursor: pointer; transition: background .15s, border-color .15s, color .15s, opacity .15s; }
+.mchip-b img { flex: none; filter: grayscale(1); opacity: .55; transition: filter .15s, opacity .15s; }
+.mchip-b:hover { border-color: var(--line2); color: var(--fg); }
+.mchip.on .mchip-b { color: var(--fg); border-color: color-mix(in srgb, var(--c, var(--accent)) 70%, transparent); background: color-mix(in srgb, var(--c, var(--accent)) 14%, var(--surface)); box-shadow: inset 3px 0 0 var(--c, var(--accent)); }
+.mchip.on .mchip-b img { filter: none; opacity: 1; }
+.mcat-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mchip .cnt { flex: none; font: 700 11px var(--mono); color: var(--faint); padding: 1px 6px; border-radius: 999px; background: var(--bg); }
+.mchip.on .cnt { color: var(--fg); }
+.mcat-del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line2); background: var(--surface); color: var(--faint); cursor: pointer; padding: 0; font-size: 11px; opacity: 0; transition: opacity .15s; }
+.mchip:hover .mcat-del, .mcat-del:focus-visible { opacity: 1; }
+.mcat-del:hover { color: #ef4444; border-color: #ef4444; }
+@media (hover: none) { .mcat-del { opacity: 1; } }
+/* сегментований перемикач */
+.mseg { display: flex; padding: 3px; gap: 3px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); margin: 8px 0; }
+.mseg button { flex: 1; min-height: 34px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: 600 12.5px var(--sans); cursor: pointer; transition: background .15s, color .15s; }
+.mseg button:hover { color: var(--fg); }
+.mseg button[aria-pressed="true"], .mseg button[aria-checked="true"] { background: var(--surface2); color: var(--fg); box-shadow: 0 1px 0 var(--line2); }
 .madmin section { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); }
 .madmin h4 { margin: 0; font: 700 13.5px var(--sans); }
 .madmin p { margin: 0; font-size: 12.5px; }
@@ -517,11 +533,13 @@ textarea.min { resize: vertical; }
 body.map-open { overflow: hidden; }
 body.map-open .foot { display: none; }
 .mapfull { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; }
-.mside { position: absolute; left: 12px; top: 12px; bottom: 12px; width: 310px; z-index: 600; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 10px; border-radius: var(--r); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--line2); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
+.mside { position: absolute; left: 12px; top: 12px; bottom: 12px; width: 340px; z-index: 600; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 10px; border-radius: var(--r); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--line2); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
 .mside.hidden { display: none; }
 .mtoggle { position: absolute; top: 12px; right: 12px; z-index: 650; box-shadow: var(--shadow); }
 .mapel .leaflet-bottom.leaflet-right { margin-bottom: 40px; }
-@media (max-width: 860px) {
-  .mside { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 62%; }
-  .mtoggle { top: 8px; right: 8px; }
-}
+/* телефон: звичайна сторінка — мапа зверху, фільтри під нею */
+.mapflow { display: flex; flex-direction: column; gap: 12px; padding: 12px 0 24px; }
+.mapflow .mapbox { position: relative; inset: auto; height: min(68vh, 560px); min-height: 340px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line2); }
+.mapflow .mside { position: static; width: auto; overflow: visible; padding: 0; background: none; backdrop-filter: none; border: 0; box-shadow: none; }
+.mapflow .mchips { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+@media (prefers-reduced-motion: reduce) { .msw, .msw::after, .mchip-b, .mchip-b img, .mseg button { transition: none; } }

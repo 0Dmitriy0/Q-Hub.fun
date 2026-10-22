@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
 import { MAP_ICONS } from '../data/mapIcons';
+import { fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 
@@ -23,6 +24,9 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
   const [name, setName] = useState(''); const [note, setNote] = useState(''); const [owner, setOwner] = useState('');
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [bulk, setBulk] = useState('');
+  /* звідки координати: з гри (як у нас) чи пікселі з мапи QuantFun — тоді переводимо самі */
+  const [src, setSrc] = useState<'game' | 'qf'>('game');
+  const conv = src === 'qf' ? fromQuantFun : undefined;
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const [cName, setCName] = useState(''); const [cGrp, setCGrp] = useState('Міні-ігри, квести й контракти');
   const [cColor, setCColor] = useState('#ff6a1f'); const [cIcon, setCIcon] = useState(MAP_ICONS[0]);
@@ -42,16 +46,18 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
     onMarks((data || []).map(toMark)); setMsg(`Додано міток: ${data?.length || 0}`); return true;
   }
   async function addOne() {
-    const xv = parseFloat(x.replace(',', '.')), yv = parseFloat(y.replace(',', '.'));
+    const x0 = parseFloat(x.replace(',', '.')), y0 = parseFloat(y.replace(',', '.'));
     if (!cat) return setMsg('Вибери категорію.');
-    if (!Number.isFinite(xv) || !Number.isFinite(yv)) return setMsg('Впиши X і Y або візьми їх кліком по мапі.');
+    if (!Number.isFinite(x0) || !Number.isFinite(y0)) return setMsg('Впиши X і Y або візьми їх кліком по мапі.');
+    const [xv, yv] = conv ? conv(x0, y0) : [x0, y0];
+    if (xv < -6000 || xv > 6800 || yv < -4400 || yv > 8500) return setMsg(`Точка X ${xv}, Y ${yv} поза мапою — перевір, чи правильно вибрано «${src === 'qf' ? 'QuantFun' : 'З гри'}».`);
     const st = owner.trim() ? Number(owner.trim().replace('#', '')) : null;
     if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
-    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st }])) { setName(''); setNote(''); setOwner(''); }
+    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
   }
   async function addBulk() {
     if (!cat) return setMsg('Вибери категорію.');
-    const r = parseBulk(bulk);
+    const r = parseBulk(bulk, conv);
     if (r.bad.length) return setMsg(`Не зрозумів рядки: ${r.bad.join(', ')}. Формат: X, Y, назва (назву можна не писати).`);
     if (!r.ok.length) return setMsg('Немає жодного рядка з координатами.');
     if (await insert(r.ok.map(p => ({ category_id: cat, name: p.name, note: '', x: p.x, y: p.y })))) setBulk('');
@@ -76,20 +82,25 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
         <input className="min" placeholder="Назва (необов'язково)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" />
         <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" />
         <input className="min mono" inputMode="numeric" placeholder="Статік власника бізнесу (необов'язково)" value={owner} onChange={e => setOwner(e.target.value)} aria-label="Статік власника" />
+        <div className="mseg" role="radiogroup" aria-label="Звідки координати">
+          <button type="button" role="radio" aria-checked={src === 'game'} onClick={() => setSrc('game')}>З гри / Q-Hub</button>
+          <button type="button" role="radio" aria-checked={src === 'qf'} onClick={() => setSrc('qf')}>Пікселі QuantFun</button>
+        </div>
+        {src === 'qf' && <p className="muted">Впиши числа з мапи QuantFun як є — переведу в координати гри сам (похибка ~3 м). Для «Взяти з мапи» перемкни назад на «З гри».</p>}
         <div className="mrow">
           <input className="min mono" inputMode="decimal" placeholder="X" value={x} onChange={e => setX(e.target.value)} aria-label="X" />
           <input className="min mono" inputMode="decimal" placeholder="Y" value={y} onChange={e => setY(e.target.value)} aria-label="Y" />
         </div>
         <div className="mrow">
-          <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => onPick(!picking)} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : 'Взяти з мапи'}</button>
+          <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => { setSrc('game'); onPick(!picking); }} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : 'Взяти з мапи'}</button>
           <button type="button" className="btn sm acc" disabled={busy} onClick={addOne}>Додати мітку</button>
         </div>
       </section>
       <section>
         <h4>Багато міток одразу</h4>
-        <p className="muted">У вибрану вище категорію. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        <p className="muted">У вибрану вище категорію{src === 'qf' ? ', пікселі QuantFun' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
-        <button type="button" className="btn sm acc" disabled={busy || !bulk.trim()} onClick={addBulk}>Додати {parseBulk(bulk).ok.length || ''} міток</button>
+        <button type="button" className="btn sm acc" disabled={busy || !bulk.trim()} onClick={addBulk}>Додати {parseBulk(bulk, conv).ok.length || ''} міток</button>
       </section>
       <section>
         <h4>Нова категорія</h4>
