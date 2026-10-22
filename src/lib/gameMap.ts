@@ -144,11 +144,20 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
-  /* море трохи прозоре — крізь глибину видно тло гри; малюється окремо й кладеться цілим шаром, щоб шви трикутників не темніли */
+  /* море як на карті в паузі гри: біля берега майже непрозоре, глибше — прозоріше, на краях зникає зовсім.
+     Шар малюється окремо (шви трикутників не темніють), прозорість — за яскравістю рівня глибини */
   if (sea && meta.seaPalette) {
     const sc = document.createElement('canvas'); sc.width = W; sc.height = H;
-    await drawTris(sc.getContext('2d')!, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
-    ctx.globalAlpha = SEA_ALPHA; ctx.drawImage(sc, 0, 0); ctx.globalAlpha = 1;
+    const sx = sc.getContext('2d', { willReadFrequently: true })!;
+    await drawTris(sx, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
+    const lum = (h: string) => { const v = parseInt(h.slice(1), 16); return ((v >> 16) & 255) + ((v >> 8) & 255) + (v & 255); };
+    const ls = (meta.seaPalette as string[]).map(lum), lo = Math.min(...ls), hi = Math.max(...ls);
+    const img = sx.getImageData(0, 0, W, H), d = img.data;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3]) {
+      const t = Math.min(1, Math.max(0, (d[i] + d[i + 1] + d[i + 2] - lo) / (hi - lo)));
+      d[i + 3] = Math.round(d[i + 3] * (SEA_DEEP + (SEA_SHORE - SEA_DEEP) * t * t));
+    }
+    sx.putImageData(img, 0, 0); ctx.drawImage(sc, 0, 0);
   }
   await drawTris(ctx, size, '/map/game/export.bin', meta.palette, meta.q);
   /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — дрібним текстом у їхньому розмірі в метрах */
@@ -199,15 +208,14 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
 
 /* текстури як у грі: minimap_R_C 512 px (з назвами, зонами й мітками), minimap_sea_R_C 1024 px (суша й море з глибиною,
    як на мапі сайту),
-   minimap_lod_128 — уся мапа одним квадратом 128 px на тлі глибокого моря */
-const TEX = 512, SEA = 1024, LOD = 128, DEEP = '#0a0e11';
-const SEA_ALPHA = 0.75;
+   minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
+const TEX = 512, SEA = 1024, LOD = 128;
+const SEA_SHORE = 0.85, SEA_DEEP = 0;
 async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
   const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers), TEX, 'minimap_');
   const sea = await drawMap(SEA, [], 0, imgs, [], true);
   files.push(...await tiles(sea, SEA, 'minimap_sea_'));
   const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
-  lc.fillStyle = DEEP; lc.fillRect(0, 0, LOD, LOD);
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
   lc.imageSmoothingQuality = 'high'; lc.drawImage(sea, (LOD - w) / 2, (LOD - h) / 2, w, h);
   files.push({ name: 'textures/minimap_lod_128.png', data: await png(l) });
