@@ -26,6 +26,8 @@ create index if not exists map_points_category on public.map_points (category_id
 
 -- власник бізнесу на мітці (магазин, АЗС тощо): статік персонажа; файл можна запускати повторно
 alter table public.map_points add column if not exists owner_static integer check (owner_static between 1 and 999999999);
+-- своя іконка окремої мітки (напр. банда в категорії «Банди»); порожньо — іконка категорії
+alter table public.map_points add column if not exists icon text check (length(icon) <= 300 and icon ~ '^(/icons/|https://)[^\s"''<>]+$');
 
 -- нік власника для мапи: лише ті профілі, чий статік стоїть на якійсь мітці, і лише нік зі статіком
 create or replace view public.map_owners as
@@ -61,10 +63,6 @@ insert into public.map_categories (id, name, grp, icon, sort, shown) values
   ('mafia', 'Мафії', 'Структури', '/icons/map/mafia.svg', 22, true),
   ('spawn', 'Початкові локації', 'Структури', '/icons/map/spawn.svg', 23, true),
   ('school', 'Школи', 'Структури', '/icons/map/school.svg', 24, true),
-  ('gang-green', 'Зелені', 'Структури', '/icons/map/gang-green.svg', 25, true),
-  ('gang-yellow', 'Жовті', 'Структури', '/icons/map/gang-yellow.svg', 26, true),
-  ('gang-purple', 'Фіолетові', 'Структури', '/icons/map/gang-purple.svg', 27, true),
-  ('gang-bikers', 'Байкери', 'Структури', '/icons/map/gang-bikers.svg', 28, true),
   ('ls-customs', 'LS Customs', 'Транспорт', '/icons/jobs/mechanic.svg', 30, true),
   ('air-salon', 'Авіасалони', 'Транспорт', '/icons/map/air-salon.svg', 31, true),
   ('car-market', 'Авторинки', 'Транспорт', '/icons/map/car-market.svg', 32, true),

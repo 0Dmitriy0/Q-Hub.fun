@@ -10,7 +10,7 @@ import { JOBS } from '../data/jobs';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
-import MapAdmin from '../components/MapAdmin';
+import MapAdmin, { MarkEdit } from '../components/MapAdmin';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const ON_KEY = 'qhub:map:on';
@@ -50,6 +50,7 @@ export default function MapPage() {
   const [picked, setPicked] = useState<[number, number] | null>(null);
   const [dbMissing, setDbMissing] = useState(false);
   const [owners, setOwners] = useState<Record<number, string>>({});
+  const [editing, setEditing] = useState<MapMark | null>(null);
   /* комп'ютер: мапа на весь екран під шапкою, панель фільтрів поверх мапи і згортається.
      телефон: звичайна сторінка — мапа зверху, фільтри під нею */
   const mq = typeof matchMedia === 'function' ? matchMedia('(min-width: 861px)') : null;
@@ -84,11 +85,14 @@ export default function MapPage() {
 
   useEffect(() => {
     if (!supabase) return;
-    Promise.all([supabase.from('map_categories').select('*').order('sort'), supabase.from('map_points').select('id,category_id,name,note,x,y,owner_static').limit(20000), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
+    /* колонку icon додає новіший SQL — без неї мітки все одно завантажуються */
+    const pts = () => supabase!.from('map_points').select('id,category_id,name,note,x,y,owner_static,icon').limit(20000)
+      .then(r => (r.error && /icon/i.test(r.error.message) ? supabase!.from('map_points').select('id,category_id,name,note,x,y,owner_static').limit(20000) : r));
+    Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
       if (c.error || p.error) { setDbMissing(true); return; }
       if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
       setCats([...BUILTIN, ...(c.data as MapCategory[])]);
-      setMarks([...BUILTIN_MARKS, ...(p.data || []).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null }))]);
+      setMarks([...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, icon: (r.icon as string | null) || undefined }))]);
     });
   }, []);
 
@@ -134,7 +138,7 @@ export default function MapPage() {
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy">X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         + (mk.link ? `<a data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
-        + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
+        + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
     }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
@@ -173,6 +177,11 @@ export default function MapPage() {
     const o = await supabase!.from('map_owners').select('static_id,game_name');
     if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
   }
+  function startEdit(id: number) {
+    const mk = marks.find(x => x.dbId === id); if (!mk) return;
+    map.current?.closePopup(); setPanel(true); setEditing(mk);
+    setTimeout(() => document.getElementById('mark-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
   async function delCat(c: MapCategory) {
     if (!confirm(`Видалити категорію «${c.name}» разом з усіма її мітками (${count[c.id] || 0})?`)) return;
     const { error } = await supabase!.from('map_categories').delete().eq('id', c.id);
@@ -190,6 +199,7 @@ export default function MapPage() {
           const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
           const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
           const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
+          const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
         {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
@@ -232,6 +242,8 @@ export default function MapPage() {
               );
             })}
           </details>
+          {isAdmin && editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
+            onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
           {isAdmin && (dbMissing
             ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
             : <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}

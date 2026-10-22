@@ -543,3 +543,11 @@ body.map-open .foot { display: none; }
 .mapflow .mside { position: static; width: auto; overflow: visible; padding: 0; background: none; backdrop-filter: none; border: 0; box-shadow: none; }
 .mapflow .mchips { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 @media (prefers-reduced-motion: reduce) { .msw, .msw::after, .mchip-b, .mchip-b img, .mseg button { transition: none; } }
+/* редагування окремої мітки: категорія й своя іконка */
+.medit-box { display: flex; flex-direction: column; gap: 8px; border-color: var(--accent); }
+.medit-box h4 { margin: 0; font: 700 14px var(--sans); }
+.medit-box p { margin: 0; font-size: 12.5px; }
+.micons .mcat-ico { position: relative; }
+.micons .mcat-ico small { position: absolute; bottom: 0; right: 2px; font: 700 8.5px var(--sans); color: var(--muted); }
+.mic-pick > summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--muted); padding: 2px 0; }
+.mic-pick[open] > summary { margin-bottom: 6px; }
