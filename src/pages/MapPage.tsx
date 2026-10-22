@@ -88,14 +88,13 @@ export default function MapPage() {
 
   useEffect(() => {
     if (!supabase) return;
-    /* колонку icon додає новіший SQL — без неї мітки все одно завантажуються */
-    const pts = () => supabase!.from('map_points').select('id,category_id,name,note,x,y,owner_static,icon').limit(20000)
-      .then(r => (r.error && /icon/i.test(r.error.message) ? supabase!.from('map_points').select('id,category_id,name,note,x,y,owner_static').limit(20000) : r));
+    /* '*' — нові колонки (icon, show_label) додає новіший SQL; без них мітки все одно завантажуються */
+    const pts = () => supabase!.from('map_points').select('*').limit(20000);
     Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
       if (c.error || p.error) { setDbMissing(true); return; }
       if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
       setCats([...BUILTIN, ...(c.data as MapCategory[])]);
-      setMarks([...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, icon: (r.icon as string | null) || undefined }))]);
+      setMarks([...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false }))]);
     });
   }, []);
 
@@ -146,7 +145,7 @@ export default function MapPage() {
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
       /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
-      if (mk.name) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
+      if (mk.name && mk.label !== false) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
   }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps

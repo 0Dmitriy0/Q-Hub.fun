@@ -27,6 +27,8 @@ create index if not exists map_points_category on public.map_points (category_id
 -- власник бізнесу на мітці (магазин, АЗС тощо): статік персонажа; файл можна запускати повторно
 alter table public.map_points add column if not exists owner_static integer check (owner_static between 1 and 999999999);
 -- своя іконка окремої мітки (напр. банда в категорії «Банди»); порожньо — іконка категорії
+-- чи писати назву мітки під нею на мапі (для дрібних міток на кшталт баків підпис зайвий)
+alter table public.map_points add column if not exists show_label boolean not null default true;
 alter table public.map_points add column if not exists icon text check (length(icon) <= 300 and icon ~ '^(/icons/|https://)[^\s"''<>]+$');
 
 -- нік власника для мапи: лише ті профілі, чий статік стоїть на якійсь мітці, і лише нік зі статіком

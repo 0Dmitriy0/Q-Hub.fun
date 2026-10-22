@@ -1,6 +1,6 @@
 /* Дані мапи: категорії й мітки з бази плюс вбудовані (роботи, скупники) з даних сайту. */
 export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean }
-export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; icon?: string; link?: { href: string; label: string } }
+export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; icon?: string; label?: boolean; link?: { href: string; label: string } }
 
 /* «Нік #статік» власника; ніка може не бути, якщо гравець не зареєстрований на сайті */
 export const ownerLabel = (st: number, names: Record<number, string>) => (names[st] ? `${names[st]} #${st}` : `#${st}`);

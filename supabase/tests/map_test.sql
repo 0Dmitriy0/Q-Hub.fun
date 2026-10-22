@@ -45,6 +45,7 @@ end $$;
 update public.map_points set icon = '/icons/map/gang-green.svg' where name = 'Бак біля пірсу';
 do $$ begin
   assert (select icon from public.map_points where name = 'Бак біля пірсу') = '/icons/map/gang-green.svg', 'іконка мітки не записалась';
+  assert (select show_label from public.map_points where name = 'Бак біля пірсу'), 'назва мітки за замовчуванням не показується';
   begin update public.map_points set icon = 'javascript:alert(1)' where name = 'Скриня 1'; raise exception 'погану іконку прийнято';
   exception when check_violation then null; end;
   begin update public.map_points set icon = '/icons/x.svg" onerror="x' where name = 'Скриня 1'; raise exception 'іконку з лапками прийнято';
@@ -60,4 +61,4 @@ do $$ begin
 end $$;
 reset role;
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000a';
-\echo 'Мапа ok: 38 категорій; бачать усі; гість і гравець нічого не додають; адмін додає категорії й мітки; координати й колір перевіряються; мітки йдуть разом з категорією; власника бізнесу видно за статіком; мітка може мати свою іконку'
+\echo 'Мапа ok: 38 категорій; бачать усі; гість і гравець нічого не додають; адмін додає категорії й мітки; координати й колір перевіряються; мітки йдуть разом з категорією; власника бізнесу видно за статіком; мітка може мати свою іконку і ховати назву'

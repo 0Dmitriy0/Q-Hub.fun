@@ -12,6 +12,9 @@ export const dbErr = (m: string) => /owner_static|icon|column .* does not exist/
   ? 'У базі ще немає таблиць мапи. Запусти q-hub-map.sql у Supabase → SQL Editor.'
   : /row-level security|permission/i.test(m) ? 'Це може лише адмін.' : m;
 
+const colErr = (m: string) => /show_label/i.test(m) ? 'У базі ще немає колонки для підпису мітки. Запусти q-hub-map-label.sql у Supabase → SQL Editor.'
+  : /icon/i.test(m) ? 'У базі ще немає колонки для іконки мітки. Запусти q-hub-map-icon.sql у Supabase → SQL Editor.' : dbErr(m);
+
 /* сітка готових іконок; null — «як у категорії» */
 export function IconGrid({ value, onChange, catIcon, label }: { value: string | null; onChange: (v: string | null) => void; catIcon?: string; label: string }) {
   return (
@@ -30,19 +33,21 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   const own = cats.filter(c => !c.builtin);
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
   const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
+  const [label, setLabel] = useState(mark.label !== false);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const catIcon = cats.find(c => c.id === cat)?.icon || '';
   async function save() {
     setBusy(true); setMsg('');
-    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim() }).eq('id', mark.dbId!);
+    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}) }).eq('id', mark.dbId!);
     setBusy(false);
-    if (error) return setMsg(/icon/i.test(error.message) ? 'У базі ще немає колонки для іконки мітки. Запусти q-hub-map-icon.sql у Supabase → SQL Editor.' : dbErr(error.message));
-    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim() });
+    if (error) return setMsg(colErr(error.message));
+    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label });
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити мітку">
       <h4>Змінити мітку{mark.name ? ` «${mark.name}»` : ''}</h4>
       <input className="min" placeholder="Назва (видно під міткою на мапі)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" maxLength={160} />
+      <label className="mcheck"><input type="checkbox" checked={label} onChange={e => setLabel(e.target.checked)} /> Показувати назву на мапі</label>
       <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" maxLength={600} />
       <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
       <p className="muted">Іконка: перша — як у категорії, або будь-яка інша лише для цієї мітки</p>
@@ -67,7 +72,7 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
   useEffect(() => { if (!cat && own.length) setCat(own[0].id); }, [own.length]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [name, setName] = useState(''); const [note, setNote] = useState(''); const [owner, setOwner] = useState('');
   const [x, setX] = useState(''); const [y, setY] = useState('');
-  const [mIcon, setMIcon] = useState<string | null>(null);
+  const [mIcon, setMIcon] = useState<string | null>(null); const [mLabel, setMLabel] = useState(true);
   const [bulk, setBulk] = useState('');
   /* звідки координати: з гри (як у нас) чи пікселі з мапи QuantFun — тоді переводимо самі */
   const [src, setSrc] = useState<'game' | 'qf'>('game');
@@ -80,14 +85,14 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
   const [seen, setSeen] = useState<[number, number] | null>(null);
   if (picked && picked !== seen) { setSeen(picked); setX(String(Math.round(picked[0] * 10) / 10)); setY(String(Math.round(picked[1] * 10) / 10)); }
 
-  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number; owner_static: number | null; icon?: string | null }): MapMark =>
-    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y, owner: r.owner_static, icon: r.icon || undefined });
+  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number; owner_static: number | null; icon?: string | null; show_label?: boolean }): MapMark =>
+    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y, owner: r.owner_static, icon: r.icon || undefined, label: r.show_label !== false });
 
-  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number; owner_static?: number | null; icon?: string }[]) {
+  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number; owner_static?: number | null; icon?: string; show_label?: boolean }[]) {
     setBusy(true); setMsg('');
     const { data, error } = await supabase!.from('map_points').insert(rows).select('*');
     setBusy(false);
-    if (error) { setMsg(dbErr(error.message)); return false; }
+    if (error) { setMsg(colErr(error.message)); return false; }
     onMarks((data || []).map(toMark)); setMsg(`Додано міток: ${data?.length || 0}`); return true;
   }
   async function addOne() {
@@ -98,7 +103,7 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
     if (xv < -6000 || xv > 6800 || yv < -4400 || yv > 8500) return setMsg(`Точка X ${xv}, Y ${yv} поза мапою — перевір, чи правильно вибрано «${src === 'qf' ? 'QuantFun' : 'З гри'}».`);
     const st = owner.trim() ? Number(owner.trim().replace('#', '')) : null;
     if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
-    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}) }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
+    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }) }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
   }
   async function addBulk() {
     if (!cat) return setMsg('Вибери категорію.');
@@ -125,6 +130,7 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
         <h4>Нова мітка</h4>
         <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
         <input className="min" placeholder="Назва (необов'язково)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" />
+        <label className="mcheck"><input type="checkbox" checked={mLabel} onChange={e => setMLabel(e.target.checked)} /> Показувати назву на мапі</label>
         <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" />
         <input className="min mono" inputMode="numeric" placeholder="Статік власника бізнесу (необов'язково)" value={owner} onChange={e => setOwner(e.target.value)} aria-label="Статік власника" />
         <details className="mic-pick"><summary>Іконка мітки: {mIcon ? <img src={mIcon} alt="своя" width={20} height={20} /> : 'як у категорії'}</summary>
