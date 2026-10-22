@@ -1,7 +1,7 @@
 {
   "name": "q-hub-desktop",
   "productName": "Q-Hub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Q-Hub Desktop — програма поверх гри для гравців QuantRP",
   "main": "src/main.cjs",
   "private": true,
@@ -15,14 +15,24 @@
     "@supabase/supabase-js": "2.117.2"
   },
   "devDependencies": {
-    "electron": "33.2.1",
+    "electron": "37.10.3",
     "electron-builder": "25.1.8"
   },
   "build": {
     "appId": "fun.q-hub.desktop",
     "productName": "Q-Hub",
-    "files": ["src/**/*", "!src/*.test.cjs"],
-    "win": { "target": "nsis", "icon": "build/icon.png" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "shortcutName": "Q-Hub" }
+    "files": [
+      "src/**/*",
+      "!src/*.test.cjs"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Q-Hub"
+    }
   }
 }

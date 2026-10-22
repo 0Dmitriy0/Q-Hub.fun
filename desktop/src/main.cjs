@@ -1,5 +1,5 @@
 /* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа. Далі тут з'являться Alt+Q і баланс з екрана. */
-const { app, BrowserWindow, ipcMain, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
@@ -42,6 +42,10 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'index.html'));
 }
 
+/* помилка запуску — повідомлення замість тихого виходу без вікна */
+const fail = e => { dialog.showErrorBox('Q-Hub не запустився', String(e?.stack || e)); app.quit(); };
+process.on('uncaughtException', fail);
+
 app.whenReady().then(() => {
   try { settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { settings = {}; }
   const enc = s => (safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s) : Buffer.from(s));
@@ -57,6 +61,6 @@ app.whenReady().then(() => {
   ipcMain.handle('character', (_e, id) => { settings.character = id; saveSettings(); return true; });
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));
   createWindow();
-});
+}).catch(fail);
 
 app.on('window-all-closed', () => app.quit());
