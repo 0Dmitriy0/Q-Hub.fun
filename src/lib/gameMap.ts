@@ -124,7 +124,7 @@ async function deflate(data: Uint8Array): Promise<{ data: Uint8Array; method: 0 
 }
 
 /* 6 текстур мапи (як пак Hydra) з мітками, намальованими поверх */
-async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<string, HTMLImageElement | null>): Promise<ZipEntry[]> {
+async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
   const [meta, buf] = await Promise.all([fetch('/map/game/export.json').then(r => r.json()), fetch('/map/game/export.bin').then(r => r.arrayBuffer())]);
   const n = new DataView(buf).getUint32(0, true), xy = new Uint16Array(buf, 4, n * 6), col = new Uint8Array(buf, 4 + n * 12, n);
   const W = size * GAME.cols, H = size * GAME.rows;
@@ -138,6 +138,26 @@ async function textures(pins: GamePin[], size: number, pinPx: number, imgs: Map<
     ctx.fillStyle = ctx.strokeStyle = meta.palette[c]; ctx.fill(); ctx.stroke();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — дрібним текстом у їхньому розмірі в метрах */
+  if (layers.includes('zones')) {
+    const zones = (await import('../data/mapZones.json')).default as number[][][][];
+    ctx.fillStyle = 'rgba(60, 200, 90, .2)'; ctx.strokeStyle = 'rgba(140, 230, 150, .7)'; ctx.lineWidth = 0.6;
+    for (const poly of zones) {
+      ctx.beginPath();
+      for (const ring of poly) ring.forEach(([x, y], i) => { const [px, py] = gamePx(x, y, size); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+      ctx.fill('evenodd'); ctx.stroke();
+    }
+  }
+  if (layers.includes('names')) {
+    const labels = (await import('../data/mapLabels.json')).default as { t: string; x: number; y: number; h: number; c: string }[];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    for (const l of labels) {
+      const [px, py] = gamePx(l.x, l.y, size), fs = Math.max(3, l.h * size / 4500);
+      ctx.font = `800 ${fs}px Unbounded, Manrope, sans-serif`;
+      ctx.lineWidth = Math.max(0.8, fs / 4); ctx.strokeStyle = 'rgba(0, 0, 0, .85)'; ctx.strokeText(l.t, px, py);
+      ctx.fillStyle = l.c; ctx.fillText(l.t, px, py);
+    }
+  }
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
   const r = pinPx / 2;
@@ -230,7 +250,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; texSi
   }
   const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
-  const tex = await textures(pins, opt.texSize, opt.texPin, imgs);
+  const tex = await textures(pins, opt.texSize, opt.texPin, imgs, opt.layers);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...icons, ...tex]) as BlobPart], { type: 'application/zip' });
 }
