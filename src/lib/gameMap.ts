@@ -144,7 +144,12 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
-  if (sea && meta.seaPalette) await drawTris(ctx, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
+  /* море трохи прозоре — крізь глибину видно тло гри; малюється окремо й кладеться цілим шаром, щоб шви трикутників не темніли */
+  if (sea && meta.seaPalette) {
+    const sc = document.createElement('canvas'); sc.width = W; sc.height = H;
+    await drawTris(sc.getContext('2d')!, size, '/map/game/sea.bin', meta.seaPalette, meta.q);
+    ctx.globalAlpha = SEA_ALPHA; ctx.drawImage(sc, 0, 0); ctx.globalAlpha = 1;
+  }
   await drawTris(ctx, size, '/map/game/export.bin', meta.palette, meta.q);
   /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — дрібним текстом у їхньому розмірі в метрах */
   if (layers.includes('zones')) {
@@ -196,6 +201,7 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
    як на мапі сайту),
    minimap_lod_128 — уся мапа одним квадратом 128 px на тлі глибокого моря */
 const TEX = 512, SEA = 1024, LOD = 128, DEEP = '#0a0e11';
+const SEA_ALPHA = 0.75;
 async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
   const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers), TEX, 'minimap_');
   const sea = await drawMap(SEA, [], 0, imgs, [], true);
