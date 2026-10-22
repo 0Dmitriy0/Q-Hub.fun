@@ -32,6 +32,10 @@ const BUILTIN_MARKS: MapMark[] = POINTS.map(p => {
     : { id: p.id, category: 'buyers', name: p.name, note: p.note || '', x: p.x, y: p.y, icon: p.id === 'buyer-junk' ? '/icons/junk/buyer.svg' : '/icons/harvest/buyer.svg', link: { href: '/tsiny', label: 'Ціни скупників →' } };
 });
 
+/* при першому відкритті мапи увімкнені лише ці групи; далі — як гравець сам налаштував */
+const DEFAULT_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги']);
+const OPEN_KEY = 'qhub:map:open';
+function readOpen(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}'); } catch { return {}; } }
 function readOn(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(ON_KEY) || '{}'); } catch { return {}; } }
 function saveOn(v: Record<string, boolean>) { try { localStorage.setItem(ON_KEY, JSON.stringify(v)); } catch { /* приватний режим */ } }
 
@@ -80,7 +84,11 @@ export default function MapPage() {
     return () => { ro.disconnect(); document.body.classList.remove('map-open'); };
   }, [wide]);
 
-  const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? c.shown;
+  const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp);
+  /* панель: вкладки й згорнуті групи */
+  const [tab, setTab] = useState<'filters' | 'game' | 'admin'>('filters');
+  const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
+  const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
   const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
@@ -180,6 +188,7 @@ export default function MapPage() {
     m.fire('zoomend');
   }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  function resetOn() { setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
   function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
   function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
@@ -210,7 +219,7 @@ export default function MapPage() {
   }
   function startEdit(id: number) {
     const mk = marks.find(x => x.dbId === id); if (!mk) return;
-    map.current?.closePopup(); setPanel(true); setEditing(mk);
+    map.current?.closePopup(); setPanel(true); setTab('admin'); setEditing(mk);
     setTimeout(() => document.getElementById('mark-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   async function delCat(c: MapCategory) {
@@ -243,20 +252,30 @@ export default function MapPage() {
           <div className="fld has-ico msearch"><Icon name="search" /><input type="search" placeholder="Знайти мітку" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук на мапі" />
             {found.length > 0 && <ul className="mfound">{found.map(mk => <li key={mk.id}><button type="button" onClick={() => go(mk)}><img src={mk.icon || catById[mk.category]?.icon} alt="" width={18} height={18} />{mk.name || catById[mk.category]?.name}<small>{mk.name ? catById[mk.category]?.name : ''}</small></button></li>)}</ul>}
           </div>
-          <details className="mfilters" open>
-            <summary>Фільтри</summary>
+          <div className="mtabs" role="tablist" aria-label="Панель мапи">
+            <button type="button" role="tab" aria-selected={tab === 'filters'} onClick={() => setTab('filters')}>Фільтри</button>
+            <button type="button" role="tab" aria-selected={tab === 'game'} onClick={() => setTab('game')}>Для гри</button>
+            {isAdmin && <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Адмін</button>}
+          </div>
+          {tab === 'filters' && <section className="mfilters" role="tabpanel" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
-              <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Показати все</button>
-              <button type="button" onClick={() => setMany(allIds, false)} aria-pressed={visibleCats.length > 0 && !visibleCats.some(isOn)}>Сховати все</button>
+              <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Усі</button>
+              <button type="button" onClick={resetOn}>Як спочатку</button>
+              <button type="button" onClick={() => setMany(allIds, false)} aria-pressed={visibleCats.length > 0 && !visibleCats.some(isOn)}>Жодної</button>
             </div>
             {groups.map(({ grp, cats: gc }) => {
-              const allOn = gc.every(isOn);
+              const nOn = gc.filter(isOn).length, allOn = nOn === gc.length, open = !!openG[grp];
               return (
-                <section key={grp} className="mgrp">
-                  <button type="button" className="mgrp-h" onClick={() => setMany(gc.map(c => c.id), !allOn)} role="switch" aria-checked={allOn} title={allOn ? 'Сховати групу' : 'Показати групу'}>
-                    <span>{grp}</span><span className="msw" aria-hidden="true" />
-                  </button>
-                  <div className="mchips">
+                <section key={grp} className={'mgrp' + (open ? ' open' : '')}>
+                  <div className="mgrp-h">
+                    <button type="button" className="mgrp-t" onClick={() => toggleG(grp)} aria-expanded={open}>
+                      <svg className="mchev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      <span>{grp}</span><span className={'mgrp-n' + (nOn ? ' on' : '')}>{nOn}/{gc.length}</span>
+                    </button>
+                    <button type="button" className="msw-b" role="switch" aria-checked={nOn > 0} onClick={() => setMany(gc.map(c => c.id), !allOn && nOn === 0 ? true : !allOn)}
+                      aria-label={(nOn ? 'Сховати' : 'Показати') + ' групу ' + grp}><span className={'msw' + (nOn && !allOn ? ' part' : '')} aria-hidden="true" /></button>
+                  </div>
+                  {open && <div className="mchips">
                     {gc.map(c => {
                       const v = isOn(c);
                       return (
@@ -268,18 +287,20 @@ export default function MapPage() {
                         </span>
                       );
                     })}
-                  </div>
+                  </div>}
                 </section>
               );
             })}
-          </details>
-          <GameMapExport groups={groups} marks={marks} catById={catById} isOn={isOn} />
-          {isAdmin && editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
-            onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
-          {isAdmin && (dbMissing
-            ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
-            : <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
-                onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />)}
+          </section>}
+          {tab === 'game' && <GameMapExport groups={groups} marks={marks} catById={catById} isOn={isOn} />}
+          {tab === 'admin' && isAdmin && <>
+            {editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
+              onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
+            {dbMissing
+              ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
+              : <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
+                  onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />}
+          </>}
         </aside>
     </div>
   );

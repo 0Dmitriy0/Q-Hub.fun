@@ -39,7 +39,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   }
 
   return (
-    <details className="madmin mgame">
+    <details className="madmin mgame" open>
       <summary>Карта для гри</summary>
       <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV — ті самі файли, що дає Hydra. Галочками вибери, що потрібно: назви місць, зелені зони й мітки — вони стануть частиною мапи.</p>
       <div className="mseg" role="group" aria-label="Усі мітки">
