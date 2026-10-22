@@ -565,3 +565,9 @@ body.map-open .foot { display: none; }
 .mgame .mcheck { font-size: 13px; }
 .mgame .mcheck .cnt { margin-left: auto; font: 600 11px var(--mono); color: var(--faint); }
 .mgame select.min { width: auto; padding: 4px 6px; }
+/* назви місць на мапі: розмір у метрах гри (--h) × px на метр (--ms), шрифт сайту */
+.mname-wrap { background: none; border: 0; }
+.mname { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  font: 700 calc(var(--h) * var(--ms, .3) * 1px / .75) var(--disp); letter-spacing: .01em; line-height: 1;
+  text-shadow: 0 0 2px #0c0d0f, 0 0 2px #0c0d0f, 1px 1px 0 #0c0d0f, -1px -1px 0 #0c0d0f, 1px -1px 0 #0c0d0f, -1px 1px 0 #0c0d0f; }
+.mname.tiny { display: none; }

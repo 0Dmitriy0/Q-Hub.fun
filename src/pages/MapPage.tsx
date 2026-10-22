@@ -6,6 +6,8 @@ import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '
 import { vectorLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapCategory, type MapMark } from '../lib/mapData';
 import { POINTS } from '../data/mapPoints';
+import LABELS from '../data/mapLabels.json';
+import ZONES from '../data/mapZones.json';
 import { JOBS } from '../data/jobs';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -18,6 +20,8 @@ const ON_KEY = 'qhub:map:on';
 
 /* роботи й скупники — вбудовані категорії з даних сайту, решта — з бази (додає адмін) */
 const BUILTIN: MapCategory[] = [
+  { id: 'names', name: 'Назви місць', grp: 'Шари мапи', icon: '/icons/map/layer-names.svg', color: '#f4f1ec', sort: 1, shown: true, builtin: true },
+  { id: 'zones', name: 'Зелені зони', grp: 'Шари мапи', icon: '/icons/map/layer-zones.svg', color: '#2ea057', sort: 2, shown: true, builtin: true },
   { id: 'jobs', name: 'Роботи', grp: 'Заробіток', icon: '/icons/map/jobs.svg', color: '#ff6a1f', sort: 52, shown: true, builtin: true },
   { id: 'buyers', name: 'Скупники', grp: 'Заробіток', icon: '/icons/harvest/buyer.svg', color: '#f5b301', sort: 53, shown: true, builtin: true }
 ];
@@ -77,7 +81,7 @@ export default function MapPage() {
   }, [wide]);
 
   const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? c.shown;
-  const count = useMemo(() => { const n: Record<string, number> = {}; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
+  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
   const groups = useMemo(() => groupCategories(visibleCats), [visibleCats]);
@@ -122,7 +126,12 @@ export default function MapPage() {
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
       pickRef.current = false; setPicking(false);
     });
-    const labels = () => el.classList.toggle('mlabels-on', m.getZoom() >= LABEL_ZOOM);
+    const labels = () => {
+      el.classList.toggle('mlabels-on', m.getZoom() >= LABEL_ZOOM);
+      /* назви місць мають розмір у метрах гри — масштаб px/м для CSS; надто дрібні ховаємо */
+      const ms = PX_PER_M * 2 ** (m.getZoom() - ZMAX); el.style.setProperty('--ms', String(ms));
+      for (const n of el.querySelectorAll<HTMLElement>('.mname')) n.classList.toggle('tiny', Number(n.dataset.h) * ms / 0.75 < 7);
+    };
     m.on('zoomend', labels); labels();
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
@@ -148,12 +157,19 @@ export default function MapPage() {
       /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
       if (mk.name && mk.label !== false) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
+    /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
+    const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
+    if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
+    if (layers.current.names) for (const n of LABELS as { t: string; x: number; y: number; h: number; c: string }[])
+      L.marker(ll(n.x, n.y), { interactive: false, keyboard: false, icon: L.divIcon({ className: 'mname-wrap', iconSize: [0, 0], html: `<span class="mname" data-h="${n.h}" style="color:${n.c};--h:${n.h}">${esc(n.t)}</span>` }) }).addTo(layers.current.names);
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
+    m.fire('zoomend');   // розмір назв — коли вони вже на мапі
   }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current; if (!m) return;
     for (const c of cats) { const g = layers.current[c.id]; if (!g) continue; if (isOn(c)) g.addTo(m); else g.remove(); }
+    m.fire('zoomend');
   }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }

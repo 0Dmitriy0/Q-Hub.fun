@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import type { MapCategory, MapMark } from '../lib/mapData';
+import LABELS from '../data/mapLabels.json';
+import ZONES from '../data/mapZones.json';
+
+/* шари мапи (не мітки): у грі це готові файли назв і зон */
+const LAYER_COUNT = { names: LABELS.length, zones: ZONES.length };
 
 /* ці мітки адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію сховано */
 const PRESET = new Set(['graffiti', 'ufo-land', 'oil']);
@@ -15,7 +20,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   const [iconM, setIconM] = useState(12);
   const [tex, setTex] = useState(512);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
-  const count: Record<string, number> = {}; for (const m of marks) count[m.category] = (count[m.category] || 0) + 1;
+  const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of marks) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
   const picked = marks.filter(m => catById[m.category] && on(catById[m.category]));
   const set = (ids: string[], v: boolean) => setSel(s => { const n = { ...s }; for (const id of ids) n[id] = v; return n; });
@@ -25,7 +30,8 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
     try {
       const { buildGamePack } = await import('../lib/gameMap');
       const pins = picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color }; });
-      const blob = await buildGamePack(pins, { iconM, texSize: tex, texPin: Math.round(14 * tex / 512) }, setBusy);
+      const layers = (['names', 'zones'] as const).filter(id => catById[id] && on(catById[id]));
+      const blob = await buildGamePack(pins, { iconM, texSize: tex, texPin: Math.round(14 * tex / 512), layers }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
     } catch (e) { setErr('Не вдалося зібрати архів: ' + (e as Error).message); }
@@ -35,12 +41,11 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   return (
     <details className="madmin mgame">
       <summary>Карта для гри</summary>
-      <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV — ті самі файли, що дає Hydra. Галочками вибери мітки: вони стануть значками прямо на мапі.</p>
+      <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV — ті самі файли, що дає Hydra. Галочками вибери, що потрібно: назви місць, зелені зони й мітки — вони стануть частиною мапи.</p>
       <div className="mseg" role="group" aria-label="Усі мітки">
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
         <button type="button" onClick={() => set(all.map(c => c.id), false)}>Жодної</button>
       </div>
-      <p className="muted">Назви місць і зелені зони вже є на мапі; графіті, НЛО на суші й нафтокачки вибрані одразу.</p>
       {list.map(({ grp, cats }) => (
         <fieldset key={grp} className="mgame-grp">
           <legend>{grp}</legend>
