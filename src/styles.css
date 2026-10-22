@@ -557,3 +557,11 @@ body.map-open .foot { display: none; }
 .mlabels-on .leaflet-tooltip.mlabel { display: block; }
 .mcheck { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 .mcheck input { accent-color: var(--accent); width: 16px; height: 16px; }
+/* «Карта для гри»: галочки категорій */
+.mgame { display: flex; flex-direction: column; gap: 8px; }
+.mgame > p { margin: 4px 0 0; font-size: 12.5px; }
+.mgame-grp { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 6px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.mgame-grp legend { font: 700 12.5px var(--sans); color: var(--muted); padding: 0 4px 0 0; }
+.mgame .mcheck { font-size: 13px; }
+.mgame .mcheck .cnt { margin-left: auto; font: 600 11px var(--mono); color: var(--faint); }
+.mgame select.min { width: auto; padding: 4px 6px; }

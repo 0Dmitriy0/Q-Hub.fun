@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import MapAdmin, { MarkEdit } from '../components/MapAdmin';
+import GameMapExport from '../components/GameMapExport';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const ON_KEY = 'qhub:map:on';
@@ -248,6 +249,7 @@ export default function MapPage() {
               );
             })}
           </details>
+          <GameMapExport groups={groups} marks={marks} catById={catById} isOn={isOn} />
           {isAdmin && editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
             onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
           {isAdmin && (dbMissing
