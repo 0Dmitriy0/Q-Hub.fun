@@ -58,6 +58,15 @@ export function readZip(buf: Uint8Array): ZipEntry[] {
 /* сітка частин мінікарти: стовпці по 1175 м від X -4500, рядки по 1388 м від Y 8000; папка minimap_<стовпець>_<рядок> */
 export const supertileOf = (x: number, y: number): [number, number] => [Math.floor((x + 4500) / 1175), Math.floor((8000 - y) / 1388)];
 
+/* у кожній частині гра читає лише supertile_fore_C_R_tile_X_Y з X, Y від 0 до 2 (tile_3_0 вже ігнорує — назви так і зникали).
+   tile_0_0 — сама мапа; назви, зони й значки беруть вільні з решти, як Hydra бере tile_2_2 */
+export const SLOTS = ['2_2', '2_1', '2_0', '1_2', '1_1', '1_0', '0_2', '0_1'];
+export const slotFile = (k: string, slot: string) => `minimap_${k}/supertile_fore_${k}_tile_${slot}.odr`;
+export function freeSlot(k: string, taken: Set<string>): string | null {
+  const s = SLOTS.find(x => !taken.has(slotFile(k, x))); if (!s) return null;
+  taken.add(slotFile(k, s)); return s;
+}
+
 /* значок у одиницях [-0.5, 0.5]: горизонтальні смужки однакового кольору з растру іконки */
 export type IconRuns = { x0: number; x1: number; y0: number; y1: number; c: [number, number, number] }[];
 export function iconRuns(px: Uint8ClampedArray, n: number): IconRuns {
@@ -144,7 +153,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
-  /* море як на карті в паузі гри: біля берега майже непрозоре, глибше — прозоріше, на краях зникає зовсім.
+  /* море як на карті в паузі гри: біля берега непрозоре, глибше плавно прозоріше, на краях зникає зовсім.
      Шар малюється окремо (шви трикутників не темніють), прозорість — за яскравістю рівня глибини */
   if (sea && meta.seaPalette) {
     const sc = document.createElement('canvas'); sc.width = W; sc.height = H;
@@ -155,7 +164,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     const img = sx.getImageData(0, 0, W, H), d = img.data;
     for (let i = 0; i < d.length; i += 4) if (d[i + 3]) {
       const t = Math.min(1, Math.max(0, (d[i] + d[i + 1] + d[i + 2] - lo) / (hi - lo)));
-      d[i + 3] = Math.round(d[i + 3] * (SEA_DEEP + (SEA_SHORE - SEA_DEEP) * t * t));
+      d[i + 3] = Math.round(d[i + 3] * (SEA_DEEP + (SEA_SHORE - SEA_DEEP) * Math.sqrt(t)));
     }
     sx.putImageData(img, 0, 0); ctx.drawImage(sc, 0, 0);
   }
@@ -210,7 +219,7 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
    як на мапі сайту),
    minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
 const TEX = 512, SEA = 1024, LOD = 128;
-const SEA_SHORE = 0.85, SEA_DEEP = 0;
+const SEA_SHORE = 1, SEA_DEEP = 0;
 async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
   const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, true), TEX, 'minimap_');
   const sea = await drawMap(SEA, [], 0, imgs, [], true);
@@ -234,26 +243,25 @@ function runsOf(im: HTMLImageElement | null, n = 24): IconRuns {
 export const oddText = (k: string, odrs: string[]) =>
   `Version 165 32\n{\n${[...new Set(odrs)].sort().map(n => `\tminimap_${k}\\${n}`).join('\n')}\n}`;
 
-/* файли значків для вектора мінікарти: у кожній частині мапи — supertile_fore_C_R_tile_2_2 (далі 2_3…, якщо значків забагато) */
+/* файли значків для вектора мінікарти: у кожній частині мапи — перший вільний supertile_fore_C_R_tile_X_Y зі SLOTS */
 async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLImageElement | null>, added: Map<string, string[]>, taken: Set<string>): Promise<ZipEntry[]> {
   const runs = new Map<string, IconRuns>(); for (const [src, im] of imgs) runs.set(src, runsOf(im));
   const groups = new Map<string, GamePin[]>();
   for (const p of pins) { const [c, r] = supertileOf(p.x, p.y); const k = c + '_' + r; groups.set(k, [...(groups.get(k) || []), p]); }
   const out: ZipEntry[] = []; const enc = new TextEncoder();
   for (const [k, list] of groups) {
-    /* у базі вже лежать назви й зони (tile_2_2, 2_3…) — значки йдуть у наступні вільні файли */
-    let part = 2; while (taken.has(`minimap_${k}/supertile_fore_${k}_tile_2_${part}.odr`)) part++;
+    /* значки — у вільні номери частини (після мапи, назв і зон) */
     let m = new IconMesh();
     const flush = async () => {
       if (!m.size) return;
-      const tile = `supertile_fore_${k}_tile_2_${part}`, dir = `minimap_${k}/`;
+      const slot = freeSlot(k, taken); if (!slot) { m = new IconMesh(); return; }
+      const tile = `supertile_fore_${k}_tile_${slot}`, dir = `minimap_${k}/`;
       const { mesh, min, max } = meshText(m);
       for (const [name, text] of [[`${dir}${tile}/${tile}_high.mesh`, mesh], [`${dir}${tile}.odr`, odrText(tile, min, max)]] as const) {
         const raw = enc.encode(text); const z = await deflate(raw);
         out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
       }
       added.set(k, [...(added.get(k) || []), tile + '.odr']);
-      part++; while (taken.has(`minimap_${k}/supertile_fore_${k}_tile_2_${part}.odr`)) part++;
       m = new IconMesh();
     };
     for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM, p.color, runs.get(p.icon) || []); }
@@ -271,18 +279,43 @@ async function zipAt(url: string) {
   const ab: ArrayBuffer = await res.arrayBuffer(); return readZip(new Uint8Array(ab));
 }
 
+
+async function inflate(e: ZipEntry): Promise<Uint8Array> {
+  if (!e.method) return e.data;
+  return new Uint8Array(await new Response(new Blob([e.data as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+}
+
+/* файли шару (назви — tile_3_N, зони — tile_4_N у готових наборах) переносяться у вільні номери частини:
+   міняються шляхи і посилання на .mesh усередині .odr */
+async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntry[]> {
+  const re = /supertile_fore_(\d+_\d+)_tile_(\d+_\d+)/, map = new Map<string, string | null>();
+  const out: ZipEntry[] = [], enc = new TextEncoder(), dec = new TextDecoder();
+  for (const e of entries) {
+    const m = re.exec(e.name); if (!m) continue;
+    const key = m[0];
+    if (!map.has(key)) { const slot = freeSlot(m[1], taken); map.set(key, slot && `supertile_fore_${m[1]}_tile_${slot}`); }
+    const to = map.get(key); if (!to) continue;
+    const name = e.name.split(key).join(to);
+    if (!name.endsWith('.odr')) { out.push({ ...e, name }); continue; }
+    const raw = enc.encode(dec.decode(await inflate(e)).split(key).join(to)), z = await deflate(raw);
+    out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
+  }
+  return out;
+}
+
 /* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + значки вибраних міток + 6 текстур */
 export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[] }, step?: (s: string) => void): Promise<Blob> {
   step?.('Завантажую мапу…');
   const base = await zipAt('/map/game/base.zip');
   const extra: ZipEntry[] = [];
-  for (const l of opt.layers) extra.push(...(await zipAt(GAME_LAYERS[l])).filter(e => !base.some(b => b.name === e.name)));
+  const taken = new Set(base.map(e => e.name));
+  for (const l of opt.layers) extra.push(...await toSlots(await zipAt(GAME_LAYERS[l]), taken));
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
   const added = new Map<string, string[]>();
   const all = [...base, ...extra];
-  const icons = await iconFiles(pins, opt.iconM, imgs, added, new Set(all.map(e => e.name)));
+  const icons = await iconFiles(pins, opt.iconM, imgs, added, taken);
   /* .odd кожної частини, де з'явились нові .odr (шари або значки): усі її .odr за алфавітом */
   const touched = new Set(added.keys());
   for (const e of extra) { const m = /^minimap_([\d_]+)\/[^/]+\.odr$/.exec(e.name); if (m) touched.add(m[1]); }
