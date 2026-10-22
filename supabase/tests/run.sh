@@ -44,3 +44,6 @@ $P -f supabase/tests/player_prices_test.sql
 $P -f supabase/seed/vehicles.sql >/dev/null; $P -f supabase/seed/vehicles.sql >/dev/null   # шаблон транспорту: повтор без дублів
 $P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 4, 'шаблон транспорту дублюється'; assert (select exclusive and salon_price is null and fuel = 'petrol' from public.vehicles where name = 'Karin Priu'), 'ексклюзив або двигун не записався'; end \$\$;"
 echo 'Шаблон транспорту ok'
+$P -f supabase/seed/vehicles_marketplace.sql >/dev/null; $P -f supabase/seed/vehicles_marketplace.sql >/dev/null   # транспорт з маркетплейсу: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 78, 'транспорт з маркетплейсу дублюється'; assert (select kind = 'moto' and brand = 'Shitzu' from public.vehicles where name = 'Shitzu Ninja ZX-10R'), 'тип або марка не записались'; end \$\$;"
+echo 'Транспорт з маркетплейсу ok'
