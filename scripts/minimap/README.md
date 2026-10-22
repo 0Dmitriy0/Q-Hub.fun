@@ -13,3 +13,7 @@ zones.zip — зелені зони напівпрозорим відтінко�
 4. `build_packs.py` — пише шари (назви — `tile_3_N`, зони — `tile_4_N`) і пакує zip; `.odd` збирає вже сайт.
 
 Потрібні: numpy, scipy, shapely, mapbox-earcut, fontTools, Pillow; шрифт `unbounded.ttf` (Google Fonts, 800).
+
+**Зараз (22.10):** назви — текст Hydra як є: `hydra_names.py` (у папці з `new/` = OpenHydra_Custom_2 і `base/` =
+OpenHydra_Custom_4) пише `names.zip`, `names.bin`, `namesPalette` в `export.json` і виправляє висоту нових локацій у `base.zip`.
+Після `scripts/map-export.py` запускати `hydra_names.py` не обов'язково — `namesPalette` зберігається.

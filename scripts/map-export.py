@@ -22,5 +22,6 @@ def dump(tris, name):
 
 land = dump([t for t in ALL if t[0] != 0], 'export.bin')   # 0 — море
 sea = dump([t for t in ALL if t[0] == 0], 'sea.bin')
-json.dump({'x0': GX0, 'yt': GYT, 'tile': 4500, 'cols': 2, 'rows': 3, 'q': Q, 'palette': land, 'seaPalette': sea},
-          open(f'{OUT}/export.json', 'w'), separators=(',', ':'))
+meta = json.load(open(f'{OUT}/export.json')) if os.path.exists(f'{OUT}/export.json') else {}   # namesPalette пише minimap/hydra_names.py
+meta.update({'x0': GX0, 'yt': GYT, 'tile': 4500, 'cols': 2, 'rows': 3, 'q': Q, 'palette': land, 'seaPalette': sea})
+json.dump(meta, open(f'{OUT}/export.json', 'w'), separators=(',', ':'))

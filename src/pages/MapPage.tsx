@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
-import { vectorLayer } from '../lib/mapVector';
+import { namesLayer, vectorLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapCategory, type MapMark } from '../lib/mapData';
 import { POINTS } from '../data/mapPoints';
 import LABELS from '../data/mapLabels.json';
@@ -130,6 +130,7 @@ export default function MapPage() {
       errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }).addTo(m);
     /* ближче за z6 растр лише розтягувався б — поверх нього малюємо векторну мапу */
     vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds).addTo(m);
+    const np = m.createPane('names'); np.style.zIndex = '450'; np.style.pointerEvents = 'none';   // назви над зеленими зонами (overlayPane 400), під мітками (600)
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
     const h = parseHash(location.hash);
     if (h) m.setView(ll(h.x, h.y), h.z); else m.setView(ll(0, -800), 3);
@@ -144,9 +145,6 @@ export default function MapPage() {
     });
     const labels = () => {
       el.classList.toggle('mlabels-on', m.getZoom() >= LABEL_ZOOM);
-      /* назви місць мають розмір у метрах гри — масштаб px/м для CSS; надто дрібні ховаємо */
-      const ms = PX_PER_M * 2 ** (m.getZoom() - ZMAX); el.style.setProperty('--ms', String(ms));
-      for (const n of el.querySelectorAll<HTMLElement>('.mname')) n.classList.toggle('tiny', Number(n.dataset.h) * ms / 0.75 < 7);
     };
     m.on('zoomend', labels); labels();
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
@@ -176,10 +174,10 @@ export default function MapPage() {
     /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
     if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
-    if (layers.current.names) for (const n of LABELS as { t: string; x: number; y: number; h: number; c: string }[])
-      L.marker(ll(n.x, n.y), { interactive: false, keyboard: false, icon: L.divIcon({ className: 'mname-wrap', iconSize: [0, 0], html: `<span class="mname" data-h="${n.h}" style="color:${n.c};--h:${n.h}">${esc(n.t)}</span>` }) }).addTo(layers.current.names);
+    /* назви — трикутники тексту Hydra частиною мапи, як у грі (namesLayer) */
+    if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
-    m.fire('zoomend');   // розмір назв — коли вони вже на мапі
+    m.fire('zoomend');
   }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

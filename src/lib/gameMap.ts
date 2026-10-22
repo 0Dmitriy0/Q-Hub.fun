@@ -169,7 +169,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     sx.putImageData(img, 0, 0); ctx.drawImage(sc, 0, 0);
   }
   await drawTris(ctx, size, '/map/game/export.bin', meta.palette, meta.q);
-  /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — дрібним текстом у їхньому розмірі в метрах */
+  /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — текст Hydra */
   if (layers.includes('zones')) {
     const zones = (await import('../data/mapZones.json')).default as number[][][][];
     ctx.fillStyle = 'rgba(60, 200, 90, .2)'; ctx.strokeStyle = 'rgba(140, 230, 150, .7)'; ctx.lineWidth = 0.6;
@@ -179,16 +179,8 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
       ctx.fill('evenodd'); ctx.stroke();
     }
   }
-  if (layers.includes('names')) {
-    const labels = (await import('../data/mapLabels.json')).default as { t: string; x: number; y: number; h: number; c: string }[];
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    for (const l of labels) {
-      const [px, py] = gamePx(l.x, l.y, size), fs = Math.max(3, l.h * size / 4500);
-      ctx.font = `800 ${fs}px Unbounded, Manrope, sans-serif`;
-      ctx.lineWidth = Math.max(0.8, fs / 4); ctx.strokeStyle = 'rgba(0, 0, 0, .85)'; ctx.strokeText(l.t, px, py);
-      ctx.fillStyle = l.c; ctx.fillText(l.t, px, py);
-    }
-  }
+  /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
+  if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, '/map/game/names.bin', meta.namesPalette, meta.q);
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
   const r = pinPx / 2;
