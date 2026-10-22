@@ -84,6 +84,7 @@ export const MAP_ICONS: string[] = [
  "/icons/map/police.svg",
  "/icons/map/national-guard.svg",
  "/icons/map/arena.svg",
+ "/icons/map/arena-fight.svg",
  "/icons/map/mafia-odesa.svg",
  "/icons/map/yakuza.svg",
  "/icons/map/mafia-cosa.svg",
