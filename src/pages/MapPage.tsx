@@ -84,7 +84,7 @@ export default function MapPage() {
         onClick={e => { const a = (e.target as HTMLElement).closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); } }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" />
         {pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
-        <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub · карта: OpenHydra</span>
+        <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
       </div>
     </>
   );
