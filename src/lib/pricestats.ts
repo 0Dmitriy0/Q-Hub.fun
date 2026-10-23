@@ -32,11 +32,22 @@ export function series(pts: Pt[], now = Date.now(), period = PERIOD): Pt[] {
   return before ? [{ t: from, p: before.p }, ...inside] : inside;
 }
 
-/* Скупник-NPC міняє ціни кожні 3 години за київським часом: 00:00, 03:00, 06:00…
-   Те саме правило рахує база (price_cycle_start), тож сайт і база погоджуються, який цикл зараз. */
-export const CYCLE_H = 3;
-export function cycleStart(now = Date.now()) {
-  const p = kyParts(now);
-  return kyTs(p.y, p.mo, p.d, p.h - (p.h % CYCLE_H), 0);
+/* скупники міняють ціни в різний час — ціна, якій більше 3 годин, підсвічується як «може бути застаріла» */
+export const STALE = 3 * 36e5;
+
+
+/* вікна графіка: «сьогодні» і «вчора» — за київською добою (як у грі), місяць — 30 днів, рік — 365 */
+export type ChartPeriod = 'today' | 'yesterday' | 'month' | 'year';
+export function chartWindow(p: ChartPeriod, now = Date.now()): { from: number; to: number } {
+  const k = kyParts(now), midnight = kyTs(k.y, k.mo, k.d, 0, 0);
+  if (p === 'today') return { from: midnight, to: now };
+  if (p === 'yesterday') { const d = new Date(Date.UTC(k.y, k.mo - 1, k.d - 1)); return { from: kyTs(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), 0, 0), to: midnight }; }
+  return { from: now - (p === 'month' ? 30 : 365) * DAY, to: now };
 }
-export const nextCycle = (now = Date.now()) => cycleStart(now) + CYCLE_H * 36e5;
+/* точки в довільному вікні: остання ціна перед вікном стає його першою точкою, остання — тягнеться до кінця вікна */
+export function seriesIn(pts: Pt[], from: number, to: number): Pt[] {
+  const sorted = [...pts].sort((a, b) => a.t - b.t);
+  const before = sorted.filter(x => x.t < from).pop();
+  const inside = sorted.filter(x => x.t >= from && x.t <= to);
+  return before ? [{ t: from, p: before.p }, ...inside] : inside;
+}

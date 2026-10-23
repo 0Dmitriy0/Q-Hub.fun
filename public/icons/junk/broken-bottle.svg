@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="broken-bottle-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#17803a"/><stop offset="0.4" stop-color="#4fd06a"/><stop offset="1" stop-color="#137034"/></linearGradient></defs>
+<path d="M230 78h52v76c0 28 62 40 62 98v118l-22 30-20-42-24 56-22-50-26 48-20-46-24 32V252c0-58 62-70 62-98z" fill="url(#broken-bottle-g)" opacity=".95"/>
+<rect x="222" y="62" width="68" height="26" rx="10" fill="#137034"/>
+<rect x="194" y="220" width="16" height="110" rx="8" fill="#fff" opacity=".5"/>
+<path d="M112 432l46-30 16 34z" fill="#3fbf5a"/><path d="M336 438l36-34 26 34z" fill="#2fa04a"/><path d="M250 440l22-18 14 18z" fill="#3fbf5a"/></svg>

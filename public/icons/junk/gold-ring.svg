@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="gold-ring-g" gradientUnits="userSpaceOnUse" x1="100" y1="180" x2="412" y2="430"><stop offset="0" stop-color="#fff0a8"/><stop offset=".4" stop-color="#ffc93a"/><stop offset="1" stop-color="#b8780e"/></linearGradient></defs>
+<ellipse cx="256" cy="304" rx="144" ry="114" fill="none" stroke="url(#gold-ring-g)" stroke-width="42"/>
+<path d="M156 360c30 30 80 46 130 40" stroke="#fff6c8" stroke-width="10" fill="none" stroke-linecap="round" opacity=".7"/>
+<path d="M226 196h60l-8 -26h-44z" fill="#d9a22a"/>
+<path d="M198 140L226 106H286L314 140L256 206Z" fill="#8fe3ff" stroke="#3aa6d6" stroke-width="8" stroke-linejoin="round"/>
+<path d="M198 140H314M226 106L240 140L256 206L272 140L286 106" stroke="#e8fbff" stroke-width="6" fill="none" stroke-linejoin="round"/></svg>

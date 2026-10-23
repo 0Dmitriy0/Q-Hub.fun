@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="brass-knuckles-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0a8"/><stop offset="0.45" stop-color="#ffc93a"/><stop offset="1" stop-color="#c98a12"/></linearGradient><mask id="brass-knuckles-m"><rect width="512" height="512" fill="#fff"/>
+<circle cx="140" cy="206" r="32" fill="#000"/><circle cx="222" cy="200" r="32" fill="#000"/><circle cx="304" cy="200" r="32" fill="#000"/><circle cx="384" cy="206" r="32" fill="#000"/>
+<path d="M190 300q66 22 132 0v14q-66 36-132 0z" fill="#000"/></mask></defs>
+<g mask="url(#brass-knuckles-m)" fill="url(#brass-knuckles-g)">
+<circle cx="140" cy="206" r="62"/><circle cx="222" cy="200" r="62"/><circle cx="304" cy="200" r="62"/><circle cx="384" cy="206" r="62"/>
+<path d="M96 240Q256 292 428 240L398 340Q256 430 126 340Z"/></g>
+<path d="M150 156c22-10 50-10 70-2" stroke="#fff6c8" stroke-width="12" fill="none" stroke-linecap="round" opacity=".8"/></svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="broken-phone-s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a7ae6"/><stop offset="1" stop-color="#14336f"/></linearGradient></defs>
+<g transform="rotate(-10 256 260)">
+<rect x="156" y="76" width="200" height="364" rx="32" fill="#8a96a8"/>
+<rect x="172" y="104" width="168" height="310" rx="14" fill="url(#broken-phone-s)"/>
+<rect x="226" y="86" width="60" height="10" rx="5" fill="#3a414b"/>
+<path d="M290 190L340 150M290 190L176 150M290 190L240 300L176 340M290 190L340 270M240 300L300 414M290 190L250 104" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M290 190l-30 24 20 18z" fill="#fff"/></g></svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="charger-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d4d9df"/></linearGradient><linearGradient id="charger-m" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d868f"/><stop offset="0.45" stop-color="#eef1f4"/><stop offset="1" stop-color="#868f99"/></linearGradient></defs>
+<path d="M196 320C196 420 320 430 350 360S376 250 400 214" stroke="#8a939d" stroke-width="34" fill="none" stroke-linecap="round"/>
+<path d="M196 320C196 420 320 430 350 360S376 250 400 214" stroke="#f4f5f7" stroke-width="18" fill="none" stroke-linecap="round"/>
+<rect x="378" y="132" width="48" height="96" rx="10" fill="#f4f5f7" stroke="#8a939d" stroke-width="8"/><rect x="390" y="100" width="24" height="36" rx="4" fill="url(#charger-m)"/>
+<rect x="146" y="56" width="22" height="80" rx="11" fill="url(#charger-m)"/><rect x="222" y="56" width="22" height="80" rx="11" fill="url(#charger-m)"/>
+<rect x="104" y="118" width="182" height="206" rx="32" fill="url(#charger-g)" stroke="#8a939d" stroke-width="10"/>
+<path d="M210 160l-50 76h36l-16 60 54-84h-38z" fill="#ffc21f" stroke="#d99a12" stroke-width="6" stroke-linejoin="round"/></svg>

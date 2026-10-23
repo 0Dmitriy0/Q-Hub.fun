@@ -30,7 +30,7 @@ for f in supabase/migrations/*.sql; do $P -f "$f"; done
 $P -c "grant usage on schema public to anon, authenticated;
        grant select, insert, update, delete on all tables in schema public to anon, authenticated;
        revoke update on public.profiles from anon, authenticated;
-       grant update (name, avatar_url) on public.profiles to authenticated;
+       grant update (name, avatar_url, static_id, game_name) on public.profiles to authenticated;
        grant select on public.prices_confirmed to anon, authenticated;"
 $P -f supabase/tests/rls_test.sql
 $P -f supabase/seed/catalog_from_hub.sql
@@ -41,3 +41,13 @@ $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/seed/limits_from_hub.sql
 $P -f supabase/tests/catalog_test.sql
 $P -f supabase/tests/player_prices_test.sql
+$P -f supabase/tests/map_test.sql
+$P -f supabase/seed/vehicles.sql >/dev/null; $P -f supabase/seed/vehicles.sql >/dev/null   # шаблон транспорту: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 4, 'шаблон транспорту дублюється'; assert (select exclusive and salon_price is null and fuel = 'petrol' from public.vehicles where name = 'Karin Priu'), 'ексклюзив або двигун не записався'; end \$\$;"
+echo 'Шаблон транспорту ok'
+$P -f supabase/seed/vehicles_marketplace.sql >/dev/null; $P -f supabase/seed/vehicles_marketplace.sql >/dev/null   # транспорт з маркетплейсу: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 78, 'транспорт з маркетплейсу дублюється'; assert (select kind = 'moto' and brand = 'Shitzu' from public.vehicles where name = 'Shitzu Ninja ZX-10R'), 'тип або марка не записались'; end \$\$;"
+echo 'Транспорт з маркетплейсу ok'
+$P -f supabase/seed/map_quantfun.sql >/dev/null; $P -f supabase/seed/map_quantfun.sql >/dev/null   # мітки з QuantFun: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.map_points where created_by is null) = 2149, 'мітки з QuantFun дублюються або не всі'; assert (select icon from public.map_points where name = 'Odesa Mafia') = '/icons/map/mafia-odesa.svg', 'іконка мафії не записалась'; assert not (select bool_or(show_label) from public.map_points where category_id = 'bombs'), 'масові мітки з підписами'; end \$\$;"
+echo 'Мітки з QuantFun ok'

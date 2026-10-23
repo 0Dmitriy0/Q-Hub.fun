@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="helmet-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa86a"/><stop offset="1" stop-color="#4f5d2c"/></linearGradient></defs>
+<path d="M152 360c10 54 60 82 104 82s94-28 104-82" stroke="#7a4424" stroke-width="16" fill="none"/>
+<path d="M110 330C110 182 178 112 256 112S402 182 402 330z" fill="url(#helmet-g)"/>
+<path d="M68 334c0-22 20-32 42-32h292c22 0 42 10 42 32 0 22-20 32-42 32H110c-22 0-42-10-42-32z" fill="#5a6a34"/>
+<path d="M160 260c0-60 34-104 84-116" stroke="#e6edc8" stroke-width="18" fill="none" stroke-linecap="round" opacity=".45"/>
+<circle cx="340" cy="282" r="10" fill="#3e4a20"/></svg>

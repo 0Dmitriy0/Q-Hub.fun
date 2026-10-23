@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="flashlight-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd84a"/><stop offset="1" stop-color="#d39500"/></linearGradient></defs>
+<g transform="translate(-30 20) rotate(-30 290 256)">
+<path d="M440 198L520 150V362L440 314z" fill="#fff3a0" opacity=".35"/>
+<rect x="96" y="218" width="250" height="76" rx="18" fill="url(#flashlight-b)"/>
+<path d="M120 218v76M146 218v76M172 218v76" stroke="#b07c00" stroke-width="10"/>
+<path d="M336 222L388 186H436V326H388L336 290z" fill="#4c5560"/>
+<rect x="424" y="184" width="22" height="144" rx="10" fill="#fff6b0"/>
+<rect x="228" y="202" width="46" height="20" rx="8" fill="#e3342a"/>
+<rect x="200" y="232" width="130" height="12" rx="6" fill="#fff" opacity=".45"/></g></svg>

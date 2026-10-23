@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="golf-club-m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7d868f"/><stop offset="0.45" stop-color="#eef1f4"/><stop offset="1" stop-color="#868f99"/></linearGradient></defs>
+<path d="M372 66L196 382" stroke="#b8c0c8" stroke-width="20" stroke-linecap="round"/>
+<path d="M372 66L330 142" stroke="#c8202a" stroke-width="34" stroke-linecap="round"/>
+<path d="M196 368c-40 6-104 26-110 54-3 14 10 22 26 22h104c16 0 26-10 20-26l-16-50z" fill="url(#golf-club-m)" stroke="#6f7882" stroke-width="8"/>
+<circle cx="370" cy="404" r="38" fill="#fff" stroke="#b8c0c8" stroke-width="8"/>
+<circle cx="358" cy="394" r="6" fill="#d0d6dc"/><circle cx="378" cy="398" r="6" fill="#d0d6dc"/><circle cx="366" cy="414" r="6" fill="#d0d6dc"/><circle cx="386" cy="416" r="6" fill="#d0d6dc"/></svg>

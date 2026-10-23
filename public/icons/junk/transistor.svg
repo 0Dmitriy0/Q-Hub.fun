@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="transistor-m" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d868f"/><stop offset="0.45" stop-color="#eef1f4"/><stop offset="1" stop-color="#868f99"/></linearGradient></defs>
+<path fill-rule="evenodd" d="M178 62h156c8 0 14 6 14 14v130H164V76c0-8 6-14 14-14zM256 102a28 28 0 1 0 0.1 0z" fill="url(#transistor-m)" stroke="#5d6670" stroke-width="6"/>
+<rect x="186" y="330" width="22" height="114" rx="6" fill="#c4cad1" stroke="#6b737d" stroke-width="6"/><rect x="245" y="330" width="22" height="114" rx="6" fill="#c4cad1" stroke="#6b737d" stroke-width="6"/><rect x="304" y="330" width="22" height="114" rx="6" fill="#c4cad1" stroke="#6b737d" stroke-width="6"/>
+<rect x="160" y="186" width="192" height="156" rx="12" fill="#2e3238" stroke="#6b737d" stroke-width="8"/>
+<rect x="178" y="206" width="156" height="18" rx="6" fill="#4a5058"/><circle cx="196" cy="320" r="8" fill="#6b737d"/></svg>

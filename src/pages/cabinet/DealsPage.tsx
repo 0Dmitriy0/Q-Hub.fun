@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useRows } from '../../lib/useRows';
 import { ledger } from '../../lib/ledger';
 import { money, parseMoney, qty as fq, signed, when } from '../../lib/format';
 import { DEAL_CATS, OPS } from '../../lib/cats';
 import type { Character, DealRow } from './types';
+import Select from '../../components/Select';
 
 export default function DealsPage({ c }: { c: Character }) {
   const { rows, error, reload } = useRows<DealRow>('deals', c.id, 'ts', false);
+  const [params] = useSearchParams();
   const [op, setOp] = useState<'buy' | 'farm' | 'sell'>('buy');
-  const [item, setItem] = useState(''); const [q, setQ] = useState(''); const [price, setPrice] = useState(''); const [cat, setCat] = useState('');
+  const [item, setItem] = useState(''); const [q, setQ] = useState('');
+  /* «Купив / Нафармив / Продав» з дашборду й складу відкривають форму з уже вибраною дією й товаром */
+  useEffect(() => { const o = params.get('op'); if (o === 'buy' || o === 'farm' || o === 'sell') setOp(o); const i = params.get('item'); if (i) setItem(i); }, [params]); const [price, setPrice] = useState(''); const [cat, setCat] = useState('');
   const [toLedger, setToLedger] = useState(true); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false); const [sure, setSure] = useState('');
   const [catalog, setCatalog] = useState<string[]>([]);
   useEffect(() => { supabase?.from('items').select('name').order('name').limit(2000).then(({ data }) => setCatalog((data || []).map(r => r.name as string))); }, []);
@@ -55,7 +60,7 @@ export default function DealsPage({ c }: { c: Character }) {
           <datalist id="items">{names.map(n => <option key={n} value={n} />)}</datalist>
           <label className="fld">Кількість<input value={q} onChange={e => setQ(e.target.value)} inputMode="decimal" placeholder="1" /></label>
           {op !== 'farm' && <label className="fld">Ціна за шт, $<input value={price} onChange={e => setPrice(e.target.value)} inputMode="numeric" placeholder="150к" /></label>}
-          <label className="fld">Категорія<select value={cat} onChange={e => setCat(e.target.value)}>{DEAL_CATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+          <label className="fld">Категорія<Select value={cat} onChange={setCat} options={DEAL_CATS.map(([k, l]) => ({ value: k, label: l }))} /></label>
           {op !== 'farm' && <label className="row" style={{ gap: 8 }}><input type="checkbox" checked={toLedger} onChange={e => setToLedger(e.target.checked)} /> Записати в облік</label>}
           <button className="btn acc" disabled={busy}>{op === 'buy' ? 'Записати покупку' : op === 'sell' ? 'Записати продаж' : 'Додати на склад'}</button>
         </form>

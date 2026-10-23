@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balance, ledger, stock, type Deal } from './ledger';
+import { balance, balances, ledger, stock, type Deal } from './ledger';
 
 const d = (id: string, op: Deal['op'], item: string, qty: number, price: number, ts: number): Deal => ({ id, op, item, qty, price, ts });
 
@@ -25,5 +25,19 @@ describe('ledger', () => {
   });
   it('баланс = старт + доходи − витрати', () => {
     expect(balance(5085516, [{ type: 'in', amount: 1815145 }, { type: 'out', amount: 150000 }])).toBe(6750661);
+  });
+});
+
+describe('готівка й картка', () => {
+  it('старт ділиться на картку й решту; записи — на свій рахунок; переказ разом нічого не змінює', () => {
+    const c = { start_balance: 1000, start_card: 300 };
+    expect(balances(c, [])).toEqual({ total: 1000, card: 300, cash: 700 });
+    expect(balances(c, [{ type: 'in', amount: 50, account: 'card' }, { type: 'out', amount: 20, account: 'cash' }, { type: 'out', amount: 5 }]))
+      .toEqual({ total: 1025, card: 350, cash: 675 });
+    const moved = balances(c, [{ type: 'out', amount: 100, account: 'card' }, { type: 'in', amount: 100, account: 'cash' }]);
+    expect(moved).toEqual({ total: 1000, card: 200, cash: 800 });
+  });
+  it('без start_card (стара база) — усе готівкою', () => {
+    expect(balances({ start_balance: 500 }, [])).toEqual({ total: 500, card: 0, cash: 500 });
   });
 });

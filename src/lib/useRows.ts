@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { desktop } from './app';
 
 /* рядки таблиці персонажа; RLS у базі гарантує, що прийдуть лише свої */
 export function useRows<T>(table: string, characterId: string | undefined, order = 'ts', ascending = false) {
@@ -15,5 +16,7 @@ export function useRows<T>(table: string, characterId: string | undefined, order
     setLoading(false);
   }, [table, characterId, order, ascending]);
   useEffect(() => { reload(); }, [reload]);
+  /* у програмі: запис через Alt+Q — одразу видно тут */
+  useEffect(() => desktop?.onChanged?.(reload), [reload]);
   return { rows, loading, error, reload };
 }

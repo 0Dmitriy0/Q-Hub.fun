@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="452" rx="150" ry="22" fill="#000" opacity=".18"/><defs><linearGradient id="mineral-water-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cc2ee"/><stop offset="0.4" stop-color="#cdeeff"/><stop offset="1" stop-color="#5aa9e0"/></linearGradient></defs>
+<path d="M228 112h56v26c0 20 72 38 72 98v180c0 16-14 26-30 26H186c-16 0-30-10-30-26V236c0-60 72-78 72-98z" fill="url(#mineral-water-g)"/>
+<rect x="220" y="70" width="72" height="48" rx="10" fill="#1d5fc4"/><rect x="220" y="104" width="72" height="12" fill="#164a99"/>
+<rect x="156" y="276" width="200" height="96" fill="#2b8be0"/>
+<path d="M174 356l42-50 28 28 30-42 64 64z" fill="#fff"/>
+<path d="M160 244h192M160 404h192" stroke="#9fd2f3" stroke-width="12"/>
+<rect x="180" y="190" width="18" height="70" rx="9" fill="#fff" opacity=".6"/></svg>

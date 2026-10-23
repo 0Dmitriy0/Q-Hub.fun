@@ -46,3 +46,11 @@ export function stock(L: Ledger) {
 export function balance(start: number, tx: { type: 'in' | 'out'; amount: number }[]) {
   return tx.reduce((s, t) => s + (t.type === 'in' ? 1 : -1) * Number(t.amount), Number(start) || 0);
 }
+
+/* баланс окремо готівкою й на картці: старт картки — start_card, старт готівки — решта start_balance;
+   переказ між рахунками (пара записів) суму разом не змінює */
+export function balances(c: { start_balance: number; start_card?: number }, tx: { type: 'in' | 'out'; amount: number; account?: string }[]) {
+  const total = balance(c.start_balance, tx);
+  const card = tx.reduce((s, t) => s + (t.account === 'card' ? (t.type === 'in' ? 1 : -1) * Number(t.amount) : 0), Number(c.start_card) || 0);
+  return { total, card, cash: total - card };
+}
