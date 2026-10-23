@@ -8,3 +8,8 @@ public/snapshot/
 src/**/*.js
 vite.config.js
 *.tsbuildinfo
+# інтерфейс програми — збирається з src/desktop (npm run build:app)
+desktop/src/ui/
+desktop/src/ocr/
+# службові файли Supabase CLI (login / link)
+supabase/.temp/

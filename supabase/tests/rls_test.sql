@@ -91,4 +91,44 @@ do $$ declare r record; begin
   assert (select count(*) from public.price_reports) = 0, 'анонім бачить сирі звіти';
 end $$;
 reset role;
-\echo 'RLS ok: власник бачить своє, інші — ні; роль не підняти; каталог лише для редакторів; ціна = медіана 3 гравців без викиду'
+
+-- готівка й картка: картка й переказ приймаються, вигаданий рахунок чи джерело — ні
+reset role;
+do $$ declare ch uuid := (select id from public.characters limit 1); begin
+  insert into public.transactions (character_id, type, amount, category, account, source) values (ch, 'out', 10, 'Переказ', 'card', 'transfer');
+  assert (select account from public.transactions where source = 'transfer') = 'card', 'рахунок не записався';
+  begin
+    insert into public.transactions (character_id, type, amount, account) values (ch, 'in', 1, 'crypto');
+    raise exception 'прийнято вигаданий рахунок';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.transactions (character_id, type, amount, source) values (ch, 'in', 1, 'hack');
+    raise exception 'прийнято вигадане джерело';
+  exception when check_violation then null;
+  end;
+  delete from public.transactions where source = 'transfer';
+end $$;
+
+-- ШІ-помічник: 150 запитів на добу, лічильник не видно й не змінити напряму, анонім не отримує нічого
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
+set role authenticated;
+do $$ begin
+  for i in 1..150 loop assert public.assistant_take(), 'ліміт спрацював зарано: ' || i; end loop;
+  assert not public.assistant_take(), '151-й запит пройшов';
+  assert (select count(*) from public.assistant_usage) = 0, 'лічильник видно гравцю';
+  update public.assistant_usage set n = 0;
+  assert not public.assistant_take(), 'лічильник скинуто напряму';
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub', '', false) \gset
+set role anon;
+do $$ begin
+  begin
+    perform public.assistant_take();
+    raise exception 'анонім викликав помічника';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+\echo 'RLS ok: власник бачить своє, інші — ні; роль не підняти; каталог лише для редакторів; ціна = медіана 3 гравців без викиду; ліміт ШІ'

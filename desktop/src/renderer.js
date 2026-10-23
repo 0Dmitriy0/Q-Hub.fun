@@ -4,7 +4,7 @@ function show(s) {
   $('out').hidden = !!s.user; $('in').hidden = !s.user; $('wait').hidden = true; $('login').disabled = false;
   if (!s.user) return;
   $('name').textContent = s.user.name;
-  $('game').textContent = s.user.gameName ? `${s.user.gameName}${s.user.staticId ? ' #' + s.user.staticId : ''}` : 'Нік і статік — у кабінеті на сайті';
+  $('game').textContent = s.user.gameName ? `${s.user.gameName}${s.user.staticId ? ' #' + s.user.staticId : ''}` : 'Нік і статік — у кабінеті';
   $('avatar').hidden = !s.user.avatar; if (s.user.avatar) $('avatar').src = s.user.avatar;
   const sel = $('chars'); sel.replaceChildren(...s.characters.map(c => new Option(c.name, c.id, false, c.id === s.character)));
   $('pick').hidden = !s.characters.length; $('nochar').hidden = !!s.characters.length;

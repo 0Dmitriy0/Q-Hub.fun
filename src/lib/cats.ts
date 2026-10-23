@@ -6,3 +6,9 @@ export const TX_CATS = {
 /* категорії товарів у угодах; '' — ресурси скупників */
 export const DEAL_CATS: [string, string][] = [['', 'Ресурси'], ['trans', 'Транспорт'], ['moto', 'Мото'], ['tune', 'Тюнінг'], ['plate', 'Номери'], ['cloth', 'Одяг'], ['acc', 'Аксесуари'], ['other', 'Інше']];
 export const OPS = { buy: 'Купив', farm: 'Отримав', sell: 'Продав' } as const;
+/* рахунки: готівка й картка (міграція 0017). Куди йде запис, якщо гравець не сказав, — за категорією:
+   зарплата, квести, оренда, бізнес і держплатежі — банком; скупники, перекуп і угоди з гравцями — готівкою */
+export type Account = 'cash' | 'card';
+export const ACCOUNTS: Record<Account, string> = { cash: 'Готівка', card: 'Картка' };
+const CARD_CATS = new Set<string>(['Робота', "Квести сім'ї", 'Оренда', 'Бізнес', 'Податки', 'Ліцензії', 'Комісія маркету']);
+export const defaultAccount = (category: string): Account => (CARD_CATS.has(category) ? 'card' : 'cash');

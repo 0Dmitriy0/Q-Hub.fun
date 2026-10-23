@@ -9,7 +9,8 @@
     "build": "node scripts/copy-ocr.mjs && node scripts/snapshot.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:app": "tsc --noEmit && vite build --config vite.app.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

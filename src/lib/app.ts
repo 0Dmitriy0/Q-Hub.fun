@@ -6,6 +6,7 @@ interface Bridge {
   onSession: (cb: (t: AppTokens | null) => void) => void;
   logout: () => Promise<unknown>;
   character: (id: string) => Promise<unknown>;
+  onChanged?: (cb: () => void) => () => void;
 }
 
 export const desktop: Bridge | undefined = typeof window !== 'undefined'
@@ -14,3 +15,6 @@ export const desktop: Bridge | undefined = typeof window !== 'undefined'
 
 /* редагувати кабінет можна лише з програми */
 export const canEdit = !!desktop;
+
+/* картинки каталогу записані в базі як шляхи сайту («/icons/…»); програма відкривається з диска й має їх у себе (ui/icons) */
+export const asset = (u: string) => (u.startsWith('/') && typeof location !== 'undefined' && location.protocol === 'file:' ? '.' + u : u);

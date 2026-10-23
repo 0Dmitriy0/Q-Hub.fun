@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { desktop, type AppTokens } from './app';
 
-export interface Character { id: string; name: string; start_balance: number; goal_name: string; goal: number }
+export interface Character { id: string; name: string; start_balance: number; start_card?: number; goal_name: string; goal: number }
 interface Auth {
   ready: boolean;
   session: Session | null;
@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const reloadCharacters = useCallback(async () => {
     if (!supabase || !session) { setCharacters([]); return; }
-    const { data } = await supabase.from('characters').select('id,name,start_balance,goal_name,goal').order('created_at');
+    const full = await supabase.from('characters').select('id,name,start_balance,start_card,goal_name,goal').order('created_at');
+    /* міграцію 0017 (готівка й картка) ще не запущено — без start_card, усе вважається готівкою */
+    const data = full.error ? (await supabase.from('characters').select('id,name,start_balance,goal_name,goal').order('created_at')).data : full.data;
     setCharacters((data as Character[]) || []);
   }, [session]);
   useEffect(() => { reloadCharacters(); }, [reloadCharacters]);
