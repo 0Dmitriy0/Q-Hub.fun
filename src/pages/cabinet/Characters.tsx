@@ -23,11 +23,11 @@ export default function Characters({ first }: { first?: boolean }) {
       <section className="card">
         <h2>{first ? 'Додай свого персонажа' : 'Новий персонаж'}</h2>
         {first && <p className="muted">У кожного персонажа свій облік, склад і гараж.</p>}
-        <form className="form cols" onSubmit={add}>
+        <form className="form cols addchar" onSubmit={add}>
           <label className="fld">Ім'я в грі<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} /></label>
-          <label className="fld">Баланс зараз (готівка + банк)<input value={start} onChange={e => setStart(e.target.value)} inputMode="numeric" placeholder="6 900 661" /></label>
-          <label className="fld">Ціль<input value={goalName} onChange={e => setGoalName(e.target.value)} placeholder="Ubermacht I5" maxLength={60} /></label>
-          <label className="fld">Сума цілі<input value={goal} onChange={e => setGoal(e.target.value)} inputMode="numeric" placeholder="13 000 000" /></label>
+          <label className="fld">Баланс у грі зараз, $<input value={start} onChange={e => setStart(e.target.value)} inputMode="numeric" placeholder="6 900 661" /></label>
+          <label className="fld">На що збираєш<input value={goalName} onChange={e => setGoalName(e.target.value)} placeholder="Ubermacht I5" maxLength={60} /></label>
+          <label className="fld">Скільки треба, $<input value={goal} onChange={e => setGoal(e.target.value)} inputMode="numeric" placeholder="13 000 000" /></label>
           <button className="btn acc" disabled={busy}>Додати персонажа</button>
         </form>
         {msg && <p className="err">{msg}</p>}

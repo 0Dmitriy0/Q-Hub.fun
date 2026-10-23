@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -11,6 +12,27 @@ import Characters from './Characters';
 import SettingsPage from './SettingsPage';
 import Select from '../../components/Select';
 import Icon from '../../components/Icon';
+import { useRows } from '../../lib/useRows';
+import { balances } from '../../lib/ledger';
+import { money } from '../../lib/format';
+import type { Character, Tx } from './types';
+
+/* низ бічного меню програми: гроші завжди перед очима і один вхід для будь-якого запису — плашка Alt+Q */
+function DeskFoot({ c }: { c: Character | null }) {
+  const { rows } = useRows<Tx>('transactions', c?.id);
+  const [key, setKey] = useState('Alt+Q');
+  useEffect(() => { desktop?.hotkey?.().then(k => k && setKey(k)); }, []);
+  const b = c ? balances(c, rows) : null;
+  return (
+    <div className="dfoot">
+      {b && <div className="dwallet" aria-label="Гроші персонажа">
+        <div><small>Готівка</small><b className="mono">{money(b.cash)}</b></div>
+        <div><small>Картка</small><b className="mono">{money(b.card)}</b></div>
+      </div>}
+      <button className="btn acc dadd" onClick={() => desktop?.openBar?.()}><Icon name="spark" size={16} />Швидкий запис<kbd>{key}</kbd></button>
+    </div>
+  );
+}
 
 /* [шлях, назва, підзаголовок, іконка] — у програмі це бічне меню, як у Quant Hub; на сайті — вкладки */
 const TABS: [string, string, string, string][] = [
@@ -56,7 +78,7 @@ export default function Cabinet() {
     </fieldset>
   );
 
-  /* програма: бічне меню, заголовок розділу, «+ Запис» — як у Quant Hub */
+  /* програма: бічне меню, заголовок розділу, гроші й «Швидкий запис» унизу меню — як у Quant Hub */
   if (desktop) return (
     <div className="desk">
       <aside className="dside">
@@ -64,7 +86,7 @@ export default function Cabinet() {
         <nav className="dnav" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => (
           <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={18} />{l}</NavLink>))}
         </nav>
-        <Link className="btn acc dadd" to="/kabinet/uhody?op=buy">+ Запис</Link>
+        <DeskFoot c={current} />
       </aside>
       <div className="dmain">
         <header className="dhead">

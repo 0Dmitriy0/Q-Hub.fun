@@ -16,7 +16,7 @@ export default function SessionCard({ characterId }: { characterId: string }) {
       <div className="row between"><h2>Ігрова сесія</h2>
         <span className={'pill ' + (cur ? 'good' : '')}>{cur ? '● гра йде' : 'гра не запущена'}</span></div>
       <div className="big" style={{ fontSize: 30 }}>{cur ? hm(now - Date.parse(cur.started_at)) : '—'}</div>
-      <div className="trip">
+      <div className="trip tight">
         <div><small>Сьогодні</small><b className="mono">{hm(played(rows, 'today', now))}</b></div>
         <div><small>Вчора</small><b className="mono">{hm(played(rows, 'yesterday', now))}</b></div>
         <div><small>7 днів</small><b className="mono">{hm(played(rows, 'week', now))}</b></div>

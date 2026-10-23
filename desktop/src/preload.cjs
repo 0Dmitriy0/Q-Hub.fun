@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('qhub', {
   character: id => ipcRenderer.invoke('character', id),
   site: path => ipcRenderer.invoke('site', path),
   cabinet: () => ipcRenderer.invoke('cabinet'),
+  openBar: () => ipcRenderer.invoke('open-bar'),
+  hotkey: () => ipcRenderer.invoke('hotkey'),
   /* рядок швидкого запису (Alt+Q) */
   quickParse: text => ipcRenderer.invoke('quick-parse', text),
   quickAdd: text => ipcRenderer.invoke('quick-add', text),

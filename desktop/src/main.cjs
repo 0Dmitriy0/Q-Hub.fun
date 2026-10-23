@@ -16,7 +16,7 @@ const BAR_W = 960, BAR_MAX_H = 600;
 /* інтерфейс кабінету вбудований у програму (зібраний з src/desktop сайту в ui/) — не сторінка сайту в рамці */
 const UI = path.join(__dirname, 'ui', 'app.html');
 /* власний заголовок вікна: кнопки Windows малює система поверх наших 40 px */
-const TITLE_BAR = { color: '#111214', symbolColor: '#a8a29e', height: 40 };
+const TITLE_BAR = { color: '#070707', symbolColor: '#a8a29e', height: 40 };
 
 let sb, win, bar, tray, quitting = false, settings = {};
 const dir = () => app.getPath('userData');
@@ -38,7 +38,7 @@ async function tokens() {
 function showLogin() {
   win.setResizable(false); win.setMaximizable(false); if (win.isMaximized()) win.unmaximize();
   win.setMinimumSize(420, 560); win.setSize(420, 560); win.center();
-  win.setTitleBarOverlay({ ...TITLE_BAR, color: '#111214' });
+  win.setTitleBarOverlay(TITLE_BAR);
   win.loadFile(path.join(__dirname, 'index.html'));
 }
 /* кабінет відкривається там і такого розміру, як його лишили минулого разу */
@@ -48,7 +48,7 @@ function showCabinet() {
   if (b && screen.getAllDisplays().some(d => { const a = d.workArea; return b.x < a.x + a.width && b.x + b.width > a.x && b.y < a.y + a.height && b.y + b.height > a.y; })) win.setBounds(b);
   else { win.setSize(1280, 820); win.center(); }
   if (settings.maximized) win.maximize();
-  win.setTitleBarOverlay({ ...TITLE_BAR, color: '#070707' });
+  win.setTitleBarOverlay(TITLE_BAR);
   win.loadFile(UI, { hash: '/kabinet' });
 }
 const rememberBounds = () => {
@@ -123,6 +123,9 @@ function placeBar() {
 }
 async function toggleBar() {
   if (bar.isVisible()) { bar.hide(); return; }
+  await showBar();
+}
+async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session || !settings.character) { showMain(); return; }   // спершу вхід і персонаж
   placeBar();
@@ -460,6 +463,9 @@ app.whenReady().then(() => {
   ipcMain.handle('state', () => state());
   ipcMain.handle('session', e => (trusted(e) ? tokens() : null));
   ipcMain.handle('cabinet', () => showCabinet());
+  /* «Швидкий запис» у кабінеті відкриває ту саму плашку, що й Alt+Q */
+  ipcMain.handle('open-bar', e => { if (trusted(e)) return showBar().then(() => prefs().hotkey); });
+  ipcMain.handle('hotkey', e => (trusted(e) ? prefs().hotkey : null));
   ipcMain.handle('login', async () => {
     try { await login(sb, openExternal); win?.show(); win?.focus(); return await state(); }
     catch (e) { return { user: null, error: 'Вхід не вдався: ' + e.message }; }

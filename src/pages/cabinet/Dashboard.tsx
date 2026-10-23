@@ -28,22 +28,17 @@ export default function Dashboard({ c }: { c: Character }) {
           <span className="muted">Баланс</span>
           <div className="big">{money(bal)}</div>
           <div className="row"><span className="pill" style={{ background: 'rgba(20,7,0,.16)' }}>{signed(today)} сьогодні</span></div>
-          <div className="accs on-acc"><div><small>Готівка</small><b className="mono">{money(b.cash)}</b></div><div><small>Картка</small><b className="mono">{money(b.card)}</b></div></div>
+          <div className="row between hero-foot">
+            <div className="accs on-acc"><div><small>Готівка</small><b className="mono">{money(b.cash)}</b></div><div><small>Картка</small><b className="mono">{money(b.card)}</b></div></div>
+            <div className="hero-act edit-only">
+              <Link to="/kabinet/uhody?op=buy">Купив</Link><Link to="/kabinet/uhody?op=farm">Нафармив</Link><Link to="/kabinet/uhody?op=sell">Продав</Link>
+            </div>
+          </div>
           {c.goal > 0 && <>
             <div className="row between"><b>{c.goal_name || 'Ціль'}</b><b className="mono">{pct.toFixed(1)}%</b></div>
             <div style={{ height: 10, borderRadius: 99, background: 'rgba(20,7,0,.2)' }}><div style={{ width: pct + '%', height: '100%', borderRadius: 99, background: '#140700' }} /></div>
             <span className="muted">Залишилось {money(Math.max(0, c.goal - bal))}</span>
           </>}
-        </section>
-        <section className="card edit-only">
-          <span className="lbl">Що зробив у грі</span>
-          <div className="qa">
-            <Link className="btn acc" to="/kabinet/uhody?op=buy">Купив</Link>
-            <Link className="btn" to="/kabinet/uhody?op=farm">Нафармив</Link>
-            <Link className="btn" to="/kabinet/uhody?op=sell">Продав</Link>
-            <Link className="btn" to="/kabinet/oblik">Облік</Link>
-          </div>
-          <small className="muted">Або <b>Alt+Q</b> поверх гри: «продав 10 гливи», «що вигідно здати?»</small>
         </section>
         <Profitable held={st} />
         <h2 className="sect">Скупники платять найбільше</h2>
@@ -55,11 +50,11 @@ export default function Dashboard({ c }: { c: Character }) {
           </div></div>))}</div> : <div className="card empty">Межі цін скупників ще не вписані.</div>}
       </div>
       <div className="grid">
+        <SessionCard characterId={c.id} />
         <section className="card">
           <div className="row between"><h2>Івенти</h2><span className="lbl mono">Київ {kyHM(Date.now())}</span></div>
           <EventList />
         </section>
-        <SessionCard characterId={c.id} />
         <div className="grid two">
           <section className="card"><span className="lbl">Прибуток з перекупу</span><div className="big" style={{ fontSize: 26 }}>{signed(L.resale)}</div><span className="muted">за всі угоди</span></section>
           <section className="card"><span className="lbl">На складі</span><div className="big" style={{ fontSize: 26 }}>{st.length} поз.</div><span className="muted">вкладено {money(cost)}</span></section>

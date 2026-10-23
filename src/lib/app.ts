@@ -7,6 +7,8 @@ interface Bridge {
   logout: () => Promise<unknown>;
   character: (id: string) => Promise<unknown>;
   onChanged?: (cb: () => void) => () => void;
+  openBar?: () => Promise<string>;
+  hotkey?: () => Promise<string | null>;
 }
 
 export const desktop: Bridge | undefined = typeof window !== 'undefined'

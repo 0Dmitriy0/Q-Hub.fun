@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 function show(s) {
   $('err').hidden = !s.error; $('err').textContent = s.error || '';
-  $('out').hidden = !!s.user; $('in').hidden = !s.user; $('wait').hidden = true; $('login').disabled = false;
+  $('out').hidden = !!s.user; $('in').hidden = !s.user; $('keys').hidden = !s.user; $('wait').hidden = true; $('login').disabled = false;
   if (!s.user) return;
   $('name').textContent = s.user.name;
   $('game').textContent = s.user.gameName ? `${s.user.gameName}${s.user.staticId ? ' #' + s.user.staticId : ''}` : 'Нік і статік — у кабінеті';

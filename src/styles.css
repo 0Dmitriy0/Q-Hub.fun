@@ -740,3 +740,30 @@ body.in-app .dmain > * { flex-shrink: 0; }
 .accs b { font-size: 16px; }
 .accs.on-acc > div { background: rgba(20, 7, 0, .16); }
 .accs.on-acc small { color: rgba(20, 7, 0, .72); }
+
+/* ---------- етап 5: зрозуміліше й спокійніше ---------- */
+/* низ бічного меню: гроші завжди перед очима і один вхід для будь-якого запису */
+.dfoot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.dwallet { display: grid; gap: 6px; padding: 12px; border-radius: 14px; background: var(--surface2); }
+.dwallet div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dwallet small { color: var(--muted); font-size: 12.5px; }
+.dwallet b { font-size: 14px; }
+.dadd { margin-top: 0; gap: 8px; white-space: nowrap; padding: 11px 14px; font-size: 14px; }
+.dadd kbd { margin-left: auto; font: 700 11px var(--sans); padding: 2px 6px; border-radius: 6px; background: rgba(20, 7, 0, .18); }
+/* картка балансу: гроші ліворуч, три швидкі дії праворуч — темні, щоб не сперечатися з помаранчевим тлом */
+.hero-foot { align-items: flex-end; gap: 12px; }
+.hero-act { display: flex; gap: 6px; flex-wrap: wrap; }
+.hero-act a { padding: 9px 14px; border-radius: 999px; background: rgba(20, 7, 0, .82); color: #fff3ea; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+.hero-act a:hover { background: #140700; }
+.hero-act a:focus-visible { outline: 2px solid #140700; outline-offset: 2px; }
+/* профіль у налаштуваннях кабінету: нік, статік і «Зберегти» в один рядок (у вікні-вимозі — як було, стовпцем) */
+fieldset .static-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+fieldset .static-form .err { grid-column: 1 / -1; }
+fieldset .static-form .btn { align-self: end; }
+/* новий персонаж: 2×2, кнопка окремим рядком */
+.form.cols.addchar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form.cols.addchar > .btn { grid-column: 1 / -1; justify-self: start; }
+/* фільтри складу, що не влізли, плавно зникають праворуч — видно, що їх можна гортати */
+.tabs.chips { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 32px; }
+/* картка сесії: «1 год 39 хв» не ламається в рядку */
+.trip.tight b { white-space: nowrap; font-size: 14px; }
