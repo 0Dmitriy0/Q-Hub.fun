@@ -21,7 +21,7 @@ interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc } | null;
-interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean }
+interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string }
@@ -33,7 +33,7 @@ interface BarApi {
   quickAdd(t: string): Promise<Res>; quickAsk(t: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
   quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
   quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
-  onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string): Promise<boolean>;
+  onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
 interface Shot { name: string; preview: string; black: boolean }
@@ -171,7 +171,7 @@ export default function Bar() {
         </div>
 
         {expanded && <div className="bpanes">
-          {view === 'shot' && shot ? <ShotView shot={shot} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
+          {view === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            view === 'settings' && prefs ? <Settings prefs={prefs} save={savePrefs} /> :
            view === 'history' ? <History rows={hist} sel={sel} setSel={setSel} /> :
            mode === 'prices' ? <Prices found={found} sel={Math.min(sel, Math.max(0, found.length - 1))} setSel={setSel} qtyRef={qtyRef} q={q}
@@ -258,12 +258,19 @@ function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n:
 }
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
-function ShotView({ shot, done }: { shot: Shot; done: (t: string) => void }) {
+function ShotView({ shot, share0, done }: { shot: Shot; share0: boolean; done: (t: string) => void }) {
   const [st, setSt] = useState<ShotStats | null>(null);
   const [note, setNote] = useState('');
+  const [share, setShare] = useState(share0);
+  const [busy, setBusy] = useState(false);
   useEffect(() => { api.shotsStats().then(setSt); setNote(''); }, [shot.name]);
   async function mark(label: string) {
-    if (await api.shotLabel(shot.name, label, note)) done(`Знімок збережено як «${st?.labels[label]}» — таких уже ${(st?.stats[label] ?? 0) + 1}`);
+    setBusy(true);
+    const r = await api.shotLabel(shot.name, label, note, share);
+    setBusy(false);
+    if (!r.ok) return;
+    const sent = share ? (r.shared ? ' і надіслано розробникам' : ' (надіслати не вдалося — лишився лише в тебе)') : '';
+    done(`«${st?.labels[label]}» збережено${sent} — таких уже ${(st?.stats[label] ?? 0) + 1}`);
   }
   return <>
     <div className="bleft bshot">
@@ -275,8 +282,10 @@ function ShotView({ shot, done }: { shot: Shot; done: (t: string) => void }) {
       <h3>Що на знімку?</h3>
       <p className="muted">З цих прикладів програма вчиться сама помічати такі екрани в грі. Потрібно 5–10 кожного типу.</p>
       <div className="blabels">{st && Object.entries(st.labels).map(([k, l]) => (
-        <button key={k} className="btn" onClick={() => mark(k)}>{l}<small>{st.stats[k] || 0}</small></button>))}</div>
+        <button key={k} className="btn" disabled={busy} onClick={() => mark(k)}>{l}<small>{st.stats[k] || 0}</small></button>))}</div>
       <label className="bnote">Примітка (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="напр. скупник Гриби, продав 20 гливи" /></label>
+      <label className="bchk bshare"><input type="checkbox" checked={share} onChange={e => setShare(e.target.checked)} />
+        <span>Поділитися з розробниками Q-Hub — так програма швидше вчиться бачити гру. Знімок бачить лише адмін; якщо на ньому чат чи чужі ніки, зніми прапорець.</span></label>
       <small className="muted"><kbd>Esc</kbd> — лишити без позначки</small>
     </div>
   </>;

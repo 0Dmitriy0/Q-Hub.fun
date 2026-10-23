@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('qhub', {
   barCabinet: () => ipcRenderer.invoke('bar-cabinet'),
   /* навчальні знімки (Alt+S) */
   onShot: cb => { ipcRenderer.on('shot', (_e, s) => cb(s)); },
-  shotLabel: (name, label, note) => ipcRenderer.invoke('shot-label', name, label, note),
+  shotLabel: (name, label, note, share) => ipcRenderer.invoke('shot-label', name, label, note, share),
   shotsStats: () => ipcRenderer.invoke('shots-stats'),
   shotsOpen: () => ipcRenderer.invoke('shots-open'),
   visionLogOpen: () => ipcRenderer.invoke('vision-log-open'),
