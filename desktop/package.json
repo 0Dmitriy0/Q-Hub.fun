@@ -36,6 +36,11 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Q-Hub"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/tesseract.js/**",
+      "node_modules/tesseract.js-core/**",
+      "src/ocr/**"
+    ]
   }
 }

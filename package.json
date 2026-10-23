@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:app": "tsc --noEmit && vite build --config vite.app.config.ts"
+    "build:app": "tsc --noEmit && vite build --config vite.app.config.ts && vite build --config vite.lib.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

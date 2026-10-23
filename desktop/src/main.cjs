@@ -1,5 +1,5 @@
 /* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа, кабінет, швидкий запис по Alt+Q. Далі — баланс з екрана. */
-const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, screen, desktopCapturer, nativeImage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
@@ -8,6 +8,7 @@ const { fileStorage } = require('./store.cjs');
 const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
 const shots = require('./shots.cjs');
+const { vision } = require('./vision.cjs');
 const SHOT_KEY = 'Alt+S';
 
 /* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
@@ -253,7 +254,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true };
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true };
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
@@ -342,6 +343,8 @@ function barPrefs(p) {
   if (Number.isFinite(p?.opacity)) next.opacity = Math.min(1, Math.max(0.6, p.opacity));
   if (['ai', 'prices'].includes(p?.mode)) next.mode = p.mode;
   if (typeof p?.tab === 'boolean') next.tab = p.tab;
+  if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
+  if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.hotkey === 'string' && p.hotkey !== cur.hotkey) {
     let ok = false;
     try { ok = registerHotkey(p.hotkey); } catch { ok = false; }
@@ -352,6 +355,68 @@ function barPrefs(p) {
   settings.bar = next; saveSettings();
   bar.setOpacity(next.opacity);
   return { prefs: next };
+}
+
+/* ---------- «зір» програми (vision.cjs): гроші з HUD → облік, вікна скупників → ціни на сайт ---------- */
+const visionLog = () => path.join(dir(), 'vision.log');
+let catalogAt = 0, catalogCache = [];
+async function visionCatalog() {
+  if (Date.now() - catalogAt < 30 * 60e3 && catalogCache.length) return catalogCache;
+  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,items(name)');
+  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id })); catalogAt = Date.now(); }
+  return catalogCache;
+}
+/* кадр екрана гри (основний монітор) у повному розмірі */
+async function captureFrame() {
+  const d = screen.getPrimaryDisplay();
+  const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
+  const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
+  return (srcs.find(s => s.display_id === String(d.id)) || srcs[0])?.thumbnail || null;
+}
+/* зміни грошей → облік; «Авто ·» у нотатці — щоб такі записи було видно й легко виправити через Alt+Q */
+async function autoRecords(recs) {
+  const c = settings.character;
+  for (const r of recs) {
+    if (r.kind === 'transfer') await insertTransfer(c, r.from, r.to, r.amount);
+    else await sb.from('transactions').insert({ character_id: c, type: r.type, amount: r.amount, category: r.category, note: ('Авто · ' + r.note).slice(0, 200), source: 'desktop', account: r.account });
+  }
+  refreshCabinet();
+}
+/* при вході в гру облік має збігатися з HUD: різниця — коригування; картку ще не розділено — розділити, як ручна звірка */
+async function autoBaseline({ cash, bank }) {
+  const c = settings.character;
+  const [{ data: ch }, { data: tx }] = await Promise.all([
+    sb.from('characters').select('start_balance,start_card').eq('id', c).maybeSingle(),
+    sb.from('transactions').select('type,amount,account').eq('character_id', c).limit(20000),
+  ]);
+  if (!ch) return;
+  const sgn = t => (t.type === 'in' ? 1 : -1) * Number(t.amount);
+  const total = (tx || []).reduce((s, t) => s + sgn(t), Number(ch.start_balance) || 0);
+  let card = (tx || []).reduce((s, t) => s + (t.account === 'card' ? sgn(t) : 0), Number(ch.start_card) || 0), cashNow = total - card;
+  const fix = (account, diff) => diff && sb.from('transactions').insert({ character_id: c, type: diff > 0 ? 'in' : 'out', amount: Math.abs(diff), category: 'Коригування', note: 'Звірка з HUD гри', source: 'reconcile', account });
+  if (!Number(ch.start_card) && !(tx || []).some(t => t.account === 'card')) {
+    await sb.from('characters').update({ start_card: bank }).eq('id', c);
+    cashNow = total - bank; card = bank;
+  } else await fix('card', bank - card);
+  await fix('cash', cash - cashNow);
+  refreshCabinet();
+}
+/* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
+async function autoPrices(rows) {
+  let ok = 0;
+  for (const r of rows) if (!(await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop' })).error) ok++;
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}\n`); } catch { /* журнал не обов'язковий */ }
+  if (ok) pricesAt = 0;   // плашка Alt+Q одразу покаже нові ціни
+}
+function startVision() {
+  try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
+  const eye = vision({
+    nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
+    active: () => !!settings.session && !!settings.character && prefs().autoLedger !== false,
+    prices: () => prefs().autoPrices !== false,
+    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices,
+  });
+  setInterval(() => eye.tick(), 2000);
 }
 
 /* таймер ігрової сесії: гра запущена — сесія йде, гру закрито — записана (session.cjs) */
@@ -427,6 +492,7 @@ app.whenReady().then(() => {
   ipcMain.handle('quick-deal', (e, op, item, qty, price) => (fromBar(e) ? quickDeal(op, item, qty, price) : null));
   ipcMain.handle('shot-label', (e, name, label, note) => (fromBar(e) && shotStore ? shotStore.label(name, label, note) : false));
   ipcMain.handle('shots-stats', e => { if (!fromBar(e)) return null; shotStore ??= shots.store(path.join(dir(), 'shots')); return { stats: shotStore.stats(), labels: shots.LABELS, key: SHOT_KEY }; });
+  ipcMain.handle('vision-log-open', e => { if (fromBar(e)) shell.openPath(visionLog()); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
@@ -435,6 +501,7 @@ app.whenReady().then(() => {
   createBar();
   createTray();
   startSessionTimer();
+  startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
   if (!registerHotkey(prefs().hotkey))

@@ -3,15 +3,15 @@
    Програма раз на 2 с читає цю ділянку (OCR лише цифр) і з різниці між стабільними показами робить записи обліку.
    Тут — чиста логіка без Electron і OCR, щоб її можна було перевірити тестами (hud.test.cjs). */
 
-/* ділянка з грошима для екрана w×h: HUD прив'язаний до правого краю й масштабується з висотою (виміряно на 1920×1080) */
+/* ділянка з грошима для екрана w×h (прямокутник Electron { x, y, width, height }): HUD прив'язаний до правого краю й масштабується з висотою (виміряно на 1920×1080) */
 function region(w, h) {
   const s = h / 1080;
-  return { left: Math.round(w - 342 * s), top: Math.round(76 * s), width: Math.round(140 * s), height: Math.round(52 * s) };
+  return { x: Math.round(w - 342 * s), y: Math.round(76 * s), width: Math.round(140 * s), height: Math.round(52 * s) };
 }
 /* ширша ділянка — там, де з'являються значки зміни (праворуч від цифр) */
 function badgeRegion(w, h) {
   const s = h / 1080;
-  return { left: Math.round(w - 342 * s), top: Math.round(66 * s), width: Math.round(180 * s), height: Math.round(62 * s) };
+  return { x: Math.round(w - 342 * s), y: Math.round(66 * s), width: Math.round(180 * s), height: Math.round(62 * s) };
 }
 
 /* текст OCR → { cash, bank } або null. Рядки «$3 820 037» і «$3 162 623»; усе інше (меню закрило HUD, сміття) — null */
@@ -48,7 +48,7 @@ function classify(prev, next) {
    двічі поспіль однаковий. Неправдоподібні стрибки (OCR зʼїв цифру) — відкидаються */
 function watcher({ maxJump = 50e6 } = {}) {
   let stable = null, cand = null;
-  return function feed(r) {
+  function feed(r) {
     if (!r) { cand = null; return []; }
     if (!stable) { if (cand && cand.cash === r.cash && cand.bank === r.bank) { stable = r; cand = null; } else cand = r; return []; }
     if (r.cash === stable.cash && r.bank === stable.bank) { cand = null; return []; }
@@ -57,7 +57,10 @@ function watcher({ maxJump = 50e6 } = {}) {
     const acts = classify(stable, r);
     stable = r; cand = null;
     return acts;
-  };
+  }
+  /* останній стабільний показ — для звірки з обліком при вході в гру */
+  Object.defineProperty(feed, 'stable', { get: () => stable });
+  return feed;
 }
 
 module.exports = { region, badgeRegion, parse, hasBadge, classify, watcher };

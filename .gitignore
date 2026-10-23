@@ -13,3 +13,5 @@ desktop/src/ui/
 desktop/src/ocr/
 # службові файли Supabase CLI (login / link)
 supabase/.temp/
+# розбір скріншотів для програми — збирається з src/lib/shotParse.ts
+desktop/src/lib/

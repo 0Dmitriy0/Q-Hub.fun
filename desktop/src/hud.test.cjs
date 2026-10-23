@@ -3,8 +3,8 @@ const assert = require('node:assert');
 const { region, parse, hasBadge, classify, watcher } = require('./hud.cjs');
 
 test('HUD: ділянка грошей масштабується з висотою й тримається правого краю', () => {
-  assert.deepEqual(region(1920, 1080), { left: 1578, top: 76, width: 140, height: 52 });
-  assert.deepEqual(region(2560, 1440), { left: 2104, top: 101, width: 187, height: 69 });
+  assert.deepEqual(region(1920, 1080), { x: 1578, y: 76, width: 140, height: 52 });
+  assert.deepEqual(region(2560, 1440), { x: 2104, y: 101, width: 187, height: 69 });
 });
 
 test('HUD: розбір OCR — лише дві суми «$…», решта — null', () => {
@@ -36,7 +36,9 @@ test('HUD: зміни → витрата, прибуток, переказ', () 
 test('HUD: спостерігач — нове значення лише після двох однакових показів, без запису на старті й на сміття', () => {
   const feed = watcher();
   const A = { cash: 1000, bank: 500 }, B = { cash: 700, bank: 500 }, junk = { cash: 70, bank: 500 };
+  assert.equal(feed.stable, null);
   assert.deepEqual(feed(A), []); assert.deepEqual(feed(A), []);   // база, без запису
+  assert.deepEqual(feed.stable, A);
   assert.deepEqual(feed(B), []);                                  // перший показ — ще не віримо
   assert.deepEqual(feed(null), []);                               // значок / меню
   assert.deepEqual(feed(B), []);

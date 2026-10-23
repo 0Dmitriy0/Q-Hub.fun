@@ -21,7 +21,7 @@ interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc } | null;
-interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean }
+interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string }
@@ -34,7 +34,7 @@ interface BarApi {
   quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
   quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string): Promise<boolean>;
-  shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>;
+  shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
@@ -302,6 +302,12 @@ function Settings({ prefs, save }: { prefs: Prefs; save: (p: Partial<Prefs>) => 
         <label className="bchk"><input type="checkbox" checked={prefs.tab} onChange={e => save({ tab: e.target.checked })} /> показувати найближчий івент над плашкою</label>
         <span>Шпилька</span>
         <label className="bchk"><input type="checkbox" checked={prefs.pinned} onChange={e => save({ pinned: e.target.checked })} /> не ховати, коли повертаюсь у гру</label>
+        <span>Зір програми</span>
+        <div className="grid" style={{ gap: 6 }}>
+          <label className="bchk"><input type="checkbox" checked={prefs.autoLedger} onChange={e => save({ autoLedger: e.target.checked })} /> автооблік з екрана: гроші з HUD → записи з місцем (магазин, скупник…)</label>
+          <label className="bchk"><input type="checkbox" checked={prefs.autoPrices} onChange={e => save({ autoPrices: e.target.checked })} /> надсилати ціни скупників на сайт від мого імені</label>
+          <small className="muted">Працює, лише коли запущена гра. <button className="btn sm" onClick={() => api.visionLogOpen()}>Журнал зору</button></small>
+        </div>
         <span>Навчальні знімки</span>
         <div className="row"><span><kbd>{st?.key ?? 'Alt+S'}</kbd> у грі · зібрано {st ? Object.values(st.stats).reduce((a, b) => a + b, 0) : 0}</span><button className="btn sm" onClick={() => api.shotsOpen()}>Відкрити папку</button></div>
       </div>
