@@ -95,3 +95,5 @@ body.in-bar input { user-select: text; }
 .bnote input:focus { border-color: var(--accent); }
 .bacts li.bdel { border-left: 3px solid var(--bad); }
 .bacts li s { text-decoration-color: var(--faint); }
+.bshare { align-items: flex-start; font-size: 12.5px; color: var(--muted); }
+.bshare input { margin-top: 2px; flex: none; }

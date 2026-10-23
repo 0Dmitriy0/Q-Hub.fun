@@ -110,6 +110,20 @@ do $$ declare ch uuid := (select id from public.characters limit 1); begin
   delete from public.transactions where source = 'transfer';
 end $$;
 
+-- навчальні знімки: гравець кладе лише у свою теку й не бачить нічиїх знімків (навіть своїх — їх дивиться адмін)
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
+set role authenticated;
+do $$ begin
+  insert into storage.objects (bucket_id, name, owner) values ('training', '00000000-0000-0000-0000-00000000000a/buyer/1.jpg', auth.uid());
+  begin
+    insert into storage.objects (bucket_id, name, owner) values ('training', '00000000-0000-0000-0000-00000000000b/buyer/1.jpg', auth.uid());
+    raise exception 'знімок записано в чужу теку';
+  exception when insufficient_privilege then null;
+  end;
+  assert (select count(*) from storage.objects where bucket_id = 'training') = 0, 'гравець бачить навчальні знімки';
+end $$;
+reset role;
+
 -- ШІ-помічник: 150 запитів на добу, лічильник не видно й не змінити напряму, анонім не отримує нічого
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
 set role authenticated;

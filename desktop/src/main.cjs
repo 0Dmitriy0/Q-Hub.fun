@@ -257,7 +257,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true };
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true };
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
@@ -331,6 +331,22 @@ async function captureShot() {
   bar.webContents.send('shot', { name, preview: img.resize({ width: 520 }).toDataURL(), black: shots.isBlack(img.toBitmap()), stats: shotStore.stats() });
 }
 
+/* «Поділитися з розробниками»: знімок (JPEG) і позначка — у закрите сховище training/<id гравця>/… (міграція 0018);
+   бачить їх лише адмін. Не вдалося (немає мережі, ліміт) — знімок усе одно лишається локально */
+async function shareShot(name, label, note) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return false;
+    const img = nativeImage.createFromPath(path.join(shotStore.dir, name + '.png'));
+    if (img.isEmpty()) return false;
+    const base = `${session.user.id}/${label}/${name}`;
+    const up = await sb.storage.from('training').upload(base + '.jpg', img.toJPEG(78), { contentType: 'image/jpeg' });
+    if (up.error) return false;
+    await sb.storage.from('training').upload(base + '.json', Buffer.from(JSON.stringify({ label, note, size: img.getSize(), version: app.getVersion(), at: new Date().toISOString() })), { contentType: 'application/json' });
+    return true;
+  } catch { return false; }
+}
+
 /* клавіша плашки — своя, клавіша знімка (Alt+S) живе окремо */
 let barKey = null;
 function registerHotkey(key) {
@@ -348,6 +364,7 @@ function barPrefs(p) {
   if (typeof p?.tab === 'boolean') next.tab = p.tab;
   if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
+  if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
   if (typeof p?.hotkey === 'string' && p.hotkey !== cur.hotkey) {
     let ok = false;
     try { ok = registerHotkey(p.hotkey); } catch { ok = false; }
@@ -496,7 +513,11 @@ app.whenReady().then(() => {
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));
   ipcMain.handle('bar-prefs', (e, p) => (fromBar(e) ? barPrefs(p) : null));
   ipcMain.handle('quick-deal', (e, op, item, qty, price) => (fromBar(e) ? quickDeal(op, item, qty, price) : null));
-  ipcMain.handle('shot-label', (e, name, label, note) => (fromBar(e) && shotStore ? shotStore.label(name, label, note) : false));
+  ipcMain.handle('shot-label', async (e, name, label, note, share) => {
+    if (!fromBar(e) || !shotStore || !shotStore.label(name, label, note)) return { ok: false };
+    if (typeof share === 'boolean' && share !== prefs().shareShots) barPrefs({ shareShots: share });
+    return { ok: true, shared: share ? await shareShot(name, label, note) : false };
+  });
   ipcMain.handle('shots-stats', e => { if (!fromBar(e)) return null; shotStore ??= shots.store(path.join(dir(), 'shots')); return { stats: shotStore.stats(), labels: shots.LABELS, key: SHOT_KEY }; });
   ipcMain.handle('vision-log-open', e => { if (fromBar(e)) shell.openPath(visionLog()); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
