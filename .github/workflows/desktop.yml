@@ -1,31 +1,52 @@
-# Збірка Q-Hub Desktop для Windows: інсталятор NSIS як артефакт запуску (Actions → цей запуск → Artifacts).
+# Збірка Q-Hub Desktop для Windows. Інтерфейс програми й розбір скріншотів збираються з коду сайту (корінь репозиторію),
+# тому ставляться залежності й сайту, й програми. На main (і вручну) інсталятор викладається в реліз «desktop-latest»
+# (pre-release — тестова версія): кнопка на сторінці «Програма» сайту веде саме туди.
 name: Desktop (Windows)
 
 on:
   workflow_dispatch:
   push:
-    paths: ['desktop/**', '.github/workflows/desktop.yml']
+    paths: ['desktop/**', 'src/**', 'app.html', 'bar.html', 'vite.app.config.ts', 'vite.lib.config.ts', '.github/workflows/desktop.yml']
+
+permissions:
+  contents: write   # реліз з інсталятором
 
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: desktop
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
       - run: npm ci
+      - run: npm ci
+        working-directory: desktop
       - run: npm test
+        working-directory: desktop
       - run: npm run dist
+        working-directory: desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # без сертифіката підпису коду
       - uses: actions/upload-artifact@v4
         with:
           name: Q-Hub-Setup
-          path: desktop/dist/*.exe
+          path: desktop/dist/Q-Hub-Setup.exe
           if-no-files-found: error
+      - name: Реліз «desktop-latest» (тестова версія)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: Q-Hub Desktop — тестова версія
+          prerelease: true
+          make_latest: false
+          files: desktop/dist/Q-Hub-Setup.exe
+          body: |
+            Тестова версія програми Q-Hub для Windows — ще не фінальна. Можуть траплятися помилки;
+            записи, які програма робить сама («Авто ·»), перевіряй у кабінеті.
+            Інсталятор не підписаний: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».

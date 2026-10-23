@@ -767,3 +767,11 @@ fieldset .static-form .btn { align-self: end; }
 .tabs.chips { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 32px; }
 /* картка сесії: «1 год 39 хв» не ламається в рядку */
 .trip.tight b { white-space: nowrap; font-size: 14px; }
+
+/* сторінка «Програма»: помітне попередження, що це тестова версія */
+.note-test { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--warn); background: var(--warn-soft); }
+.note-test b { color: var(--warn); }
+.note-test span { color: var(--fg); font-size: 14px; }
+/* список без порядку — крапки, а не номери */
+.steps.plain li { grid-template-columns: 8px 1fr; }
+.steps.plain li::before { content: ""; width: 8px; height: 8px; margin-top: 8px; background: var(--accent); }

@@ -1,7 +1,7 @@
 {
   "name": "q-hub-desktop",
   "productName": "Q-Hub",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Q-Hub Desktop — програма поверх гри для гравців QuantRP",
   "main": "src/main.cjs",
   "private": true,
@@ -35,7 +35,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Q-Hub"
+      "shortcutName": "Q-Hub",
+      "artifactName": "Q-Hub-Setup.${ext}"
     },
     "asarUnpack": [
       "node_modules/tesseract.js/**",
