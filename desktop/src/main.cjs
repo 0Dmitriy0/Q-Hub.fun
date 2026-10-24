@@ -112,8 +112,17 @@ function createBar() {
   bar.setOpacity(prefs().opacity);
   bar.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   bar.webContents.on('will-navigate', e => e.preventDefault());
-  /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою */
-  bar.on('blur', () => { if (!prefs().pinned) bar.hide(); });
+  /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою.
+     Але гра (RAGE MP) сама забирає фокус назад приблизно за секунду після появи плашки — тоді це не «повернувся»:
+     плашка ще двічі бере фокус собі, а не вийшло — лишається на екрані (сховати — Alt+Q або клік у плашці й Esc) */
+  bar.on('blur', () => {
+    if (prefs().pinned) return;
+    if (Date.now() - barShownAt < 1500) {
+      if (barSteals++ < 2) setTimeout(() => { if (bar.isVisible()) { bar.moveTop(); bar.focus(); } }, 60);
+      return;
+    }
+    bar.hide();
+  });
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор */
@@ -121,6 +130,12 @@ function placeBar() {
   const { workArea: a } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 }[prefs().position];
   bar.setPosition(Math.round(a.x + (a.width - BAR_W) / 2), Math.max(a.y, y));
+}
+/* показати плашку поверх гри й узяти фокус (blur вище не дає грі одразу сховати її) */
+let barShownAt = 0, barSteals = 0;
+function raiseBar() {
+  barShownAt = Date.now(); barSteals = 0;
+  bar.show(); bar.moveTop(); bar.focus();
 }
 async function toggleBar() {
   if (bar.isVisible()) { bar.hide(); return; }
@@ -130,7 +145,7 @@ async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session || !settings.character) { showMain(); return; }   // спершу вхід і персонаж
   placeBar();
-  bar.show(); bar.moveTop(); bar.focus();
+  raiseBar();
   bar.webContents.send('quick-show');
 }
 
@@ -358,7 +373,7 @@ async function captureShot() {
   if (!src || src.thumbnail.isEmpty()) return;
   const img = src.thumbnail;
   const name = shotStore.save(img.toPNG());
-  placeBar(); bar.show(); bar.moveTop(); bar.focus();
+  placeBar(); raiseBar();
   bar.webContents.send('shot', { name, preview: img.resize({ width: 520 }).toDataURL(), black: shots.isBlack(img.toBitmap()), stats: shotStore.stats() });
 }
 
