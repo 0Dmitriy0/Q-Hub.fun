@@ -143,5 +143,19 @@ delete from public.map_points where category_id = 'drafts-test';
 do $$ begin
   assert (select status = 'published' and point_id is null from public.map_drafts where id = 'a0000000-0000-0000-0000-000000000001'), 'чернетка зламалась після видалення мітки';
 end $$;
+-- підказка редактора (0020): категорія з наявних і опис; чужа категорія чи задовгий опис — ні
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
+do $$ begin
+  insert into public.map_drafts (id, taken_at, shot, category_id, note)
+    values ('a0000000-0000-0000-0000-000000000010', now(), '00000000-0000-0000-0000-00000000000a/h.jpg', 'trash-bins', 'бак за магазином');
+  assert (select category_id = 'trash-bins' and note = 'бак за магазином' from public.map_drafts where id = 'a0000000-0000-0000-0000-000000000010'), 'підказка не записалась';
+  begin insert into public.map_drafts (id, taken_at, shot, category_id) values ('a0000000-0000-0000-0000-000000000011', now(), 'a/x.jpg', 'no-such-cat'); raise exception 'неіснуючу категорію прийнято';
+  exception when foreign_key_violation then null; end;
+  begin insert into public.map_drafts (id, taken_at, shot, note) values ('a0000000-0000-0000-0000-000000000012', now(), 'a/x.jpg', repeat('я', 601)); raise exception 'задовгий опис прийнято';
+  exception when check_violation then null; end;
+end $$;
+reset role;
+
 delete from public.map_drafts; delete from public.map_categories where id = 'drafts-test';
 \echo 'Чернетки міток ok: гість і гравець нічого не бачать і не подають; editor і moderator подають лише свої й бачать лише свої; дубль, чужий автор, x без y, поза мапою — відхилено; публікує й відхиляє лише адмін, один раз; знімки — лише адмін і автор'

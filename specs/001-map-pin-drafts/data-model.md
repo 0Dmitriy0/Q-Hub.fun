@@ -64,3 +64,14 @@ published / rejected ── будь-яка дія ──▶ помилка alre
 
 - **map_points** — публікація створює один рядок: `category_id`, `name`, `note`, `x`, `y`, `created_by = admin`.
 - **map_categories** — лише вибір наявної; нові категорії — поза межами.
+
+## Підказка редактора (міграція `0020_map_drafts_hint.sql`)
+
+Коли F9 не знайшов точку, програма питає, чи надсилати знімок, і дає вибрати категорію та написати опис:
+
+| Поле | Тип | Правила |
+|------|-----|---------|
+| `category_id` | `text` null | FK `map_categories(id) on delete set null on update cascade` — лише наявні категорії |
+| `note` | `text` not null default `''` | `length(note) <= 600` |
+
+Адмін бачить їх готовими у формі публікації й може змінити. Права (RLS) не змінюються.

@@ -16,6 +16,8 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
   onFocus: (p: [number, number]) => void; onPublished: (m: MapMark) => void;
 }) {
   const own = cats.filter(c => !c.builtin);
+  /* підказка редактора: «Сміттєві баки · бак за магазином» */
+  const hintText = (d: MapDraft) => [own.find(c => c.id === d.category_id)?.name, d.note?.trim()].filter(Boolean).join(' · ');
   const [drafts, setDrafts] = useState<MapDraft[] | null>(null);
   const [err, setErr] = useState('');
   const [view, setView] = useState<'new' | 'done'>('new');
@@ -46,7 +48,9 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
   }, [drafts, view]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   function open(d: MapDraft) {
-    setSel(d); setMsg(''); setFull(undefined); setName(''); setNote('');
+    setSel(d); setMsg(''); setFull(undefined); setName('');
+    /* підказка редактора з програми — одразу у формі, адмін може змінити */
+    setCat(d.category_id && own.some(c => c.id === d.category_id) ? d.category_id : ''); setNote(d.note || '');
     const p: [number, number] | null = d.x !== null && d.y !== null ? [d.x, d.y] : null;
     onPoint(p); if (p) onFocus(p);
     if (!d.shot_deleted_at) shotUrl(d.shot).then(setFull);
@@ -86,6 +90,7 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
         : full === null ? <p className="muted">Знімок не вдалося відкрити.</p>
         : <p className="muted">Завантажую знімок…</p>}
       <p className="mono mdr-xy">{point ? `X ${Math.round(point[0])} · Y ${Math.round(point[1])}` : 'Точку не визначено'}</p>
+      {hintText(sel) && <p className="mdr-hint">Редактор: {hintText(sel)}</p>}
       {isAdmin && sel.status === 'new' && <>
         <p className="muted">{point ? 'Точку можна перетягнути на мапі або поставити заново.' : 'Подивіться на знімок і поставте точку на мапі.'}</p>
         <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => onPick(!picking)} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : point ? 'Поставити заново' : 'Поставити на мапі'}</button>
@@ -115,7 +120,7 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
           <li key={d.id}>
             <button type="button" onClick={() => open(d)}>
               {thumbs[d.shot] ? <img src={thumbs[d.shot]} alt="" width={64} height={36} loading="lazy" /> : <span className="mdr-ph" aria-hidden="true" />}
-              <span className="mdr-t"><b>{authorName(d)}</b><small>{when(d.taken_at)}{d.x === null ? ' · точку не визначено' : ''}</small></span>
+              <span className="mdr-t"><b>{authorName(d)}</b><small>{when(d.taken_at)}{d.x === null ? ' · точку не визначено' : ''}{hintText(d) ? ' · ' + hintText(d) : ''}</small></span>
               <span className={'mdr-st ' + d.status}>{statusLabel(d.status)}</span>
             </button>
           </li>
