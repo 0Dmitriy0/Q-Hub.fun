@@ -7,6 +7,12 @@ export default function Home() {
   const { session, signIn } = useAuth();
   return (
     <>
+      {/* сезонний банер: веде на мапу (привиди осіннього оновлення) */}
+      <Link className="promo" to="/mapa">
+        <img src="/banners/ghost-map-1000.webp" srcSet="/banners/ghost-map-1000.webp 1000w, /banners/ghost-map-2000.webp 2000w"
+          sizes="(max-width: 1100px) 100vw, 1100px" width={2000} height={496} fetchPriority="high"
+          alt="Карта привидів вже тут: швидко знаходь усіх привидів осіннього оновлення Quant RP. Відкрити мапу" />
+      </Link>
       <section className="card hero">
         <span className="lbl">Для гравців QuantRP</span>
         <h1>Ціни, угоди й гроші персонажа — в одному місці</h1>
