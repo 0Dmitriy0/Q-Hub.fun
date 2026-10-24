@@ -11,6 +11,10 @@ const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
 const { createUpdater } = require('./updater.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
+const mapmatch = require('./mapmatch.cjs');
+const { loadMapRef } = require('./mapref.cjs');
+const { Worker } = require('node:worker_threads');
+const { createWorker } = require('tesseract.js');
 const SHOT_KEY = 'Alt+S';
 
 /* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
@@ -386,6 +390,56 @@ async function refreshRole() {
     myRole = data?.role || 'user';
   }
   registerPinKey(prefs().pinKey);
+  if (STAFF.includes(myRole)) startLocator();
+}
+
+/* де гравець на великій карті: mapmatch.cjs в окремому потоці; еталон — з сайту (mapref.cjs). Кожна спроба — у pin.log */
+const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');   // потоки й tesseract читають з диска, не з архіву
+const pinLog = m => { try { fs.appendFileSync(path.join(dir(), 'pin.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
+let locator = null, locatorReady = false, scaleOcr = null, lid = 0;
+const pending = new Map();
+function callLocator(msg, transfer = [], ms = 6000) {
+  return new Promise(res => {
+    const id = ++lid, t = setTimeout(() => { pending.delete(id); res({ error: 'timeout' }); }, ms);
+    pending.set(id, r => { clearTimeout(t); res(r); });
+    locator.postMessage({ ...msg, id }, transfer);
+  });
+}
+async function startLocator() {
+  if (locator) return;
+  locator = new Worker(unpacked(path.join(__dirname, 'mapmatch.worker.cjs')));
+  locator.on('message', r => { const f = pending.get(r.id); if (f) { pending.delete(r.id); f(r); } });
+  locator.on('error', e => { pinLog('locator error ' + (e?.stack || e)); locator = null; locatorReady = false; });
+  try {
+    const { bin, meta } = await loadMapRef(cfg.site, path.join(dir(), 'map'));
+    const ab = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.length);
+    const r = await callLocator({ type: 'init', bin: ab, meta }, [ab], 30000);
+    locatorReady = !!r.ok; pinLog('locator ready ' + JSON.stringify(r));
+  } catch (e) { pinLog('locator init ' + (e?.message || e)); }
+}
+/* число на шкалі («551m») — цифровий OCR ділянки під правим кінцем шкали, збільшеної втричі */
+async function readScale(img, bar) {
+  if (!scaleOcr) {
+    scaleOcr = await createWorker('eng', 1, { langPath: unpacked(path.join(__dirname, 'ocr')), gzip: false, cacheMethod: 'none' });
+    await scaleOcr.setParameters({ tessedit_char_whitelist: '0123456789mk.,', tessedit_pageseg_mode: '7' });
+  }
+  const part = img.crop(bar.number), { width } = part.getSize();
+  const text = (await scaleOcr.recognize(part.resize({ width: width * 3, quality: 'best' }).toPNG())).data.text.trim();
+  return { text, meters: mapmatch.scaleMeters(text) };
+}
+const WHY = { no_map: 'не видно шкали великої карти', zoom_in: 'карта надто віддалена — наблизьте до 50–1500 м',
+  zoom_out: 'карта надто наближена — віддаліть до 50–1500 м', unsure: 'не впевнений у місці', no_ref: 'мапа ще завантажується', error: 'помилка розпізнавання' };
+async function locatePin(img) {
+  if (!locator || !locatorReady) return { kind: 'no_ref' };
+  const bmp = img.toBitmap(), { width, height } = img.getSize(), frame = { width, height, data: bmp };
+  const bar = mapmatch.scaleBar(frame);
+  if (!bar) return { kind: 'no_map' };
+  const sc = await readScale(img, bar);
+  if (!sc.meters) return { kind: 'no_map', scale_text: sc.text };
+  const ab = bmp.buffer.slice(bmp.byteOffset, bmp.byteOffset + bmp.length);
+  const r = await callLocator({ type: 'locate', width, height, data: ab, meters: sc.meters }, [ab]);
+  if (r.error) { pinLog('locate ' + r.error); return { kind: 'error' }; }
+  return { ...r.result, scale_text: sc.text, bar_px: bar.px };
 }
 function registerPinKey(key) {
   if (pinKeyReg) { globalShortcut.unregister(pinKeyReg); pinKeyReg = null; }
@@ -410,11 +464,20 @@ async function pinShot() {
   if (!img) return showPin('Не вдалося зняти екран — спробуйте ще раз.', true);
   if (shots.isBlack(img.toBitmap())) return showPin('Знімок вийшов чорним — перемкніть гру в режим «вікно без рамки».', true);
   const { width, height } = img.getSize();
-  draftBox().put({ taken_at: new Date().toISOString(), x: null, y: null, match: { screen: [width, height], version: app.getVersion() } }, img.toJPEG(80));
+  try { fs.writeFileSync(path.join(dir(), 'pin-last.png'), img.toPNG()); } catch { /* лише для діагностики, лишається на ПК */ }
+  /* поки розпізнавання не перевірене на багатьох знімках, чернетка йде завжди: з точкою, якщо знайшли, інакше без неї */
+  let loc;
+  try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
+  pinLog('F9 ' + JSON.stringify(loc));
+  const pt = loc.kind === 'point';
+  const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
+  draftBox().put({ taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
+    match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } }, img.toJPEG(80));
   const r = await draftBox().flush();
+  const what = pt ? `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}` : `Точку не визначено (${WHY[kind] || kind}) — поставить адмін`;
   if (r.denied) showPin('Немає прав на чернетки міток.', true);
-  else if (r.left) showPin('Чернетку збережено — відправлю, щойно буде інтернет.');
-  else showPin('Чернетку надіслано — точку поставить адмін на сайті.');
+  else if (r.left) showPin(what + '. Відправлю, щойно буде інтернет.');
+  else showPin(what + '. Чернетку надіслано.');
 }
 /* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
 async function sendDraft(draft, jpeg) {
