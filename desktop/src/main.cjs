@@ -10,6 +10,7 @@ const gameSession = require('./session.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
 const { createUpdater } = require('./updater.cjs');
+const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const SHOT_KEY = 'Alt+S';
 
 /* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
@@ -303,7 +304,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true };
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'F9' };
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
@@ -330,7 +331,7 @@ async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
   const [prices, stock] = await Promise.all([barPrices(), barStock(s.character)]);
-  return { ...s, prices, stock, prefs: prefs() };
+  return { ...s, prices, stock, prefs: prefs(), staff: STAFF.includes(myRole) };
 }
 async function barHistory() {
   const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(20);
@@ -361,17 +362,86 @@ async function barCharacter(id) {
   if (isCabinet(win.webContents.getURL())) win.webContents.send('session', await tokens());
   return true;
 }
-/* Alt+S: навчальний знімок екрана гри → плашка з прев'ю й кнопками «що на ньому» (shots.cjs) */
-let shotStore = null;
-async function captureShot() {
-  shotStore ??= shots.store(path.join(dir(), 'shots'));
-  if (bar.isVisible()) { bar.hide(); await new Promise(r => setTimeout(r, 200)); }   // плашка не має потрапити в кадр
+/* знімок екрана, на якому зараз курсор (там гра), у повному розмірі; плашка не має потрапити в кадр */
+async function grabScreen() {
+  if (bar.isVisible()) { bar.hide(); await new Promise(r => setTimeout(r, 200)); }
   const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
   const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
   const src = srcs.find(s => s.display_id === String(d.id)) || srcs[0];
-  if (!src || src.thumbnail.isEmpty()) return;
-  const img = src.thumbnail;
+  return !src || src.thumbnail.isEmpty() ? null : src.thumbnail;
+}
+
+/* ---------- мітка з гри (F9): знімок великої карти → чернетка на сайт, публікує адмін (specs/001-map-pin-drafts) ----------
+   Поки без розпізнавання карти: чернетка йде як «точку не визначено», точку ставить адмін, дивлячись на знімок.
+   Клавіша реєструється лише для editor / moderator / admin — гравцям F9 лишається в грі. */
+const STAFF = ['editor', 'moderator', 'admin'];
+let myRole = null, pinKeyReg = null, pinAt = 0, drafts = null, pinTimer = null;
+async function refreshRole() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) myRole = null;
+  else {
+    const { data, error } = await sb.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+    if (error) return;   // немає мережі — лишаємо, як було
+    myRole = data?.role || 'user';
+  }
+  registerPinKey(prefs().pinKey);
+}
+function registerPinKey(key) {
+  if (pinKeyReg) { globalShortcut.unregister(pinKeyReg); pinKeyReg = null; }
+  if (!STAFF.includes(myRole)) return true;
+  const ok = globalShortcut.register(key, () => pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)));
+  if (ok) pinKeyReg = key;
+  return ok;
+}
+/* повідомлення поверх гри без фокусу (гра не втрачає керування) — і само ховається */
+function showPin(text, bad = false) {
+  clearTimeout(pinTimer);
+  bar.webContents.send('pin', { text, bad });
+  if (!bar.isVisible()) { placeBar(); bar.showInactive(); }
+  bar.moveTop();
+  pinTimer = setTimeout(() => { if (bar.isVisible() && !bar.isFocused() && !prefs().pinned) bar.hide(); }, 3500);
+}
+const draftBox = () => (drafts ??= outbox(path.join(dir(), 'drafts'), sendDraft));
+async function pinShot() {
+  if (Date.now() - pinAt < 5000) return;   // подвійне натискання — одна чернетка
+  pinAt = Date.now();
+  const img = await grabScreen();
+  if (!img) return showPin('Не вдалося зняти екран — спробуйте ще раз.', true);
+  if (shots.isBlack(img.toBitmap())) return showPin('Знімок вийшов чорним — перемкніть гру в режим «вікно без рамки».', true);
+  const { width, height } = img.getSize();
+  draftBox().put({ taken_at: new Date().toISOString(), x: null, y: null, match: { screen: [width, height], version: app.getVersion() } }, img.toJPEG(80));
+  const r = await draftBox().flush();
+  if (r.denied) showPin('Немає прав на чернетки міток.', true);
+  else if (r.left) showPin('Чернетку збережено — відправлю, щойно буде інтернет.');
+  else showPin('Чернетку надіслано — точку поставить адмін на сайті.');
+}
+/* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
+async function sendDraft(draft, jpeg) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return 'retry';
+  const shot = `${session.user.id}/${draft.id}.jpg`;
+  const up = await sb.storage.from('map-drafts').upload(shot, jpeg, { contentType: 'image/jpeg', upsert: false });
+  if (up.error) {
+    const m = `${up.error.statusCode || ''} ${up.error.message}`;
+    if (!/409|exists|duplicate/i.test(m)) return /403|row-level|security|unauthori/i.test(m) ? 'denied' : 'retry';
+  }
+  const { error } = await sb.from('map_drafts').insert({ id: draft.id, taken_at: draft.taken_at, shot, x: draft.x, y: draft.y, match: draft.match || {} });
+  if (!error || error.code === '23505') return 'ok';
+  return error.code === '42501' ? 'denied' : 'retry';
+}
+function startDrafts() {
+  refreshRole().catch(() => {});
+  setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
+  setInterval(() => { if (draftBox().size()) draftBox().flush().catch(() => {}); }, 30e3);
+}
+
+/* Alt+S: навчальний знімок екрана гри → плашка з прев'ю й кнопками «що на ньому» (shots.cjs) */
+let shotStore = null;
+async function captureShot() {
+  shotStore ??= shots.store(path.join(dir(), 'shots'));
+  const img = await grabScreen();
+  if (!img) return;
   const name = shotStore.save(img.toPNG());
   placeBar(); raiseBar();
   bar.webContents.send('shot', { name, preview: img.resize({ width: 520 }).toDataURL(), black: shots.isBlack(img.toBitmap()), stats: shotStore.stats() });
@@ -411,7 +481,16 @@ function barPrefs(p) {
   if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
+  if (typeof p?.pinKey === 'string' && p.pinKey !== cur.pinKey) {
+    const bad = pinKeyConflict(p.pinKey, cur.hotkey, SHOT_KEY);
+    if (bad) return { error: bad, prefs: cur };
+    let ok = false;
+    try { ok = registerPinKey(p.pinKey); } catch { ok = false; }
+    if (!ok) { registerPinKey(cur.pinKey); return { error: `${p.pinKey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
+    next.pinKey = p.pinKey;
+  }
   if (typeof p?.hotkey === 'string' && p.hotkey !== cur.hotkey) {
+    if (p.hotkey.toLowerCase() === String(cur.pinKey).toLowerCase()) return { error: `${p.hotkey} уже ставить мітку — оберіть іншу клавішу.`, prefs: cur };
     let ok = false;
     try { ok = registerHotkey(p.hotkey); } catch { ok = false; }
     if (!ok) { registerHotkey(cur.hotkey); return { error: `${p.hotkey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
@@ -518,6 +597,7 @@ app.whenReady().then(() => {
 
   /* оновлені токени — одразу в кабінет, інакше він за годину лишиться з простроченим ключем */
   sb.auth.onAuthStateChange((ev) => {
+    if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(() => refreshRole().catch(() => {}), 0);   // F9 — лише для редакторів
     if (!win || !isCabinet(win.webContents.getURL())) return;
     if (ev === 'TOKEN_REFRESHED' || ev === 'SIGNED_IN') tokens().then(t => win.webContents.send('session', t));
     if (ev === 'SIGNED_OUT') { win.webContents.send('session', null); showLogin(); }
@@ -577,6 +657,7 @@ app.whenReady().then(() => {
   createBar();
   createTray();
   startUpdates();
+  startDrafts();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))

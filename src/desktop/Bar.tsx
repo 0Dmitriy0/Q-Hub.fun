@@ -21,8 +21,8 @@ interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc } | null;
-interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean }
-interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs }
+interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
+interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string }
 type Res = { ok?: boolean; error?: string; character?: string };
@@ -33,6 +33,7 @@ interface BarApi {
   quickAdd(t: string): Promise<Res>; quickAsk(t: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
   quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
   quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
+  onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
@@ -88,6 +89,8 @@ export default function Bar() {
     api.onQuickShow(() => { setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); load(); setTimeout(() => input.current?.focus(), 0); });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
+    /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
+    api.onPin(s => { setView('main'); setChars(false); setNote(s); });
   }, [load]);
   /* вікно точно під вміст: згорнута плашка — низька, розгорнута — до 600 px */
   useLayoutEffect(() => {
@@ -172,7 +175,7 @@ export default function Bar() {
 
         {expanded && <div className="bpanes">
           {view === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
-           view === 'settings' && prefs ? <Settings prefs={prefs} save={savePrefs} /> :
+           view === 'settings' && prefs ? <Settings prefs={prefs} staff={!!d?.staff} save={savePrefs} /> :
            view === 'history' ? <History rows={hist} sel={sel} setSel={setSel} /> :
            mode === 'prices' ? <Prices found={found} sel={Math.min(sel, Math.max(0, found.length - 1))} setSel={setSel} qtyRef={qtyRef} q={q}
              done={t => { setNote({ text: t }); load(); }} fail={t => setNote({ text: t, bad: true })} /> :
@@ -291,8 +294,9 @@ function ShotView({ shot, share0, done }: { shot: Shot; share0: boolean; done: (
   </>;
 }
 
-function Settings({ prefs, save }: { prefs: Prefs; save: (p: Partial<Prefs>) => void }) {
+function Settings({ prefs, staff, save }: { prefs: Prefs; staff: boolean; save: (p: Partial<Prefs>) => void }) {
   const [rec, setRec] = useState(false);
+  const [recPin, setRecPin] = useState(false);
   const [st, setSt] = useState<ShotStats | null>(null);
   useEffect(() => { api.shotsStats().then(setSt); }, []);
   return (
@@ -303,6 +307,15 @@ function Settings({ prefs, save }: { prefs: Prefs; save: (p: Partial<Prefs>) => 
         <button className={'btn' + (rec ? ' acc' : '')} onClick={() => setRec(true)}
           onKeyDown={e => { if (!rec) return; e.preventDefault(); e.stopPropagation(); if (e.key === 'Escape') { setRec(false); return; } const a = toAccelerator(e); if (a) { setRec(false); save({ hotkey: a }); } }}>
           {rec ? 'Натисни комбінацію… (Esc — скасувати)' : prefs.hotkey}</button>
+        {staff && <>
+          <span>Мітка з гри</span>
+          <div className="grid" style={{ gap: 6 }}>
+            <button className={'btn' + (recPin ? ' acc' : '')} onClick={() => setRecPin(true)}
+              onKeyDown={e => { if (!recPin) return; e.preventDefault(); e.stopPropagation(); if (e.key === 'Escape') { setRecPin(false); return; } const a = toAccelerator(e); if (a) { setRecPin(false); save({ pinKey: a }); } }}>
+              {recPin ? 'Натисни клавішу… (Esc — скасувати)' : prefs.pinKey || 'F9'}</button>
+            <small className="muted">На великій карті в грі — знімок іде чернеткою на сайт, мітку публікує адмін. Поки клавіша тут, гра її не отримує.</small>
+          </div>
+        </>}
         <span>Де з’являється</span>
         <div className="bseg sm">{([['top', 'Зверху'], ['center', 'По центру'], ['bottom', 'Знизу']] as const).map(([k, l]) => <button key={k} aria-pressed={prefs.position === k} onClick={() => save({ position: k })}>{l}</button>)}</div>
         <span>Прозорість</span>
