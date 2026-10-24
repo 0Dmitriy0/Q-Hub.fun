@@ -49,7 +49,9 @@
     "asarUnpack": [
       "node_modules/tesseract.js/**",
       "node_modules/tesseract.js-core/**",
-      "src/ocr/**"
+      "src/ocr/**",
+      "src/mapmatch.cjs",
+      "src/mapmatch.worker.cjs"
     ]
   }
 }
