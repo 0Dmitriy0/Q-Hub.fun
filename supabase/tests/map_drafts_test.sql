@@ -3,14 +3,15 @@
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
 
--- a — editor (після map_test.sql), b — user; додаємо c — moderator, d — admin
+-- a — editor (після map_test.sql), b — user; свої c1 — moderator, d1 — admin (c і d уже зайняті іншими тестами)
 insert into auth.users (id, raw_user_meta_data) values
-  ('00000000-0000-0000-0000-00000000000c', '{"full_name":"Moder"}'),
-  ('00000000-0000-0000-0000-00000000000d', '{"full_name":"Admin"}');
+  ('00000000-0000-0000-0000-0000000000c1', '{"full_name":"Moder"}'),
+  ('00000000-0000-0000-0000-0000000000d1', '{"full_name":"Admin"}')
+  on conflict (id) do nothing;
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000a';
 update public.profiles set role = 'user' where id = '00000000-0000-0000-0000-00000000000b';
-update public.profiles set role = 'moderator' where id = '00000000-0000-0000-0000-00000000000c';
-update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00000000000d';
+update public.profiles set role = 'moderator' where id = '00000000-0000-0000-0000-0000000000c1';
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000d1';
 insert into public.map_categories (id, name) values ('drafts-test', 'Тест чернеток') on conflict (id) do nothing;
 
 -- ---------- гість ----------
@@ -38,7 +39,7 @@ do $$ begin
   -- повторна відправка з програми — не дубль
   begin insert into public.map_drafts (id, taken_at, shot) values ('a0000000-0000-0000-0000-000000000001', now(), 'a/x.jpg'); raise exception 'дубль прийнято';
   exception when unique_violation then null; end;
-  begin insert into public.map_drafts (id, author, taken_at, shot) values ('a0000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-00000000000c', now(), 'c/x.jpg'); raise exception 'чернетку від чужого імені прийнято';
+  begin insert into public.map_drafts (id, author, taken_at, shot) values ('a0000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-0000000000c1', now(), 'c/x.jpg'); raise exception 'чернетку від чужого імені прийнято';
   exception when insufficient_privilege then null; end;
   begin insert into public.map_drafts (id, taken_at, shot, status, reviewed_at) values ('a0000000-0000-0000-0000-000000000008', now(), 'a/x.jpg', 'rejected', now()); raise exception 'одразу оброблену чернетку прийнято';
   exception when insufficient_privilege then null; end;
@@ -49,7 +50,7 @@ do $$ begin
   begin insert into public.map_drafts (id, taken_at, shot) values ('a0000000-0000-0000-0000-000000000005', now() + interval '1 day', 'a/x.jpg'); raise exception 'час з майбутнього прийнято';
   exception when check_violation then null; end;
   -- знімок лише у свою теку
-  begin insert into storage.objects (bucket_id, name, owner) values ('map-drafts', '00000000-0000-0000-0000-00000000000c/x.jpg', auth.uid()); raise exception 'знімок у чужу теку прийнято';
+  begin insert into storage.objects (bucket_id, name, owner) values ('map-drafts', '00000000-0000-0000-0000-0000000000c1/x.jpg', auth.uid()); raise exception 'знімок у чужу теку прийнято';
   exception when insufficient_privilege then null; end;
   -- змінити чи видалити свою чернетку не можна: оброблення лише через адміна
   update public.map_drafts set status = 'published' where id = 'a0000000-0000-0000-0000-000000000001';
@@ -67,9 +68,9 @@ reset role;
 
 -- ---------- moderator c: подає свою, бачить лише свою ----------
 set role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false) \gset
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false) \gset
 insert into public.map_drafts (id, taken_at, shot, x, y)
-  values ('c0000000-0000-0000-0000-000000000001', now(), '00000000-0000-0000-0000-00000000000c/c0000000-0000-0000-0000-000000000001.jpg', 110, 210);
+  values ('c0000000-0000-0000-0000-000000000001', now(), '00000000-0000-0000-0000-0000000000c1/c0000000-0000-0000-0000-000000000001.jpg', 110, 210);
 do $$ begin
   assert (select count(*) from public.map_drafts) = 1, 'moderator бачить чужі чернетки';
   assert (select count(*) from storage.objects where bucket_id = 'map-drafts') = 0, 'moderator бачить чужий знімок';
@@ -93,7 +94,7 @@ reset role;
 
 -- ---------- admin d: бачить усе, публікує й відхиляє один раз ----------
 set role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000d', false) \gset
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false) \gset
 do $$
 declare pid bigint;
 begin
@@ -128,7 +129,7 @@ reset role;
 -- оброблену 31 день тому — можна; нову — ніколи
 update public.map_drafts set reviewed_at = now() - interval '31 days' where id = 'c0000000-0000-0000-0000-000000000001';
 set role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000d', false) \gset
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false) \gset
 do $$ begin
   assert public.mark_map_draft_shots_deleted(array['c0000000-0000-0000-0000-000000000001'::uuid, 'a0000000-0000-0000-0000-000000000002'::uuid]) = 1, 'позначено не те';
   assert (select shot_deleted_at is not null from public.map_drafts where id = 'c0000000-0000-0000-0000-000000000001'), 'позначки немає';
