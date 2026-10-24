@@ -1,0 +1,5 @@
+public/
+desktop/src/ui/
+desktop/dist/
+.claude/
+*.png
