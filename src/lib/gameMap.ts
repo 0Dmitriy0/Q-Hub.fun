@@ -104,7 +104,32 @@ export class IconMesh {
     const s = size * 0.7;
     for (const u of runs) this.quad([x + u.x0 * s, y + u.y0 * s, 17.6, ...u.c], [x + u.x1 * s, y + u.y0 * s, 17.6, ...u.c], [x + u.x1 * s, y + u.y1 * s, 17.6, ...u.c], [x + u.x0 * s, y + u.y1 * s, 17.6, ...u.c]);
   }
+  /* чотирикутник одного кольору (штрих межі зони) */
+  addQuad(c: [number, number][], z: number, color: string) { const col = hex(color); this.quad(...(c.map(([x, y]) => [x, y, z, ...col]) as [number[], number[], number[], number[]])); }
   get size() { return this.v.length; }
+}
+
+/* зона з бази (поле скарбів): контур у метрах гри й колір категорії */
+export type GameArea = { ring: [number, number][]; color: string };
+
+/* межа зони пунктиром, як межі зелених зон у zones.zip: штрихи dash м через gap м, завширшки w м.
+   Візерунок іде суцільно вздовж усього контуру; штрих через вершину — двома чотирикутниками */
+export function areaDashes(ring: [number, number][], dash = 10, gap = 6, w = 3): [number, number][][] {
+  const out: [number, number][][] = [], period = dash + gap, h = w / 2;
+  let s0 = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [ax, ay] = ring[i], [bx, by] = ring[(i + 1) % ring.length], L = Math.hypot(bx - ax, by - ay);
+    if (!L) continue;
+    const ux = (bx - ax) / L, uy = (by - ay) / L, nx = -uy * h, ny = ux * h;
+    for (let k = Math.floor(s0 / period); k * period < s0 + L; k++) {
+      const t0 = Math.max(0, k * period - s0), t1 = Math.min(L, k * period + dash - s0);
+      if (t1 - t0 < 0.05) continue;
+      const p = [ax + ux * t0, ay + uy * t0], q = [ax + ux * t1, ay + uy * t1];
+      out.push([[p[0] + nx, p[1] + ny], [q[0] + nx, q[1] + ny], [q[0] - nx, q[1] - ny], [p[0] - nx, p[1] - ny]]);
+    }
+    s0 += L;
+  }
+  return out;
 }
 
 const f7 = (n: number) => n.toFixed(7);
@@ -151,7 +176,7 @@ async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: strin
 }
 
 /* мапа одним полотном 2x3 тайли по size px: (море з рівнями глибини,) суша, потім шари й мітки (якщо передані) */
-async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], sea = false): Promise<HTMLCanvasElement> {
+async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], sea = false): Promise<HTMLCanvasElement> {
   const meta = await fetch(mapUrl('/map/game/export.json')).then(r => r.json());
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -181,6 +206,13 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
       for (const ring of poly) ring.forEach(([x, y], i) => { const [px, py] = gamePx(x, y, size); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
       ctx.fill('evenodd'); ctx.stroke();
     }
+  }
+  /* зони з бази (поля скарбів) — так само: відтінок кольору категорії з контуром */
+  for (const a of areas) {
+    const [r, g, b] = hex(a.color);
+    ctx.beginPath(); a.ring.forEach(([x, y], i) => { const [px, py] = gamePx(x, y, size); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }); ctx.closePath();
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, .28)`; ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, .9)`; ctx.lineWidth = Math.max(0.8, size / 640);
+    ctx.fill('evenodd'); ctx.stroke();
   }
   /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
   if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
@@ -215,9 +247,9 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
    minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
 const TEX = 512, SEA = 1024, LOD = 128;
 const SEA_SHORE = 1, SEA_DEEP = 0;
-async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[]): Promise<ZipEntry[]> {
-  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, true), TEX, 'minimap_');
-  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, true);
+async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[]): Promise<ZipEntry[]> {
+  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true), TEX, 'minimap_');
+  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true);
   files.push(...await tiles(sea, SEA, 'minimap_sea_'));
   const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
@@ -238,27 +270,41 @@ function runsOf(im: HTMLImageElement | null, n = 24): IconRuns {
 export const oddText = (k: string, odrs: string[]) =>
   `Version 165 32\n{\n${[...new Set(odrs)].sort().map(n => `\tminimap_${k}\\${n}`).join('\n')}\n}`;
 
+/* .mesh і .odr одного шару частини мапи k; tile — тимчасовий номер (tile_L_N), справжній дає toSlots */
+async function meshFiles(out: ZipEntry[], k: string, tile: string, m: IconMesh) {
+  const enc = new TextEncoder(), dir = `minimap_${k}/`;
+  const { mesh, min, max } = meshText(m);
+  for (const [name, text] of [[`${dir}${tile}/${tile}_high.mesh`, mesh], [`${dir}${tile}.odr`, odrText(tile, min, max)]] as const) {
+    const raw = enc.encode(text); const z = await deflate(raw);
+    out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
+  }
+}
+
 /* файли значків для вектора мінікарти: у кожній частині мапи — тимчасово tile_5_N, справжній номер дає toSlots */
 async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLImageElement | null>): Promise<ZipEntry[]> {
   const runs = new Map<string, IconRuns>(); for (const [src, im] of imgs) runs.set(src, runsOf(im));
   const groups = new Map<string, GamePin[]>();
   for (const p of pins) { const [c, r] = supertileOf(p.x, p.y); const k = c + '_' + r; groups.set(k, [...(groups.get(k) || []), p]); }
-  const out: ZipEntry[] = []; const enc = new TextEncoder();
+  const out: ZipEntry[] = [];
   for (const [k, list] of groups) {
     let m = new IconMesh(), part = 0;
-    const flush = async () => {
-      if (!m.size) return;
-      const tile = `supertile_fore_${k}_tile_5_${part++}`, dir = `minimap_${k}/`;   // номер дає toSlots
-      const { mesh, min, max } = meshText(m);
-      for (const [name, text] of [[`${dir}${tile}/${tile}_high.mesh`, mesh], [`${dir}${tile}.odr`, odrText(tile, min, max)]] as const) {
-        const raw = enc.encode(text); const z = await deflate(raw);
-        out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
-      }
-      m = new IconMesh();
-    };
+    const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_5_${part++}`, m); m = new IconMesh(); };
     for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM, p.color, runs.get(p.icon) || []); }
     await flush();
   }
+  return out;
+}
+
+/* межі зон з бази для вектора мінікарти — пунктир кольору категорії на висоті пунктиру зелених зон (16.6);
+   шар зон (tile_4_N, як zones.zip), номер 50 — щоб не збігтися з готовими зеленими зонами */
+async function areaFiles(areas: GameArea[]): Promise<ZipEntry[]> {
+  const groups = new Map<string, IconMesh>();
+  for (const a of areas) for (const q of areaDashes(a.ring)) {
+    const [c, r] = supertileOf((q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2), k = c + '_' + r;
+    const m = groups.get(k) ?? new IconMesh(); groups.set(k, m); m.addQuad(q, 16.6, a.color);
+  }
+  const out: ZipEntry[] = [];
+  for (const [k, m] of groups) await meshFiles(out, k, `supertile_fore_${k}_tile_4_50`, m);
   return out;
 }
 
@@ -298,8 +344,9 @@ async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntr
   return out;
 }
 
-/* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + значки вибраних міток + 6 текстур */
-export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[] }, step?: (s: string) => void): Promise<Blob> {
+/* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
+export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[] }, step?: (s: string) => void): Promise<Blob> {
+  const areas = opt.areas ?? [];
   step?.('Завантажую мапу…');
   const base = await zipAt('/map/game/base.zip');
   const raw: ZipEntry[] = [];
@@ -307,7 +354,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
-  raw.push(...await iconFiles(pins, opt.iconM, imgs));
+  raw.push(...await areaFiles(areas), ...await iconFiles(pins, opt.iconM, imgs));
   /* зони, значки й назви — у вільні номери кожної частини, знизу вгору */
   const extra = await toSlots(raw, new Set(base.map(e => e.name)));
   /* .odd кожної частини, де з'явились нові .odr: усі її .odr за алфавітом */
@@ -321,7 +368,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   }
   const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
-  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers);
+  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...tex]) as BlobPart], { type: 'application/zip' });
 }
