@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupCategories, parseBulk, slugify, type MapCategory } from './mapData';
+import { groupCategories, parseBulk, ringProblem, slugify, type MapCategory } from './mapData';
 
 const c = (id: string, grp: string, sort: number): MapCategory => ({ id, name: id, grp, icon: '', color: '#ff6a1f', sort, shown: true });
 
@@ -26,4 +26,11 @@ describe('масове додавання міток', () => {
     const r = parseBulk('0, 0, кут\n-5, 3', (x, y) => [x - 100, y + 100]);
     expect(r.ok).toEqual([{ x: -100, y: 100, name: 'кут' }, { x: -105, y: 103, name: '' }]);
   });
+});
+
+describe('контур зони', () => {
+  it('менше 3 точок — не можна', () => expect(ringProblem([[0, 0], [1, 1]])).toMatch(/3 точки/));
+  it('трикутник у межах мапи — можна', () => expect(ringProblem([[0, 0], [10, 0], [0, 10]])).toBeNull());
+  it('точка поза мапою — ні', () => expect(ringProblem([[0, 0], [10, 0], [99999, 10]])).toMatch(/поза мапою/));
+  it('понад 500 точок — ні', () => expect(ringProblem(Array.from({ length: 501 }, (_, i) => [i, 0] as [number, number]))).toMatch(/Забагато/));
 });

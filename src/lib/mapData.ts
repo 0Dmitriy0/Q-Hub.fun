@@ -38,3 +38,15 @@ export function parseBulk(text: string, conv?: (x: number, y: number) => [number
   });
   return { ok, bad };
 }
+
+/* зона на мапі (0021): багатокутник у метрах гри, напр. поле скарбів */
+export interface MapArea { id: string; dbId: number; category: string; name: string; note: string; ring: [number, number][] }
+export const AREA_MAX = 500;
+
+/* контур, який прийме база: 3–500 точок у межах мапи; інакше — що не так */
+export function ringProblem(ring: [number, number][]): string | null {
+  if (ring.length < 3) return 'Потрібно щонайменше 3 точки — клікай по мапі вздовж межі.';
+  if (ring.length > AREA_MAX) return `Забагато точок (${ring.length}) — не більше ${AREA_MAX}.`;
+  if (ring.some(([x, y]) => x < -6000 || x > 6800 || y < -4400 || y > 8500)) return 'Частина контуру поза мапою.';
+  return null;
+}
