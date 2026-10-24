@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld('qhub', {
   onShot: cb => { ipcRenderer.on('shot', (_e, s) => cb(s)); },
   /* F9: результат чернетки мітки — текст у плашці */
   onPin: cb => { ipcRenderer.on('pin', (_e, s) => cb(s)); },
+  /* F9 без точки: показати знімок і причину, відповідь — надіслати чи ні */
+  onPinAsk: cb => { ipcRenderer.on('pin-ask', (_e, s) => cb(s)); },
+  pinDecide: send => ipcRenderer.invoke('pin-decide', send),
   shotLabel: (name, label, note, share) => ipcRenderer.invoke('shot-label', name, label, note, share),
   shotsStats: () => ipcRenderer.invoke('shots-stats'),
   shotsOpen: () => ipcRenderer.invoke('shots-open'),

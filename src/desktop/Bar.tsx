@@ -34,10 +34,12 @@ interface BarApi {
   quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
   quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
+  onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
 interface Shot { name: string; preview: string; black: boolean }
+interface PinAskT { reason: string; preview: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
 
@@ -70,7 +72,8 @@ export default function Bar() {
   const [d, setD] = useState<Data | null>(null);
   const [q, setQ] = useState('');
   const [mode, setMode] = useState<'ai' | 'prices'>('ai');
-  const [view, setView] = useState<'main' | 'history' | 'settings' | 'shot'>('main');
+  const [view, setView] = useState<'main' | 'history' | 'settings' | 'shot' | 'pinask'>('main');
+  const [pinQ, setPinQ] = useState<PinAskT | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [sel, setSel] = useState(0);
   const [asks, setAsks] = useState<Ask[]>([]);
@@ -90,7 +93,9 @@ export default function Bar() {
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
     /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
-    api.onPin(s => { setView('main'); setChars(false); setNote(s); });
+    api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
+    /* F9 без точки: спитати, чи надсилати знімок */
+    api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
   }, [load]);
   /* вікно точно під вміст: згорнута плашка — низька, розгорнута — до 600 px */
   useLayoutEffect(() => {
@@ -101,6 +106,7 @@ export default function Bar() {
 
   const found = useMemo(() => (d ? search(d.prices, q, d.stock) : []), [d, q]);
   const prefs = d?.prefs;
+  const decidePin = (send: boolean) => { setPinQ(null); setView('main'); api.pinDecide(send); };
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); savePrefs({ mode: m }); input.current?.focus(); };
 
@@ -132,6 +138,7 @@ export default function Bar() {
   async function openHistory() { setView(v => (v === 'history' ? 'main' : 'history')); setSel(0); setHist(await api.barHistory()); }
 
   function onKey(e: React.KeyboardEvent) {
+    if (view === 'pinask' && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); decidePin(e.key === 'Enter'); return; }
     if (e.key === 'Escape') { e.preventDefault(); if (chars) setChars(false); else if (view !== 'main' && view !== 'shot') setView('main'); else api.quickHide(); return; }
     if (e.key === 'Tab') { e.preventDefault(); switchMode(mode === 'ai' ? 'prices' : 'ai'); return; }
     if (e.target !== input.current) return;   // стрілки й Enter у полях форми — їхні
@@ -174,7 +181,8 @@ export default function Bar() {
         </div>
 
         {expanded && <div className="bpanes">
-          {view === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
+          {view === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
+           view === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            view === 'settings' && prefs ? <Settings prefs={prefs} staff={!!d?.staff} save={savePrefs} /> :
            view === 'history' ? <History rows={hist} sel={sel} setSel={setSel} /> :
            mode === 'prices' ? <Prices found={found} sel={Math.min(sel, Math.max(0, found.length - 1))} setSel={setSel} qtyRef={qtyRef} q={q}
@@ -261,6 +269,22 @@ function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n:
 }
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
+/* F9 не знайшов точку на карті: показати, що знято, і спитати — надіслати без точки (поставить адмін) чи ні */
+function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean) => void }) {
+  return <>
+    <div className="bleft bshot"><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
+    <div className="bright">
+      <h3>Точку не знайдено</h3>
+      <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p>
+      <div className="row">
+        <button className="btn acc" onClick={() => decide(true)}>Надіслати без точки</button>
+        <button className="btn" onClick={() => decide(false)}>Не надсилати</button>
+      </div>
+      <small className="muted"><kbd>Enter</kbd> — надіслати · <kbd>Esc</kbd> — не надсилати</small>
+    </div>
+  </>;
+}
+
 function ShotView({ shot, share0, done }: { shot: Shot; share0: boolean; done: (t: string) => void }) {
   const [st, setSt] = useState<ShotStats | null>(null);
   const [note, setNote] = useState('');
