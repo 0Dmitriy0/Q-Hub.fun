@@ -1,50 +1,115 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: (шаблон) → 1.0.0
+- Принципи (нові): I. Зовнішній інструмент; II. Права — у базі; III. Знімки екрана приватні;
+  IV. Власні й перевірені дані; V. Програма лише додає; VI. Тести на права й логіку
+- Додані розділи: «Безпека й секрети», «Процес розробки», «Governance»
+- Видалені розділи: немає
+- Шаблони: plan-template.md, spec-template.md, tasks-template.md читають конституцію під час роботи,
+  змін не потребують (✅ перевірено: посилання на принципи загальні, «Constitution Check» у плані)
+- Відкладені TODO: немає
+-->
+
+# Q-Hub Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Зовнішній інструмент
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Q-Hub Desktop працює лише поза грою.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- Дані з гри програма бере тільки зі знімка екрана (OCR/CV), з того, що ввів гравець, і з гарячих клавіш.
+- MUST NOT: інʼєкції в процес гри, читання чи запис памʼяті гри, перехоплення мережевого трафіку гри.
+- MUST NOT: програма не виконує дій у грі за гравця (не натискає клавіші, не клікає, не пише в чат).
+  Вона може лише покласти текст у буфер обміну, щоб гравець вставив його сам.
+- Функцію, яку неможливо зробити без порушення цих правил, не робимо або переформульовуємо.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Чому: проєкт існує за згодою адміністрації QuantRP. Будь-яке втручання в гру ставить під загрозу
+і цю згоду, і акаунти гравців.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Права — у базі, ролі фіксовані
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- Хто що бачить і змінює, MUST визначатися правилами доступу бази (RLS), а не інтерфейсом.
+  Сховане в інтерфейсі вважається відкритим, якщо база його віддає.
+- Особисті дані (облік, склад, гараж, угоди, персонажі) бачить і змінює лише власник.
+- Ролі — лише `user`, `editor`, `moderator`, `admin`. Нова роль — тільки через зміну цієї конституції.
+- Публічні довідкові дані (мапа, каталог, картинки, категорії) напряму змінює лише `admin`.
+  `editor` і `moderator` подають пропозиції (наприклад, чернетки міток), які публікує `admin`.
+- Ціни від гравців — окремий механізм: їх вносить будь-який гравець, а «підтвердженими» вони стають
+  за правилом принципу IV.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Чому: публічний (anon) ключ є в бандлі сайту й програми — захищати можна лише на рівні бази.
+Один відповідальний за публічні дані — менше помилок і вандалізму на мапі.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### III. Знімки екрана приватні
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- На знімку гри бувають чат, ніки й статіки інших гравців, тому знімки MUST зберігатися в закритому
+  сховищі й ніколи не віддаватися публічно чи разом із публічними даними.
+- Гравець кладе знімки лише у свою теку; читати їх можуть тільки ролі, яким це потрібно для роботи
+  (за замовчуванням — `admin`).
+- Знімки, які вже не потрібні для роботи, видаляються; строк зберігання вказує специфікація функції.
+
+Чому: це дані третіх осіб, яких ніхто не питав.
+
+### IV. Власні й перевірені дані
+
+- Контент інших фан-сайтів (quantfun.com.ua, вікі тощо) MUST NOT копіюватися. Ідеї інтерфейсу — можна,
+  дані — ні. Джерела даних: гра, Discord, гравці.
+- Ціна від гравців стає підтвердженою, коли її повідомили щонайменше 3 різні гравці за 48 год,
+  а викиди відкинуто. Непідтверджене показується з позначкою або не показується.
+- Розпізнане з невисокою впевненістю (OCR) MUST NOT записуватися в спільну базу автоматично:
+  або відкидається, або йде людині на перевірку.
+- Якщо даних замало для висновку, інтерфейс прямо про це каже, а не вигадує число.
+
+Чому: цінність Q-Hub — дані, яким можна вірити. Одна неправдива ціна коштує гравцю грошей у грі.
+
+### V. Програма лише додає, працює без інтернету
+
+- Програма додає записи (облік, ціни, чернетки) і не змінює й не видаляє наявні — так немає
+  конфліктів із сайтом.
+- Без звʼязку записи стають у локальну чергу й відправляються, коли звʼязок з'явиться.
+- Кожен запис із програми має стабільний ідентифікатор, щоб повторна відправка не створила дубль.
+- Сесія програми власна (не спільна з браузером) і зберігається зашифрованою.
+
+Чому: гравець грає, а не дивиться на статус мережі; повторна відправка трапляється завжди.
+
+### VI. Тести на права й логіку
+
+- Кожна зміна правил доступу MUST мати SQL-тест у `supabase/tests/`, який перевіряє і дозвіл,
+  і заборону (зокрема для anon і для `user`).
+- Чиста логіка (розбір OCR, розрахунки, пошук) MUST мати модульні тести: сайт — `vitest`,
+  програма — `node --test`.
+- CI (`deploy.yml`) запускає тести перед деплоєм; червоні тести блокують деплой.
+
+Чому: помилка в RLS непомітна, доки чужі дані не витекли; тест — єдиний спосіб її побачити.
+
+## Безпека й секрети
+
+- Паролі, ключі, токени, URL вебхуків MUST NOT потрапляти в репозиторій — лише GitHub Secrets
+  або зашифроване сховище на ПК користувача.
+- Виняток: публічний (publishable/anon) ключ і адреса Supabase у `desktop/src/config.json`
+  і `.env.production` — вони й так є в бандлі сайту.
+- Міграції бази додаються новими файлами (`supabase/migrations/NNNN_*.sql`), уже застосовані
+  не переписуються; міграції ідемпотентні (`if not exists`, `drop policy if exists`).
+
+## Процес розробки
+
+- Нова функція: специфікація (`/speckit-specify`) → план (`/speckit-plan`) → задачі → реалізація.
+  Велику функцію ділимо на частини, кожну з яких можна перевірити окремо.
+- Робота — у гілці `claude/*` або власній, у `main` — через злиття після зелених тестів.
+- Інтерфейс, тексти, коментарі й повідомлення комітів — українською.
+- На Windows npm запускається як `npm.cmd`; програма — `cd desktop && npm.cmd start`.
+- Деплой сайту — лише GitHub Actions (`.github/workflows/deploy.yml`), програми —
+  `.github/workflows/desktop.yml`.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- Конституція має пріоритет над іншими домовленостями проєкту; план функції проходить
+  «Constitution Check» і пояснює кожне відхилення в розділі «Complexity Tracking».
+- Зміни вносить власник проєкту. Кожна зміна оновлює версію й дату та коротко описує, що змінилося.
+- Версії: MAJOR — прибрано чи переозначено принцип; MINOR — новий принцип або розділ чи суттєве
+  розширення; PATCH — уточнення формулювань.
+- Під час рев'ю змін перевіряється відповідність принципам I–VI; порушення без пояснення
+  блокує злиття.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-10-24 | **Last Amended**: 2026-10-24
