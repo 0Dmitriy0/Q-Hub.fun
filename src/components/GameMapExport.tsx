@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MapCategory, MapMark } from '../lib/mapData';
+import type { MapArea, MapCategory, MapMark } from '../lib/mapData';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 
@@ -7,11 +7,11 @@ import ZONES from '../data/mapZones.json';
 const LAYER_COUNT = { names: LABELS.length, zones: ZONES.length };
 
 /* це адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію чи шар сховано */
-const PRESET = new Set(['names', 'zones', 'graffiti', 'ufo-land', 'oil']);
+const PRESET = new Set(['names', 'zones', 'treasure-fields', 'graffiti', 'ufo-land', 'oil']);
 
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур) */
-export default function GameMapExport({ groups, marks, catById, isOn }: {
-  groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean;
+export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
+  groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; areas: MapArea[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean;
 }) {
   /* поки галочку не чіпали — як у фільтрі мапи (категорії з бази приходять уже після відкриття сторінки) */
   const [sel, setSel] = useState<Record<string, boolean>>({});
@@ -19,9 +19,11 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   const list = groups;
   const [iconM, setIconM] = useState(7);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
-  const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of marks) count[m.category] = (count[m.category] || 0) + 1;
+  const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
   const picked = marks.filter(m => catById[m.category] && on(catById[m.category]));
+  /* зони з бази (поля скарбів): відтінок на текстурах і пунктирна межа у векторі мінікарти */
+  const pickedAreas = areas.filter(a => catById[a.category] && on(catById[a.category]));
   const set = (ids: string[], v: boolean) => setSel(s => { const n = { ...s }; for (const id of ids) n[id] = v; return n; });
 
   async function go() {
@@ -30,7 +32,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
       const { buildGamePack } = await import('../lib/gameMap');
       const pins = picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color }; });
       const layers = (['names', 'zones'] as const).filter(id => catById[id] && on(catById[id]));
-      const blob = await buildGamePack(pins, { iconM, layers }, setBusy);
+      const blob = await buildGamePack(pins, { iconM, layers, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
     } catch (e) { setErr('Не вдалося зібрати архів: ' + (e as Error).message); }
@@ -40,7 +42,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
   return (
     <details className="madmin mgame" open>
       <summary>Карта для гри</summary>
-      <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV. Галочками вибери, що потрібно: назви місць, зелені зони й мітки — вони стануть частиною мапи.</p>
+      <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV. Галочками вибери, що потрібно: назви місць, зелені зони, поля скарбів і мітки — вони стануть частиною мапи.</p>
       <div className="mseg" role="group" aria-label="Усі мітки">
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
         <button type="button" onClick={() => set(all.map(c => c.id), false)}>Жодної</button>
@@ -59,7 +61,7 @@ export default function GameMapExport({ groups, marks, catById, isOn }: {
       <div className="mrow">
         <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[5, 7, 12, 20].map(v => <option key={v} value={v}>{v}{v === 7 ? ' (рекомендовано)' : ''}</option>)}</select></label>
       </div>
-      <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток`}</button>
+      <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток${pickedAreas.length ? ` · ${pickedAreas.length} зон` : ''}`}</button>
       {picked.length > 1500 && !busy && <p className="muted">Багато міток — значки на мінікарті злипатимуться, а архів буде великим.</p>}
       {err && <p className="mmsg" role="alert">{err}</p>}
     </details>

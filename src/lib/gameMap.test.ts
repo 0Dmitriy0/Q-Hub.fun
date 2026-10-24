@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { crc32, gamePx, makeZip, tileName } from './gameMap';
+import { areaDashes, crc32, gamePx, makeZip, tileName } from './gameMap';
 
 describe('карта для гри', () => {
   it('межі текстур гри: кут (-4140, 8400), 4500 м на тайл', () => {
@@ -56,4 +56,23 @@ describe('значки міток як у Hydra', () => {
     expect(oddText('3_4', ['supertile_sea_3_4.odr', 'supertile_back_3_4.odr', 'supertile_fore_3_4_tile_0_0.odr', 'supertile_fore_3_4_tile_2_2.odr']))
       .toBe('Version 165 32\n{\n\tminimap_3_4\\supertile_back_3_4.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_0_0.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_2_2.odr\n\tminimap_3_4\\supertile_sea_3_4.odr\n}');
   });
+});
+
+describe('зони з бази (поля скарбів) — пунктирна межа', () => {
+  const sq: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100]];
+  it('штрихи 10 м через 6 м суцільно вздовж контуру', () => {
+    const d = areaDashes(sq);
+    expect(d.length).toBe(27);   // 400 м / 16 = 25 штрихів; кути на 100 і 200 м — посеред штриха (він двома шматками), на 300 м — пауза
+    expect(d[0]).toEqual([[0, 1.5], [10, 1.5], [10, -1.5], [0, -1.5]]);
+    expect(d[1][0][0]).toBeCloseTo(16);
+  });
+  it('усі штрихи — на межі, завширшки 3 м', () => {
+    for (const q of areaDashes(sq)) {
+      const w = Math.hypot(q[1][0] - q[2][0], q[1][1] - q[2][1]);
+      expect(w).toBeCloseTo(3);
+      const [mx, my] = [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2];
+      expect(Math.min(Math.abs(mx), Math.abs(mx - 100), Math.abs(my), Math.abs(my - 100))).toBeLessThan(0.01);
+    }
+  });
+  it('повторені точки не ламають контур', () => expect(areaDashes([[0, 0], [0, 0], [32, 0], [32, 32]]).every(q => q.flat().every(Number.isFinite))).toBe(true));
 });

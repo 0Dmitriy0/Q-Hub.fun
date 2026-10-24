@@ -350,7 +350,7 @@ export default function MapPage() {
               );
             })}
           </section>}
-          {tab === 'game' && <GameMapExport groups={groups} marks={marks} catById={catById} isOn={isOn} />}
+          {tab === 'game' && <GameMapExport groups={groups} marks={marks} areas={areas} catById={catById} isOn={isOn} />}
           {tab === 'admin' && isAdmin && <>
             {editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
               onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
