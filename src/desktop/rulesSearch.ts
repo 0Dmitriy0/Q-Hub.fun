@@ -45,7 +45,7 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
       if (inText || inHead) { got++; score += idf[i] * ((inText ? 1 : 0.6) + (inHead ? 0.4 : 0) + about); }
     });
     if (!got || !terms.some((t, i) => has(d.words, t) && idf[i] > 0)) continue;
-    score *= got / terms.length;   // збіглися всі слова — пункт угорі
+    score *= got / terms.length * (d.item.n ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів
     hits.push({ topic: d.topic.title, url: d.topic.url, n: d.item.n, s: d.item.s, score });
   }
   return hits.sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);

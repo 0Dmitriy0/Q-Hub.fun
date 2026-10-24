@@ -19,7 +19,7 @@ function postText(h) {
     const c = (p.split("data-role='commentContent'")[1] || '').split(/cPostShareMenu|<\/article>/)[0];
     return ent(c.replace(/^[^>]*>/, '').replace(/<(script|style)[\s\S]*?<\/\1>/g, '').replace(/<br\s*\/?>/g, '\n')
       .replace(/<\/(p|div|li|h\d|tr)>/g, '\n').replace(/<[^>]+>/g, ''));
-  }).join('\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && l !== '•' && !/^<div/.test(l));
+  }).join('\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && l !== '•' && !/^<div/.test(l) && !/^\d{1,2}$/.test(l));   // «3» — номери картинок, не текст
 }
 
 /* пункти: «1.4 Заборонено…» — окремо; заголовок розділу («2. Основні поняття») — в h; решта абзаців — шматками до ~700 символів */
