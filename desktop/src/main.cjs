@@ -1,5 +1,5 @@
 /* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа, кабінет, швидкий запис по Alt+Q. Далі — баланс з екрана. */
-const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, screen, desktopCapturer, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, Notification, screen, desktopCapturer, nativeImage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
@@ -9,6 +9,7 @@ const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
+const { createUpdater } = require('./updater.cjs');
 const SHOT_KEY = 'Alt+S';
 
 /* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
@@ -136,13 +137,43 @@ async function showBar() {
 function createTray() {
   tray = new Tray(path.join(__dirname, 'icon.png'));
   tray.setToolTip(`Q-Hub — ${prefs().hotkey}: швидкий запис`);
-  tray.setContextMenu(Menu.buildFromTemplate([
+  trayMenu();
+  tray.on('click', showMain);
+}
+/* меню трею; є нова версія — зверху пункт «Оновити» */
+function trayMenu() {
+  const u = updates?.state();
+  tray?.setContextMenu(Menu.buildFromTemplate([
+    ...(u && u.status !== 'idle' ? [{ label: u.status === 'downloading' ? `Оновлення ${u.percent}%…` : `Оновити до ${u.version}`, enabled: u.status !== 'downloading', click: () => updates.install() }, { type: 'separator' }] : []),
     { label: 'Швидкий запис', click: () => toggleBar() },
     { label: 'Відкрити Q-Hub', click: showMain },
     { type: 'separator' },
     { label: 'Вийти з програми', click: () => { quitting = true; app.quit(); } },
   ]));
-  tray.on('click', showMain);
+}
+
+/* ---------- оновлення програми (updater.cjs): перевірка раз на 3 год, ставиться лише після кнопки «Оновити» ---------- */
+let updates = null, notifiedVersion = null;
+function startUpdates() {
+  if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
+  const { autoUpdater } = require('electron-updater');
+  updates = createUpdater({
+    autoUpdater,
+    beforeInstall: () => { quitting = true; },
+    log: m => { try { fs.appendFileSync(path.join(dir(), 'update.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } },
+    onChange: s => {
+      win?.webContents.send('update', s);
+      trayMenu();
+      /* сповіщення Windows — один раз на кожну нову версію */
+      if (s.status === 'available' && s.version !== notifiedVersion && Notification.isSupported()) {
+        notifiedVersion = s.version;
+        const n = new Notification({ title: 'Вийшла нова версія Q-Hub', body: `${s.version} — натисни «Оновити» в програмі або в меню іконки в треї.`, icon: path.join(__dirname, 'icon.png') });
+        n.on('click', showMain); n.show();
+      }
+    },
+  });
+  setTimeout(() => updates.check(), 15e3);
+  setInterval(() => updates.check(), 3 * 3600e3);
 }
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
@@ -523,10 +554,14 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
+  /* кнопка «Оновити» в кабінеті */
+  ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion() } : null));
+  ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });
 
   createWindow();
   createBar();
   createTray();
+  startUpdates();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))

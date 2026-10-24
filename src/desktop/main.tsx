@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../lib/auth';
 import Cabinet from '../pages/cabinet/Cabinet';
 import StaticGate from '../components/StaticGate';
+import UpdateBanner from './UpdateBanner';
 import '../styles.css';
 
 /* Інтерфейс програми Q-Hub: лише кабінет, вбудований у саму програму (desktop/src/ui), а не сторінка сайту.
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<Navigate to="/kabinet" replace />} />
         </Routes>
         <StaticGate />
+        <UpdateBanner />
       </AuthProvider>
     </HashRouter>
   </StrictMode>
