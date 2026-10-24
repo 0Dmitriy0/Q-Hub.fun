@@ -5,10 +5,13 @@ import { money, signed, when } from '../lib/format';
 import { search, pos, type BarPrice, type Found } from './barSearch';
 import { toAccelerator } from './hotkey';
 import { matchCats } from './catMatch';
+import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 
 /* Плашка Alt+Q поверх гри: рядок як у помічників для RP-серверів, що розгортається в дві панелі.
-   Режими: «ШІ» (записати чи спитати своїми словами) і «Ціни» (миттєвий пошук по скупниках, без ШІ).
+   Режими: «Пошук» (Enter — пошук у правилах сервера чи запис із сумою без ШІ, Shift+Enter — спитати ШІ-помічника)
+   і «Ціни» (миттєвий пошук по скупниках, без ШІ).
    Даних із бази тут немає — усе дає головний процес програми через міст (desktop/src/preload.cjs). */
 
 type Op = 'buy' | 'farm' | 'sell';
@@ -25,13 +28,13 @@ type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?:
 interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
-interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string }
+interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
   barData(): Promise<Data>; barHistory(): Promise<Hist[]>; barCharacter(id: string): Promise<boolean>;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>; barCabinet(): Promise<void>;
   quickParse(t: string): Promise<Rule>;
-  quickAdd(t: string): Promise<Res>; quickAsk(t: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
+  quickAdd(t: string): Promise<Res>; quickAsk(t: string, rules: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
   quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
   quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
@@ -44,6 +47,7 @@ interface PinAskT { reason: string; preview: string; cats: { id: string; name: s
 interface PinHint { category: string; note: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
+const TOPICS = (RULES as { topics: RuleTopic[] }).topics;
 
 const OPS: Record<Op, string> = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const sum = (type: 'in' | 'out', n: number) => <b className={type === 'in' ? 'good' : 'bad'}>{type === 'in' ? '+' : '−'}{money(n)}</b>;
@@ -84,6 +88,7 @@ export default function Bar() {
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
   const [hist, setHist] = useState<Hist[]>([]);
   const [chars, setChars] = useState(false);
+  const [shift, setShift] = useState(false);   // затиснутий Shift — Enter піде до ШІ, показати це одразу
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
@@ -99,6 +104,11 @@ export default function Bar() {
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
   }, [load]);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => setShift(e.shiftKey), off = () => setShift(false);
+    window.addEventListener('keydown', k); window.addEventListener('keyup', k); window.addEventListener('blur', off);
+    return () => { window.removeEventListener('keydown', k); window.removeEventListener('keyup', k); window.removeEventListener('blur', off); };
+  }, []);
   /* вікно точно під вміст: згорнута плашка — низька, розгорнута — до 600 px */
   useLayoutEffect(() => {
     const el = root.current; if (!el) return;
@@ -112,7 +122,7 @@ export default function Bar() {
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); savePrefs({ mode: m }); input.current?.focus(); };
 
-  /* «без ШІ» підказка під рядком: що запишеться за правилами по Shift+Enter */
+  /* «без ШІ» підказка під рядком: що запишеться по Enter (з питанням «?» — пошук у правилах) */
   useEffect(() => {
     if (mode !== 'ai' || !q.trim()) { setRule(null); return; }
     let live = true; api.quickParse(q).then(r => live && setRule(r)); return () => { live = false; };
@@ -121,16 +131,28 @@ export default function Bar() {
   const latest = asks[0];
   async function ask() {
     const text = q.trim(); if (!text || busy) return;
-    if (latest && !latest.done && latest.actions.length && latest.q === text) { // другий Enter — записати план
-      setBusy(true); const r = await api.quickRun(); setBusy(false);
-      if (r.error) { setNote({ text: r.error, bad: true }); return; }
-      setAsks(a => [{ ...a[0], done: true }, ...a.slice(1)]); setNote({ text: `Записано · ${r.character}` }); setQ(''); load(); return;
-    }
+    if (pending(text)) return runPlan();
     setBusy(true); setNote(null);
-    const r = await api.quickAsk(text);
+    /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
+    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', actions: r.actions || [], done: !(r.actions || []).length, error: r.error }, ...a].slice(0, 30));
     setSel(0);
+  }
+  const pending = (text: string) => !!latest && !latest.done && latest.actions.length > 0 && latest.q === text;
+  async function runPlan() {   // Enter після відповіді помічника — записати його план
+    setBusy(true); const r = await api.quickRun(); setBusy(false);
+    if (r.error) { setNote({ text: r.error, bad: true }); return; }
+    setAsks(a => [{ ...a[0], done: true }, ...a.slice(1)]); setNote({ text: `Записано · ${r.character}` }); setQ(''); load();
+  }
+  /* Enter без ШІ: план помічника чекає — записати; є сума — запис за правилами; інакше — пошук у правилах сервера */
+  function plain() {
+    const text = q.trim(); if (!text || busy) return;
+    if (pending(text)) { runPlan(); return; }
+    if (rule && !text.includes('?')) { quickRule(); return; }
+    const hits = searchRules(TOPICS, text);
+    setAsks(a => [{ q: text, reply: hits.length ? '' : 'У правилах сервера такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits }, ...a].slice(0, 30));
+    setSel(0); setNote(null);
   }
   async function quickRule() {
     if (!rule) { setNote({ text: 'Без ШІ потрібна сума — наприклад, 450к', bad: true }); return; }
@@ -148,24 +170,27 @@ export default function Bar() {
     if (e.key === 'Enter' && view === 'main') {
       e.preventDefault();
       if (mode === 'prices') { qtyRef.current?.focus(); qtyRef.current?.select(); return; }
-      if (e.shiftKey) quickRule(); else ask();
+      if (e.shiftKey) ask(); else plain();
     }
   }
 
   const expanded = !!d && (view !== 'main' || (mode === 'prices' && (q.trim() !== '' || found.length > 0)) || (mode === 'ai' && (asks.length > 0 || busy)));
   const ch = d?.characters.find(c => c.id === d.character);
+  const aiNext = mode === 'ai' && shift;
+  const saves = mode === 'ai' && !aiNext && !!rule && !q.includes('?');   // Enter запише суму, а не шукатиме
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey}>
       {prefs?.tab !== false && <NextEvent />}
       <div className="bbox">
         <div className="bbar">
-          <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
+          {/* що зробить Enter: пошук, ШІ (з Shift) чи ціни */}
+          <span className={'blead' + (aiNext ? ' ai' : saves ? ' save' : '')} aria-hidden="true"><Icon name={mode === 'prices' ? 'tag' : aiNext ? 'spark' : saves ? 'coin' : 'search'} size={18} /></span>
           <input ref={input} value={q} autoFocus spellCheck={false} onChange={e => { setQ(e.target.value); setSel(0); setNote(null); }}
-            placeholder={mode === 'ai' ? 'Що сталося або питання: «продав 10 гливи»' : 'Товар або скупник: глива, шкура, мотлох…'} aria-label="Запит" />
+            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, сума для обліку або питання') : 'Товар або скупник: глива, шкура, мотлох…'} aria-label="Запит" />
           {q && <button className="bico" title="Очистити" onClick={() => { setQ(''); input.current?.focus(); }}><Icon name="x" size={15} /></button>}
           <div className="bseg" role="group" aria-label="Режим">
-            <button aria-pressed={mode === 'ai'} onClick={() => switchMode('ai')}><Icon name="spark" size={14} />ШІ</button>
+            <button aria-pressed={mode === 'ai'} onClick={() => switchMode('ai')}><Icon name="search" size={14} />Пошук</button>
             <button aria-pressed={mode === 'prices'} onClick={() => switchMode('prices')}><Icon name="tag" size={14} />Ціни</button>
           </div>
           <div className="bchar">
@@ -177,6 +202,8 @@ export default function Bar() {
               <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}</button>))}
               <button onClick={() => api.barCabinet()}>Відкрити кабінет…</button></div>}
           </div>
+          <span className="bsep" aria-hidden="true" />
+          <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
           <button className={'bico' + (view === 'history' ? ' on' : '')} title="Історія записів" onClick={openHistory}><Icon name="history" size={17} /></button>
           <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => setView(v => (v === 'settings' ? 'main' : 'settings'))}><Icon name="gear" size={17} /></button>
         </div>
@@ -192,26 +219,69 @@ export default function Bar() {
         </div>}
 
         <div className="bhint">
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'Думаю…' : mode === 'ai' && rule ? (rule.kind === 'transfer' ? <>Без ШІ: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Без ШІ: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? 'Пиши як другу — помічник розбереться' : 'Ціни скупників з сайту · ↑↓ вибір')}</span>
-          <span><kbd>Enter</kbd> {mode === 'ai' ? 'спитати / записати' : 'кількість'} · {mode === 'ai' && <><kbd>Shift+Enter</kbd> без ШІ · </>}<kbd>Tab</kbd> режим · <kbd>Esc</kbd> сховати</span>
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Ціни скупників з сайту · ↑↓ вибір')}</span>
+          <span className="bkeys">{mode === 'ai'
+            ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
+            : <span className="on"><kbd>Enter</kbd>кількість</span>}
+            <span><kbd>Tab</kbd>{mode === 'ai' ? 'ціни' : 'пошук'}</span><span><kbd>Esc</kbd>сховати</span></span>
         </div>
       </div>
     </div>
   );
 }
 
+/* «Заборонено … | Деморган 60 хв. Примітка: …» — покарання окремо, щоб його було видно одразу; примітки й винятки — після нього */
+function splitPenalty(t: string) {
+  const i = t.search(/\s\|\s/);
+  if (i < 0) return { body: t, pen: '', more: '' };
+  const tail = t.slice(i).replace(/^\s*\|\s*/, '').replace(/\s*\|\s*/g, ' · ').trim();
+  const j = tail.search(/\s(Примітк|Виняток|Винятки|Уточнення|Приклад)/);
+  return { body: t.slice(0, i).trim(), pen: j < 0 ? tail : tail.slice(0, j).trim(), more: j < 0 ? '' : tail.slice(j).trim() };
+}
+function RuleCard({ h }: { h: RuleHit }) {
+  const [open, setOpen] = useState(false);
+  const { body, pen, more } = splitPenalty(h.s);
+  const long = body.length > 260 || body.split('\n').length > 4;
+  return <li className="brule">
+    <div className="brule-top">
+      {h.n && <span className="bpunkt">п. {h.n}</span>}
+      <a href={h.url} target="_blank" rel="noreferrer" title="Відкрити тему на форумі">{h.topic}</a>
+    </div>
+    <p className={long && !open ? 'clamp' : ''}>{body}</p>
+    {long && <button className="bmore" onClick={() => setOpen(o => !o)}>{open ? 'Згорнути' : 'Показати повністю'}</button>}
+    {pen && <span className="bpen">{pen}</span>}
+    {more && <p className="bextra">{more}</p>}
+  </li>;
+}
+/* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)» — помітні, щоб було видно, звідки відповідь */
+const cites = (t: string) => t.split(/(\([^()]*п\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
+
 function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string }) {
   const a = asks[sel];
+  const kind = (x: Ask) => (x.error ? 'err' : x.hits ? 'rules' : x.actions.length ? 'plan' : 'ai');
+  const meta = (x: Ask) => x.error ? 'помилка' : x.hits ? (x.hits.length ? `правила · ${x.hits.length}` : 'нічого не знайдено') : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь ШІ';
+  const ICO = { rules: 'search', ai: 'spark', plan: 'coin', err: 'x' } as const;
   return <>
-    <div className="bleft">{busy && <div className="brow on"><b>Думаю…</b><small>зараз</small></div>}
-      {asks.map((x, i) => <button key={i} className={'brow' + (i === sel ? ' on' : '')} onClick={() => setSel(i)}><b>{x.q}</b><small>{x.error ? 'помилка' : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь'}</small></button>)}</div>
-    <div className="bright">{a ? <>
-      <p className="bq">{a.q}</p>
-      {a.error ? <p className="bad">{a.error}</p> : <p className="breply">{a.reply}</p>}
-      {a.actions.length > 0 && <ul className="bacts">{a.actions.map((x, i) => <ActLine key={i} a={x} />)}</ul>}
-      {sel === 0 && !a.done && a.actions.length > 0 && <button className="btn acc" onClick={run} disabled={busy || q.trim() !== a.q}>{q.trim() === a.q ? 'Записати (Enter)' : 'Текст змінено — Enter спитає знову'}</button>}
-      {a.done && a.actions.length > 0 && <p className="good">Записано в облік.</p>}
-    </> : <p className="muted">Напиши, що сталося в грі, або спитай про ціни й склад.</p>}</div>
+    <div className="bleft">
+      {busy && <div className="brow item on"><span className="bkico ai"><Icon name="spark" size={15} /></span><span><b>{q.trim()}</b><small>ШІ думає…</small></span></div>}
+      {asks.map((x, i) => <button key={i} className={'brow item' + (!busy && i === sel ? ' on' : '')} onClick={() => setSel(i)}>
+        <span className={'bkico ' + kind(x)}><Icon name={ICO[kind(x)]} size={15} /></span><span><b>{x.q}</b><small>{meta(x)}</small></span></button>)}
+    </div>
+    <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
+      {a.hits ? <>
+        <div className="bkind"><Icon name="search" size={14} />Правила сервера{a.hits.length ? ` · ${a.hits.length} збігів` : ''}</div>
+        {a.reply && <p className="bnone">{a.reply}</p>}
+        {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
+        <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
+      </> : <>
+        <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
+        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}</div>}
+        {a.actions.length > 0 && <ul className="bacts">{a.actions.map((x, i) => <ActLine key={i} a={x} />)}</ul>}
+        {sel === 0 && !a.done && a.actions.length > 0 && <button className="btn acc" onClick={run} disabled={busy || q.trim() !== a.q}>{q.trim() === a.q ? 'Записати (Enter)' : 'Текст змінено — Shift+Enter спитає знову'}</button>}
+        {a.done && a.actions.length > 0 && <p className="good">Записано в облік.</p>}
+        {!a.error && !a.actions.length && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
+      </>}
+    </> : null}</div>
   </>;
 }
 

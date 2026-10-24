@@ -32,6 +32,7 @@ export const SYSTEM = `Ти — помічник у програмі Q-Hub дл�
 
 Твоя відповідь — JSON за схемою: reply і actions.
 - reply: одне-два короткі речення українською, як друг у грі. Якщо гравець щось записує — коротко підтверди, що саме буде записано. Якщо питає — відповідай на основі даних нижче (склад, ціни скупників, баланс). Не вигадуй цін і товарів, яких немає в даних; якщо даних бракує — так і скажи.
+- Питання про правила сервера (що можна й не можна, покарання, івенти, терміни DM/PG/MG/RK…) — відповідай лише з «Пунктів правил сервера» нижче: суть і покарання, з назвою теми й номером пункту в дужках, до чотирьох речень. Якщо пунктів немає або вони не про це — чесно скажи, що в правилах цього не знайшов, і порадь подивитися на форумі forum.quant5.com.ua. Правил з пам'яті не вигадуй.
 - actions: що записати. Гравець побачить їх і підтвердить Enter, тож пропонуй лише те, що він явно сказав.
   • kind "deal" — операція з товаром: op "buy" (купив), "farm" (нафармив, отримав безкоштовно), "sell" (продав). item — назва товару, бажано точно як у цінах скупників; qty — кількість; price — ціна за ОДНУ штуку в $ (для farm — 0). Якщо гравець назвав суму за все — поділи на кількість. Якщо продав і ціну не назвав — візьми найкращу ціну скупника з даних і скажи це в reply.
   • kind "tx" — гроші без товару: type "in" (дохід) або "out" (витрата), amount — сума в $, category — одна з категорій нижче, note — коротко що це, account — "card" (картка / банк) або "cash" (готівка), якщо гравець сказав; не сказав — null.
@@ -88,6 +89,15 @@ export function holdings(deals: DealIn[]) {
 const money = (n: number) => Math.round(n).toLocaleString('uk-UA').replace(/ /g, ' ') + ' $';
 
 /* дані для моделі: персонаж, склад, ціни скупників (до 3 найкращих на товар) */
+/* пункти правил сервера від програми (вона шукає їх під питання) — окремим блоком перед текстом гравця */
+export function rulesBlock(rules: unknown): string {
+  const r = typeof rules === 'string' ? rules.trim().slice(0, 8000) : '';
+  return r ? `Пункти правил сервера QuantRP, що можуть стосуватися питання:
+${r}
+
+` : '';
+}
+
 export function context(c: Ctx): string {
   const held = holdings(c.deals);
   const byItem = new Map<string, PriceIn[]>();
@@ -113,7 +123,7 @@ export function recLine(t: TxRec) {
 /* перевірка того, що повернула модель: лише валідні дії з додатними числами; назву товару — як у каталозі */
 export function clean(raw: unknown, c: Ctx): Plan {
   const r = (raw ?? {}) as { reply?: unknown; actions?: unknown };
-  const reply = typeof r.reply === 'string' ? r.reply.trim().slice(0, 400) : '';
+  const reply = typeof r.reply === 'string' ? r.reply.trim().slice(0, 700) : '';   // відповідь про правила — з пунктом і покаранням, довша
   const names = new Map<string, string>();
   for (const n of [...c.prices.map(p => p.item), ...c.deals.map(d => d.item)]) names.set(n.trim().toLowerCase(), n);
   const held = new Map(holdings(c.deals).map(h => [h.item, h]));

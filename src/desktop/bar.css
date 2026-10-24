@@ -5,11 +5,17 @@ body.in-bar input { user-select: text; }
 .btab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px 6px; margin-bottom: -1px; border: 1px solid var(--line2); border-bottom: 0; border-radius: 10px 10px 0 0; background: #141416; color: var(--muted); font: 600 12px var(--sans); position: relative; z-index: 1; }
 .btab.soon { color: var(--accent-hi); }
 .btab.soon .ico { color: var(--accent); }
-.bbox { width: 100%; background: #141416; border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .4); overflow: hidden; }
+.bbox { width: 100%; background: #141416; border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .4); overflow: hidden; transition: border-color .15s; }
+.bbox:focus-within { border-color: #46403b; }
 
 /* рядок */
 .bbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
-.bbar input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--fg); font: 500 16px var(--sans); padding: 6px 4px; }
+.bbar input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--fg); font: 500 17px var(--sans); padding: 6px 4px; caret-color: var(--accent); }
+/* значок зліва — що зробить Enter; із затиснутим Shift стає «ШІ» */
+.blead { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--muted); background: #1b1b1e; transition: background .15s, color .15s; }
+.blead.ai { color: var(--accent-fg); background: var(--accent); }
+.blead.save { color: var(--good); background: var(--good-soft); }
+.bsep { flex: none; width: 1px; height: 22px; background: var(--line2); margin: 0 2px; }
 .bbar input::placeholder { color: var(--faint); }
 .bico { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }
 .bico:hover { background: var(--surface2); color: var(--fg); }
@@ -42,7 +48,12 @@ body.in-bar input { user-select: text; }
 .brow small { color: var(--muted); font-size: 12px; }
 .brow.item { flex-direction: row; align-items: center; gap: 10px; }
 .brow.item img, .brow.item .bava { width: 36px; height: 36px; border-radius: 9px; background: #0c0c0d; object-fit: contain; padding: 3px; flex: none; }
-.brow.item > span:not(.bava):not(.pill) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.brow.item > span:not(.bava):not(.pill):not(.bkico) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bkico { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: #1f1f23; color: var(--muted); }
+.bkico.ai { color: var(--accent); background: rgba(255, 106, 31, .12); }
+.bkico.plan { color: var(--good); background: var(--good-soft); }
+.bkico.err { color: var(--bad); background: var(--bad-soft); }
+.brow.on .bkico.rules { color: var(--fg); }
 .brow .pill { flex: none; }
 .bhead { display: flex; align-items: center; gap: 12px; }
 .bhead img { width: 56px; height: 56px; border-radius: 14px; background: #0c0c0d; object-fit: contain; padding: 6px; }
@@ -65,6 +76,35 @@ body.in-bar input { user-select: text; }
 .breply { font-size: 15.5px; line-height: 1.5; }
 .bacts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .bacts li { padding: 8px 11px; border-radius: 9px; background: #1b1b1e; font-size: 14px; }
+/* заголовок відповіді: пошук у правилах чи ШІ */
+.bkind { display: inline-flex; align-items: center; gap: 7px; font: 700 11.5px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.bkind.ai, .bkind.ai .ico { color: var(--accent-hi); }
+.brules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.brule { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 11px 14px 12px; border-radius: 12px; background: #1a1a1d; border: 1px solid var(--line); }
+.brule-top { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.bpunkt { flex: none; font: 700 12px var(--mono); color: var(--accent-hi); background: rgba(255, 106, 31, .12); padding: 2px 7px; border-radius: 6px; }
+.brule a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brule a:hover { color: var(--fg); text-decoration: underline; }
+.brule p { font-size: 14.5px; line-height: 1.5; white-space: pre-line; }
+.brule p.clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.bmore { border: 0; background: none; padding: 0; color: var(--accent-hi); font: 600 12.5px var(--sans); cursor: pointer; }
+.bmore:hover { text-decoration: underline; }
+.bpen { font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--bad); background: var(--bad-soft); padding: 4px 9px; border-radius: 7px; }
+.brule p.bextra { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.bnone { color: var(--muted); }
+.btip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); padding-top: 2px; }
+.btip .ico { color: var(--accent); }
+.btip kbd, .bans kbd { font: 600 11px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; color: var(--fg); }
+/* відповідь ШІ: картка з помаранчевою рискою, пункти правил — позначками */
+.bans { font-size: 15.5px; line-height: 1.6; padding: 14px 16px; border-radius: 12px; background: #1a1a1d; border: 1px solid var(--line); border-left: 3px solid var(--accent); }
+.bcite { background: rgba(255, 106, 31, .13); color: var(--accent-hi); font-size: 13px; font-weight: 600; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.bfine { font-size: 12px; color: var(--faint); }
+/* ШІ думає: сірі рядки замість тексту */
+.bskel { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+.bskel i { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #1d1d20 0%, #2a2a2e 50%, #1d1d20 100%); background-size: 200% 100%; animation: bshim 1.2s linear infinite; }
+.bskel i:nth-child(2) { width: 88%; } .bskel i:nth-child(3) { width: 62%; }
+@keyframes bshim { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .bskel i { animation: none; } .bbox, .blead { transition: none; } }
 .bright .btn { align-self: flex-start; }
 .bkv { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 14px; align-items: center; font-size: 14px; }
 .bkv > span { color: var(--muted); }
@@ -79,7 +119,14 @@ body.in-bar input { user-select: text; }
 /* підказка знизу */
 .bhint { display: flex; justify-content: space-between; gap: 12px; padding: 7px 14px 8px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .bhint > span:first-child { overflow: hidden; text-overflow: ellipsis; }
-.bhint kbd { font: 600 11px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-radius: 4px; }
+.bhint kbd { font: 600 11px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; color: var(--fg); }
+.bkeys { display: inline-flex; align-items: center; gap: 14px; }
+.bkeys > span { display: inline-flex; align-items: center; gap: 4px; }
+.bkeys > span kbd + kbd { margin-left: -1px; }
+.bkeys > span kbd { margin-right: 3px; }
+.bkeys > span.on { color: var(--fg); }
+.bkeys > span.on kbd { border-color: #5a524b; }
+.bkeys > span.on.ai, .bkeys > span.on.ai kbd { color: var(--accent-hi); border-color: var(--accent); }
 .bwrap ::-webkit-scrollbar { width: 8px; }
 .bwrap ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
 

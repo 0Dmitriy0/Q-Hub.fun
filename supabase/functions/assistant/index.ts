@@ -1,9 +1,10 @@
-/* ШІ-помічник програми Q-Hub (Alt+Q). Програма шле { text, character_id } з сесією гравця;
+/* ШІ-помічник програми Q-Hub (Alt+Q). Програма шле { text, character_id, rules } з сесією гравця
+   (rules — пункти правил сервера, знайдені під питання в src/data/rules.json);
    функція читає його дані тими самими правами (RLS), питає Claude і повертає { reply, actions }.
    Нічого не записує — записує програма після Enter гравця. Ключ Anthropic — лише в секретах Supabase. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { SCHEMA, SYSTEM, clean, context, type Ctx } from './plan.ts';
+import { SCHEMA, SYSTEM, clean, context, rulesBlock, type Ctx } from './plan.ts';
 
 const KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const anthropic = KEY ? new Anthropic({ apiKey: KEY }) : null;
@@ -12,10 +13,10 @@ const fail = (status: number, error: string) => json({ error }, status);
 
 Deno.serve(async req => {
   if (req.method !== 'POST') return fail(405, 'Лише POST');
-  if (!anthropic) { console.error('ANTHROPIC_API_KEY не задано в секретах функції'); return fail(503, 'Помічник ще не налаштований — запиши через Shift+Enter'); }
+  if (!anthropic) { console.error('ANTHROPIC_API_KEY не задано в секретах функції'); return fail(503, 'Помічник ще не налаштований — запиши суму через Enter'); }
   const auth = req.headers.get('Authorization');
   if (!auth) return fail(401, 'Увійди в програму');
-  const { text, character_id } = await req.json().catch(() => ({}));
+  const { text, character_id, rules } = await req.json().catch(() => ({}));
   if (typeof text !== 'string' || !text.trim() || text.length > 500) return fail(400, 'Напиши, що сталося, до 500 символів');
   if (typeof character_id !== 'string') return fail(400, 'Обери персонажа');
 
@@ -52,7 +53,7 @@ Deno.serve(async req => {
       max_tokens: 2000,
       system: SYSTEM,
       output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      messages: [{ role: 'user', content: `${context(c)}\n\nГравець пише: ${text.trim()}` }],
+      messages: [{ role: 'user', content: `${context(c)}\n\n${rulesBlock(rules)}Гравець пише: ${text.trim()}` }],
     });
     if (res.stop_reason === 'refusal') return json({ reply: 'З цим не допоможу.', actions: [] });
     const block = res.content.find(b => b.type === 'text');
@@ -63,6 +64,6 @@ Deno.serve(async req => {
     if (e instanceof Anthropic.APIError) return fail(502, 'Помічник недоступний — спробуй пізніше');
     if (e instanceof SyntaxError) return fail(502, 'Помічник відповів незрозуміло — спробуй ще раз');
     console.error(e);
-    return fail(500, 'Помічник зламався — запиши через Shift+Enter');
+    return fail(500, 'Помічник зламався — запиши суму через Enter');
   }
 });

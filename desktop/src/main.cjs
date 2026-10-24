@@ -115,7 +115,8 @@ function createBar() {
   });
   bar.setAlwaysOnTop(true, 'screen-saver');
   bar.setOpacity(prefs().opacity);
-  bar.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  /* з плашки відкриваються лише теми правил на форумі сервера — у звичайному браузері */
+  bar.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://forum.quant5.com.ua/')) openExternal(url); return { action: 'deny' }; });
   bar.webContents.on('will-navigate', e => e.preventDefault());
   /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою.
      Але гра (RAGE MP) сама забирає фокус назад приблизно за секунду після появи плашки — тоді це не «повернувся»:
@@ -202,7 +203,7 @@ const charName = async () => (await sb.from('characters').select('name').eq('id'
 /* відкритий кабінет одразу показує нові записи — сторінки перечитують дані, без перезавантаження */
 const refreshCabinet = () => { if (isCabinet(win.webContents.getURL())) win.webContents.send('changed'); };
 
-/* Shift+Enter: записати рядок за правилами, без помічника */
+/* Enter із сумою: записати рядок за правилами, без помічника */
 async function quickAdd(text) {
   const r = quick.parse(text);
   if (!r) return { error: 'Немає суми — напиши, наприклад, 450к' };
@@ -213,14 +214,15 @@ async function quickAdd(text) {
   return { ok: true, character: await charName() };
 }
 
-/* Enter: спитати помічника (supabase/functions/assistant). План лишається тут — виконується лише він, після другого Enter */
+/* Shift+Enter: спитати помічника (supabase/functions/assistant); rules — пункти правил сервера, які плашка знайшла під питання.
+   План лишається тут — виконується лише він, після Enter */
 let plan = null;
-async function quickAsk(text) {
+async function quickAsk(text, rules) {
   plan = null;
-  const { data, error } = await sb.functions.invoke('assistant', { body: { text: String(text).slice(0, 500), character_id: settings.character } });
+  const { data, error } = await sb.functions.invoke('assistant', { body: { text: String(text).slice(0, 500), character_id: settings.character, rules: typeof rules === 'string' ? rules.slice(0, 8000) : '' } });
   if (error) {
     const msg = await error.context?.json?.().then(b => b.error).catch(() => null);
-    return { error: msg || 'Помічник недоступний. Перевір інтернет або запиши через Shift+Enter.' };
+    return { error: msg || 'Помічник недоступний. Перевір інтернет або запиши суму через Enter.' };
   }
   plan = { reply: String(data.reply || ''), actions: Array.isArray(data.actions) ? data.actions : [] };
   return plan;
@@ -725,7 +727,7 @@ app.whenReady().then(() => {
   const fromBar = e => bar && e.sender === bar.webContents;
   ipcMain.handle('quick-parse', (e, text) => (fromBar(e) ? quick.parse(text) : null));
   ipcMain.handle('quick-add', (e, text) => (fromBar(e) ? quickAdd(text) : null));
-  ipcMain.handle('quick-ask', (e, text) => (fromBar(e) ? quickAsk(text) : null));
+  ipcMain.handle('quick-ask', (e, text, rules) => (fromBar(e) ? quickAsk(text, rules) : null));
   ipcMain.handle('quick-run', e => (fromBar(e) ? quickRun() : null));
   /* плашка росте під відповідь помічника */
   /* плашка росте під вміст; знизу екрана — угору, щоб не вилізти за край */
