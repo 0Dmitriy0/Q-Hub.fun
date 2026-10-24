@@ -65,6 +65,19 @@ for (const [name, cx, cy, s] of [
   });
 }
 
+/* хибна точка гірша за відсутню (принцип IV): на зображенні без мапи — лише «не впевнений» */
+test('шум зі шкалою — не точка', () => {
+  const W = 1920, H = 1080, data = Buffer.alloc(W * H * 4);
+  let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (let y = 0; y < H; y += 8) for (let x = 0; x < W; x += 8) {   // плями 8×8, як рельєф на чужій палітрі
+    const v = Math.round(20 + rnd() * 60);
+    for (let yy = y; yy < y + 8; yy++) for (let xx = x; xx < x + 8; xx++) data.fill(v, (yy * W + xx) * 4, (yy * W + xx) * 4 + 3);
+  }
+  for (let x = 30; x < 238; x++) for (let y = 943; y < 945; y++) data.fill(170, (y * W + x) * 4, (y * W + x) * 4 + 3);
+  const r = mm.locate({ width: W, height: H, data }, ref, 300, { cache });
+  assert.notEqual(r.kind, 'point', JSON.stringify(r));
+});
+
 /* справжні кадри F9 з fixtures/map: <назва>.png + <назва>.json { x, y, scale_m } */
 const FIX = path.join(__dirname, 'fixtures', 'map');
 for (const f of fs.readdirSync(FIX).filter(f => f.endsWith('.png'))) {

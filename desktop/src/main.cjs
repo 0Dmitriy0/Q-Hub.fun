@@ -128,6 +128,8 @@ function createBar() {
     }
     bar.hide();
   });
+  /* плашку закрили, не вибравши «надіслати» (Esc, повернувся в гру) — знімок без точки не надсилається */
+  bar.on('hide', () => { if (pinAsk) { pinAsk = null; pinLog('F9 без точки — не надіслано (плашку закрито)'); } });
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор */
@@ -454,7 +456,8 @@ function showPin(text, bad = false) {
   bar.webContents.send('pin', { text, bad });
   if (!bar.isVisible()) { placeBar(); bar.showInactive(); }
   bar.moveTop();
-  pinTimer = setTimeout(() => { if (bar.isVisible() && !bar.isFocused() && !prefs().pinned) bar.hide(); }, 3500);
+  /* результат F9 ховається сам (фокус повертається грі), якщо плашку не закріпили і не чекаємо відповіді у формі */
+  pinTimer = setTimeout(() => { if (bar.isVisible() && !pinAsk && !prefs().pinned) bar.hide(); }, 2500);
 }
 const draftBox = () => (drafts ??= outbox(path.join(dir(), 'drafts'), sendDraft));
 async function pinShot() {
@@ -465,19 +468,49 @@ async function pinShot() {
   if (shots.isBlack(img.toBitmap())) return showPin('Знімок вийшов чорним — перемкніть гру в режим «вікно без рамки».', true);
   const { width, height } = img.getSize();
   try { fs.writeFileSync(path.join(dir(), 'pin-last.png'), img.toPNG()); } catch { /* лише для діагностики, лишається на ПК */ }
-  /* поки розпізнавання не перевірене на багатьох знімках, чернетка йде завжди: з точкою, якщо знайшли, інакше без неї */
+  /* плашка — одразу, поки Windows ще дозволяє взяти фокус (лише відразу після натискання клавіші);
+     якщо точку не знайдемо, форма відкриється вже з фокусом і можна одразу друкувати */
+  clearTimeout(pinTimer);
+  placeBar(); raiseBar();
+  bar.webContents.send('pin', { text: 'Шукаю точку на карті…' });
   let loc;
   try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
   pinLog('F9 ' + JSON.stringify(loc));
   const pt = loc.kind === 'point';
   const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
-  draftBox().put({ taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
-    match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } }, img.toJPEG(80));
+  const draft = { taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
+    match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } };
+  /* точку знайдено — одразу на сайт; ні — спершу спитати: на знімку може бути не гра, а чат, Discord тощо */
+  if (pt) return sendPin(draft, img.toJPEG(80), `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}`);
+  pinAsk = { draft, jpeg: img.toJPEG(80) };
+  clearTimeout(pinTimer);
+  placeBar(); raiseBar();
+  bar.webContents.send('pin-ask', { reason: WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats() });
+}
+/* категорії мапи для вікна «точку не знайдено» — раз на 30 хв */
+let catsAt = 0, catsCache = [];
+async function pinCats() {
+  if (Date.now() - catsAt < 30 * 60e3 && catsCache.length) return catsCache;
+  const { data, error } = await sb.from('map_categories').select('id,name,grp,sort').order('sort');
+  if (!error) { catsCache = data || []; catsAt = Date.now(); }
+  return catsCache;
+}
+let pinAsk = null;   // знімок без точки, що чекає на рішення: Enter — надіслати, Esc чи закрита плашка — ні
+async function sendPin(draft, jpeg, what) {
+  draftBox().put(draft, jpeg);
   const r = await draftBox().flush();
-  const what = pt ? `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}` : `Точку не визначено (${WHY[kind] || kind}) — поставить адмін`;
   if (r.denied) showPin('Немає прав на чернетки міток.', true);
   else if (r.left) showPin(what + '. Відправлю, щойно буде інтернет.');
   else showPin(what + '. Чернетку надіслано.');
+}
+/* hint — підказка редактора адміну: { category, note } */
+function pinDecide(send, hint = {}) {
+  const a = pinAsk; pinAsk = null;
+  if (!a) return;
+  const category_id = typeof hint.category === 'string' && hint.category ? hint.category : null;
+  const note = typeof hint.note === 'string' ? hint.note.trim().slice(0, 600) : '';
+  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, 'Без точки — поставить адмін').catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
+  else showPin('Не надіслано.');
 }
 /* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
 async function sendDraft(draft, jpeg) {
@@ -489,7 +522,12 @@ async function sendDraft(draft, jpeg) {
     const m = `${up.error.statusCode || ''} ${up.error.message}`;
     if (!/409|exists|duplicate/i.test(m)) return /403|row-level|security|unauthori/i.test(m) ? 'denied' : 'retry';
   }
-  const { error } = await sb.from('map_drafts').insert({ id: draft.id, taken_at: draft.taken_at, shot, x: draft.x, y: draft.y, match: draft.match || {} });
+  const row = { id: draft.id, taken_at: draft.taken_at, shot, x: draft.x, y: draft.y, match: draft.match || {} };
+  const hint = draft.category_id || draft.note ? { category_id: draft.category_id || null, note: draft.note || '' } : {};
+  let { error } = await sb.from('map_drafts').insert({ ...row, ...hint });
+  /* у базі ще немає колонок підказки (0020) або категорію видалили — надіслати без підказки, а не застрягти в черзі */
+  if (error && Object.keys(hint).length && /category_id|note|column|foreign key|23503|PGRST204/i.test(`${error.code} ${error.message}`))
+    ({ error } = await sb.from('map_drafts').insert(row));
   if (!error || error.code === '23505') return 'ok';
   return error.code === '42501' ? 'denied' : 'retry';
 }
@@ -712,6 +750,12 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
+  /* F9 без точки: «надіслати без точки» чи «не надсилати» */
+  ipcMain.handle('pin-decide', (e, send, hint) => {
+    if (!fromBar(e) || !pinAsk) return;
+    const a = pinAsk; pinAsk = null; bar.hide(); pinAsk = a;   // hide не має скасувати те, що вибрали
+    pinDecide(send === true, hint && typeof hint === 'object' ? hint : {});
+  });
   /* кнопка «Оновити» в кабінеті */
   ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion() } : null));
   ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });

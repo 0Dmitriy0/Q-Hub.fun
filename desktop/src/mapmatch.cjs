@@ -10,6 +10,8 @@ const SEA = 0.05;                       // яскравість моря (три
 const COARSE = [16, 24, 32, 48], FINE = 8;   // м/пікс: грубий пошук по всій мапі (за масштабом знімка) й уточнення
 const PAD = 2500;                       // море навколо мапи: на великому масштабі частина знімка — за краєм еталона
 const MIN_SCORE = 0.3, MIN_RATIO = 1.2; // пороги впевненості (R5) — підбираються на знімках
+const AGREE = 3;                        // пікс (×8 м): наскільки можуть розійтися половини шаблону при правильному збігу
+const MIN_EDGES = 0.35;                // місця з країв менше за третину медіани (море, поле) не розглядаються
 const SCALE_MIN = 50, SCALE_MAX = 1500;   // на 114 м і 551 м перевірено на справжніх кадрах; хибне відсіює поріг впевненості
 
 const lum = hex => { const v = parseInt(hex.slice(1), 16); return (0.299 * (v >> 16 & 255) + 0.587 * (v >> 8 & 255) + 0.114 * (v & 255)) / 255; };
@@ -133,8 +135,10 @@ function prep(a) {
   const f32 = s => ({ re: Float32Array.from(s.re), im: Float32Array.from(s.im) });   // кеш еталона — вдвічі менше пам'яті
   return { w: a.w, h: a.h, W, H, A: f32(spectrum(a.d, a.w, a.h, W, H)), A2: f32(spectrum(a2, a.w, a.h, W, H)) };
 }
-/* нормована кореляція шаблону t (з маскою m) по зображенню a: для кожного зсуву, де шаблон цілком на зображенні */
-function ncc(a, t, m) {
+/* нормована кореляція шаблону t (з маскою m) по зображенню a: для кожного зсуву, де шаблон цілком на зображенні.
+   minVar — частка медіанної «кількості країв» еталона під шаблоном: де їх менше (море, поле), бал не рахується —
+   на майже порожньому еталоні нормування роздуває випадковий шум до високого балу (хибна точка на узбережжі, 2026-10-24) */
+function ncc(a, t, m, minVar = 0) {
   if (!a.A) a = prep(a);
   const { W, H, A, A2 } = a;
   let n = 0, s = 0; for (let i = 0; i < t.d.length; i++) if (m[i]) { n++; s += t.d[i]; }
@@ -144,10 +148,16 @@ function ncc(a, t, m) {
   tn = Math.sqrt(tn) || 1;
   const T = spectrum(tz, t.w, t.h, W, H), M = spectrum(m, t.w, t.h, W, H);
   const num = xcorr(A, T, W, H), sa = xcorr(A, M, W, H), sa2 = xcorr(A2, M, W, H);
-  const ow = a.w - t.w + 1, oh = a.h - t.h + 1, out = new Float32Array(Math.max(0, ow * oh));
+  const ow = a.w - t.w + 1, oh = a.h - t.h + 1, out = new Float32Array(Math.max(0, ow * oh)), vars = new Float32Array(out.length);
+  for (let v = 0; v < oh; v++) for (let u = 0; u < ow; u++) { const i = v * W + u; vars[v * ow + u] = sa2[i] - sa[i] * sa[i] / n; }
+  let floor = 1e-9;
+  if (minVar > 0) {
+    const pos = vars.filter(x => x > 1e-9).sort();
+    if (pos.length) floor = Math.max(floor, minVar * pos[pos.length >> 1]);
+  }
   for (let v = 0; v < oh; v++) for (let u = 0; u < ow; u++) {
-    const i = v * W + u, va = sa2[i] - sa[i] * sa[i] / n;
-    out[v * ow + u] = va > 1e-9 ? num[i] / (tn * Math.sqrt(va)) : 0;
+    const k = v * ow + u, va = vars[k];
+    out[k] = va > floor ? num[v * W + u] / (tn * Math.sqrt(va)) : 0;
   }
   return { w: ow, h: oh, d: out };
 }
@@ -245,7 +255,7 @@ function locate(frame, ref, meters, opts = {}) {
   /* грубо: уся мапа (з морем навколо); крок — найгрубший, при якому знімок ще щонайменше 150 пікс завширшки */
   const rc = [...COARSE].reverse().find(r => frame.width * s / r >= 150) || COARSE[0];
   const t = shrink(g, rc / s, ui), te = edges(t, t.m);
-  const c = ncc(coarseRef(ref, rc, cache), te, t.m);
+  const c = ncc(coarseRef(ref, rc, cache), te, t.m, MIN_EDGES);
   const cand = peaks(c, 5, 150 / rc);
 
   /* точніше: лише квадрат ~1,6 км навколо гравця (менше роботи, і похибка масштабу на краях екрана не заважає),
@@ -256,17 +266,23 @@ function locate(frame, ref, meters, opts = {}) {
   const tf = shrink(crop.g, FINE / s, crop.m), tfe = edges(tf, tf.m), pad = 2 * rc;
   const fine = cand.map(p => {
     const box = { x: p.x * rc - PAD + cx0 * s - pad, y: p.y * rc - PAD + cy0 * s - pad, w: tf.w * FINE + 2 * pad, h: tf.h * FINE + 2 * pad };
-    const cc = ncc(edges(renderRef(ref, FINE, box)), tfe, tf.m), [best] = peaks(cc, 1, 1);
+    const re = prep(edges(renderRef(ref, FINE, box))), cc = ncc(re, tfe, tf.m), [best] = peaks(cc, 1, 1);
     if (!best) return null;
+    /* узгодженість: ліва й права половини шаблону окремо мають стати в те саме місце; випадковий збіг — розходиться */
+    const split = side => { const m = Uint8Array.from(tf.m, (v, i) => (v && ((i % tf.w) < tf.w / 2) === side ? 1 : 0)); return peaks(ncc(re, tfe, m), 1, 1)[0]; };
+    const L = split(true), R = split(false);
+    const agree = !!L && !!R && Math.hypot(L.x - best.x, L.y - best.y) <= AGREE && Math.hypot(R.x - best.x, R.y - best.y) <= AGREE;
     const [dx, dy] = subpixel(cc, best.x, best.y);
     /* лівий верхній кут УСЬОГО знімка в метрах кадру */
-    return { fx: box.x + (best.x + dx) * FINE - cx0 * s, fy: box.y + (best.y + dy) * FINE - cy0 * s, s: best.s };
+    /* місце вибирає грубий етап (уся мапа, одне нормування), точний лише уточнює: окремо його бал на чужих
+       ділянках буває вищим за правильний (хибна точка на узбережжі, 2026-10-24) — тож рахуємо добуток */
+    return { fx: box.x + (best.x + dx) * FINE - cx0 * s, fy: box.y + (best.y + dy) * FINE - cy0 * s, s: Math.sqrt(Math.max(0, p.s) * Math.max(0, best.s)), coarse: p.s, fine: best.s, agree };
   }).filter(Boolean).sort((a, b) => b.s - a.s);
   if (!fine.length) return { kind: 'unsure', match: { scale_m_per_px: s, score: 0, ratio: 0 } };
   const [b1] = fine, other = fine.find(f => Math.hypot(f.fx - b1.fx, f.fy - b1.fy) > 150);
   const ratio = other ? b1.s / Math.max(other.s, 1e-6) : 9;
-  const match = { scale_m_per_px: Math.round(s * 1e4) / 1e4, score: Math.round(b1.s * 1e3) / 1e3, ratio: Math.round(ratio * 100) / 100 };
-  if (b1.s < MIN_SCORE || ratio < MIN_RATIO) return { kind: 'unsure', match };
+  const match = { scale_m_per_px: Math.round(s * 1e4) / 1e4, score: Math.round(b1.s * 1e3) / 1e3, ratio: Math.round(ratio * 100) / 100, agree: b1.agree };
+  if (b1.s < MIN_SCORE || ratio < MIN_RATIO || !b1.agree) return { kind: 'unsure', match };
   /* лівий верхній кут знімка в метрах кадру + зсув до хрестика */
   const x = FRAME.x0 + b1.fx + aim.x * s, y = FRAME.yt - (b1.fy + aim.y * s);
   return { kind: 'point', x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, match };

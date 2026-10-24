@@ -91,9 +91,15 @@ body.in-bar input { user-select: text; }
 .blabels .btn { justify-content: space-between; border-radius: 12px; min-height: 44px; }
 .blabels .btn small { font: 700 12px var(--mono); color: var(--muted); }
 .bnote { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-.bnote input { background: #0c0c0d; color: var(--fg); border: 1px solid var(--line2); border-radius: 9px; padding: 8px 10px; font: 500 14px var(--sans); outline: 0; user-select: text; }
-.bnote input:focus { border-color: var(--accent); }
+.bnote input, .bnote select { background: #0c0c0d; color: var(--fg); border: 1px solid var(--line2); border-radius: 9px; padding: 8px 10px; font: 500 14px var(--sans); outline: 0; user-select: text; }
+.bnote input:focus, .bnote select:focus { border-color: var(--accent); }
 .bacts li.bdel { border-left: 3px solid var(--bad); }
 .bacts li s { text-decoration-color: var(--faint); }
 .bshare { align-items: flex-start; font-size: 12.5px; color: var(--muted); }
 .bshare input { margin-top: 2px; flex: none; }
+/* F9 «Точку не знайдено»: збіги категорій під полем */
+.bcats { display: flex; flex-wrap: wrap; gap: 6px; }
+.bcats button { display: inline-flex; align-items: baseline; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line2); background: transparent; color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
+.bcats button small { color: var(--muted); font-weight: 500; font-size: 11px; }
+.bcats button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.bcats .muted { font-size: 12px; }

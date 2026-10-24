@@ -7,6 +7,7 @@ export interface MapDraft {
   id: string; author: string; taken_at: string; created_at: string; shot: string;
   x: number | null; y: number | null; status: DraftStatus;
   reviewed_at: string | null; point_id: number | null; shot_deleted_at: string | null;
+  category_id?: string | null; note?: string;   // підказка редактора з програми (0020), коли точку не знайдено
   who?: { game_name: string | null; name: string | null } | null;
 }
 
@@ -35,9 +36,10 @@ export function expiredShots(drafts: MapDraft[], now: Date): MapDraft[] {
 const BUCKET = 'map-drafts';
 
 export async function loadDrafts(): Promise<{ data: MapDraft[]; error: string | null }> {
-  const { data, error } = await supabase!.from('map_drafts')
-    .select('id,author,taken_at,created_at,shot,x,y,status,reviewed_at,point_id,shot_deleted_at,who:profiles!author(game_name,name)')
-    .order('created_at', { ascending: false }).limit(500);
+  const cols = 'id,author,taken_at,created_at,shot,x,y,status,reviewed_at,point_id,shot_deleted_at,who:profiles!author(game_name,name)';
+  const q = (c: string) => supabase!.from('map_drafts').select(c).order('created_at', { ascending: false }).limit(500);
+  let { data, error } = await q(cols + ',category_id,note');
+  if (error && /category_id|note/.test(error.message)) ({ data, error } = await q(cols));   // міграцію 0020 ще не застосовано
   if (error) return { data: [], error: /relation .*map_drafts|schema cache/i.test(error.message) ? 'У базі ще немає таблиці чернеток — запусти міграцію 0019_map_drafts.sql у Supabase → SQL Editor.' : error.message };
   return { data: (data || []) as unknown as MapDraft[], error: null };
 }
