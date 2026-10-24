@@ -456,7 +456,8 @@ function showPin(text, bad = false) {
   bar.webContents.send('pin', { text, bad });
   if (!bar.isVisible()) { placeBar(); bar.showInactive(); }
   bar.moveTop();
-  pinTimer = setTimeout(() => { if (bar.isVisible() && !bar.isFocused() && !prefs().pinned) bar.hide(); }, 3500);
+  /* результат F9 ховається сам (фокус повертається грі), якщо плашку не закріпили і не чекаємо відповіді у формі */
+  pinTimer = setTimeout(() => { if (bar.isVisible() && !pinAsk && !prefs().pinned) bar.hide(); }, 2500);
 }
 const draftBox = () => (drafts ??= outbox(path.join(dir(), 'drafts'), sendDraft));
 async function pinShot() {
@@ -467,6 +468,11 @@ async function pinShot() {
   if (shots.isBlack(img.toBitmap())) return showPin('Знімок вийшов чорним — перемкніть гру в режим «вікно без рамки».', true);
   const { width, height } = img.getSize();
   try { fs.writeFileSync(path.join(dir(), 'pin-last.png'), img.toPNG()); } catch { /* лише для діагностики, лишається на ПК */ }
+  /* плашка — одразу, поки Windows ще дозволяє взяти фокус (лише відразу після натискання клавіші);
+     якщо точку не знайдемо, форма відкриється вже з фокусом і можна одразу друкувати */
+  clearTimeout(pinTimer);
+  placeBar(); raiseBar();
+  bar.webContents.send('pin', { text: 'Шукаю точку на карті…' });
   let loc;
   try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
   pinLog('F9 ' + JSON.stringify(loc));

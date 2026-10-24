@@ -4,6 +4,7 @@ import { dur, eventStatus, kyHM } from '../lib/events';
 import { money, signed, when } from '../lib/format';
 import { search, pos, type BarPrice, type Found } from './barSearch';
 import { toAccelerator } from './hotkey';
+import { matchCats } from './catMatch';
 import { asset } from '../lib/app';
 
 /* Плашка Alt+Q поверх гри: рядок як у помічників для RP-серверів, що розгортається в дві панелі.
@@ -271,27 +272,41 @@ function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n:
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
 /* F9 не знайшов точку на карті: показати, що знято, і спитати — надіслати без точки (поставить адмін) чи ні */
 function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: PinHint) => void }) {
-  const [category, setCategory] = useState(''); const [note, setNote] = useState('');
-  const groups = [...new Set(ask.cats.map(c => c.grp))];
-  const send = (yes: boolean) => decide(yes, yes ? { category, note } : undefined);
-  /* Enter — надіслати (і з поля опису теж), Esc — не надсилати; не пускати ці клавіші далі в плашку */
-  const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); send(e.key === 'Enter'); } };
+  const [text, setText] = useState(''); const [pick, setPick] = useState(0); const [note, setNote] = useState('');
+  const first = useRef<HTMLInputElement>(null), box = useRef<HTMLDivElement>(null);
+  const found = useMemo(() => matchCats(ask.cats, text), [ask.cats, text]);
+  const chosen = found[Math.min(pick, found.length - 1)];
+  /* курсор — одразу в полі категорії: і коли форма з'явилась, і коли вікно отримало фокус пізніше */
+  useEffect(() => {
+    const f = () => { if (!box.current?.contains(document.activeElement)) first.current?.focus(); };
+    f(); window.addEventListener('focus', f); return () => window.removeEventListener('focus', f);
+  }, []);
+  const send = (yes: boolean) => decide(yes, yes ? { category: chosen?.id || '', note } : undefined);
+  /* Enter — надіслати, Esc — не надсилати, ↑↓ — інша категорія зі збігів; не пускати ці клавіші далі в плашку */
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); send(e.key === 'Enter'); return; }
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && found.length) { e.preventDefault(); e.stopPropagation(); setPick(p => (p + (e.key === 'ArrowDown' ? 1 : found.length - 1)) % found.length); }
+  };
   return <>
     <div className="bleft bshot"><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
-    <div className="bright" onKeyDown={onKey}>
+    <div className="bright" ref={box} onKeyDown={onKey}>
       <h3>Точку не знайдено</h3>
       <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p>
-      <label className="bnote">Що тут (необов’язково)
-        <select value={category} onChange={e => setCategory(e.target.value)}>
-          <option value="">— категорію вибере адмін —</option>
-          {groups.map(g => <optgroup key={g} label={g}>{ask.cats.filter(c => c.grp === g).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
-        </select></label>
-      <label className="bnote">Опис (необов’язково)<input autoFocus value={note} onChange={e => setNote(e.target.value)} maxLength={600} placeholder="напр. бак за магазином 24/7, біля входу" /></label>
+      <label className="bnote">Категорія (необов’язково)
+        <input ref={first} value={text} onChange={e => { setText(e.target.value); setPick(0); }} placeholder="почни писати: бак, заправка, 24/7…"
+          role="combobox" aria-expanded={found.length > 0} aria-controls="pin-cats" aria-activedescendant={chosen ? 'pin-cat-' + chosen.id : undefined} /></label>
+      {text.trim() && <div className="bcats" id="pin-cats" role="listbox" aria-label="Категорії">
+        {found.length ? found.map(c => (
+          <button key={c.id} id={'pin-cat-' + c.id} role="option" aria-selected={c === chosen} className={c === chosen ? 'on' : ''} tabIndex={-1}
+            onMouseDown={e => e.preventDefault()} onClick={() => setPick(found.indexOf(c))}>{c.name}<small>{c.grp}</small></button>))
+          : <span className="muted">Такої категорії немає — адмін вибере сам</span>}
+      </div>}
+      <label className="bnote">Опис (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={600} placeholder="напр. бак за магазином 24/7, біля входу" /></label>
       <div className="row">
         <button className="btn acc" onClick={() => send(true)}>Надіслати без точки</button>
         <button className="btn" onClick={() => send(false)}>Не надсилати</button>
       </div>
-      <small className="muted"><kbd>Enter</kbd> — надіслати · <kbd>Esc</kbd> — не надсилати</small>
+      <small className="muted"><kbd>↑↓</kbd> інша категорія · <kbd>Tab</kbd> до опису · <kbd>Enter</kbd> надіслати · <kbd>Esc</kbd> не надсилати</small>
     </div>
   </>;
 }
