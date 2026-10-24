@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clean, context, holdings, type Ctx, type TxRec } from './plan.ts';
+import { clean, context, holdings, rulesBlock, type Ctx, type TxRec } from './plan.ts';
 
 const c: Ctx = {
   character: 'Dmitriy_Core', balance: 6903606,
@@ -89,4 +89,16 @@ describe('помічник Alt+Q', () => {
     expect(p.actions).toEqual([]);
     expect(clean(null, c)).toEqual({ reply: 'Не зрозумів — спробуй інакше.', actions: [] });
   });
+});
+
+describe('пункти правил для помічника', () => {
+  it('є пункти — окремий блок перед текстом гравця', () => {
+    expect(rulesBlock('[Правила Зелених Зон, п. 1.1] Заборонено вбивство')).toBe('Пункти правил сервера QuantRP, що можуть стосуватися питання:\n[Правила Зелених Зон, п. 1.1] Заборонено вбивство\n\n');
+  });
+  it('порожньо чи не рядок — нічого', () => {
+    expect(rulesBlock('  ')).toBe('');
+    expect(rulesBlock(undefined)).toBe('');
+    expect(rulesBlock({ x: 1 })).toBe('');
+  });
+  it('задовге — обрізається до 8000', () => expect(rulesBlock('я'.repeat(20000)).length).toBeLessThan(8100));
 });

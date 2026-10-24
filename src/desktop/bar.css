@@ -65,6 +65,11 @@ body.in-bar input { user-select: text; }
 .breply { font-size: 15.5px; line-height: 1.5; }
 .bacts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .bacts li { padding: 8px 11px; border-radius: 9px; background: #1b1b1e; font-size: 14px; }
+.brules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.brules li { padding: 9px 12px; border-radius: 9px; background: #1b1b1e; }
+.brules a { font-size: 12.5px; font-weight: 700; text-decoration: none; }
+.brules a:hover { text-decoration: underline; }
+.brules p { margin: 3px 0 0; font-size: 14px; line-height: 1.45; white-space: pre-line; }
 .bright .btn { align-self: flex-start; }
 .bkv { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 14px; align-items: center; font-size: 14px; }
 .bkv > span { color: var(--muted); }

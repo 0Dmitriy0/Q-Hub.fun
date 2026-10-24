@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('qhub', {
   /* рядок швидкого запису (Alt+Q) */
   quickParse: text => ipcRenderer.invoke('quick-parse', text),
   quickAdd: text => ipcRenderer.invoke('quick-add', text),
-  quickAsk: text => ipcRenderer.invoke('quick-ask', text),
+  quickAsk: (text, rules) => ipcRenderer.invoke('quick-ask', text, rules),
   quickRun: () => ipcRenderer.invoke('quick-run'),
   quickSize: h => ipcRenderer.invoke('quick-size', h),
   quickHide: () => ipcRenderer.invoke('quick-hide'),
