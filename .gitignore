@@ -15,3 +15,5 @@ desktop/src/ocr/
 supabase/.temp/
 # розбір скріншотів для програми — збирається з src/lib/shotParse.ts
 desktop/src/lib/
+# граф проєкту від graphify (/graphify .) — локальний, не для репозиторію
+graphify-out/
