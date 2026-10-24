@@ -26,7 +26,7 @@
 Check-обмеження:
 - `(x is null) = (y is null)`
 - `status in ('new','published','rejected')`
-- `status = 'new' or (reviewed_by is not null and reviewed_at is not null)` — оброблена чернетка завжди має, хто й коли
+- `status = 'new' or reviewed_at is not null` — оброблена чернетка завжди має час обробки; `reviewed_by` ставить RPC, але в обмеження не входить, бо при видаленні профілю адміна стає `null` (`on delete set null`)
 - `point_id is null or status = 'published'` — мітка буває лише в опублікованої (після видалення мітки `point_id` стає `null`, статус лишається)
 
 ### Переходи станів
