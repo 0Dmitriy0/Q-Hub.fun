@@ -9,7 +9,12 @@ interface Bridge {
   onChanged?: (cb: () => void) => () => void;
   openBar?: () => Promise<string>;
   hotkey?: () => Promise<string | null>;
+  updateState?: () => Promise<UpdateState | null>;
+  updateInstall?: () => Promise<unknown>;
+  onUpdate?: (cb: (s: UpdateState) => void) => () => void;
 }
+/* оновлення програми (desktop/src/updater.cjs); current — встановлена версія */
+export interface UpdateState { status: 'idle' | 'available' | 'downloading' | 'ready'; version: string | null; percent: number; error: string | null; current?: string }
 
 export const desktop: Bridge | undefined = typeof window !== 'undefined'
   ? (window as unknown as { qhub?: Bridge }).qhub

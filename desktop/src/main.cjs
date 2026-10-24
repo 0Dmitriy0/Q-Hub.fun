@@ -1,5 +1,5 @@
 /* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа, кабінет, швидкий запис по Alt+Q. Далі — баланс з екрана. */
-const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, screen, desktopCapturer, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, Notification, screen, desktopCapturer, nativeImage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
@@ -9,6 +9,7 @@ const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
+const { createUpdater } = require('./updater.cjs');
 const SHOT_KEY = 'Alt+S';
 
 /* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
@@ -111,8 +112,17 @@ function createBar() {
   bar.setOpacity(prefs().opacity);
   bar.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   bar.webContents.on('will-navigate', e => e.preventDefault());
-  /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою */
-  bar.on('blur', () => { if (!prefs().pinned) bar.hide(); });
+  /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою.
+     Але гра (RAGE MP) сама забирає фокус назад приблизно за секунду після появи плашки — тоді це не «повернувся»:
+     плашка ще двічі бере фокус собі, а не вийшло — лишається на екрані (сховати — Alt+Q або клік у плашці й Esc) */
+  bar.on('blur', () => {
+    if (prefs().pinned) return;
+    if (Date.now() - barShownAt < 1500) {
+      if (barSteals++ < 2) setTimeout(() => { if (bar.isVisible()) { bar.moveTop(); bar.focus(); } }, 60);
+      return;
+    }
+    bar.hide();
+  });
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор */
@@ -120,6 +130,12 @@ function placeBar() {
   const { workArea: a } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 }[prefs().position];
   bar.setPosition(Math.round(a.x + (a.width - BAR_W) / 2), Math.max(a.y, y));
+}
+/* показати плашку поверх гри й узяти фокус (blur вище не дає грі одразу сховати її) */
+let barShownAt = 0, barSteals = 0;
+function raiseBar() {
+  barShownAt = Date.now(); barSteals = 0;
+  bar.show(); bar.moveTop(); bar.focus();
 }
 async function toggleBar() {
   if (bar.isVisible()) { bar.hide(); return; }
@@ -129,20 +145,50 @@ async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session || !settings.character) { showMain(); return; }   // спершу вхід і персонаж
   placeBar();
-  bar.show(); bar.moveTop(); bar.focus();
+  raiseBar();
   bar.webContents.send('quick-show');
 }
 
 function createTray() {
   tray = new Tray(path.join(__dirname, 'icon.png'));
   tray.setToolTip(`Q-Hub — ${prefs().hotkey}: швидкий запис`);
-  tray.setContextMenu(Menu.buildFromTemplate([
+  trayMenu();
+  tray.on('click', showMain);
+}
+/* меню трею; є нова версія — зверху пункт «Оновити» */
+function trayMenu() {
+  const u = updates?.state();
+  tray?.setContextMenu(Menu.buildFromTemplate([
+    ...(u && u.status !== 'idle' ? [{ label: u.status === 'downloading' ? `Оновлення ${u.percent}%…` : `Оновити до ${u.version}`, enabled: u.status !== 'downloading', click: () => updates.install() }, { type: 'separator' }] : []),
     { label: 'Швидкий запис', click: () => toggleBar() },
     { label: 'Відкрити Q-Hub', click: showMain },
     { type: 'separator' },
     { label: 'Вийти з програми', click: () => { quitting = true; app.quit(); } },
   ]));
-  tray.on('click', showMain);
+}
+
+/* ---------- оновлення програми (updater.cjs): перевірка раз на 3 год, ставиться лише після кнопки «Оновити» ---------- */
+let updates = null, notifiedVersion = null;
+function startUpdates() {
+  if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
+  const { autoUpdater } = require('electron-updater');
+  updates = createUpdater({
+    autoUpdater,
+    beforeInstall: () => { quitting = true; },
+    log: m => { try { fs.appendFileSync(path.join(dir(), 'update.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } },
+    onChange: s => {
+      win?.webContents.send('update', s);
+      trayMenu();
+      /* сповіщення Windows — один раз на кожну нову версію */
+      if (s.status === 'available' && s.version !== notifiedVersion && Notification.isSupported()) {
+        notifiedVersion = s.version;
+        const n = new Notification({ title: 'Вийшла нова версія Q-Hub', body: `${s.version} — натисни «Оновити» в програмі або в меню іконки в треї.`, icon: path.join(__dirname, 'icon.png') });
+        n.on('click', showMain); n.show();
+      }
+    },
+  });
+  setTimeout(() => updates.check(), 15e3);
+  setInterval(() => updates.check(), 3 * 3600e3);
 }
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
@@ -327,7 +373,7 @@ async function captureShot() {
   if (!src || src.thumbnail.isEmpty()) return;
   const img = src.thumbnail;
   const name = shotStore.save(img.toPNG());
-  placeBar(); bar.show(); bar.moveTop(); bar.focus();
+  placeBar(); raiseBar();
   bar.webContents.send('shot', { name, preview: img.resize({ width: 520 }).toDataURL(), black: shots.isBlack(img.toBitmap()), stats: shotStore.stats() });
 }
 
@@ -523,10 +569,14 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
+  /* кнопка «Оновити» в кабінеті */
+  ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion() } : null));
+  ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });
 
   createWindow();
   createBar();
   createTray();
+  startUpdates();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))

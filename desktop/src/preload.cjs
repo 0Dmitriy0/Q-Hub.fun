@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('qhub', {
   /* для кабінету сайту: токени сесії програми і їх оновлення */
   session: () => ipcRenderer.invoke('session'),
   onSession: cb => { ipcRenderer.on('session', (_e, t) => cb(t)); },
+  /* оновлення програми: стан, кнопка «Оновити», зміни стану — повертає відписку */
+  updateState: () => ipcRenderer.invoke('update-state'),
+  updateInstall: () => ipcRenderer.invoke('update-install'),
+  onUpdate: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('update', f); return () => ipcRenderer.removeListener('update', f); },
   /* дані змінилися поза сторінкою (Alt+Q) — повертає відписку */
   onChanged: cb => { const f = () => cb(); ipcRenderer.on('changed', f); return () => ipcRenderer.removeListener('changed', f); },
 });

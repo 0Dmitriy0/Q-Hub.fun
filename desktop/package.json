@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
+    "electron-updater": "6.3.9",
     "tesseract.js": "6.0.1"
   },
   "devDependencies": {
@@ -38,6 +39,12 @@
       "shortcutName": "Q-Hub",
       "artifactName": "Q-Hub-Setup.${ext}"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/0Dmitriy0/Q-Hub.fun/releases/download/desktop-latest"
+      }
+    ],
     "asarUnpack": [
       "node_modules/tesseract.js/**",
       "node_modules/tesseract.js-core/**",

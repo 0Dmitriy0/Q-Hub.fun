@@ -28,6 +28,9 @@ jobs:
         working-directory: desktop
       - run: npm test
         working-directory: desktop
+      - name: Номер збірки у версії (програма бачить оновлення лише за більшою версією)
+        run: node scripts/version.mjs ${{ github.run_number }}
+        working-directory: desktop
       - run: npm run dist
         working-directory: desktop
         env:
@@ -45,7 +48,11 @@ jobs:
           name: Q-Hub Desktop — тестова версія
           prerelease: true
           make_latest: false
-          files: desktop/dist/Q-Hub-Setup.exe
+          # latest.yml — версія й контрольна сума для оновлення з програми; blockmap — щоб завантажувати лише змінені частини
+          files: |
+            desktop/dist/Q-Hub-Setup.exe
+            desktop/dist/Q-Hub-Setup.exe.blockmap
+            desktop/dist/latest.yml
           body: |
             Тестова версія програми Q-Hub для Windows — ще не фінальна. Можуть траплятися помилки;
             записи, які програма робить сама («Авто ·»), перевіряй у кабінеті.
