@@ -10,7 +10,7 @@ insert into auth.users (id, raw_user_meta_data) values
 update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000a2';
 update public.profiles set role = 'user' where id = '00000000-0000-0000-0000-0000000000b2';
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-00000000000a';
-do $$ begin assert (select shown = false and grp = 'Заробіток' from public.map_categories where id = 'treasure-fields'), 'категорії полів скарбів немає'; end $$;
+do $$ begin assert (select shown = false and grp = 'Шари мапи' from public.map_categories where id = 'treasure-fields'), 'поля скарбів не в шарах мапи'; end $$;
 
 -- адмін малює зону
 set role authenticated;
