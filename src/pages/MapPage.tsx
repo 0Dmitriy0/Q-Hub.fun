@@ -14,6 +14,7 @@ import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import MapAdmin, { MarkEdit } from '../components/MapAdmin';
 import GameMapExport from '../components/GameMapExport';
+import MapDrafts from '../components/MapDrafts';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const ON_KEY = 'qhub:map:on';
@@ -50,8 +51,12 @@ export default function MapPage() {
   const pickRef = useRef(false);
   const pickMarker = useRef<L.CircleMarker | null>(null);
   const nav = useNavigate();
-  const { role } = useAuth();
+  const { role, isStaff } = useAuth();
   const isAdmin = role === 'admin';
+  /* точка відкритої чернетки: маркер на мапі (адмін його перетягує); клік у режимі «поставити» ставить її сюди */
+  const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
+  const draftMarker = useRef<L.Marker | null>(null);
+  const pickFor = useRef<'mark' | 'draft'>('mark');
   const [cats, setCats] = useState<MapCategory[]>(BUILTIN);
   const [marks, setMarks] = useState<MapMark[]>(BUILTIN_MARKS);
   const [saved] = useState(readOn);
@@ -86,7 +91,7 @@ export default function MapPage() {
 
   const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp);
   /* панель: вкладки й згорнуті групи */
-  const [tab, setTab] = useState<'filters' | 'game' | 'admin'>('filters');
+  const [tab, setTab] = useState<'filters' | 'game' | 'admin' | 'drafts'>('filters');
   const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
   const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
   const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
@@ -138,7 +143,9 @@ export default function MapPage() {
     m.on('mousemove', e => setPos(game(e))); m.on('mouseout', () => setPos(null));
     m.on('click', e => {
       if (!pickRef.current) return;
-      const g = game(e); setPicked(g);
+      const g = game(e);
+      if (pickFor.current === 'draft') { setDraftPt(g); pickRef.current = false; setPicking(false); return; }
+      setPicked(g);
       pickMarker.current?.remove();
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
       pickRef.current = false; setPicking(false);
@@ -186,9 +193,21 @@ export default function MapPage() {
     m.fire('zoomend');
   }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* маркер чернетки: білий з помаранчевою обводкою, щоб не сплутати з опублікованими мітками */
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    if (!draftPt) { draftMarker.current?.remove(); draftMarker.current = null; return; }
+    const ll = m.unproject(toPx(draftPt[0], draftPt[1]), ZMAX);
+    if (draftMarker.current) { draftMarker.current.setLatLng(ll); return; }
+    const icon = L.divIcon({ className: 'mpin-wrap', iconSize: [28, 28], iconAnchor: [14, 14], html: '<span class="mdr-pin"></span>' });
+    draftMarker.current = L.marker(ll, { icon, draggable: isAdmin, title: 'Точка чернетки', zIndexOffset: 1000 }).addTo(m);
+    draftMarker.current.on('dragend', () => { const p = m.project(draftMarker.current!.getLatLng(), ZMAX); setDraftPt(toGame(p.x, p.y)); });
+  }, [draftPt, isAdmin]);
+  function focusDraft(p: [number, number]) { const m = map.current; if (m) m.flyTo(m.unproject(toPx(p[0], p[1]), ZMAX), 5, { duration: 0.8 }); }
+
   function resetOn() { setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
   function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
-  function pick(v: boolean) { pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+  function pick(v: boolean, forDraft = false) { pickFor.current = forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
     const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
@@ -253,8 +272,12 @@ export default function MapPage() {
           <div className="mtabs" role="tablist" aria-label="Панель мапи">
             <button type="button" role="tab" aria-selected={tab === 'filters'} onClick={() => setTab('filters')}>Фільтри</button>
             <button type="button" role="tab" aria-selected={tab === 'game'} onClick={() => setTab('game')}>Для гри</button>
+            {isStaff && <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки</button>}
             {isAdmin && <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Адмін</button>}
           </div>
+          {tab === 'drafts' && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} point={draftPt} picking={picking}
+            onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}
+            onPublished={mk => { setMarks(ms => [...ms, mk]); setMany([mk.category], true); }} />}
           {tab === 'filters' && <section className="mfilters" role="tabpanel" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
               <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Усі</button>

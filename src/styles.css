@@ -784,3 +784,25 @@ fieldset .static-form .btn { align-self: end; }
 .upd-bar { width: 120px; height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; }
 .upd-bar span { display: block; height: 100%; background: var(--accent); transition: width .2s linear; }
 .upd .btn:disabled { opacity: .55; cursor: default; }
+
+/* мапа: вкладка «Чернетки» — точки з гри (F9 у програмі), src/components/MapDrafts.tsx */
+.mdrafts { display: flex; flex-direction: column; gap: 8px; }
+.mdr-note { margin: 0; font-size: 13px; }
+.mdr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.mdr-list button { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); font: 500 13px var(--sans); text-align: left; cursor: pointer; }
+.mdr-list button:hover { background: var(--hover); }
+.mdr-list button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mdr-list img, .mdr-ph { width: 64px; height: 36px; flex: none; border-radius: 6px; object-fit: cover; background: var(--surface2); }
+.mdr-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mdr-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdr-t small { color: var(--muted); font-size: 12px; }
+.mdr-st { flex: none; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--muted); }
+.mdr-st.new { background: var(--warn-soft); color: var(--warn); }
+.mdr-st.published { background: var(--good-soft); color: var(--good); }
+.mdr-st.rejected { background: var(--bad-soft); color: var(--bad); }
+.mdr-open { display: flex; flex-direction: column; gap: 8px; }
+.mdr-open > .btn { align-self: flex-start; }
+.mdr-shot { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--line2); }
+.mdr-shot img { display: block; width: 100%; height: auto; }
+.mdr-xy { margin: 0; font-size: 13px; }
+.mdr-pin { display: block; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); box-shadow: 0 0 0 4px rgba(255, 106, 31, .35), 0 6px 14px rgba(0, 0, 0, .5); cursor: grab; }
