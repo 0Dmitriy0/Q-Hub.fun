@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, mapUrl, parseHash, toGame, toPx } from '../lib/mapGeo';
 import { namesLayer, vectorLayer } from '../lib/mapVector';
-import { groupCategories, ownerLabel, type MapCategory, type MapMark } from '../lib/mapData';
+import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { POINTS } from '../data/mapPoints';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
@@ -15,6 +15,7 @@ import Icon from '../components/Icon';
 import MapAdmin, { MarkEdit } from '../components/MapAdmin';
 import GameMapExport from '../components/GameMapExport';
 import MapDrafts from '../components/MapDrafts';
+import MapAreaDraw from '../components/MapAreaDraw';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const ON_KEY = 'qhub:map:on';
@@ -57,6 +58,12 @@ export default function MapPage() {
   const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
   const draftMarker = useRef<L.Marker | null>(null);
   const pickFor = useRef<'mark' | 'draft'>('mark');
+  /* зони (0021): багатокутники в шарах своїх категорій; адмін малює нову кліками по мапі */
+  const [areas, setAreas] = useState<MapArea[]>([]);
+  const [ring, setRing] = useState<[number, number][]>([]);
+  const [drawing, setDrawing] = useState(false);
+  const drawRef = useRef(false);
+  const ringLayer = useRef<L.LayerGroup | null>(null);
   const [cats, setCats] = useState<MapCategory[]>(BUILTIN);
   const [marks, setMarks] = useState<MapMark[]>(BUILTIN_MARKS);
   const [saved] = useState(readOn);
@@ -94,7 +101,7 @@ export default function MapPage() {
   const [tab, setTab] = useState<'filters' | 'game' | 'admin' | 'drafts'>('filters');
   const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
   const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
-  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of marks) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks]);
+  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas]);
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
   const groups = useMemo(() => groupCategories(visibleCats), [visibleCats]);
@@ -116,8 +123,10 @@ export default function MapPage() {
         all.push(...(r.data || [])); if (!r.data || r.data.length < 1000) return { data: all, error: null };
       }
     };
-    Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name')]).then(([c, p, o]) => {
+    Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name'), supabase.from('map_areas').select('*').order('id')]).then(([c, p, o, a]) => {
       if (c.error || p.error) { setDbMissing(true); return; }
+      /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
+      if (!a.error) setAreas(((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][] })));
       if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
       setCats([...BUILTIN, ...(c.data as MapCategory[])]);
       setMarks([...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false }))]);
@@ -142,6 +151,7 @@ export default function MapPage() {
     const game = (e: L.LeafletMouseEvent) => { const pt = m.project(e.latlng, ZMAX); return toGame(pt.x, pt.y); };
     m.on('mousemove', e => setPos(game(e))); m.on('mouseout', () => setPos(null));
     m.on('click', e => {
+      if (drawRef.current) { const g = game(e); setRing(r => [...r, g]); return; }
       if (!pickRef.current) return;
       const g = game(e);
       if (pickFor.current === 'draft') { setDraftPt(g); pickRef.current = false; setPicking(false); return; }
@@ -178,6 +188,13 @@ export default function MapPage() {
       /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
       if (mk.name && mk.label !== false) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
+    /* зони з бази: заливка кольору категорії, клік — назва й примітка (адміну — «Видалити») */
+    for (const ar of areas) {
+      const c = catById[ar.category]; if (!c || !layers.current[c.id]) continue;
+      const html = `<div class="mpop"><b>${esc(ar.name || c.name)}</b>${ar.name ? `<span>${esc(c.name)}</span>` : ''}${ar.note ? `<span>${esc(ar.note)}</span>` : ''}`
+        + (isAdmin ? `<span class="mrow"><button type="button" class="mdel" data-del-area="${ar.dbId}">Видалити зону</button></span>` : '') + '</div>';
+      L.polygon(ar.ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), { color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.28 }).bindPopup(html).addTo(layers.current[c.id]);
+    }
     /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
     if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
@@ -185,7 +202,7 @@ export default function MapPage() {
     if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
     m.fire('zoomend');
-  }, [cats, marks, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cats, marks, areas, isAdmin, owners]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current; if (!m) return;
@@ -203,6 +220,24 @@ export default function MapPage() {
     draftMarker.current = L.marker(ll, { icon, draggable: isAdmin, title: 'Точка чернетки', zIndexOffset: 1000 }).addTo(m);
     draftMarker.current.on('dragend', () => { const p = m.project(draftMarker.current!.getLatLng(), ZMAX); setDraftPt(toGame(p.x, p.y)); });
   }, [draftPt, isAdmin]);
+  /* контур нової зони: лінія через точки й пунктир до першої (замкнеться при збереженні) */
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    ringLayer.current?.remove(); ringLayer.current = null;
+    if (!ring.length) return;
+    const ll = ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), g = L.layerGroup().addTo(m);
+    L.polyline(ll, { color: '#ff6a1f', weight: 3 }).addTo(g);
+    if (ll.length > 2) L.polyline([ll[ll.length - 1], ll[0]], { color: '#ff6a1f', weight: 2, dashArray: '6 6' }).addTo(g);
+    for (const p of ll) L.circleMarker(p, { radius: 4, color: '#fff', weight: 2, fillColor: '#ff6a1f', fillOpacity: 1, interactive: false }).addTo(g);
+    ringLayer.current = g;
+  }, [ring]);
+  function draw(v: boolean) { drawRef.current = v; setDrawing(v); if (v) { pickRef.current = false; setPicking(false); } }
+  async function delArea(id: number) {
+    if (!confirm('Видалити цю зону з мапи?')) return;
+    const { error } = await supabase!.from('map_areas').delete().eq('id', id);
+    if (error) { alert('Не вдалося видалити: ' + error.message); return; }
+    map.current?.closePopup(); setAreas(as => as.filter(a => a.dbId !== id));
+  }
   function focusDraft(p: [number, number]) { const m = map.current; if (m) m.flyTo(m.unproject(toPx(p[0], p[1]), ZMAX), 5, { duration: 0.8 }); }
 
   function resetOn() { setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
@@ -255,11 +290,13 @@ export default function MapPage() {
           const t = e.target as HTMLElement;
           const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
           const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
+          const da = t.closest('button[data-del-area]'); if (da) delArea(Number(da.getAttribute('data-del-area')));
           const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
           const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
         {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
+        {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
         <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
       </div>
@@ -319,8 +356,10 @@ export default function MapPage() {
               onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
             {dbMissing
               ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
-              : <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
-                  onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />}
+              : <><MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
+                  onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />
+                <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
+                  onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} /></>}
           </>}
         </aside>
     </div>
