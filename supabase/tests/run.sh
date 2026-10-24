@@ -51,4 +51,3 @@ echo 'Транспорт з маркетплейсу ok'
 $P -f supabase/seed/map_quantfun.sql >/dev/null; $P -f supabase/seed/map_quantfun.sql >/dev/null   # мітки з QuantFun: повтор без дублів
 $P -c "do \$\$ begin assert (select count(*) from public.map_points where created_by is null) = 2149, 'мітки з QuantFun дублюються або не всі'; assert (select icon from public.map_points where name = 'Odesa Mafia') = '/icons/map/mafia-odesa.svg', 'іконка мафії не записалась'; assert not (select bool_or(show_label) from public.map_points where category_id = 'bombs'), 'масові мітки з підписами'; end \$\$;"
 echo 'Мітки з QuantFun ok'
-$P -f supabase/tests/map_drafts_test.sql

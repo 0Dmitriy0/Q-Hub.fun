@@ -27,8 +27,7 @@
     "productName": "Q-Hub",
     "files": [
       "src/**/*",
-      "!src/*.test.cjs",
-      "!src/fixtures/**"
+      "!src/*.test.cjs"
     ],
     "win": {
       "target": "nsis",
