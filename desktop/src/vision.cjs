@@ -16,7 +16,28 @@ const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.un
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
 const SCENE_TTL = 120e3;        // скільки після меню зміна грошей ще належить йому
 const TOAST_TTL = 20e3;         // скільки після значка зміни пам'ятати текст підтвердження
-const PRICES_EVERY = 10 * 60e3; // ціни одного скупника — не частіше
+const PRICES_EVERY = 10 * 60e3; // ту саму ціну того самого товару — не частіше
+
+/* відбір цін зі зчитаних кадрів вікна скупника. Раніше вікно читалося один раз на першому кадрі — і товари,
+   яких на ньому не розпізнало (вікно ще домальовувалось, рядок зчитався криво), не доходили до сайту.
+   Тепер кожен кадр, поки вікно відкрите: ціна йде на сайт, коли два кадри поспіль показали те саме число
+   (захист від помилок розпізнавання), і не повторюється, поки не зміниться або не мине PRICES_EVERY */
+function pricePicker(every = PRICES_EVERY) {
+  const seen = new Map(), sent = new Map();
+  return (buyer, rows, now) => {
+    const out = [];
+    for (const r of rows) {
+      const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k);
+      const confirmed = s && s.price === r.price;
+      seen.set(k, { price: r.price });
+      if (!confirmed) continue;
+      if (done && done.price === r.price && now - done.at < every) continue;
+      sent.set(k, { price: r.price, at: now });
+      out.push(r);
+    }
+    return out;
+  };
+}
 
 /* лишити лише білий текст (назви й ціни в меню білі) — як prepare() у src/components/ShotImport.tsx */
 function whiteOnly(img, nativeImage) {
@@ -40,7 +61,7 @@ function vision(deps) {
   let digits = null, text = null, busy = false;
   const feed = hud.watcher();
   let baselineSent = false, place = null, toast = null, lastScene = 0;
-  const pricesAt = new Map();
+  const pickPrices = pricePicker();
   const log = m => { try { fs.appendFileSync(deps.logFile, `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
 
   async function workers() {
@@ -81,8 +102,10 @@ function vision(deps) {
         const crop = img.crop(hud.region(width, height));
         money = hud.parse(await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })));
       }
-      const acts = feed(money);
-      if (money && !baselineSent && feed.stable) { baselineSent = true; log('baseline ' + JSON.stringify(feed.stable)); await deps.onBaseline(feed.stable); }
+      /* автооблік вимкнено — HUD однаково читаємо (щоб знати, коли відкрите меню скупника), але записів не робимо */
+      const ledger = !deps.ledger || deps.ledger();
+      const acts = ledger ? feed(money) : [];
+      if (ledger && money && !baselineSent && feed.stable) { baselineSent = true; log('baseline ' + JSON.stringify(feed.stable)); await deps.onBaseline(feed.stable); }
       if (acts.length) {
         const sc = place && now - place.at < SCENE_TTL ? place : null, ts = toast && now - toast.at < TOAST_TTL ? toast.text : '';
         const recs = scenes.records(acts, sc, ts);
@@ -111,17 +134,18 @@ function vision(deps) {
     if (!items.length) return;
     const ls = await lines(img);
     const buyer = shot.detectBuyer(ls, items);
-    if (!buyer || now - (pricesAt.get(buyer) || 0) < PRICES_EVERY) return;
-    const rows = shot.parseShot(ls, items.filter(i => i.buyer_id === buyer))
+    if (!buyer) return;
+    const all = items.filter(i => i.buyer_id === buyer);
+    const rows = shot.parseShot(ls, all)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
       .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price }));
-    log(`prices ${buyer}: ${JSON.stringify(rows)}`);
-    if (!rows.length) return;
-    pricesAt.set(buyer, now);
-    await deps.onPrices(rows);
+    const fresh = pickPrices(buyer, rows, now);
+    if (!fresh.length) return;
+    log(`prices ${buyer}: кадр ${rows.length}/${all.length}, на сайт ${JSON.stringify(fresh)}`);
+    await deps.onPrices(fresh);
   }
 
   return { tick, stop: async () => { await digits?.terminate(); await text?.terminate(); digits = text = null; } };
 }
 
-module.exports = { vision, toastRegions, whiteOnly };
+module.exports = { vision, toastRegions, whiteOnly, pricePicker };

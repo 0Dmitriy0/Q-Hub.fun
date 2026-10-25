@@ -705,7 +705,9 @@ function startVision() {
   try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
   const eye = vision({
     nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
-    active: () => !!settings.session && !!settings.character && prefs().autoLedger !== false,
+    /* зір працює, якщо ввімкнено хоч щось: автооблік або ціни скупників (раніше вимкнений автооблік вимикав і ціни) */
+    active: () => !!settings.session && !!settings.character && (prefs().autoLedger !== false || prefs().autoPrices !== false),
+    ledger: () => prefs().autoLedger !== false,
     prices: () => prefs().autoPrices !== false,
     onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices,
   });
