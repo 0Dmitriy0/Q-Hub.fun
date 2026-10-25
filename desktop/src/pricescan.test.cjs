@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { pricePicker } = require('./vision.cjs');
+const { pricePicker } = require('./pricescan.cjs');
 
 const r = (item_id, price) => ({ buyer_id: 'fish', item_id, price });
 
@@ -22,7 +22,7 @@ test('криве розпізнавання не проходить, нова ц
   assert.deepStrictEqual(pick('fish', [r(1, 120)], 704e3), []);
 });
 
-const { parseChange, changePicker } = require('./vision.cjs');
+const { parseChange, changePicker } = require('./pricescan.cjs');
 
 test('таймер зміни цін: справжні результати OCR з вікон скупників', () => {
   assert.strictEqual(parseChange('Е ЗМІНА ЦІН НА. £\n= ТОВАРИ ЧЕРЕЗ i\n| 2 год. 55 хв. Е\n'), 175);

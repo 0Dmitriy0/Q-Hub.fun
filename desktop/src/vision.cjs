@@ -10,64 +10,13 @@ const { createWorker } = require('tesseract.js');
 const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
+const { pricePicker, parseChange, changePicker, changeRegion } = require('./pricescan.cjs');
 
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
 const SCENE_TTL = 120e3;        // скільки після меню зміна грошей ще належить йому
 const TOAST_TTL = 20e3;         // скільки після значка зміни пам'ятати текст підтвердження
-const PRICES_EVERY = 10 * 60e3; // ту саму ціну того самого товару — не частіше
-
-/* відбір цін зі зчитаних кадрів вікна скупника. Раніше вікно читалося один раз на першому кадрі — і товари,
-   яких на ньому не розпізнало (вікно ще домальовувалось, рядок зчитався криво), не доходили до сайту.
-   Тепер кожен кадр, поки вікно відкрите: ціна йде на сайт, коли два кадри поспіль показали те саме число
-   (захист від помилок розпізнавання), і не повторюється, поки не зміниться або не мине PRICES_EVERY */
-function pricePicker(every = PRICES_EVERY) {
-  const seen = new Map(), sent = new Map();
-  return (buyer, rows, now) => {
-    const out = [];
-    for (const r of rows) {
-      const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k);
-      const confirmed = s && s.price === r.price;
-      seen.set(k, { price: r.price });
-      if (!confirmed) continue;
-      if (done && done.price === r.price && now - done.at < every) continue;
-      sent.set(k, { price: r.price, at: now });
-      out.push(r);
-    }
-    return out;
-  };
-}
-
-/* блок «Зміна цін на товари через 2 год. 55 хв.» ліворуч унизу вікна скупника (виміряно на 1920×1080) */
-function changeRegion(w, h) {
-  const s = h / 1080;
-  return { x: Math.round(100 * s), y: Math.round(870 * s), width: Math.round(200 * s), height: Math.round(100 * s) };
-}
-/* «2 год. 55 хв.» → 175 хв; «55 хв.» → 55; «1 год.» → 60; не схоже на таймер → null. OCR іноді зливає число з «год» */
-function parseChange(t) {
-  /* OCR плутає схожі літери: «3rop. 12xe.», «xB.», «З год.» (кирилична З замість трійки) — зводимо до «3 год. 12 хв.» */
-  const s = String(t || '').toLowerCase().replace(/\s+/g, ' ')
-    .replace(/x/g, 'х').replace(/b/g, 'в').replace(/o/g, 'о').replace(/r(?=о)/g, 'г');
-  const h = s.match(/(\d{1,2}|з)\s*го[дnp]/), m = s.match(/(\d{1,2})\s*х/);
-  if (!h && !m) return null;
-  const hh = h ? (h[1] === 'з' ? 3 : Number(h[1])) : 0, mm = m ? Number(m[1]) : 0;
-  if (mm > 59) return null;
-  const mins = hh * 60 + mm;
-  return mins >= 1 && mins <= 24 * 60 ? mins : null;
-}
-/* коли надсилати час зміни: два кадри поспіль показали той самий момент (±1 хв), і він відрізняється від уже надісланого
-   більш ніж на 2 хв — тобто почався новий цикл цін (поки відлік іде, момент зміни той самий і повторно не шлеться) */
-function changePicker() {
-  const seen = new Map(), sent = new Map();
-  return (buyer, at) => {
-    const prev = seen.get(buyer); seen.set(buyer, at);
-    if (prev === undefined || Math.abs(prev - at) > 60e3) return false;
-    const done = sent.get(buyer);
-    if (done !== undefined && Math.abs(done - at) <= 2 * 60e3) return false;
-    sent.set(buyer, at); return true;
-  };
-}
 
 /* лишити лише білий текст (назви й ціни в меню білі) — як prepare() у src/components/ShotImport.tsx */
 function whiteOnly(img, nativeImage) {
@@ -193,4 +142,4 @@ function vision(deps) {
   return { tick, stop: async () => { await digits?.terminate(); await text?.terminate(); digits = text = null; } };
 }
 
-module.exports = { vision, toastRegions, whiteOnly, pricePicker, parseChange, changePicker, changeRegion };
+module.exports = { vision, toastRegions, whiteOnly };
