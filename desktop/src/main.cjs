@@ -241,7 +241,7 @@ function startUpdates() {
     },
   });
   setTimeout(() => updates.check(), 15e3);
-  setInterval(() => updates.check(), 3 * 3600e3);
+  setInterval(() => updates.check(), 30 * 60e3);   // нова версія доходить за пів години, а не за три
 }
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';

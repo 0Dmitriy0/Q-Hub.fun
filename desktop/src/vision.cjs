@@ -93,7 +93,10 @@ function vision(deps) {
         toast = null;
         await deps.onRecords(recs);
       }
-      if (!money && !badge && now - lastScene > SCENE_EVERY) {
+      /* відкрите вікно скупника читаємо щокадру (~2 с), а не раз на SCENE_EVERY: ціна йде на сайт після двох однакових кадрів,
+         і за коротку зупинку біля скупника їх треба встигнути зробити */
+      const atBuyer = place?.kind === 'buyer' && now - place.at < 10e3;
+      if (!money && !badge && now - lastScene > (atBuyer ? 0 : SCENE_EVERY)) {
         /* HUD закритий — гравець у меню: де саме */
         lastScene = now;
         const small = img.resize({ width: Math.min(width, 1280), quality: 'good' });

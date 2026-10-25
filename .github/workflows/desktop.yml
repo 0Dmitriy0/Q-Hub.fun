@@ -41,6 +41,12 @@ jobs:
         working-directory: desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # без сертифіката підпису коду
+      # інсталятор з версією в назві (Q-Hub-Setup-0.2.48.exe) — тоді в релізі лишається blockmap попередньої версії,
+      # і програма качає лише змінені шматки, а не всі 110 МБ. Копія під сталою назвою — для кнопки на сайті
+      - name: Інсталятор під сталою назвою для кнопки на сайті
+        shell: bash
+        working-directory: desktop/dist
+        run: cp Q-Hub-Setup-*.exe Q-Hub-Setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: Q-Hub-Setup
@@ -56,8 +62,9 @@ jobs:
           make_latest: false
           # спершу інсталятор і blockmap (щоб завантажувати лише змінені частини), latest.yml — окремим кроком нижче
           files: |
+            desktop/dist/Q-Hub-Setup-*.exe
+            desktop/dist/Q-Hub-Setup-*.exe.blockmap
             desktop/dist/Q-Hub-Setup.exe
-            desktop/dist/Q-Hub-Setup.exe.blockmap
           body: |
             Тестова версія програми Q-Hub для Windows — ще не фінальна. Можуть траплятися помилки;
             записи, які програма робить сама («Авто ·»), перевіряй у кабінеті.
@@ -71,3 +78,16 @@ jobs:
           prerelease: true
           make_latest: false
           files: desktop/dist/latest.yml
+      # старі версії не потрібні: лишаємо 3 останні (з запасом для тих, хто давно не оновлювався — їм просто прийде повне завантаження)
+      - name: Прибрати старі версії з релізу
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          old=$(gh release view desktop-latest --repo "${{ github.repository }}" --json assets --jq '.assets[].name' \
+            | grep -E '^Q-Hub-Setup-[0-9][0-9.]*\.exe$' | sort -V | head -n -3 || true)
+          for n in $old; do
+            gh release delete-asset desktop-latest "$n" --repo "${{ github.repository }}" -y || true
+            gh release delete-asset desktop-latest "$n.blockmap" --repo "${{ github.repository }}" -y || true
+          done
