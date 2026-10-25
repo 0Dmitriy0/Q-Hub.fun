@@ -1039,3 +1039,79 @@ fieldset .static-form .btn { align-self: end; }
 .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); animation: online-pulse 2s ease-in-out infinite; }
 @keyframes online-pulse { 50% { box-shadow: 0 0 0 6px transparent; } }
 @media (max-width: 600px) { .online { padding: 0 10px; } .online-t { display: none; } }
+
+/* ---------- ціни скупників (Figma «Скупники» + design/stitch/buyers.html, src/pages/Prices.tsx) ---------- */
+.bp { display: flex; flex-direction: column; gap: 32px; }
+.bp-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 10px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--faint); font: 600 12px var(--mono); }
+.bp-status > span { display: inline-flex; align-items: center; gap: 8px; }
+.bp-status b { color: var(--fg); }
+.bp-status-r { margin-left: auto; }
+.bp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.bp-head > div:first-child { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.bp-head h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.03em; }
+.bp-head p { font-size: 14.5px; line-height: 23px; }
+/* вигідно здавати зараз */
+.bp-leaders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.bp-lead { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, transform .15s; }
+.bp-lead:hover { border-color: rgba(255, 107, 0, .45); transform: translateY(-2px); }
+.bp-lead:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.bp-lead-h { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bp-lead-h > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.bp-lead-h b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-lead-h small { color: var(--faint); font-size: 12px; }
+.bp-tag { flex: none; padding: 2px 9px; border-radius: 999px; background: rgba(255, 107, 0, .18); color: var(--accent-hi); font: 700 10.5px/16px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.bp-lead-p { display: flex; align-items: baseline; gap: 6px; }
+.bp-lead-p b { font-size: 30px; line-height: 1.1; letter-spacing: -.02em; }
+.bp-lead-p small { color: var(--faint); font-size: 12px; }
+.bp-pos { margin-left: auto; color: var(--good); font-size: 13px; font-weight: 700; }
+.bp-lead-f { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line2); color: var(--faint); font-size: 12px; }
+.bp-lead-f b { color: var(--fg); font-size: 12px; }
+/* список */
+.bp-list { gap: 14px; padding: 18px; }
+.bp-tools { display: flex; gap: 10px; flex-wrap: wrap; }
+.bp-search { flex: 1 1 320px; }
+.bp-sort { flex: 0 1 240px; }
+.bp-sort select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; cursor: pointer; }
+.bp-tabs a { display: inline-flex; align-items: center; gap: 8px; }
+.bp-tabs .cnt { padding: 0 6px; border-radius: 999px; background: var(--bg); color: var(--faint); font-size: 11px; }
+.bp-tabs a.active .cnt { background: rgba(22, 8, 0, .18); color: var(--accent-fg); }
+.bp-buyer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 4px; }
+.bp-th { display: grid; grid-template-columns: minmax(0, 1fr) 72px 150px; gap: 12px; padding: 8px 12px 6px 64px; border-bottom: 1px solid var(--line2); color: var(--faint); font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.bp-th span:nth-child(3) { text-align: right; }
+.bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) 72px minmax(150px, auto) auto; padding: 12px; margin: 0 -6px; border-radius: 12px; border-bottom: 0; }
+.bp-list .prow + .prow { box-shadow: 0 -1px 0 var(--line); }
+.bp-list .prow:hover, .bp-list .prow.open { background: color-mix(in srgb, var(--surface2) 70%, transparent); box-shadow: none; }
+.bp-list .prow:hover + .prow, .bp-list .prow.open + .prow { box-shadow: none; }
+.bp-list .pdetail { border-bottom: 0; padding-bottom: 6px; }
+/* пусто за пошуком */
+.bp-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 16px; text-align: center; }
+.bp-empty-ico { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: var(--surface2); color: var(--faint); margin-bottom: 4px; }
+.bp-empty h2 { font-size: 20px; }
+.bp-empty-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+.bp-empty-chips .btn { gap: 6px; }
+/* калькулятор і як внести ціну */
+.bp-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.bp-calc, .bp-how { gap: 12px; padding: 22px; }
+.bp-calc h2, .bp-how h2 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.bp-calc-in { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 10px; }
+.bp-calc-out { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bp-calc-out div { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line2); }
+.bp-calc-out small { color: var(--faint); font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.bp-calc-out b { font-size: 24px; color: var(--accent-hi); }
+.bp-calc-out b.good { color: var(--good); }
+.bp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bp-steps li { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line2); }
+.bp-steps b { font-size: 14.5px; }
+.bp-steps p { font-size: 13.5px; line-height: 21px; margin: 2px 0 4px; }
+.bp-steps a { font-weight: 700; font-size: 13.5px; text-decoration: none; }
+@media (max-width: 1000px) { .bp-leaders { grid-template-columns: 1fr; } .bp-bottom { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .bp { gap: 24px; }
+  .bp-status-r { margin-left: 0; }
+  .bp-th { display: none; }
+  .bp-list { padding: 12px; }
+  .bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) auto; margin: 0 -4px; padding: 10px 8px; }
+  .bp-list .prow .spark { display: none; }
+  .bp-calc-in, .bp-calc-out { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .bp-lead, .bp-lead:hover { transition: none; transform: none; } }

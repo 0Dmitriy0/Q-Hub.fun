@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { money, parseMoney, when } from '../lib/format';
@@ -50,6 +51,10 @@ export default function Prices() {
   useEffect(() => { const id = setInterval(() => setTick(Date.now()), 30000); return () => clearInterval(id); }, []);
   const [tab, setTab] = useState(cached?.buyers[0]?.id || '');
   const [q, setQ] = useState('');
+  /* сортування списку: за назвою (як було), за ціною, за свіжістю або за вигідністю (положення між мін і макс) */
+  const [sort, setSort] = useState<'name' | 'price' | 'fresh' | 'good'>('name');
+  /* калькулятор: товар (ключ buyer:item) і кількість */
+  const [calc, setCalc] = useState({ key: '', qty: '10' });
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
   /* звідки зараз ціни: жива база, збережені в браузері чи знімок сайту */
@@ -113,8 +118,17 @@ export default function Prices() {
         const mine = u && Math.abs(ms(u.created_at) - ms(r.price_at)) < 2000;
         return { ...r, shown: r.price, at: r.price_at, by: mine ? who(u!) + (u!.reporter_static ? ' #' + u!.reporter_static : '') : r.price_at ? 'редактор' : '' };
       })
-      .sort((a, b) => a.items!.name.localeCompare(b.items!.name, 'uk'));
-  }, [rows, ups, tab, q]);
+      .sort((a, b) => {
+        const byName = a.items!.name.localeCompare(b.items!.name, 'uk');
+        if (sort === 'price') return (b.shown || 0) - (a.shown || 0) || byName;
+        if (sort === 'fresh') return ms(b.at) - ms(a.at) || byName;
+        if (sort === 'good') {
+          const p = (r: Row) => rangePos(r.price, priceRange(hist[r.buyer_id + ':' + r.item_id] || [], r.min_price, r.max_price, now)) ?? -1;
+          return p(b) - p(a) || byName;
+        }
+        return byName;
+      });
+  }, [rows, ups, tab, q, sort, hist, now]);
   const buyer = buyers.find(b => b.id === tab);
   useEffect(() => { loadHist([...new Set(cur.map(r => r.buyer_id))].filter(id => !histFor.has(id))); }, [cur]);
   const reload = (buyerId: string) => { load(); loadHist([buyerId]); };
@@ -167,10 +181,41 @@ export default function Prices() {
   const buyerSize = (id: string) => rows.filter(r => r.buyer_id === id).length;
   const buyerName = (id: string) => buyers.find(b => b.id === id)?.name || '';
   const itemName = (id: number) => rows.find(r => r.item_id === id)?.items?.name || '—';
+  /* «вигідно здавати зараз»: свіжі ціни (до 3 год), найближчі до максимуму скупника за межами з гри */
+  const leaders = useMemo(() => rows
+    .filter(r => r.items && r.price > 0 && ms(r.price_at) >= cs)
+    .map(r => ({ r, pos: rangePos(r.price, priceRange([], r.min_price, r.max_price)) }))
+    .filter((x): x is { r: Row; pos: number } => x.pos !== null)
+    .sort((a, b) => b.pos - a.pos || b.r.price - a.r.price).slice(0, 3), [rows, cs]);
+  const freshAll = rows.filter(r => ms(r.price_at) >= cs).length;
+  const lastAll = rows.reduce((m, r) => Math.max(m, ms(r.price_at)), 0);
+  const priced = useMemo(() => rows.filter(r => r.items && r.price > 0).sort((a, b) => a.items!.name.localeCompare(b.items!.name, 'uk')), [rows]);
+  const calcRow = priced.find(r => r.buyer_id + ':' + r.item_id === calc.key) || priced[0];
+  const calcQty = Math.max(0, Math.floor(Number(calc.qty.replace(/s/g, '')) || 0));
+  const pick = (id: string) => { setQ(''); setTab(id); document.getElementById('price-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   return (
-    <>
-      <div><h1>Ціни скупників</h1><p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік за 30 днів.</p></div>
+    <div className="bp">
+      {/* смужка стану ринку — лише справжні числа з бази */}
+      {buyers.length > 0 && <div className="bp-status">
+        <span><span className="mdot good" aria-hidden="true" />Скупників: <b className="mono">{buyers.length}</b></span>
+        <span>Товарів: <b className="mono">{rows.length}</b></span>
+        <span>Свіжих цін (до 3 год): <b className="mono">{freshAll}</b></span>
+        <span className="bp-status-r">Остання ціна: <b className="mono">{lastAll ? when(lastAll) : '—'}</b></span>
+      </div>}
+
+      <section className="bp-head">
+        <div>
+          <span className="h-kicker"><Icon name="buyer" size={16} />Ціни скупників</span>
+          <h1>Ціни скупників Quant RP</h1>
+          <p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік.</p>
+        </div>
+        <div className="row">
+          {session ? <a className="btn acc" href="#add-price"><Icon name="camera" />Внести ціни</a> : <button className="btn acc" onClick={signIn}><Icon name="user" />Увійти, щоб вносити ціни</button>}
+          <Link className="btn ghost" to="/mapa"><Icon name="map" />Скупники на мапі</Link>
+        </div>
+      </section>
+
       {!supabase && <div className="card empty">База ще не підключена.</div>}
       {err && !buyers.length && <div className="card err">{err}</div>}
       {supabase && !loaded && !buyers.length && <div className="card empty" role="status">Завантажуємо ціни…</div>}
@@ -178,37 +223,34 @@ export default function Prices() {
       {loaded && !err && !buyers.length && <div className="card empty">Скупників поки немає — скоро з'являться.</div>}
       {buyers.length > 0 && (
         <>
-          <section className="card recent">
-            <div className="row between rhead"><h2 className="ih"><Icon name="clock" />Останні оновлення цін</h2><Leaderboard list={top} /></div>
-            {recent.length
-              ? <ul className="ulist">{recent.map(g => {
-                  /* один стиль для всіх записів: нік жирним на початку, під ним що саме оновлено */
-                  const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); setQ(''); setTab(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
-                  const one = g.items.length === 1, all = !one && g.items.length >= buyerSize(g.buyer_id);
-                  return <li key={g.key}>
-                    <div className="ug-head"><b>{g.who}</b>{g.stat ? <span className="mono stat">#{g.stat}</span> : null}
-                      <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
-                      <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
-                    <div className="ug-items">{one
-                      ? <>{itemName(g.items[0].item_id)} — <b className="mono">{money(g.items[0].price)}</b></>
-                      : g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
-                  </li>;
-                })}</ul>
-              : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару нижче.</div>}
-            {groups.length > SHOWN && <button type="button" className="btn sm ghost" aria-expanded={allUps} onClick={() => setAllUps(v => !v)}>{allUps ? 'Сховати' : `Показати ще ${Math.min(groups.length, 30) - SHOWN}`}</button>}
-          </section>
-          {session && <div className="shot-wrap"><ShotImport
-            catalog={rows.filter(r => r.items).map(r => ({ id: r.item_id, name: r.items!.name, buyer_id: r.buyer_id, min: r.min_price, max: r.max_price, price: r.price }))}
-            buyerName={buyerName} onBuyer={id => { setQ(''); setTab(id); }} onDone={() => load()} /></div>}
-          <div className="fld has-ico"><Icon name="search" /><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
-          {!q && <div className="tabs" role="tablist">{buyers.map(b => (
-            <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>
-              <Pic url={b.image_url} alt={b.name} size={24} />{b.name}
-            </a>))}</div>}
-          {!session && <div className="card row between"><span>Увійди через Discord, щоб оновлювати ціни й потрапити в рейтинг.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}
-          <section className="card">
+          {/* вигідно здавати зараз */}
+          {leaders.length > 0 && <section className="h-sec">
+            <div className="row between"><h2 className="ih"><Icon name="bolt" />Вигідно здавати зараз</h2><span className="h-lbl">свіжа ціна найближче до максимуму скупника</span></div>
+            <div className="bp-leaders">{leaders.map(({ r, pos }, i) => (
+              <button type="button" key={r.buyer_id + ':' + r.item_id} className="bp-lead" onClick={() => pick(r.buyer_id)}>
+                <span className="bp-lead-h"><Pic url={r.items!.image_url} alt={r.items!.name} size={36} /><span><b>{r.items!.name}</b><small>{buyerName(r.buyer_id)}</small></span>{i === 0 && <span className="bp-tag">Топ</span>}</span>
+                <span className="bp-lead-p"><b className="mono">{money(r.price)}</b><small>за {r.items!.unit}</small><span className="bp-pos mono">▲ {pos}%</span></span>
+                <span className="bp-lead-f"><span>Межі: <b className="mono">{money(r.min_price)} – {money(r.max_price)}</b></span><span>{when(r.price_at!)}</span></span>
+              </button>))}
+            </div>
+          </section>}
+
+          {/* список цін */}
+          <section className="card bp-list" id="price-list">
+            <div className="bp-tools">
+              <div className="fld has-ico bp-search"><Icon name="search" /><input type="search" placeholder="Пошук товару серед усіх скупників" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук товару" /></div>
+              <label className="fld bp-sort"><span className="vh">Сортування</span>
+                <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Сортування">
+                  <option value="name">За назвою</option><option value="good">Найвигідніші зараз</option><option value="price">Найдорожчі</option><option value="fresh">Нещодавно оновлені</option>
+                </select>
+              </label>
+            </div>
+            {!q && <div className="tabs bp-tabs" role="tablist">{buyers.map(b => (
+              <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>
+                <Pic url={b.image_url} alt={b.name} size={24} />{b.name}<span className="cnt mono">{buyerSize(b.id)}</span>
+              </a>))}</div>}
             {!q && buyer && (
-              <div className="row between">
+              <div className="bp-buyer">
                 <div className="row"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span></div></div>
                 {isAdmin && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
                   const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
@@ -236,6 +278,7 @@ export default function Prices() {
                 </div>
               </div>
             )}
+            {cur.length > 0 && <div className="bp-th" aria-hidden="true"><span>Товар · положення між мін і макс</span><span>30 днів</span><span>Ціна</span></div>}
             {cur.length ? (
               <div className="plist">{cur.map(r => {
                 const key = r.buyer_id + ':' + r.item_id, old = !!r.at && ms(r.at) < cs, isOpen = open === key, editing = edit[key] !== undefined;
@@ -283,10 +326,75 @@ export default function Prices() {
                     )}
                   </div>);
               })}</div>
-            ) : <div className="empty">{q ? 'Нічого не знайдено.' : 'У цього скупника ще немає товарів.'}</div>}
+            ) : q
+              ? <div className="bp-empty">
+                  <span className="bp-empty-ico" aria-hidden="true"><Icon name="search" size={28} /></span>
+                  <h2>Нічого не знайдено за «{q.trim()}»</h2>
+                  <p className="muted">Перевір написання або вибери скупника — у кожного свій список товарів.</p>
+                  <button type="button" className="btn acc" onClick={() => setQ('')}>Скинути пошук</button>
+                  <div className="bp-empty-chips">{buyers.map(b => <button key={b.id} type="button" className="btn ghost sm" onClick={() => pick(b.id)}><Pic url={b.image_url} alt={b.name} size={20} />{b.name}</button>)}</div>
+                </div>
+              : <div className="empty">У цього скупника ще немає товарів.</div>}
+          </section>
+
+          {/* калькулятор і як внести ціну */}
+          <section className="bp-bottom">
+            <div className="card bp-calc">
+              <span className="h-kicker"><Icon name="coin" size={16} />Калькулятор</span>
+              <h2>Скільки отримаєш у скупника</h2>
+              {calcRow ? <>
+                <div className="bp-calc-in">
+                  <label className="fld"><span>Товар</span>
+                    <select value={calcRow.buyer_id + ':' + calcRow.item_id} onChange={e => setCalc({ ...calc, key: e.target.value })}>
+                      {priced.map(r => <option key={r.buyer_id + ':' + r.item_id} value={r.buyer_id + ':' + r.item_id}>{r.items!.name} — {buyerName(r.buyer_id)} · {money(r.price)}</option>)}
+                    </select>
+                  </label>
+                  <label className="fld bp-qty"><span>Кількість, {calcRow.items!.unit}</span><input inputMode="numeric" value={calc.qty} onChange={e => setCalc({ ...calc, qty: e.target.value })} /></label>
+                </div>
+                <div className="bp-calc-out">
+                  <div><small>За поточною ціною</small><b className="mono">{money(calcRow.price * calcQty)}</b></div>
+                  <div><small>На максимумі скупника</small><b className="mono good">{calcRow.max_price > calcRow.price ? money(calcRow.max_price * calcQty) : '—'}</b></div>
+                </div>
+                {ms(calcRow.price_at) < cs && <small className="warn">Ціні понад 3 години — у грі вона могла змінитися.</small>}
+              </> : <p className="muted">Ще немає цін для розрахунку.</p>}
+            </div>
+            <div className="card bp-how" id="add-price">
+              <span className="h-kicker"><Icon name="camera" size={16} />Ціни вносять гравці</span>
+              <h2>Бачиш іншу ціну в грі?</h2>
+              <ol className="bp-steps">
+                <li><span className="start-n p-n" aria-hidden="true">1</span><div><b>Автоматично через Q-Hub Desktop</b><p className="muted">Відкрий вікно скупника в грі — програма сама надішле ціни від твого імені.</p><Link to="/programa">Про програму →</Link></div></li>
+                <li><span className="start-n p-n" aria-hidden="true">2</span><div><b>Скріншот вікна скупника</b><p className="muted">Завантаж знімок — сайт розпізнає ціни, а ти перевіриш перед збереженням. Або натисни «Оновити ціну» біля товару.</p></div></li>
+              </ol>
+              {session
+                ? <ShotImport
+                    catalog={rows.filter(r => r.items).map(r => ({ id: r.item_id, name: r.items!.name, buyer_id: r.buyer_id, min: r.min_price, max: r.max_price, price: r.price }))}
+                    buyerName={buyerName} onBuyer={id => { setQ(''); setTab(id); }} onDone={() => load()} />
+                : <button className="btn acc" onClick={signIn}>Увійти через Discord</button>}
+            </div>
+          </section>
+
+          {/* останні оновлення й рейтинг */}
+          <section className="card recent">
+            <div className="row between rhead"><h2 className="ih"><Icon name="clock" />Останні оновлення цін</h2><Leaderboard list={top} /></div>
+            {recent.length
+              ? <ul className="ulist">{recent.map(g => {
+                  /* один стиль для всіх записів: нік жирним на початку, під ним що саме оновлено */
+                  const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); pick(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
+                  const one = g.items.length === 1, all = !one && g.items.length >= buyerSize(g.buyer_id);
+                  return <li key={g.key}>
+                    <div className="ug-head"><b>{g.who}</b>{g.stat ? <span className="mono stat">#{g.stat}</span> : null}
+                      <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
+                      <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
+                    <div className="ug-items">{one
+                      ? <>{itemName(g.items[0].item_id)} — <b className="mono">{money(g.items[0].price)}</b></>
+                      : g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
+                  </li>;
+                })}</ul>
+              : <div className="empty">Гравці ще не оновлювали ціни. Будь першим — натисни «Оновити ціну» біля товару вище.</div>}
+            {groups.length > SHOWN && <button type="button" className="btn sm ghost" aria-expanded={allUps} onClick={() => setAllUps(v => !v)}>{allUps ? 'Сховати' : `Показати ще ${Math.min(groups.length, 30) - SHOWN}`}</button>}
           </section>
         </>
       )}
-    </>
+    </div>
   );
 }
