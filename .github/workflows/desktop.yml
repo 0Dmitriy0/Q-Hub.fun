@@ -11,6 +11,12 @@ on:
 permissions:
   contents: write   # реліз з інсталятором
 
+# реліз «desktop-latest» один на всіх: дві збірки одночасно перезаписували його навперейми — latest.yml від однієї,
+# інсталятор від іншої, і програма відмовлялась оновлюватись («sha512 checksum mismatch»). Тепер збірки йдуть по черзі
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -48,12 +54,20 @@ jobs:
           name: Q-Hub Desktop — тестова версія
           prerelease: true
           make_latest: false
-          # latest.yml — версія й контрольна сума для оновлення з програми; blockmap — щоб завантажувати лише змінені частини
+          # спершу інсталятор і blockmap (щоб завантажувати лише змінені частини), latest.yml — окремим кроком нижче
           files: |
             desktop/dist/Q-Hub-Setup.exe
             desktop/dist/Q-Hub-Setup.exe.blockmap
-            desktop/dist/latest.yml
           body: |
             Тестова версія програми Q-Hub для Windows — ще не фінальна. Можуть траплятися помилки;
             записи, які програма робить сама («Авто ·»), перевіряй у кабінеті.
             Інсталятор не підписаний: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».
+      # latest.yml (версія й контрольна сума) — останнім: програма бачить нову версію лише тоді, коли інсталятор уже на місці
+      - name: Реліз «desktop-latest» — опис версії для оновлення
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          prerelease: true
+          make_latest: false
+          files: desktop/dist/latest.yml
