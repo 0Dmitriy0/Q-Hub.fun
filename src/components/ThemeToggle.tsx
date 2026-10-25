@@ -11,7 +11,7 @@ const systemLight = () => !!window.matchMedia && window.matchMedia('(prefers-col
 function apply(m: Mode) {
   const light = m === 'light' || (m === 'auto' && systemLight());
   document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#f6f5f3' : '#070707');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#f6f5f3' : '#10141a');
 }
 
 /* одна кнопка: темна (за замовчуванням) → світла → як у системі; вибір пам'ятається в браузері */

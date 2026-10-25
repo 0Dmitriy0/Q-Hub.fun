@@ -82,7 +82,7 @@ export default function Cabinet() {
   if (desktop) return (
     <div className="desk">
       <aside className="dside">
-        <div className="dbrand"><span className="logo" aria-hidden="true">Q</span><div><b>Q-Hub</b><small>{current?.name || name}{gameName ? ' · QuantRP' : ''}</small></div></div>
+        <div className="dbrand"><img className="logo" src="/brand/q-hub-logo.svg" alt="" width={36} height={36} /><div><b>Q-Hub</b><small>{current?.name || name}{gameName ? ' · QuantRP' : ''}</small></div></div>
         <nav className="dnav" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => (
           <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={18} />{l}</NavLink>))}
         </nav>

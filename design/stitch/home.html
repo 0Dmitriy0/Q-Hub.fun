@@ -1,0 +1,679 @@
+<!DOCTYPE html><html class="dark" lang="uk" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_standard" name="shell-type"><title>Q-Hub — Quant RP Hub</title><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"status-success":"#10B981","surface-container-high":"#262a31","inverse-primary":"#a04100","on-secondary-container":"#b0b9ca","accent-orange-glow":"rgba(255, 107, 0, 0.28)","on-tertiary":"#512400","tertiary-container":"#e47f33","surface":"#10141a","on-primary":"#561f00","on-tertiary-container":"#522400","tertiary":"#ffb688","surface-panel":"#141B24","outline-variant":"#5a4136","secondary-container":"#414a58","on-error-container":"#ffdad6","surface-bright":"#353940","on-secondary-fixed-variant":"#3e4755","surface-container-low":"#181c22","border-tactical":"#263344","on-primary-fixed-variant":"#7a3000","surface-dim":"#10141a","surface-variant":"#31353c","error-container":"#93000a","primary-fixed-dim":"#ffb693","secondary-fixed":"#dae3f5","on-background":"#dfe2eb","secondary":"#bec7d8","outline":"#a98a7d","primary":"#ffb693","primary-container":"#ff6b00","tertiary-fixed-dim":"#ffb688","border-tactical-focus":"#FF7A1A","surface-container-lowest":"#0a0e14","on-tertiary-fixed-variant":"#733600","background":"#10141a","surface-obsidian":"#070A0E","on-surface":"#dfe2eb","status-info":"#0EA5E9","text-muted":"#56677D","status-warning":"#F59E0B","surface-container":"#1c2026","accent-neon-orange":"#FF7A1A","on-tertiary-fixed":"#311300","inverse-on-surface":"#2d3137","on-secondary-fixed":"#131c29","text-primary":"#F4F7FB","surface-card-subtle":"#10161F","text-secondary":"#8B9BB0","primary-fixed":"#ffdbcc","on-surface-variant":"#e2bfb0","status-danger":"#EF4444","tertiary-fixed":"#ffdbc7","secondary-fixed-dim":"#bec7d8","surface-tint":"#ffb693","on-primary-container":"#572000","surface-panel-hover":"#1A2330","on-secondary":"#28313e","on-primary-fixed":"#351000","inverse-surface":"#dfe2eb","surface-container-highest":"#31353c","on-error":"#690005","error":"#ffb4ab"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-lg":"1.5rem","space-2xl":"3.5rem","space-sm":"0.5rem","gutter-mobile":"0.75rem","margin":"2rem","space-md":"1rem","space-xl":"2.25rem","space-xs":"0.25rem","gutter":"1.25rem","margin-mobile":"1rem"},"fontFamily":{"headline-xl-mobile":["Manrope"],"headline-lg":["Manrope"],"body-sm":["Manrope"],"label-mono-sm":["JetBrains Mono"],"display-hero":["Manrope"],"label-mono-lg":["JetBrains Mono"],"body-md":["Manrope"],"label-mono-md":["JetBrains Mono"],"headline-md":["Manrope"],"body-lg":["Manrope"],"headline-xl":["Manrope"],"display-hero-mobile":["Manrope"],"headline-sm":["Manrope"]},"fontSize":{"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"label-mono-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"label-mono-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.025em","fontWeight":"800"}],"display-hero-mobile":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"800"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col justify-between"><header class="fixed top-0 w-full z-50 bg-surface-obsidian/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-20 max-w-[1360px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-6 lg:gap-8"><a class="flex items-center gap-2.5 group transition-transform hover:scale-105 duration-300" data-path="holovna" href="#"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg2InXIWVpzLBKqvzE1ns5pPahb3mJCHLktduAAEw9ud3NbET1PBwvyJ-6vfDdyu88gl9o6o5prm0R_z3mYcyiJTDTIbXJRasyy_P2lPBIK1W0oAjuFNzyiMzbE7KPiL336QHuRslU9EwK1IimoY7n_47pewXnhLMqJqzYfp5bBomP_ArSDnDYj1SdpdfOPzdB9ddxZ8y7zTfYRHU80DC4tdonnmRczx2-ZMbK6oa8FghKI1FCLGJdSI6rTKa7JV4j1xY" alt="Q-Hub Logo" class="h-9 w-auto object-contain shrink-0"></a><nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-surface-panel/90 shadow-inner" data-active-classes="bg-surface-container-high text-primary font-bold rounded-full"><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-primary bg-surface-container-high font-semibold transition-all" data-path="holovna" href="#">Головна</a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="mapa-shtatu" href="#"><span class="">Мапа штату</span></a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="prohrama-overlei" href="#"><span class="">Програма-оверлей</span></a><a class="px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="transport" href="#">Транспорт</a><a class="px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="iventy" href="#">Івенти</a></nav></div><div class="flex items-center gap-3.5"><button aria-label="Перемкнути тему" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[19px]">dark_mode</span></button><a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:shadow-[0_0_20px_-2px_rgba(255,107,0,0.55)] hover:bg-accent-neon-orange transition-all duration-300" data-path="login-discord" href="#"><span class="material-symbols-outlined text-[18px]">sports_esports</span><span class="whitespace-nowrap">Увійти через Discord</span></a><div class="w-9 h-9 rounded-full bg-surface-card-subtle flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-text-secondary text-[20px]">person</span></div></div></div></header><main class="w-full pt-20 bg-surface flex-grow"><div class="flex flex-col w-full">
+<!-- Atmospheric Ambient Glows -->
+<div class="relative w-full overflow-hidden">
+<div class="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-primary-container/15 via-accent-orange-glow to-transparent blur-[120px] rounded-full"></div>
+<div class="pointer-events-none absolute top-[900px] -right-32 w-[600px] h-[600px] bg-primary-container/10 blur-[140px] rounded-full"></div>
+<div class="pointer-events-none absolute top-[2100px] -left-32 w-[550px] h-[550px] bg-accent-orange-glow blur-[130px] rounded-full"></div>
+<div class="max-w-[1360px] mx-auto px-margin-mobile md:px-margin flex flex-col gap-12 md:gap-20 py-8 md:py-14 relative z-10">
+<!-- ========================================================================= -->
+<!-- 1. HERO SECTION                                                          -->
+<!-- ========================================================================= -->
+<section class="flex flex-col gap-8 md:gap-10">
+<!-- Top Status Pill -->
+<div class="flex items-center">
+<div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-surface-panel shadow-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-neon-orange opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary-container"></span>
+</span>
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-primary tracking-wide">
+              Головний хаб гравців Quant RP • Свіжі ціни скупників оновлюються в реальному часі
+            </span>
+</div>
+</div>
+<!-- Hero Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+<div class="lg:col-span-8 flex flex-col gap-6">
+<h1 class="font-display-hero text-display-hero text-text-primary tracking-tight">
+              Ціни, угоди й гроші персонажа — <span class="text-accent-neon-orange">в одному місці</span>
+</h1>
+<p class="font-body-lg text-body-lg text-text-secondary max-w-3xl leading-relaxed">
+              Повноцінна цифрова екосистема для гравців сервера Quant RP: інтерактивна карта штату з ексклюзивним радаром у саму гру, десктопний асистент поверх екрану GTA V з аналітичним ШІ та сканером цін, а також персональний облік активів і гаража.
+            </p>
+<!-- CTA Cluster -->
+<div class="flex flex-wrap items-center gap-3.5 pt-2">
+<a class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold shadow-[0_4px_24px_rgba(255,107,0,0.4)] hover:shadow-[0_0_30px_rgba(255,107,0,0.65)] hover:bg-accent-neon-orange transition-all" href="#interactive-map">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: &quot;FILL&quot; 1;">map</span>
+<span class="">Інтерактивна мапа в гру</span>
+</a>
+<a class="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-surface-panel text-text-primary hover:bg-surface-panel-hover font-headline-sm text-headline-sm transition-all shadow-sm" href="#desktop-overlay">
+<span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
+<span class="">Завантажити Q-Hub Overlay</span>
+
+</a>
+<a class="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-surface-panel text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm text-headline-sm transition-all" href="#live-widgets">
+<span class="material-symbols-outlined text-[19px]">trending_up</span>
+<span class="">Ціни скупників</span>
+</a>
+</div>
+</div>
+<!-- Hero Promo Card / Ghost Event Badge -->
+<div class="lg:col-span-4 flex flex-col">
+<div class="relative rounded-2xl bg-gradient-to-br from-surface-panel via-surface-card-subtle to-surface-obsidian p-6 shadow-xl flex flex-col justify-between min-h-[300px] overflow-hidden group">
+<div class="absolute -right-10 -bottom-10 w-44 h-44 bg-primary-container/20 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500"></div>
+<div class="flex items-center justify-between z-10">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary-container/20 text-accent-neon-orange font-label-mono-sm text-label-mono-sm uppercase tracking-wider">
+                  Сезонний івент
+                </span>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted">LIVE RADAR</span>
+</div>
+<div class="flex flex-col gap-2 my-auto py-6 z-10">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-secondary">Спеціальна інтеграція</span>
+<h3 class="font-headline-lg text-headline-lg text-text-primary leading-tight font-extrabold">
+                  КАРТА ПРИВИДІВ &amp; СХОВИЩ
+                </h3>
+<p class="font-body-sm text-body-sm text-text-secondary">
+                  Миттєвий пошук усіх локацій осіннього квесту та підземних схованок безпосередньо у вашому радарі.
+                </p>
+</div>
+<div class="pt-2 z-10 flex items-center justify-between">
+<div class="flex items-center gap-1.5 font-label-mono-sm text-label-mono-sm text-text-secondary">
+<span class="w-2 h-2 rounded-full bg-status-success"></span>
+<span class="">142 активні точки</span>
+</div>
+<a class="inline-flex items-center gap-1 font-headline-sm text-headline-sm text-primary group-hover:text-accent-neon-orange transition-colors" href="#interactive-map">
+<span class="">Відкрити шар</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Telemetry Stat Strips -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-surface-panel/70 backdrop-blur-md shadow-md">
+<div class="flex flex-col px-3 py-2">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Спільнота гравців</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-text-primary">8,500+</span>
+<span class="font-label-mono-sm text-label-mono-sm text-status-success font-semibold flex items-center">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>+14%
+              </span>
+</div>
+<span class="font-body-sm text-body-sm text-text-secondary mt-0.5">Активних персонажів Quant RP</span>
+</div>
+<div class="flex flex-col px-3 py-2">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Ціновий моніторинг</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-text-primary">1,420+</span>
+<span class="font-label-mono-sm text-label-mono-sm text-accent-neon-orange font-semibold">щодоби</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-secondary mt-0.5">Свіжих позицій скупників</span>
+</div>
+<div class="flex flex-col px-3 py-2">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Геолокації штату</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-text-primary">320+</span>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted">POI</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-secondary mt-0.5">Банди, НЛО, скупники, графіті</span>
+</div>
+<div class="flex flex-col px-3 py-2">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Швидкість ШІ</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-accent-neon-orange">&lt; 0.1с</span>
+<span class="font-label-mono-sm text-label-mono-sm text-status-success">Instant</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-secondary mt-0.5">Миттєвий аналіз вигоди в HUD</span>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 2. FLAGSHIP FEATURE #1: INTERACTIVE MAP & GTA V RADAR MOD               -->
+<!-- ========================================================================= -->
+<section class="flex flex-col gap-6 scroll-mt-24" id="interactive-map">
+<!-- Section Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-2 max-w-2xl">
+<div class="inline-flex items-center gap-2 self-start px-3 py-1 rounded bg-primary-container/15 text-accent-neon-orange font-label-mono-sm text-label-mono-sm uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Фірмова розробка #1</span>
+</div>
+<h2 class="font-headline-xl text-headline-xl text-text-primary">
+              Інтерактивна мапа штату та мод прямо в GTA V
+            </h2>
+<p class="font-body-md text-body-md text-text-secondary">
+              Шукайте магазини, схованки, точки збуту, графіті та НЛО у веб-навігаторі або завантажте готову карту прямо у свою гру GTA V без потреби перемикатися в браузер.
+            </p>
+</div>
+<div class="flex items-center gap-3">
+
+
+</div>
+</div>
+<!-- Split Grid Showcase -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left: Interactive Map Explorer Shell -->
+<div class="lg:col-span-7 flex flex-col rounded-2xl bg-surface-panel p-5 shadow-xl">
+<!-- Filter Pills Row -->
+<div class="flex items-center gap-2 overflow-x-auto pb-3 mb-3 text-nowrap scrollbar-none" id="map-filter-row">
+<button class="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary-container font-label-mono-sm text-label-mono-sm uppercase font-bold transition-all shadow-sm" type="button">
+                Всі мітки (320)
+              </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all" type="button">
+                🛒 24/7 &amp; Магазини
+              </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all" type="button">
+                🔫 Зброя &amp; Банди
+              </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-accent-neon-orange hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all" type="button">
+                🛸 НЛО та Івенти
+              </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all" type="button">
+                🎨 Графіті
+              </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-status-success hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all" type="button">
+                🟢 Зелені зони
+              </button>
+</div>
+<!-- Stylized Map Mockup Area -->
+<div class="relative w-full h-[380px] rounded-xl overflow-hidden bg-surface-obsidian shadow-inner flex items-center justify-center group">
+<!-- Visual Map Background Image -->
+
+<!-- Radar HUD Overlay Elements -->
+<div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-surface-obsidian via-transparent to-surface-obsidian/40"></div>
+<!-- Interactive Mock Pins -->
+
+
+
+<!-- Floating Map Controls -->
+<div class="absolute bottom-4 right-4 flex items-center gap-2">
+<button class="w-9 h-9 rounded-lg bg-surface-panel/90 backdrop-blur-md flex items-center justify-center text-text-primary hover:text-accent-neon-orange transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-panel/90 backdrop-blur-md flex items-center justify-center text-text-primary hover:text-accent-neon-orange transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<button class="px-3 h-9 rounded-lg bg-primary-container text-on-primary-container font-label-mono-sm text-label-mono-sm uppercase font-bold flex items-center gap-1 shadow-md hover:bg-accent-neon-orange transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>
+<span class="">На весь екран</span>
+</button>
+</div>
+<div class="absolute top-4 left-4 flex items-center gap-2 bg-surface-obsidian/80 backdrop-blur-md px-3 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-text-muted text-[16px]">search</span>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted">Пошук координат, вулиць або NPC...</span>
+</div>
+</div>
+<!-- Bottom Map Bar Info -->
+<div class="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 text-text-secondary font-label-mono-sm text-label-mono-sm">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-status-success text-[16px]">check_circle</span>
+                Синхронізовано з актуальним патчем сервера
+              </span>
+<span class="text-text-muted">Координати центру: X: -1038.5, Y: -2738.2</span>
+</div>
+</div>
+<!-- Right: Two Features + GTA V Mod Installer Card -->
+<div class="lg:col-span-5 flex flex-col gap-4">
+<!-- Feature 1: Web Navigation -->
+<div class="p-5 rounded-2xl bg-surface-panel shadow-md flex gap-4"><div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center shrink-0 text-accent-neon-orange">
+<span class="material-symbols-outlined text-[26px]">map</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Інтерактивна карта з мітками</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+Швидкий пошук міток, розташування скупників із живими цінами, таймери спавну скарбів, зони банд та ключові локації штату прямо на другому моніторі або телефоні.
+</p>
+</div></div>
+<!-- Feature 2: In-Game Minimap Mod -->
+<div class="p-5 rounded-2xl bg-surface-panel shadow-md flex gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center shrink-0 text-status-success">
+<span class="material-symbols-outlined text-[26px]">layers</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Встановлення міток прямо в GTA V</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                  Спеціальний файл заміни мінімапи (radar mod). Всі приховані скупники, графіті та НЛО з'являться на вашому GPS-радарі в грі без згортання!
+                </p>
+</div>
+</div>
+<!-- Big Download Launcher Box -->
+<div class="mt-auto p-6 rounded-2xl bg-gradient-to-br from-surface-card-subtle to-surface-panel shadow-lg flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-status-success animate-pulse"></span>
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-primary font-bold">Готово до завантаження</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted">Формат: .zip</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-text-primary font-bold">Мапа для Quant RP</h3>
+<p class="font-body-sm text-body-sm text-text-secondary mt-1">
+                  1-клік і файли для папки гри. Безпечно для античіта, оптимізовано під 60+ FPS.
+                </p>
+</div>
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+<button class="flex-grow inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold shadow-md hover:bg-accent-neon-orange transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="">Завантажити мапу</span>
+</button>
+<button class="px-4 py-3 rounded-xl bg-surface-panel text-text-secondary hover:text-text-primary font-headline-sm text-headline-sm transition-all text-center" type="button">
+                  Інструкція
+                </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 3. FLAGSHIP FEATURE #2: Q-HUB OVERLAY (AI HELPER + SCANNER)             -->
+<!-- ========================================================================= -->
+<section class="flex flex-col gap-8 scroll-mt-24" id="desktop-overlay">
+<!-- Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-2 max-w-2xl">
+<div class="inline-flex items-center gap-2 self-start px-3 py-1 rounded bg-primary-container/15 text-accent-neon-orange font-label-mono-sm text-label-mono-sm uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span class="">Фірмова розробка #2</span>
+</div>
+<h2 class="font-headline-xl text-headline-xl text-text-primary">
+              Десктопний асистент Q-Hub поверх екрану GTA V
+            </h2>
+<p class="font-body-md text-body-md text-text-secondary">
+              Легка програма з HUD-оверлеєм, яка працює поверх гри за комбінацією <span class="text-accent-neon-orange font-bold">Alt + Q</span>, автоматизуючи аналітику цін і персональний капітал гравця без падіння кадрів.
+            </p>
+</div>
+<!-- Hotkey Badge Large -->
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-panel shadow-sm self-start md:self-auto"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwfsBDvz1ay0rxA0nt2uEY32Ovys_WydRPWRzwSBHnJOAMGwAGg9nDH6nxQMwZzlgBlhJoQtBUXwVXTS6M3hprxZLGpsAlMkNMi2Obu9EgX-FJSXWLdMsRm0rg7CObu0XEwMtqFsdh2HkZbuKMh7cbO03Zits95pjQknp2EFdi3O7F5Fcr3pDrQI0rFDN6cXkpreQBXjzVS3xfLFbYYNnLdtk3MN1V9_WyyvkN-j3QAKX-Pc4RIk_t5r3peipreEkv6dw" alt="Q-Hub App Icon" class="w-8 h-8 rounded-lg object-contain shadow-[0_2px_8px_rgba(255,107,0,0.25)] shrink-0">
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted uppercase">Швидкий виклик в грі:</span>
+<div class="flex items-center gap-1">
+<kbd class="px-2.5 py-1 rounded bg-surface-card-subtle font-label-mono-md text-label-mono-md text-text-primary font-bold shadow-inner">Alt</kbd>
+<span class="text-text-muted">+</span>
+<kbd class="px-2.5 py-1 rounded bg-surface-card-subtle font-label-mono-md text-label-mono-md text-accent-neon-orange font-bold shadow-inner">Q</kbd>
+</div>
+</div>
+</div>
+<!-- 3 Pillars Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Pillar 1: Accounting & Wealth -->
+<div class="flex flex-col rounded-2xl bg-surface-panel p-6 shadow-xl relative overflow-hidden group hover:translate-y-[-2px] transition-transform duration-300">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center text-status-info mb-5">
+<span class="material-symbols-outlined text-[28px]">account_balance_wallet</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Фінансова аналітика</span>
+<h3 class="font-headline-md text-headline-md text-text-primary mt-1 mb-3">
+              Облік витрат і доходів
+            </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed mb-6">
+              Автоматичне зчитування балансу та фіксація маржі від перепродажу, робочих змін і крафту. Повний каталог майна: склад, гараж, собівартість та динаміка особистого багатства.
+            </p>
+<div class="mt-auto pt-4 flex flex-col gap-2 rounded-xl bg-surface-card-subtle p-3.5">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-text-muted">Баланс персонажа</span>
+<span class="font-label-mono-sm text-label-mono-sm font-bold text-text-primary">$2,485,320</span>
+</div>
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-text-muted">Чистий прибуток сьогодні</span>
+<span class="font-label-mono-sm text-label-mono-sm text-status-success font-bold">+$184,200</span>
+</div>
+</div>
+</div>
+<!-- Pillar 2: Auto OCR Scanner -->
+<div class="flex flex-col rounded-2xl bg-surface-panel p-6 shadow-xl relative overflow-hidden group hover:translate-y-[-2px] transition-transform duration-300">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center text-primary-container mb-5">
+<span class="material-symbols-outlined text-[28px]">document_scanner</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">OCR Скан з екрану</span>
+<h3 class="font-headline-md text-headline-md text-text-primary mt-1 mb-3">
+              Автосканування цін скупників
+            </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed mb-6">
+              Програма миттєво зчитує ціни з інтерфейсу GTA V під час діалогу з NPC-скупником і надсилає їх у спільну базу q-hub.fun. Актуальний ринок для всіх без ручного введення!
+            </p>
+<div class="mt-auto pt-4 flex flex-col gap-2 rounded-xl bg-surface-card-subtle p-3.5">
+<div class="flex items-center gap-2 text-status-success font-label-mono-sm text-label-mono-sm">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+<span class="">Скан виконано за 42 мс</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-secondary truncate">
+                Оновлено: Мідна руда ($1,850/од), Скрап ($420)
+              </span>
+</div>
+</div>
+<!-- Pillar 3: Server-Trained AI Helper -->
+<div class="flex flex-col rounded-2xl bg-surface-panel p-6 shadow-xl relative overflow-hidden group hover:translate-y-[-2px] transition-transform duration-300">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center text-accent-neon-orange mb-5">
+<span class="material-symbols-outlined text-[28px]">smart_toy</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-text-muted">Нейромережа Quant RP</span>
+<h3 class="font-headline-md text-headline-md text-text-primary mt-1 mb-3">
+              Вбудований ШІ-асистент
+            </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed mb-6">
+              Штучний інтелект, натренований на кодексах, правилах сервера, економіці та цінах перекупів. Підказує вигідність угоди прямо під час торгу та відповідає на будь-які RP-питання.
+            </p>
+<div class="mt-auto pt-4 flex flex-col gap-2 rounded-xl bg-surface-card-subtle p-3.5">
+<div class="flex items-center justify-between font-label-mono-sm text-label-mono-sm">
+<span class="text-accent-neon-orange font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">psychology</span> AI Рекомендація
+                </span>
+<span class="text-status-success">+28% вигода</span>
+</div>
+<p class="font-body-sm text-body-sm text-text-primary line-clamp-1">
+                «Продай залізо скупнику на півдні — ціна на піку!»
+              </p>
+</div>
+</div>
+</div>
+<!-- Download Banner Strip -->
+<div class="flex flex-col lg:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-surface-container-high shadow-lg">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-[0_4px_16px_rgba(255,107,0,0.35)]"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwfsBDvz1ay0rxA0nt2uEY32Ovys_WydRPWRzwSBHnJOAMGwAGg9nDH6nxQMwZzlgBlhJoQtBUXwVXTS6M3hprxZLGpsAlMkNMi2Obu9EgX-FJSXWLdMsRm0rg7CObu0XEwMtqFsdh2HkZbuKMh7cbO03Zits95pjQknp2EFdi3O7F5Fcr3pDrQI0rFDN6cXkpreQBXjzVS3xfLFbYYNnLdtk3MN1V9_WyyvkN-j3QAKX-Pc4RIk_t5r3peipreEkv6dw" alt="Q-Hub Overlay App Icon" class="w-full h-full object-cover"></div>
+<div class="flex flex-col">
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">
+                Готові вивести гру на Quant RP на професійний рівень?
+              </h4>
+<p class="font-body-sm text-body-sm text-text-secondary">
+                Windows 10/11 x64 • Розмір 18.4 МБ • Відкритий вихідний код • Безпечно
+              </p>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<button class="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold shadow-md hover:bg-accent-neon-orange transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="">Завантажити для Windows</span>
+</button>
+<button class="inline-flex items-center gap-2 px-4 py-3.5 rounded-full bg-surface-panel text-text-primary hover:bg-surface-panel-hover font-headline-sm text-headline-sm transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span class="">Відеоінструкція (1 хв)</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 4. LIVE TIMERS & СКУПНИКИ WIDGETS                                        -->
+<!-- ========================================================================= -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-24" id="live-widgets">
+<!-- Module Left: Live Server Events -->
+<div class="lg:col-span-6 flex flex-col rounded-2xl bg-surface-panel p-6 shadow-xl">
+<div class="flex items-center justify-between pb-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-accent-neon-orange text-[22px]">alarm</span>
+<h3 class="font-headline-md text-headline-md text-text-primary font-bold">Найближчі івенти</h3>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm uppercase px-2.5 py-1 rounded bg-surface-card-subtle text-status-success font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success animate-ping"></span>
+              Live Sync
+            </span>
+</div>
+<div class="flex flex-col gap-3 pt-2">
+<!-- Event 1: Lottery -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle hover:bg-surface-panel-hover transition-colors">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Лотерея</span>
+<span class="font-label-mono-sm text-label-mono-sm text-accent-neon-orange px-1.5 py-0.2 rounded bg-surface-obsidian">Джекпот</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-muted">Щогодини, :00-:05</span>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-text-primary font-bold">о 16:00</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-status-success font-semibold">через 12 хв</span>
+</div>
+</div>
+<!-- Event 2: Races -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle hover:bg-surface-panel-hover transition-colors">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Перегони</span>
+<span class="font-body-sm text-body-sm text-text-muted">Щогодини, :02-:07</span>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-text-primary font-bold">о 16:02</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-status-success font-semibold">через 14 хв</span>
+</div>
+</div>
+<!-- Event 3: UFO -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle hover:bg-surface-panel-hover transition-colors">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">НЛО та прибульці</span>
+<span class="font-label-mono-sm text-label-mono-sm text-text-secondary px-1.5 py-0.2 rounded bg-surface-obsidian">Дроп</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-muted">12:15, 17:15, 22:15</span>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-text-primary font-bold">о 17:15</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-accent-neon-orange font-semibold">через 1 год 27 хв</span>
+</div>
+</div>
+<!-- Event 4: GunGame -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle hover:bg-surface-panel-hover transition-colors">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">GunGame</span>
+<span class="font-body-sm text-body-sm text-text-muted">Непарні години, :20-:25</span>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-text-primary font-bold">о 17:20</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-text-secondary font-semibold">через 1 год 32 хв</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Module Right: Live Buyer Price Feed -->
+<div class="lg:col-span-6 flex flex-col rounded-2xl bg-surface-panel p-6 shadow-xl">
+<div class="flex items-center justify-between pb-4">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary-container text-[22px]">storefront</span>
+<h3 class="font-headline-md text-headline-md text-text-primary font-bold">Швидкі котирування скупників</h3>
+</div>
+<a class="font-label-mono-sm text-label-mono-sm text-accent-neon-orange hover:underline" href="#">Вся таблиця →</a>
+</div>
+<div class="flex flex-col gap-3 pt-2">
+<!-- Item 1: Copper -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-obsidian flex items-center justify-center text-accent-neon-orange font-bold font-label-mono-md">
+                  Cu
+                </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Мідна руда</span>
+<span class="font-body-sm text-body-sm text-text-muted">Скупник #3 (Sandy Shores)</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-status-success font-bold">$1,850 / од</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-text-muted">скан 7 хв тому</span>
+</div>
+</div>
+<!-- Item 2: Iron -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-obsidian flex items-center justify-center text-text-primary font-bold font-label-mono-md">
+                  Fe
+                </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Залізо очищене</span>
+<span class="font-body-sm text-body-sm text-text-muted">Скупник #1 (Порт LS)</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-status-success font-bold">$3,120 / од</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-text-muted">скан 12 хв тому</span>
+</div>
+</div>
+<!-- Item 3: Fish -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-obsidian flex items-center justify-center text-status-info font-bold font-label-mono-md">
+                  🐟
+                </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Лосось королівський</span>
+<span class="font-body-sm text-body-sm text-text-muted">Рибний ринок (Пірс Дель-Перро)</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-status-success font-bold">$780 / кг</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-text-muted">скан 19 хв тому</span>
+</div>
+</div>
+<!-- Item 4: Scrap -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-card-subtle">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-obsidian flex items-center justify-center text-text-secondary font-bold font-label-mono-md">
+                  ⚙️
+                </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary font-bold">Металобрухт (скрап)</span>
+<span class="font-body-sm text-body-sm text-text-muted">Звалище (Ла-Пуерта)</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-mono-md text-label-mono-md text-status-success font-bold">$420 / од</span>
+<span class="block font-label-mono-sm text-label-mono-sm text-text-muted">скан 24 хв тому</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 5. ECOSYSTEM OVERVIEW: "ЩО ВМІЄ Q-HUB"                                   -->
+<!-- ========================================================================= -->
+<section class="flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-neon-orange text-[20px]">hub</span>
+<h2 class="font-headline-xl text-headline-xl text-text-primary">Що вміє Q-Hub</h2>
+</div>
+<p class="font-body-md text-body-md text-text-secondary max-w-2xl">
+            Комплексний набір інструментів, розроблений досвідченими гравцями для максимальної зручності та домінування в економіці сервера.
+          </p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- Card 1 -->
+<div class="p-6 rounded-2xl bg-surface-panel shadow-md flex flex-col gap-3 group hover:bg-surface-panel-hover transition-colors">
+<div class="w-10 h-10 rounded-xl bg-surface-card-subtle flex items-center justify-center text-accent-neon-orange group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[24px]">price_change</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Скільки дати гравцю</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+              Пишеш назву товару — бачиш справедливий діапазон купівлі та за скільки його гарантовано заберуть скупники.
+            </p>
+</div>
+<!-- Card 2 -->
+<div class="p-6 rounded-2xl bg-surface-panel shadow-md flex flex-col gap-3 group hover:bg-surface-panel-hover transition-colors">
+<div class="w-10 h-10 rounded-xl bg-surface-card-subtle flex items-center justify-center text-status-success group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[24px]">inventory_2</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Облік і склад</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+              Купив, продав чи скрафтив — Q-Hub миттєво порахує чисту собівартість, прибуток і поточний фінансовий баланс.
+            </p>
+</div>
+<!-- Card 3 -->
+<div class="p-6 rounded-2xl bg-surface-panel shadow-md flex flex-col gap-3 group hover:bg-surface-panel-hover transition-colors">
+<div class="w-10 h-10 rounded-xl bg-surface-card-subtle flex items-center justify-center text-status-info group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[24px]">directions_car</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Гараж і тюнінг</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+              Повна база транспорту штату Quant: держвартість, ринкова ціна на вторинці, вартість тюнінгу та об'єм багажників.
+            </p>
+</div>
+<!-- Card 4 -->
+<div class="p-6 rounded-2xl bg-surface-panel shadow-md flex flex-col gap-3 group hover:bg-surface-panel-hover transition-colors">
+<div class="w-10 h-10 rounded-xl bg-surface-card-subtle flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[24px]">menu_book</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-text-primary font-bold">Правила та довідник</h4>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+              Швидкий пошук статей законів, кодексів штату та правил сервера без необхідності гортати безкінечні форуми.
+            </p>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 6. HOW TO START PLAYING ON QUANTRP                                      -->
+<!-- ========================================================================= -->
+<section class="flex flex-col gap-8 pt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]">shield_person</span>
+<h2 class="font-headline-xl text-headline-xl text-text-primary">Як почати грати на QuantRP</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Step 1 -->
+<div class="flex flex-col justify-between p-6 rounded-2xl bg-surface-panel shadow-lg relative">
+<div class="flex flex-col gap-4">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm font-extrabold shadow-sm">
+                1
+              </div>
+<h3 class="font-headline-md text-headline-md text-text-primary font-bold">
+                Придбай гру з останнім патчем
+              </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                Потрібна чиста ліцензійна копія Grand Theft Auto V від Rockstar Games з офіційних сервісів Steam, Epic Games або Social Club.
+              </p>
+</div>
+<div class="pt-6">
+<button class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold hover:bg-accent-neon-orange transition-all shadow-md" type="button">
+<span class="material-symbols-outlined text-[18px]">shopping_cart</span>
+<span class="">Купити гру</span>
+</button>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col justify-between p-6 rounded-2xl bg-surface-panel shadow-lg relative">
+<div class="flex flex-col gap-4">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm font-extrabold shadow-sm">
+                2
+              </div>
+<h3 class="font-headline-md text-headline-md text-text-primary font-bold">
+                Встанови лаунчер QuantRP
+              </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                Завантаж та запусти офіційний лаунчер сервера. Він автоматично встановить потрібні модифікації та підключить вас до гри.
+              </p>
+</div>
+<div class="pt-6">
+<button class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-bold hover:bg-accent-neon-orange transition-all shadow-md" type="button">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="">Завантажити лаунчер</span>
+</button>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col justify-between p-6 rounded-2xl bg-surface-panel shadow-lg relative">
+<div class="flex flex-col gap-4">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm font-extrabold shadow-sm">
+                3
+              </div>
+<h3 class="font-headline-md text-headline-md text-text-primary font-bold">
+                Розпочни гру та підключи Q-Hub
+              </h3>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                Заходь на сервер, прив'яжи Discord у нашому кабінеті, підключи карту в гру та запускай оверлей на Alt+Q для комфортного старту!
+              </p>
+</div>
+<div class="pt-6">
+<button class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-surface-card-subtle text-text-primary hover:bg-surface-panel-hover font-headline-sm text-headline-sm font-bold transition-all shadow-sm" type="button">
+<span class="material-symbols-outlined text-primary text-[18px]">sports_esports</span>
+<span class="">Увійти через Discord</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+<script>
+  // Filter pill switching micro-interaction for the map showcase
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterContainer = document.getElementById('map-filter-row');
+    if (filterContainer) {
+      const buttons = filterContainer.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          buttons.forEach(b => {
+            b.className = 'px-3 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-label-mono-sm text-label-mono-sm uppercase transition-all';
+          });
+          btn.className = 'px-3 py-1.5 rounded-lg bg-primary-container text-on-primary-container font-label-mono-sm text-label-mono-sm uppercase font-bold transition-all shadow-sm';
+        });
+      });
+    }
+  });
+</script></main><footer class="w-full bg-surface-container-lowest mt-space-2xl"><div class="max-w-[1360px] mx-auto px-margin py-12 flex flex-col gap-8"><div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8"><div class="flex flex-col gap-2 max-w-xl"><div class="flex items-center gap-3"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw" alt="Q-Hub Logo" class="h-8 w-auto object-contain"><span class="font-label-mono-sm text-label-mono-sm uppercase px-2 py-0.5 rounded bg-surface-panel text-text-muted">v2.4</span></div><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Q-Hub — незалежний фан-проєкт гравців, не пов'язаний з офіційною адміністрацією QuantRP. Всі торгові марки, зображення та найменування належать їх відповідним правовласникам.</p></div><div class="flex flex-wrap items-center gap-3"><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-primary text-[20px]">forum</span><span class="">Discord спільнота</span></a></div></div><div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-4"><div class="flex flex-wrap items-center gap-6"><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="holovna" href="#">Головна</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="transport" href="#">Транспорт</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="iventy" href="#">Івенти</a></div><div class="font-label-mono-sm text-label-mono-sm text-text-muted">© 2025 Q-Hub Community. Всі права захищено.</div></div></div></footer>
+
+
+
+</body></html>
