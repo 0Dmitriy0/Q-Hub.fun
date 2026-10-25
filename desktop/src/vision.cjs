@@ -10,7 +10,7 @@ const { createWorker } = require('tesseract.js');
 const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
-const { pricePicker, parseChange, changePicker, changeRegion } = require('./pricescan.cjs');
+const { pricePicker, parseChange, changePicker, changeRegion, headerBuyer } = require('./pricescan.cjs');
 
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
@@ -59,7 +59,7 @@ function vision(deps) {
     for (let c = 0; c < 2; c++) {
       const part = whiteOnly(img.crop({ x: c * half, y: 0, width: half, height }), deps.nativeImage).resize({ width: half * 2, quality: 'best' });
       const { data } = await text.recognize(part.toPNG(), {}, { blocks: true });
-      for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0, col: c });
+      for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0, x: l.bbox.x0, col: c });
     }
     return out;
   }
@@ -117,8 +117,14 @@ function vision(deps) {
     const items = await deps.catalog();
     if (!items.length) return;
     const ls = await lines(img);
-    const buyer = shot.detectBuyer(ls, items);
-    if (!buyer) return;
+    /* спершу заголовок «Купує …», якщо не видно — за впізнаними назвами товарів (як на сайті) */
+    /* заголовок — ліворуч угорі: до 400×330 px на 1080p; рядки — з половини екрана, збільшеної вдвічі (lines()) */
+    const k = img.getSize().height / 1080 * 2;
+    const buyer = headerBuyer(ls, { maxX: 400 * k, maxY: 330 * k }) || shot.detectBuyer(ls, items);
+    if (!buyer) {
+      if (now - (quietAt.get('?') || 0) > 60e3) { quietAt.set('?', now); log('prices ?: вікно скупника, але не впізнав, який — ' + JSON.stringify(ls.filter(l => !l.col).slice(0, 8).map(l => l.text.trim()))); }
+      return;
+    }
     const all = items.filter(i => i.buyer_id === buyer);
     const rows = shot.parseShot(ls, all)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)

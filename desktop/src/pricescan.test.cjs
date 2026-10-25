@@ -56,3 +56,21 @@ test('прокручуваний список: один кадр, якщо на�
   assert.deepStrictEqual(pick('hide', [sure(1, 556)], 2e3), []);        // уже надіслано
   assert.deepStrictEqual(pick('hide', [sure(1, 656)], 4e3), [{ buyer_id: 'hide', item_id: 1, price: 656 }]);   // інша ціна — виправлення
 });
+
+const { headerBuyer } = require('./pricescan.cjs');
+
+test('скупник за заголовком «Купує …» ліворуч', () => {
+  const L = (...t) => t.map((text, i) => ({ text, y: i * 40, col: 0 }));
+  /* справжні результати OCR лівої смуги вікон (shots/*.png) */
+  assert.strictEqual(headerBuyer(L('що', 'HAROLD BROWN', 'Купує', 'харчі')), 'food');
+  assert.strictEqual(headerBuyer(L('129 kc', 'f', 'WALTER GREEN', 'Kv', 'врожай')), 'harvest');
+  assert.strictEqual(headerBuyer(L('ЛЕ', 'f', 'ASHLEY WILLIAMS', 'колоди', 'ліміт ПРОДАЖУ')), 'wood');
+  assert.strictEqual(headerBuyer(L('102 Kic', 'f', 'віск MALONE', '“nye', 'пальне')), 'fuel');
+  assert.strictEqual(headerBuyer(L('f', 'Kyrye', 'о puby', 'ra і')), 'fish');
+  assert.strictEqual(headerBuyer(L('fa', '[—', 'Kynye', 'метали')), 'metal');
+  assert.strictEqual(headerBuyer(L('B1 Kie', 'fa', 'BRAD SHIDER', 'Купує', 'шкури')), 'hide');
+  assert.strictEqual(headerBuyer(L('Купуе', "м'ясо")), 'meat');
+  assert.strictEqual(headerBuyer([{ text: 'метали', y: 0, x: 900, col: 0 }], { maxX: 800 }), null);   // картка товару, не заголовок
+  assert.strictEqual(headerBuyer([{ text: 'рибу', y: 40, col: 1 }]), null);                            // права половина екрана
+  assert.strictEqual(headerBuyer(L('ЛІМІТ ПРОДАЖУ', '0')), null);
+});

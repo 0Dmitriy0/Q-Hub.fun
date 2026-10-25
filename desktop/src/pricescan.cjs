@@ -58,4 +58,22 @@ function changePicker() {
   };
 }
 
-module.exports = { SURE, pricePicker, parseChange, changePicker, changeRegion, PRICES_EVERY };
+/* хто це — за білим словом під «Купує» ліворуч угорі вікна (харчі, шкури, врожай…): воно велике й читається надійніше
+   за назви товарів. Саме «Купує» сіре — його OCR часто губить, тож не потрібне. Слова — як пише гра: «колоди», «пальне».
+   box — ділянка заголовка в координатах рядків (лише вона, щоб «Металобрухт» з картки товару не прийняти за «метали») */
+const HEAD = [[/врож/, 'harvest'], [/гриб/, 'mush'], [/колод|дерев/, 'wood'], [/метал/, 'metal'], [/мотл/, 'junk'], [/пальн|палив/, 'fuel'],
+  [/ри[бв6]/, 'fish'], [/харч/, 'food'], [/шкур/, 'hide'], [/м.?яс|мяс/, 'meat']];
+/* латиниця, схожа на кирилицю: «puby» → «риву», «xapчi» → «харчі» */
+const LAT = { a: 'а', c: 'с', e: 'е', i: 'і', o: 'о', p: 'р', x: 'х', y: 'у', u: 'и', k: 'к', m: 'м', h: 'н', t: 'т', b: 'в' };
+const cyr = t => t.toLowerCase().replace(/[acdeiopxyukmhtb]/g, ch => LAT[ch] || ch);
+function headerBuyer(lines, box = {}) {
+  const { maxX = Infinity, maxY = Infinity } = box;
+  for (const l of lines.filter(l => !l.col && (l.x ?? 0) < maxX && l.y < maxY).sort((a, b) => a.y - b.y)) {
+    const t = cyr(l.text).replace(/[^а-яіїєґ'’ ]/g, ' ').trim();
+    if (!t || t.length > 24) continue;   // ім'я скупника й заголовок — короткі рядки
+    for (const [re, id] of HEAD) if (re.test(t)) return id;
+  }
+  return null;
+}
+
+module.exports = { headerBuyer, SURE, pricePicker, parseChange, changePicker, changeRegion, PRICES_EVERY };
