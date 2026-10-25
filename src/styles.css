@@ -461,18 +461,25 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 /* мапа */
 .mapbox { position: absolute; inset: 0; overflow: hidden; }
 .mapel { position: absolute; inset: 0; background: transparent; font: inherit; }
-.mapel .leaflet-control-zoom a { background: var(--surface); color: var(--fg); border-color: var(--line2); }
-.mapel .leaflet-control-zoom a:hover { background: var(--surface2); }
 .mpin-wrap { background: none; border: 0; }
-.mpin { display: grid; place-items: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: #111; border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(255, 106, 31, .22), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .12s; }
+/* мітка: напівпрозорий розмитий фон, кругла обводка кольору категорії (колір і кільце — inline з MapPage) */
+.mpin { display: grid; place-items: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: rgba(16, 20, 26, .38); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(255, 106, 31, .22), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .12s; }
 .mpin-wrap:hover .mpin, .mpin-wrap:focus .mpin { transform: scale(1.12); }
-.mapel .leaflet-popup-content-wrapper, .mapel .leaflet-popup-tip { background: var(--surface); color: var(--fg); box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }
-.mapel .leaflet-popup-content { margin: 12px 14px; font: 14px var(--sans); }
-.mapel .leaflet-popup-close-button { color: var(--muted); }
-.mpop { display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
-.mpop b { font: 700 15px var(--disp); }
+/* картка точки (попап Leaflet) у стилі HUD-картки з макета */
+.mapel .leaflet-popup-content-wrapper { background: color-mix(in srgb, var(--surface) 95%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--fg); border: 1px solid rgba(255, 107, 0, .4); border-radius: 16px; box-shadow: 0 16px 40px -8px rgba(0, 0, 0, .8), 0 0 24px rgba(255, 107, 0, .2); }
+.mapel .leaflet-popup-tip { background: var(--surface); box-shadow: none; }
+.mapel .leaflet-popup-content { margin: 16px 18px; font: 14px var(--sans); }
+.mapel .leaflet-popup-close-button { top: 8px; right: 8px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--surface2); color: var(--muted); font: 16px/1 var(--sans); }
+.mapel .leaflet-popup-close-button:hover { color: var(--fg); background: var(--hover); }
+.mpop { display: flex; flex-direction: column; gap: 6px; min-width: 220px; padding-right: 22px; }
+.mpop b { font: 700 16px/1.35 var(--disp); }
 .mpop span { color: var(--muted); font-size: 13px; }
+.mpop .mtag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); color: color-mix(in srgb, var(--c, var(--accent)) 70%, var(--fg)); font: 700 10px/14px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.mpop .mxy { display: flex; justify-content: space-between; gap: 10px; margin: 4px -22px 0 0; padding: 8px 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line2); color: var(--accent-hi); font: 700 11.5px var(--mono); }
+.mpop .mxy i { font-style: normal; font-weight: 500; color: var(--faint); }
 .mpop a { color: var(--accent-hi); font-weight: 700; text-decoration: none; margin-top: 4px; }
+.mpop a.mgo { display: flex; justify-content: center; margin-right: -22px; padding: 10px 14px; border-radius: 12px; background: var(--accent); color: var(--accent-fg); font: 700 13px var(--sans); box-shadow: 0 4px 16px rgba(255, 107, 0, .35); }
+.mpop a.mgo:hover { box-shadow: 0 0 20px -2px rgba(255, 107, 0, .6); }
 .mcoord { position: absolute; left: 10px; bottom: 10px; z-index: 500; padding: 4px 10px; border-radius: 999px; background: rgba(10, 14, 17, .8); color: #cfd6dc; font-size: 12px; pointer-events: none; }
 .mbrand { position: absolute; right: 10px; bottom: 10px; z-index: 500; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border-radius: 999px; background: rgba(10, 14, 17, .8); color: #aab3ba; font-size: 11.5px; pointer-events: none; }
 .msearch { position: relative; }
@@ -485,12 +492,15 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mpop .mrow { margin-top: 6px; }
 .medit { border: 1px solid var(--line2); color: var(--fg); background: none; border-radius: 8px; padding: 5px 8px; font: 600 12.5px var(--sans); cursor: pointer; }
 .mpop .mdel { margin-top: 0; }
-.mfilters, .madmin { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.madmin { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+/* фільтри: кожна група — окрема картка, як категорії в бічній панелі макета */
+.mfilters { display: flex; flex-direction: column; gap: 8px; }
 .madmin > summary { font: 700 15px var(--disp); cursor: pointer; padding: 4px 0; }
 .mfilters > .mrow { margin: 8px 0; }
 .mrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .mrow > .btn, .mrow > .min { flex: 1; }
-.mgrp { border-top: 1px solid var(--line); padding: 8px 0 4px; }
+.mgrp { border: 1px solid var(--line2); border-radius: 12px; background: color-mix(in srgb, var(--bg) 55%, transparent); padding: 4px 4px 4px 10px; }
+.mgrp.open { padding-right: 10px; }
 .mgrp-h { display: flex; align-items: center; gap: 8px; }
 .mgrp-t { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 4px 2px; border: 0; background: none; color: var(--fg); font: 700 13px var(--sans); cursor: pointer; text-align: left; border-radius: 8px; }
 .mgrp-t:hover { color: var(--accent-hi); }
@@ -508,11 +518,11 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .msw-b[aria-checked="true"] .msw::after { transform: translateX(14px); background: #fff; }
 .msw.part { background: color-mix(in srgb, var(--accent) 45%, var(--surface2)) !important; }
 /* вкладки панелі */
-.mtabs { display: flex; padding: 3px; gap: 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
-.mtabs button { flex: 1; min-height: 36px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: 700 13px var(--sans); cursor: pointer; }
+.mtabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.mtabs button { flex: none; min-height: 34px; padding: 0 12px; border: 1px solid var(--line2); border-radius: 8px; background: color-mix(in srgb, var(--bg) 55%, transparent); color: var(--muted); font: 700 12.5px var(--sans); cursor: pointer; white-space: nowrap; }
 .mtabs button:hover { color: var(--fg); }
-.mtabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg, #140700); }
-.mfilters > .mseg { margin: 2px 0 6px; }
+.mtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #140700); box-shadow: 0 2px 8px rgba(255, 107, 0, .25); }
+.mfilters > .mseg { margin: 0; }
 .mgame > summary, .madmin > summary { display: none; }
 /* категорії — кнопки-плитки з кольором категорії */
 .mchips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
@@ -549,7 +559,7 @@ textarea.min { resize: vertical; }
 .mpop .mxy { font-size: 11.5px; }
 .mdel { margin-top: 6px; border: 1px solid #ef4444; color: #ef4444; background: none; border-radius: 8px; padding: 5px 8px; font: 600 12.5px var(--sans); cursor: pointer; }
 .mapbox.picking .mapel { cursor: crosshair; }
-.mpick { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font: 700 13px var(--sans); pointer-events: none; }
+.mpick { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font: 700 13px var(--sans); pointer-events: none; }
 .mfound small { margin-left: auto; color: var(--faint); font-weight: 500; font-size: 12px; }
 
 
@@ -557,10 +567,42 @@ textarea.min { resize: vertical; }
 body.map-open { overflow: hidden; }
 body.map-open .foot { display: none; }
 .mapfull { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; }
-.mside { position: absolute; left: 12px; top: 12px; bottom: 12px; width: 340px; z-index: 600; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 10px; border-radius: var(--r); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--line2); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
+.mside { position: absolute; left: 16px; top: 74px; max-height: calc(100% - 90px); width: 344px; z-index: 600; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 12px; border-radius: 16px; background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border: 1px solid var(--line2); box-shadow: 0 20px 50px rgba(0, 0, 0, .7); }
 .mside.hidden { display: none; }
-.mtoggle { position: absolute; top: 12px; right: 12px; z-index: 650; box-shadow: var(--shadow); }
-.mapel .leaflet-bottom.leaflet-right { margin-bottom: 40px; }
+.mside-h { display: flex; align-items: center; gap: 8px; padding: 0 0 2px 4px; }
+.mside-t { font: 700 16px var(--disp); }
+.mside-n { margin-left: auto; padding: 2px 8px; border-radius: 6px; background: var(--bg); color: var(--faint); font: 600 11px var(--mono); }
+.mtoggle { position: absolute; top: 74px; left: 16px; z-index: 650; height: 42px; padding: 0 14px; gap: 8px; font: 700 14px var(--sans); cursor: pointer; }
+
+/* HUD мапи (design/stitch/mapa.html): напівпрозорі розмиті плашки поверх мапи */
+.hud { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid var(--line2); box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .55); color: var(--fg); }
+.hud-b { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: 600 11px var(--mono); cursor: pointer; }
+.hud-b:hover { color: var(--fg); background: var(--surface2); }
+.hud-b:disabled { opacity: .4; cursor: default; background: none; }
+.hud button:focus-visible, .mtoggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mhud { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 700; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; pointer-events: none; }
+.mhud-l, .mhud-r { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+.mhud-r { margin-left: auto; }
+.mgps { height: 42px; padding: 0 4px 0 14px; gap: 10px; font: 600 12px var(--mono); }
+.mgps i { font-style: normal; color: var(--faint); }
+.mgps b { display: inline-block; min-width: 5ch; margin: 0 8px 0 4px; color: var(--accent-hi); }
+.mdot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-hi); box-shadow: 0 0 8px var(--accent); }
+.mhud .msearch { width: 300px; }
+.mhud .msearch input { min-height: 42px; padding-right: 40px; border-radius: 12px; border-color: var(--line2); background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); font: 500 14px var(--sans); }
+.mhud .msearch input:focus { box-shadow: 0 0 16px rgba(255, 107, 0, .3); }
+.mhud .msearch .ico { z-index: 1; }
+.mkbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line2); background: var(--surface2); color: var(--faint); font: 600 11px var(--mono); pointer-events: none; }
+.mquick button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: 700 13px var(--sans); cursor: pointer; }
+.mquick button:hover { color: var(--fg); }
+.mquick button[aria-pressed="true"] { background: var(--surface2); color: var(--accent-hi); }
+.mzoom .hud-b.mono { min-width: 48px; }
+.mmod { height: 42px; padding: 0 16px; gap: 8px; font: 700 14px var(--sans); cursor: pointer; }
+.mmod .ico { color: var(--accent-hi); }
+.mmod:hover { border-color: var(--accent); }
+@media (max-width: 1240px) { .mquick { display: none; } }
+@media (max-width: 1040px) { .mhud .msearch { width: 220px; } .mmod span { display: none; } .mmod { padding: 0 12px; } }
+/* телефон: з HUD лишається тільки масштаб — у правому верхньому куті мапи */
+.mapflow .mhud { top: 10px; left: 10px; right: 10px; }
 /* телефон: звичайна сторінка — мапа зверху, фільтри під нею */
 .mapflow { display: flex; flex-direction: column; gap: 12px; padding: 12px 0 24px; }
 .mapflow .mapbox { position: relative; inset: auto; height: min(68vh, 560px); min-height: 340px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line2); }
