@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="uk" translate="no">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700&display=swap">
+<title>Q-Hub · сесія</title>
+<style>
+  /* нижня смужка під плашкою Alt+Q: прозоре вікно на всю ширину екрана, дві плашки по краях (main.cjs → showStrip) */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; cursor: default; }
+  body { display: flex; justify-content: space-between; align-items: center; padding: 0 2px; font: 600 13px 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; }
+  .pill { display: inline-flex; align-items: center; gap: 12px; height: 38px; padding: 0 16px; border-radius: 12px; background: rgba(20, 27, 36, .92); border: 1px solid #263344; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); white-space: nowrap; }
+  .sep { width: 1px; height: 16px; background: #3a4757; }
+  .ico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .t { color: #ff7a1a; }
+  .p { color: #10b981; } .p.neg { color: #ef4444; } .p.none { color: #8b9bb0; }
+  .mode { color: #8b9bb0; font-weight: 600; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .dot.off { background: #56677d; box-shadow: none; }
+</style>
+</head>
+<body>
+  <div class="pill">
+    <span class="t"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2 2M10 2h4"/></svg></span>
+    <span id="ses">Сесія: —</span>
+    <span class="sep"></span>
+    <span id="prof" class="p none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px;margin-right:8px"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span id="pv">Прибуток: —</span></span>
+  </div>
+  <div class="pill mode"><span id="mode">Гру не запущено</span><span id="dot" class="dot off"></span></div>
+<script>
+  let started = null;
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = n => Math.abs(n).toLocaleString('uk-UA').replace(/ | /g, ' ');
+  function tick() {
+    const el = document.getElementById('ses');
+    if (!started) { el.textContent = 'Сесія: —'; return; }
+    const s = Math.max(0, Math.floor((Date.now() - started) / 1000));
+    el.textContent = 'Сесія: ' + pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
+  }
+  /* d: { started: ms|null, perHour: число|null, game: bool } — надсилає main.cjs */
+  window.render = d => {
+    started = d.started || null; tick();
+    const p = document.getElementById('prof'), v = document.getElementById('pv');
+    if (d.perHour === null || d.perHour === undefined) { p.className = 'p none'; v.textContent = d.game ? 'Прибуток: рахуємо…' : 'Прибуток: —'; }
+    else { p.className = 'p' + (d.perHour < 0 ? ' neg' : ''); v.textContent = 'Прибуток: ~' + (d.perHour < 0 ? '−' : '') + fmt(d.perHour) + ' $/год'; }
+    document.getElementById('mode').textContent = d.game ? 'Режим: вікно без рамки' : 'Гру не запущено';
+    document.getElementById('dot').className = 'dot' + (d.game ? '' : ' off');
+  };
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>
