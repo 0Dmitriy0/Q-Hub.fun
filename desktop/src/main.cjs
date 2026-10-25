@@ -533,6 +533,12 @@ async function sendDraft(draft, jpeg) {
   if (!error || error.code === '23505') return 'ok';
   return error.code === '42501' ? 'denied' : 'retry';
 }
+/* «онлайн програми» в шапці сайту: раз на хвилину «я тут» (supabase/migrations/0023).
+   Без входу або на старій базі без функції — тихо нічого: лічильник не варто того, щоб заважати */
+function startOnline() {
+  const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping'); };
+  ping().catch(() => {}); setInterval(() => ping().catch(() => {}), 60e3);
+}
 function startDrafts() {
   refreshRole().catch(() => {});
   setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
@@ -767,6 +773,7 @@ app.whenReady().then(() => {
   createTray();
   startUpdates();
   startDrafts();
+  startOnline();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))

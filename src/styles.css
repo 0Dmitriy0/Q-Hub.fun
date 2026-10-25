@@ -1031,3 +1031,11 @@ fieldset .static-form .btn { align-self: end; }
   .p-screen { padding: 14px; min-height: 0; }
   .p-hud-cash { text-align: left; }
 }
+
+/* шапка: скільки гравців зараз у програмі (src/components/AppOnline.tsx) */
+.online { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.online b { color: var(--fg); font-size: 13px; }
+.online:hover { color: var(--fg); border-color: color-mix(in srgb, var(--good) 50%, var(--line2)); }
+.online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); animation: online-pulse 2s ease-in-out infinite; }
+@keyframes online-pulse { 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (max-width: 600px) { .online { padding: 0 10px; } .online-t { display: none; } }

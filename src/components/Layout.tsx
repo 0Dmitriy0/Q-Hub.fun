@@ -5,6 +5,7 @@ import ThemeToggle from './ThemeToggle';
 import StaticGate from './StaticGate';
 import Icon from './Icon';
 import Backdrop from './Backdrop';
+import AppOnline from './AppOnline';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/transport', 'Транспорт', 'car'],
@@ -32,6 +33,7 @@ export default function Layout() {
           {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
         </nav>
         <div className="who">
+          <AppOnline />
           <ThemeToggle />
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
