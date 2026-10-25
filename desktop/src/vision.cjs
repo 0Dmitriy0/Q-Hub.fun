@@ -42,6 +42,7 @@ function vision(deps) {
   let baselineSent = false, place = null, toast = null, lastScene = 0;
   const pickPrices = pricePicker();
   const pickChange = changePicker();
+  const quietAt = new Map();
   const log = m => { try { fs.appendFileSync(deps.logFile, `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
 
   async function workers() {
@@ -121,10 +122,11 @@ function vision(deps) {
     const all = items.filter(i => i.buyer_id === buyer);
     const rows = shot.parseShot(ls, all)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
-      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price }));
+      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0 }));
     await scanChange(img, buyer, now);
     const fresh = pickPrices(buyer, rows, now);
-    if (!fresh.length) return;
+    /* для діагностики: вікно бачимо, але нового немає — раз на хвилину на скупника, щоб не засмічувати журнал */
+    if (!fresh.length) { if (now - (quietAt.get(buyer) || 0) > 60e3) { quietAt.set(buyer, now); log(`prices ${buyer}: кадр ${rows.length}/${all.length}, нового немає`); } return; }
     log(`prices ${buyer}: кадр ${rows.length}/${all.length}, на сайт ${JSON.stringify(fresh)}`);
     await deps.onPrices(fresh);
   }

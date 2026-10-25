@@ -45,3 +45,14 @@ test('час зміни надсилається після двох кадрі�
   assert.strictEqual(pick('food', at + 3 * 36e5), true);
   assert.strictEqual(pick('fish', at), false);            // інший скупник — окремо
 });
+
+test('прокручуваний список: один кадр, якщо назва впевнена й ціна в межах скупника', () => {
+  const pick = pricePicker(600e3);
+  const sure = (item_id, price, score = 0.95) => ({ buyer_id: 'hide', item_id, price, score, min: 400, max: 900 });
+  assert.deepStrictEqual(pick('hide', [sure(1, 556)], 0), [{ buyer_id: 'hide', item_id: 1, price: 556 }]);
+  assert.deepStrictEqual(pick('hide', [sure(2, 1556)], 0), []);         // поза межами — чекати другого кадру
+  assert.deepStrictEqual(pick('hide', [sure(3, 605, 0.7)], 0), []);     // назва невпевнена — чекати
+  assert.deepStrictEqual(pick('hide', [{ ...sure(4, 605), min: 0, max: 0 }], 0), []);   // меж немає — чекати
+  assert.deepStrictEqual(pick('hide', [sure(1, 556)], 2e3), []);        // уже надіслано
+  assert.deepStrictEqual(pick('hide', [sure(1, 656)], 4e3), [{ buyer_id: 'hide', item_id: 1, price: 656 }]);   // інша ціна — виправлення
+});
