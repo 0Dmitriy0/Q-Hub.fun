@@ -12,6 +12,7 @@ const P: Record<string, string> = {
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   layers: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5',
   check: 'M5 12.5l4.5 4.5L19 7',
+  book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
   star: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z',

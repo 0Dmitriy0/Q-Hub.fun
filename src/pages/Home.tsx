@@ -134,7 +134,7 @@ export default function Home() {
           <div className="card"><span className="ibub"><Icon name="tag" /></span><h3>Скільки дати гравцю</h3><p className="muted">Пишеш товар — бачиш, за скільки його брати і кому продати дорожче.</p></div>
           <div className="card"><span className="ibub"><Icon name="box" /></span><h3>Облік і склад</h3><p className="muted">Купив, продав, нафармив — Q-Hub рахує собівартість, прибуток і баланс.</p></div>
           <div className="card"><span className="ibub"><Icon name="car" /></span><h3>Гараж і транспорт</h3><p className="muted">Авто, тюнінг, державна й ринкова вартість кожної машини штату.</p></div>
-          <div className="card"><span className="ibub"><Icon name="jobs" /></span><h3>Довідник робіт</h3><p className="muted">Усі роботи з рівнем, оплатою і точкою на мапі — <Link to="/roboty">дивитися</Link>.</p></div>
+          <div className="card"><span className="ibub"><Icon name="jobs" /></span><h3>Довідник робіт</h3><p className="muted">Усі роботи з рівнем, оплатою і точкою на мапі — <Link to="/wiki/roboty">дивитися</Link>.</p></div>
         </div>
       </section>
 

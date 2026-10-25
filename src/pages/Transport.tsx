@@ -95,6 +95,7 @@ export default function Transport() {
     if (data) setScores(sc => ({ ...sc, [id]: { vehicle_id: id, avg: Number(data.avg), votes: Number(data.votes) } }));
   }
 
+  const topSpeed = useMemo(() => list.reduce((m, v) => Math.max(m, v.speed || 0), 0), [list]);
   const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length }), [list]);
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -107,7 +108,17 @@ export default function Transport() {
 
   return (
     <>
-      <div><h1>Транспорт</h1><p className="muted">Каталог автосалонів: держ. ціна й характеристики. Зірки на картці — середня оцінка всіх гравців. Увійди, щоб поставити свою від 1 до 5: вона одразу врахується в середній.</p></div>
+      <section className="wiki-hero">
+        <div>
+          <span className="h-pill"><span className="mdot" aria-hidden="true" />Каталог автосалонів</span>
+          <h1>Транспорт штату</h1>
+          <p className="muted">Держ. ціна, швидкість, пальне й багажник. Зірки на картці — середня оцінка всіх гравців. Увійди, щоб поставити свою від 1 до 5: вона одразу врахується в середній. Натисни на транспорт — відкриється калькулятор тюнінгу.</p>
+        </div>
+        <div className="wiki-stats">
+          <div><b className="mono">{list.length || '—'}</b><small>Усього моделей</small></div>
+          <div><b className="mono">{topSpeed ? topSpeed + ' км/год' : '—'}</b><small>Найшвидший</small></div>
+        </div>
+      </section>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
       {err && <div className="card err">{err}</div>}
       <div className="tbar">
@@ -126,6 +137,7 @@ export default function Transport() {
       </div>
       {!session && list.length > 0 && <div className="card row between"><span>Увійди через Discord, щоб оцінювати транспорт.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}
       {loaded && !err && !list.length && <div className="card empty">Каталог транспорту ще порожній — його саме заповнюємо.</div>}
+      {list.length > 0 && <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span></div>}
       {shown.length > 0 && (
         <div className="vgrid">{shown.map(v => {
           const sc = scores[v.id];
@@ -156,7 +168,10 @@ export default function Transport() {
       )}
       <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin || role === 'editor'}
         onSaved={nv => setList(l => l.map(x => (x.id === nv.id ? nv : x)))} />
-      {loaded && list.length > 0 && !shown.length && <div className="card empty">Нічого не знайдено. Спробуй іншу назву або тип.</div>}
+      {loaded && list.length > 0 && !shown.length && <div className="card empty wiki-none"><b>Нічого не знайдено</b><span className="muted">Спробуй іншу назву або тип.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); setFuel('all'); setCur('all'); }}>Скинути фільтри</button></div>}
+      {list.length > 0 && <div className="wiki-tiles one">
+        <div className="card"><span className="ibub"><Icon name="speed" /></span><div><b>Калькулятор тюнінгу у вікні кожного авто</b><p className="muted">Відміть потрібні елементи — побачиш суму тюнінгу й ціну разом з авто, а також швидкість з чіпами Stage 1–4.</p></div></div>
+      </div>}
     </>
   );
 }

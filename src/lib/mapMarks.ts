@@ -20,7 +20,7 @@ export const BUILTIN: MapCategory[] = [
 export const BUILTIN_MARKS: MapMark[] = POINTS.map(p => {
   const j = p.kind === 'job' ? JOBS.find(x => x.id === p.job) : undefined;
   return p.kind === 'job'
-    ? { id: p.id, category: 'jobs', name: p.name, note: j ? (j.legal ? 'Легальна' : 'Нелегальна') + ' · з ' + j.level + ' рівня' : '', x: p.x, y: p.y, icon: `/icons/jobs/${p.job}.svg`, link: { href: `/roboty?job=${p.job}`, label: 'Опис роботи →' } }
+    ? { id: p.id, category: 'jobs', name: p.name, note: j ? (j.legal ? 'Легальна' : 'Нелегальна') + ' · з ' + j.level + ' рівня' : '', x: p.x, y: p.y, icon: `/icons/jobs/${p.job}.svg`, link: { href: `/wiki/roboty?job=${p.job}`, label: 'Опис роботи →' } }
     : { id: p.id, category: 'buyers', name: p.name, note: p.note || '', x: p.x, y: p.y, icon: p.id === 'buyer-junk' ? '/icons/junk/buyer.svg' : '/icons/harvest/buyer.svg', link: { href: '/tsiny', label: 'Ціни скупників →' } };
 });
 

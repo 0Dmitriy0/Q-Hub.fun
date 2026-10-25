@@ -8,13 +8,13 @@ import Backdrop from './Backdrop';
 import AppOnline from './AppOnline';
 
 const NAV: [string, string, string][] = [
-  ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/transport', 'Транспорт', 'car'],
-  ['/roboty', 'Роботи', 'jobs'], ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
+  ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
+  ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
 ];
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет',
 };
 
 export default function Layout() {

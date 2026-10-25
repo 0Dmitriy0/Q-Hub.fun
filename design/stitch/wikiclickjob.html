@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uk" style=""><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><title>Q-Hub — Quant RP Hub</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"surface-obsidian":"#070A0E","border-tactical":"#263344","status-danger":"#EF4444","secondary":"#bec7d8","primary":"#ffb693","surface-dim":"#10141a","surface-variant":"#31353c","text-secondary":"#8B9BB0","on-secondary-container":"#b0b9ca","tertiary-fixed":"#ffdbc7","on-surface-variant":"#e2bfb0","on-error":"#690005","surface-tint":"#ffb693","primary-fixed-dim":"#ffb693","outline":"#a98a7d","status-info":"#0EA5E9","error-container":"#93000a","surface-card-subtle":"#10161F","surface":"#10141a","on-tertiary-fixed":"#311300","secondary-fixed-dim":"#bec7d8","text-primary":"#F4F7FB","primary-container":"#ff6b00","status-success":"#10B981","surface-panel-hover":"#1A2330","text-muted":"#56677D","secondary-fixed":"#dae3f5","surface-bright":"#353940","on-secondary":"#28313e","surface-container-high":"#262a31","on-surface":"#dfe2eb","surface-container-lowest":"#0a0e14","on-primary-fixed":"#351000","on-error-container":"#ffdad6","on-secondary-fixed":"#131c29","inverse-on-surface":"#2d3137","inverse-surface":"#dfe2eb","on-background":"#dfe2eb","surface-panel":"#141B24","secondary-container":"#414a58","on-tertiary":"#512400","on-tertiary-container":"#522400","on-secondary-fixed-variant":"#3e4755","inverse-primary":"#a04100","error":"#ffb4ab","on-primary-fixed-variant":"#7a3000","on-primary-container":"#572000","outline-variant":"#5a4136","surface-container":"#1c2026","on-tertiary-fixed-variant":"#733600","primary-fixed":"#ffdbcc","tertiary-fixed-dim":"#ffb688","border-tactical-focus":"#FF7A1A","on-primary":"#561f00","surface-container-low":"#181c22","tertiary-container":"#e47f33","accent-orange-glow":"rgba(255, 107, 0, 0.28)","tertiary":"#ffb688","background":"#10141a","accent-neon-orange":"#FF7A1A","surface-container-highest":"#31353c","status-warning":"#F59E0B"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","margin":"2rem","space-md":"1rem","gutter":"1.25rem","space-lg":"1.5rem","gutter-mobile":"0.75rem","space-2xl":"3.5rem","margin-mobile":"1rem","space-xl":"2.25rem","space-xs":"0.25rem"},"fontFamily":{"headline-lg":["Manrope"],"body-lg":["Manrope"],"label-mono-lg":["JetBrains Mono"],"body-md":["Manrope"],"label-mono-md":["JetBrains Mono"],"headline-md":["Manrope"],"headline-xl-mobile":["Manrope"],"body-sm":["Manrope"],"headline-sm":["Manrope"],"headline-xl":["Manrope"],"label-mono-sm":["JetBrains Mono"],"display-hero":["Manrope"],"display-hero-mobile":["Manrope"]},"fontSize":{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"label-mono-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"label-mono-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"700"}],"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.025em","fontWeight":"800"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"display-hero-mobile":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"800"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col justify-between"><header class="fixed top-0 w-full z-50 bg-surface-obsidian/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-20 max-w-[1360px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-6 lg:gap-8"><a class="flex items-center gap-2.5 group transition-transform hover:scale-105 duration-300" data-path="holovna" href="#"><img alt="Q-Hub Logo" class="h-9 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg2InXIWVpzLBKqvzE1ns5pPahb3mJCHLktduAAEw9ud3NbET1PBwvyJ-6vfDdyu88gl9o6o5prm0R_z3mYcyiJTDTIbXJRasyy_P2lPBIK1W0oAjuFNzyiMzbE7KPiL336QHuRslU9EwK1IimoY7n_47pewXnhLMqJqzYfp5bBomP_ArSDnDYj1SdpdfOPzdB9ddxZ8y7zTfYRHU80DC4tdonnmRczx2-ZMbK6oa8FghKI1FCLGJdSI6rTKa7JV4j1xY"/></a><div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-panel/80 text-text-secondary font-label-mono-sm text-[11px]"><span class="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_#10B981] animate-pulse"></span><span class="text-text-primary font-semibold">Quant RP:</span><span class="text-status-success font-semibold">ONLINE</span></div><nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-surface-panel/90 shadow-inner" data-active-classes="bg-surface-container-high text-primary font-bold shadow-sm"><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="holovna" href="#">Головна</a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="mapa-shtatu" href="#"><span>Мапа штату</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-surface-card-subtle text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">В ГРУ</span></a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="prohrama-overlei" href="#"><span>Програма-оверлей</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-primary-container/15 text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">AI + СКАН</span></a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a aria-current="page" class="px-3.5 py-1.5 rounded-full transition-all bg-surface-container-high text-primary font-bold shadow-sm" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="iventy" href="#">Івенти</a></nav></div><div class="flex items-center gap-3.5"><button aria-label="Перемкнути тему" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[19px]">dark_mode</span></button><a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:shadow-[0_0_20px_-2px_rgba(255,107,0,0.55)] hover:bg-accent-neon-orange transition-all duration-300" data-path="login-discord" href="#"><span class="material-symbols-outlined text-[18px]">sports_esports</span><span class="whitespace-nowrap">Увійти через Discord</span></a><div class="w-9 h-9 rounded-full bg-surface-card-subtle flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-text-secondary text-[20px]">person</span></div></div></div></header><main class="w-full pt-20 bg-surface flex-grow"><div class="flex flex-col w-full">
+<!-- Top Ambient Glow Field -->
+<div class="relative w-full max-w-[1360px] mx-auto px-margin pt-6 pb-16 flex flex-col gap-8">
+<!-- Breadcrumb & Status Telemetry -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-2 font-label-mono-md text-text-muted">
+<span class="hover:text-primary transition-colors cursor-pointer">Q-HUB</span>
+<span class="material-symbols-outlined text-body-sm text-text-muted">chevron_right</span>
+<span class="text-text-primary">WIKI БАЗА</span>
+<span class="material-symbols-outlined text-body-sm text-text-muted">chevron_right</span>
+<span class="text-accent-neon-orange font-semibold">ЕНЦИКЛОПЕДІЯ V2.4</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-card-subtle text-text-secondary font-label-mono-sm">
+<span class="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
+<span>ДАНІ СИНХРОНІЗОВАНО З СЕРВЕРОМ</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-surface-card-subtle text-accent-neon-orange font-label-mono-sm font-bold">
+<span class="material-symbols-outlined text-body-sm">bolt</span>
+<span>PATCH 1.9.4</span>
+</div>
+</div>
+</div>
+<!-- Main Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="flex flex-col gap-2 max-w-3xl">
+<div class="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-surface-container-high text-accent-neon-orange font-label-mono-md uppercase tracking-wider">
+<span class="material-symbols-outlined text-body-sm">menu_book</span>
+<span>Офіційний фанатський довідник</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-text-primary tracking-tight">
+          Quant RP WIKI — <span class="text-primary-container">База знань штату</span>
+</h1>
+<p class="font-body-lg text-body-lg text-text-secondary leading-relaxed">
+          Повний довідник серверу: професії, кар’єрний ріст, рівні зарплат, технічні характеристики авто та точний калькулятор тюнінгу.
+        </p>
+</div>
+<!-- Live Quick Stats Capsule -->
+<div class="flex items-center gap-4 bg-surface-card-subtle p-3 rounded-xl shadow-lg shrink-0">
+<div class="flex flex-col px-3 py-1">
+<span class="font-label-mono-sm text-text-muted uppercase">Професій</span>
+<span class="font-headline-md text-headline-md text-text-primary">16</span>
+</div>
+<div class="w-px h-8 bg-surface-container-high"></div>
+<div class="flex flex-col px-3 py-1">
+<span class="font-label-mono-sm text-text-muted uppercase">Транспорту</span>
+<span class="font-headline-md text-headline-md text-accent-neon-orange">240+</span>
+</div>
+<div class="w-px h-8 bg-surface-container-high"></div>
+<div class="flex flex-col px-3 py-1">
+<span class="font-label-mono-sm text-text-muted uppercase">Точок робіт</span>
+<span class="font-headline-md text-headline-md text-text-primary">48</span>
+</div>
+</div>
+</div>
+<!-- Big Tactical Segment Switcher -->
+<div class="w-full bg-surface-card-subtle p-1.5 rounded-2xl flex flex-col sm:flex-row gap-2 shadow-xl">
+<button class="flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 bg-primary-container text-on-primary-container shadow-md" id="tab-jobs-btn" onclick="switchMainTab('jobs')">
+<span class="material-symbols-outlined text-headline-lg">work</span>
+<span>Роботи &amp; Професії</span>
+<span class="ml-1 px-2.5 py-0.5 rounded-full bg-surface-obsidian text-accent-neon-orange font-label-mono-sm text-label-mono-sm">16 РОБІТ</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 text-text-secondary hover:text-text-primary hover:bg-surface-panel" id="tab-vehicles-btn" onclick="switchMainTab('vehicles')">
+<span class="material-symbols-outlined text-headline-lg">directions_car</span>
+<span>Транспорт &amp; Тюнінг</span>
+<span class="ml-1 px-2.5 py-0.5 rounded-full bg-surface-container-high text-text-muted font-label-mono-sm text-label-mono-sm">240+ АВТО</span>
+</button>
+</div>
+<!-- ========================================================================= -->
+<!-- SECTION 1: JOBS & PROFESSIONS TAB -->
+<!-- ========================================================================= -->
+<div class="flex flex-col gap-8 transition-opacity duration-300" id="section-jobs">
+<!-- Search & Filters Toolbar -->
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+<!-- Job Search Bar -->
+<div class="relative flex-1 max-w-xl">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-muted">search</span>
+<input class="w-full pl-12 pr-16 py-3.5 rounded-xl bg-surface-card-subtle text-text-primary placeholder:text-text-muted font-body-md focus:outline-none focus:ring-2 focus:ring-primary-container shadow-inner" id="job-search-input" oninput="filterJobCards()" placeholder="Швидкий пошук роботи або вимог..." type="text"/>
+<kbd class="absolute right-3.5 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-surface-panel text-text-muted font-label-mono-sm text-label-mono-sm">ALT+Q</kbd>
+</div>
+<!-- Filter Pills -->
+<div class="flex flex-wrap items-center gap-2">
+<button class="job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-primary-container text-on-primary-container shadow-sm font-bold transition-all" onclick="setJobCategory('all', this)">Всі роботи</button>
+<button class="job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel transition-all" onclick="setJobCategory('starter', this)">Початкові (1-2 рівень)</button>
+<button class="job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel transition-all" onclick="setJobCategory('gov', this)">Державні</button>
+<button class="job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel transition-all" onclick="setJobCategory('crime', this)">Нелегальні / Банди</button>
+<button class="job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel transition-all" onclick="setJobCategory('high-pay', this)">Високооплачувані</button>
+</div>
+</div>
+<!-- Layout: Jobs Catalog (Left) + Featured Inspection Modal Preview (Right) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+<!-- Left: Job Cards Grid (7 Cols on desktop) -->
+<div class="xl:col-span-6 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<span class="font-label-mono-sm text-text-muted uppercase">Перелік відкритих вакансій штату</span>
+<span class="font-label-mono-sm text-accent-neon-orange" id="jobs-count-label">Показано: 6 з 16</span>
+</div>
+<!-- Cards Stack -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3.5" id="jobs-cards-container">
+<!-- Bus Driver Card (Active / Selected) -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-panel hover:bg-surface-panel-hover shadow-md transition-all flex items-center justify-between gap-4 group" data-category="starter" data-name="Водій автобуса" onclick="selectJobModal('bus')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center text-primary-container text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">directions_bus</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Водій автобуса</span>
+<span class="px-2 py-0.5 rounded-full bg-status-success/15 text-status-success font-label-mono-sm">Легальна</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 1 рівня</span>
+<span>•</span>
+<span class="text-accent-neon-orange font-semibold">Середній дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-card-subtle font-label-mono-sm text-text-secondary">GPS: Роботи</span>
+<span class="material-symbols-outlined text-primary-container group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Inkasator Card -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel shadow-md transition-all flex items-center justify-between gap-4 group" data-category="high-pay" data-name="Інкасатор" onclick="selectJobModal('inkas')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-panel flex items-center justify-center text-status-warning text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">local_police</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Інкасатор</span>
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm">Небезпечна</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 3 рівня</span>
+<span>•</span>
+<span class="text-status-success font-semibold">Високий дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-panel font-label-mono-sm text-text-secondary">Бронежилет</span>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container group-hover:translate-x-1 transition-all">arrow_forward</span>
+</div>
+</div>
+<!-- Dalekobiinyk Card -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel shadow-md transition-all flex items-center justify-between gap-4 group" data-category="high-pay" data-name="Далекобійник" onclick="selectJobModal('trucker')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-panel flex items-center justify-center text-status-info text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">local_shipping</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Далекобійник</span>
+<span class="px-2 py-0.5 rounded-full bg-status-info/15 text-status-info font-label-mono-sm">Власний тягач</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 4 рівня</span>
+<span>•</span>
+<span class="text-status-success font-semibold">ТОП дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-panel font-label-mono-sm text-text-secondary">Категорія С</span>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container group-hover:translate-x-1 transition-all">arrow_forward</span>
+</div>
+</div>
+<!-- Shakhtar Card -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel shadow-md transition-all flex items-center justify-between gap-4 group" data-category="starter" data-name="Шахтар / Гірник" onclick="selectJobModal('miner')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-panel flex items-center justify-center text-primary text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">hardware</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Шахтар / Гірник</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label-mono-sm">Фізична праця</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 1 рівня</span>
+<span>•</span>
+<span class="text-accent-neon-orange font-semibold">Базовий дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-panel font-label-mono-sm text-text-secondary">Карʼєр</span>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container group-hover:translate-x-1 transition-all">arrow_forward</span>
+</div>
+</div>
+<!-- Pilot Card -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel shadow-md transition-all flex items-center justify-between gap-4 group" data-category="gov" data-name="Пілот вантажних літаків" onclick="selectJobModal('pilot')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-panel flex items-center justify-center text-status-info text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">flight_takeoff</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Пілот літаків</span>
+<span class="px-2 py-0.5 rounded-full bg-status-info/15 text-status-info font-label-mono-sm">Ліцензія пілота</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 5 рівня</span>
+<span>•</span>
+<span class="text-status-success font-semibold">Високий дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-panel font-label-mono-sm text-text-secondary">Аеропорт LS</span>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container group-hover:translate-x-1 transition-all">arrow_forward</span>
+</div>
+</div>
+<!-- Smittievoz Card -->
+<div class="job-card cursor-pointer p-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel shadow-md transition-all flex items-center justify-between gap-4 group" data-category="starter" data-name="Сміттєвоз" onclick="selectJobModal('waste')">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-panel flex items-center justify-center text-status-warning text-headline-lg shrink-0 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-headline-lg">delete_sweep</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-text-primary">Сміттєвоз</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label-mono-sm">Напарник</span>
+</div>
+<div class="flex items-center gap-3 text-text-muted font-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">military_tech</span> з 1 рівня</span>
+<span>•</span>
+<span class="text-accent-neon-orange font-semibold">Середній дохід</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden sm:inline-flex px-2 py-1 rounded bg-surface-panel font-label-mono-sm text-text-secondary">Кооператив</span>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container group-hover:translate-x-1 transition-all">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: DETAILED RECREATED MODAL CARD (Screenshots 2 Recreated Exactly) -->
+<div class="xl:col-span-6 sticky top-24">
+<div class="rounded-2xl bg-surface-obsidian p-6 md:p-8 shadow-2xl flex flex-col gap-6 relative overflow-hidden">
+<!-- Top Ambient Glow Inside Card -->
+<div class="absolute -top-24 -right-24 w-60 h-60 bg-primary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Job Detailed Header -->
+<div class="flex items-start justify-between gap-4">
+<div class="flex items-center gap-4">
+<!-- Bus Icon Pod -->
+<div class="w-14 h-14 rounded-2xl bg-surface-card-subtle flex items-center justify-center text-3xl shadow-inner shrink-0">
+                  🚌
+                </div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-xl text-headline-xl text-text-primary tracking-tight" id="modal-job-title">Водій автобуса</h2>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<span class="px-3 py-0.5 rounded-full bg-status-success/20 text-status-success font-label-mono-md font-semibold" id="modal-job-badge">Легальна</span>
+<span class="flex items-center gap-1 text-text-secondary font-label-mono-md" id="modal-job-req">
+<span class="material-symbols-outlined text-[16px] text-accent-neon-orange">emoji_events</span>
+<span>з 1 рівня</span>
+</span>
+<div class="flex items-center gap-1 ml-1 text-status-warning">
+<span class="material-symbols-outlined text-[16px]">monetization_on</span>
+<span class="material-symbols-outlined text-[16px]">monetization_on</span>
+<span class="material-symbols-outlined text-[16px] opacity-40">monetization_on</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Close / Dismiss Button -->
+<button aria-label="Закрити" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors">
+<span class="material-symbols-outlined text-body-lg">close</span>
+</button>
+</div>
+<!-- Section: Опис -->
+<div class="flex flex-col gap-1.5 pt-2">
+<h3 class="font-headline-md text-headline-md text-text-primary">Опис</h3>
+<p class="font-body-md text-body-md text-text-secondary leading-relaxed" id="modal-job-desc">
+                Орендуємо автобус на спеціальній точці, після чого відкриваємо планшет маршрутів на літеру "J" та вирушаємо по відзначених на мапі мітках.
+              </p>
+</div>
+<!-- Section: Заробіток -->
+<div class="flex flex-col gap-1.5">
+<h3 class="font-headline-md text-headline-md text-text-primary">Заробіток</h3>
+<p class="font-body-md text-body-md text-text-secondary leading-relaxed" id="modal-job-pay">
+                Залежить від маршруту, вартість вказана в планшеті та нараховується під час видачі PayDay.
+              </p>
+</div>
+<!-- 2-Column Split: Вимоги & Де влаштуватися -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+<!-- Вимоги -->
+<div class="flex flex-col gap-2">
+<h4 class="font-headline-md text-headline-md text-text-primary">Вимоги</h4>
+<ul class="flex flex-col gap-1.5 font-body-md text-body-md text-text-secondary">
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>1 рівень персонажа</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>робота доступна всім</span>
+</li>
+</ul>
+</div>
+<!-- Де влаштуватися -->
+<div class="flex flex-col gap-2">
+<h4 class="font-headline-md text-headline-md text-text-primary">Де влаштуватися</h4>
+<ul class="flex flex-col gap-1.5 font-body-md text-body-md text-text-secondary">
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>Телефон - GPS - Роботи - Водій автобуса.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>Підійдіть до роботодавця Серпень Браун, поговоріть та натисніть кнопку "Влаштуватися".</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- 2-Column Split: Рівні навички & Прокачка навички -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+<!-- Рівні навички -->
+<div class="flex flex-col gap-2">
+<h4 class="font-headline-md text-headline-md text-text-primary">Рівні навички</h4>
+<ul class="flex flex-col gap-1 font-body-md text-body-md text-text-secondary">
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>1 рівень - початковий.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>2 рівень - 200 очок, надбавка від n$ до n$.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>3 рівень - 600 очок, надбавка від n$ до n$.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>4 рівень - 1200 очок, надбавка від n$ до n$.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>5 рівень - 3000 очок, надбавка від n$ до n$.</span>
+</li>
+</ul>
+</div>
+<!-- Прокачка навички -->
+<div class="flex flex-col gap-2">
+<h4 class="font-headline-md text-headline-md text-text-primary">Прокачка навички</h4>
+<ul class="flex flex-col gap-1 font-body-md text-body-md text-text-secondary">
+<li class="flex items-start gap-2">
+<span class="text-accent-neon-orange">•</span>
+<span>1 пройдений маршрут = 1 очко</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Section: Поради -->
+<div class="flex flex-col gap-1.5 pt-2">
+<h4 class="font-headline-md text-headline-md text-text-primary">Поради</h4>
+<p class="font-body-md text-body-md text-text-secondary leading-relaxed">
+                • Відбуксуйте автобус щоб поновити кількість палива, полагодити його та відмінити маршрут.
+              </p>
+</div>
+<!-- Footer: Джерело -->
+<div class="pt-4 flex items-center justify-between font-body-sm text-body-sm text-text-muted">
+<span>Джерело: <a class="text-text-secondary underline hover:text-accent-neon-orange transition-colors" href="#">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></span>
+<button class="px-3 py-1.5 rounded-lg bg-surface-card-subtle text-accent-neon-orange hover:bg-surface-panel transition-colors flex items-center gap-1 font-label-mono-sm">
+<span class="material-symbols-outlined text-[14px]">map</span>
+<span>Мітка на мапі</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- SECTION 2: VEHICLES & TUNING CALCULATOR TAB -->
+<!-- ========================================================================= -->
+<div class="hidden flex-col gap-8 transition-opacity duration-300" id="section-vehicles">
+<!-- Selector & Vehicle Search Header -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-card-subtle p-4 rounded-2xl shadow-lg">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+<span class="material-symbols-outlined">tune</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-text-primary">Калькулятор тюнінгу та ТТХ авто</span>
+<span class="font-body-sm text-body-sm text-text-secondary">Оберіть авто зі списку або знайдіть у базі даних автосалонів</span>
+</div>
+</div>
+<!-- Vehicle Dropdown / Selector -->
+<div class="flex flex-wrap items-center gap-2">
+<div class="relative min-w-[240px]">
+<select class="w-full px-4 py-2.5 rounded-xl bg-surface-panel text-text-primary font-headline-sm text-body-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary-container cursor-pointer pr-10 shadow-sm" id="vehicle-select" onchange="changeActiveVehicle(this.value)">
+<option selected="" value="jes">Överflöd Jes (Гіперкар)</option>
+<option value="itali">Grotti Itali GTO (Спорткар)</option>
+<option value="comet">Pfister Comet S2 (Спорткар)</option>
+<option value="krieger">Benefactor Krieger (Суперкар)</option>
+<option value="omnis">Obey Omnis e-GT (Седан)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+<button class="px-4 py-2.5 rounded-xl bg-surface-panel hover:bg-surface-panel-hover text-text-primary font-headline-sm text-body-sm flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-accent-neon-orange text-[18px]">compare_arrows</span>
+<span>Порівняти ТТХ</span>
+</button>
+</div>
+</div>
+<!-- MAIN TUNING POD (Recreated Exactly from screenshot https://lh3.googleusercontent.com/aida-public/AB6AXuDj9SoDomrnZOJOIfvzX5mfJQVj07mzcl9F2vJfRPEn-xUVDisCh49Y4HXeYG0KhrtzJnoSahMWgYGPasr8r5TDGuFf14jirD2F9qhFMV-qNr6gpGcKSQuP8bdIoVN2aMrnczxPxgBxQSdWjBgMYrzq0R1U7XMjYlgJenvSdZ3Duzhr-9ZqIuK1n98WEAG-BQplyF6NSapCw1w2PCu3ofN9w6_7xviO99hhTSlJcymK2fE8sjO9dtXWumzl8tOk1h1GQbE) -->
+<div class="rounded-3xl bg-surface-obsidian p-6 lg:p-8 shadow-2xl flex flex-col gap-6 relative">
+<!-- Top Vehicle Bar: Car icon + Title + Edit + Close -->
+<div class="flex items-center justify-between gap-4 pb-2">
+<div class="flex items-center gap-3">
+<span class="text-accent-neon-orange text-2xl">🚗</span>
+<span class="font-headline-xl text-headline-xl text-text-primary tracking-tight font-extrabold" id="active-vehicle-title">Överflöd Jes</span>
+</div>
+<div class="flex items-center gap-2.5">
+<button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-card-subtle hover:bg-surface-panel text-text-secondary hover:text-text-primary transition-colors font-headline-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">label</span>
+<span>Редагувати</span>
+</button>
+<button aria-label="Закрити" class="w-8 h-8 rounded-full bg-surface-card-subtle hover:bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</div>
+<!-- Sleek Vehicle Visual Showcase (Recreating Hypercar Hero) -->
+<div class="relative w-full h-[320px] md:h-[420px] rounded-2xl bg-gradient-to-b from-surface-card-subtle to-surface-obsidian flex items-center justify-center overflow-hidden shadow-inner">
+<!-- Background Radial Spotlights -->
+<div class="absolute inset-0 bg-radial from-primary-container/10 via-transparent to-transparent opacity-60"></div>
+<div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-surface-obsidian to-transparent"></div>
+<!-- The Orange Hypercar Render Placeholder -->
+<img class="w-full h-full object-contain z-10 drop-shadow-[0_25px_35px_rgba(0,0,0,0.85)] hover:scale-105 transition-transform duration-500" data-alt="Stunning 3D studio render of a luxury sleek bright orange and black carbon hypercar Överflöd Jes, Koenigsegg Jesko inspired, low front angle, studio rim lighting, pure dark slate background, high reflections, tactical esports aesthetic." id="vehicle-hero-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgU2YwZ6Lz70qAGLntPoyKyw-F-8zOEF7v0keQou0HEaXPGfwUoStNnENBk7-xz19lcqMQvwa4LKGPKDAEbvyvo3oVuZT3bsHYdrYa_UYw_JOQ_tMIHblszNfA9yDHUWD2LtQZSe3syW-Jc04haDSOvXXNA8CzkLWVXY75liuXpX3BEbxcS60LAOLGsR3TuXwvTqZ_1fgDkeGt66gsxsoGs7aE11-KwVOpeHDapHZ2WrYShvDiW1tQ1g"/>
+<!-- Telemetry Watermark -->
+<div class="absolute bottom-4 left-6 z-20 flex items-center gap-3 font-label-mono-sm text-text-muted">
+<span class="px-2 py-0.5 rounded bg-surface-panel/80 text-accent-neon-orange uppercase">STOCK SPEC</span>
+<span>470 KM/H</span>
+<span>•</span>
+<span>MID-ENGINE AWD</span>
+</div>
+</div>
+<!-- Two Column Split: Tuning Items Checklist (Left) & Vehicle Stats (Right) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
+<!-- LEFT COLUMN: Елементи тюнінгу (7 Cols) -->
+<div class="lg:col-span-7 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-lg text-headline-lg text-text-primary flex items-center gap-2">
+<span class="text-accent-neon-orange">⚡</span>
+<span>Елементи тюнінгу</span>
+</h3>
+</div>
+<!-- Quick Action Buttons: 'Виділити все' & 'Зняти все' -->
+<div class="grid grid-cols-2 gap-3">
+<button class="py-2.5 px-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel text-text-primary font-headline-sm text-body-sm text-center transition-colors shadow-sm" onclick="selectAllTuning(true)">
+                Виділити все
+              </button>
+<button class="py-2.5 px-4 rounded-xl bg-surface-card-subtle hover:bg-surface-panel text-text-secondary hover:text-text-primary font-headline-sm text-body-sm text-center transition-colors shadow-sm" onclick="selectAllTuning(false)">
+                Зняти все
+              </button>
+</div>
+<!-- Table Header -->
+<div class="flex items-center justify-between font-label-mono-sm text-text-muted px-3 pt-2 uppercase">
+<span>ЕЛЕМЕНТ</span>
+<span>ВАРТІСТЬ</span>
+</div>
+<!-- Tuning Checkboxes List -->
+<div class="flex flex-col gap-1.5" id="tuning-items-list">
+<!-- Item 1 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="3000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Хамелеон</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">3 000 000 $</span>
+</label>
+<!-- Item 2 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="2000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Двигун</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">2 000 000 $</span>
+</label>
+<!-- Item 3 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="2000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Турбонадув</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">2 000 000 $</span>
+</label>
+<!-- Item 4 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1400000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Підвіска</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 400 000 $</span>
+</label>
+<!-- Item 5 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1200000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Автопілот</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 200 000 $</span>
+</label>
+<!-- Item 6 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1200000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Гальма</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 200 000 $</span>
+</label>
+<!-- Item 7 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1200000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Трансмісія</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 200 000 $</span>
+</label>
+<!-- Item 8 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Броня</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 000 000 $</span>
+</label>
+<!-- Item 9 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Ремені безпеки</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 000 000 $</span>
+</label>
+<!-- Item 10 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="1000000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Тонування</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">1 000 000 $</span>
+</label>
+<!-- Item 11 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="800000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Колір диму від шин</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">800 000 $</span>
+</label>
+<!-- Item 12 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="800000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Неон</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">800 000 $</span>
+</label>
+<!-- Item 13 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="800000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Перламутр</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">800 000 $</span>
+</label>
+<!-- Item 14 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="800000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Пофарбування</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">800 000 $</span>
+</label>
+<!-- Item 15 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="400000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Номерний знак</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">400 000 $</span>
+</label>
+<!-- Item 16 -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="200000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Клаксон</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">200 000 $</span>
+</label>
+<!-- Item 17: Drift Chip -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="500000" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary group-hover:text-primary transition-colors">Чіп автотюнінгу «DRIFT»</span>
+</div>
+<span class="font-label-mono-md text-text-primary font-bold">500 000 $</span>
+</label>
+<!-- Radio: Без чіпа STAGE -->
+<label class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel cursor-pointer transition-colors">
+<div class="flex items-center gap-3">
+<input checked="" class="w-4 h-4 text-primary-container accent-primary-container cursor-pointer" name="stage-chip-opt" onchange="calculateTuningTotal()" type="radio"/>
+<span class="font-body-md text-text-primary">Без чіпа автотюнінгу «STAGE»</span>
+</div>
+</label>
+<!-- Radio with input: Чіп автотюнінгу STAGE -->
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel transition-colors gap-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="w-4 h-4 text-primary-container accent-primary-container cursor-pointer" id="stage-custom-radio" name="stage-chip-opt" onchange="calculateTuningTotal()" type="radio"/>
+<span class="font-body-md text-text-primary">Чіп автотюнінгу «STAGE»</span>
+</label>
+<input class="w-36 px-3 py-1.5 rounded-lg bg-surface-obsidian text-text-primary text-right font-label-mono-md placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary-container" id="stage-custom-price" oninput="document.getElementById('stage-custom-radio').checked=true; calculateTuningTotal();" placeholder="Вкажи ціну" type="number"/>
+</div>
+<!-- Input item: Ксенон -->
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-card-subtle hover:bg-surface-panel transition-colors gap-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="tuning-chk w-4 h-4 rounded bg-surface-obsidian text-primary-container accent-primary-container cursor-pointer" data-price="300000" id="xenon-chk" onchange="calculateTuningTotal()" type="checkbox"/>
+<span class="font-body-md text-text-primary">Ксенон</span>
+</label>
+<input class="w-36 px-3 py-1.5 rounded-lg bg-surface-obsidian text-text-primary text-right font-label-mono-md focus:outline-none focus:ring-1 focus:ring-primary-container" id="xenon-custom-price" oninput="calculateTuningTotal()" type="number" value="300000"/>
+</div>
+</div>
+<!-- Big Orange Calculate Button -->
+<button class="w-full mt-2 py-4 px-6 rounded-full bg-primary-container hover:bg-accent-neon-orange text-on-primary-container font-headline-md text-headline-md font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-orange-500/25 transition-all" onclick="calculateTuningTotal()">
+<span class="material-symbols-outlined text-[20px]">calculate</span>
+<span>Обрахувати вартість тюнінгу</span>
+</button>
+</div>
+<!-- RIGHT COLUMN: Інформація про авто (5 Cols) -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<h3 class="font-headline-lg text-headline-lg text-text-primary flex items-center gap-2">
+<span class="text-accent-neon-orange">🛡️</span>
+<span>Інформація</span>
+</h3>
+<!-- Stats Rows -->
+<div class="flex flex-col gap-4 font-body-md">
+<div class="flex flex-col gap-0.5">
+<span class="text-text-muted font-body-sm">Назва</span>
+<span class="font-headline-md text-headline-md text-text-primary font-bold" id="info-veh-name">Överflöd Jes</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-text-muted font-body-sm">Вартість у салоні</span>
+<span class="font-headline-md text-headline-md text-text-primary font-bold" id="info-veh-salon">28 000 000 $</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-text-muted font-body-sm">Державна вартість</span>
+<span class="font-headline-md text-headline-md text-text-primary font-bold" id="info-veh-gov">20 000 000 $</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-text-muted font-body-sm">Максимальна швидкість</span>
+<span class="font-headline-md text-headline-md text-text-primary font-bold" id="info-veh-speed">470 км/год</span>
+</div>
+</div>
+<!-- SPECIAL HIGHLIGHT BOX (Orange Accent Box for Stage Chips) -->
+<div class="p-5 rounded-2xl bg-surface-card-subtle shadow-md flex flex-col gap-3 relative overflow-hidden">
+<div class="font-headline-sm text-body-md text-text-primary font-bold leading-snug">
+                Максимальна швидкість з чіпами для автотюнінгу:
+              </div>
+<ul class="flex flex-col gap-1.5 font-body-md text-text-secondary">
+<li class="flex items-center gap-2">
+<span class="text-accent-neon-orange font-bold">•</span>
+<span class="text-text-primary font-medium">Stage 1:</span>
+<span class="font-label-mono-md text-accent-neon-orange font-bold" id="stage-1-speed">494 км/год</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="text-accent-neon-orange font-bold">•</span>
+<span class="text-text-primary font-medium">Stage 2:</span>
+<span class="font-label-mono-md text-accent-neon-orange font-bold" id="stage-2-speed">517 км/год</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="text-accent-neon-orange font-bold">•</span>
+<span class="text-text-primary font-medium">Stage 3:</span>
+<span class="font-label-mono-md text-accent-neon-orange font-bold" id="stage-3-speed">540 км/год</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="text-accent-neon-orange font-bold">•</span>
+<span class="text-text-primary font-medium">Stage 4:</span>
+<span class="font-label-mono-md text-accent-neon-orange font-bold" id="stage-4-speed">564 км/год</span>
+</li>
+</ul>
+</div>
+<!-- Engine & Fuel Type -->
+<div class="flex flex-col gap-1">
+<span class="text-text-muted font-body-sm">Двигун</span>
+<div class="flex items-center gap-2 font-headline-sm text-text-primary">
+<span>⛽</span>
+<span id="info-veh-engine">Пальне</span>
+</div>
+</div>
+<!-- LIVE CALCULATED SUMMARY POD -->
+<div class="p-5 rounded-2xl bg-surface-panel shadow-lg flex flex-col gap-3 mt-2">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted uppercase">Підсумок обрахунку</span>
+<span class="font-label-mono-sm text-accent-neon-orange" id="selected-mods-count">Обрано: 0 елементів</span>
+</div>
+<div class="flex items-baseline justify-between pt-1">
+<span class="font-body-md text-text-secondary">Вартість тюнінгу:</span>
+<span class="font-headline-lg text-headline-lg text-accent-neon-orange font-black" id="tuning-total-display">0 $</span>
+</div>
+<div class="flex items-baseline justify-between text-body-sm text-text-muted">
+<span>Разом з авто (салон):</span>
+<span class="font-label-mono-md text-text-primary font-semibold" id="total-with-car-display">28 000 000 $</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Tab Switching Logic
+  function switchMainTab(tab) {
+    const jobsSec = document.getElementById('section-jobs');
+    const vehSec = document.getElementById('section-vehicles');
+    const jobsBtn = document.getElementById('tab-jobs-btn');
+    const vehBtn = document.getElementById('tab-vehicles-btn');
+
+    if (tab === 'jobs') {
+      jobsSec.classList.remove('hidden');
+      jobsSec.classList.add('flex');
+      vehSec.classList.add('hidden');
+      vehSec.classList.remove('flex');
+
+      jobsBtn.className = "flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 bg-primary-container text-on-primary-container shadow-md";
+      vehBtn.className = "flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 text-text-secondary hover:text-text-primary hover:bg-surface-panel";
+    } else {
+      jobsSec.classList.add('hidden');
+      jobsSec.classList.remove('flex');
+      vehSec.classList.remove('hidden');
+      vehSec.classList.add('flex');
+
+      vehBtn.className = "flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 bg-primary-container text-on-primary-container shadow-md";
+      jobsBtn.className = "flex-1 flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl font-headline-md text-headline-md transition-all duration-200 text-text-secondary hover:text-text-primary hover:bg-surface-panel";
+    }
+  }
+
+  // Job Filtering Logic
+  function setJobCategory(category, btn) {
+    document.querySelectorAll('.job-cat-btn').forEach(b => {
+      b.className = "job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel transition-all";
+    });
+    btn.className = "job-cat-btn px-4 py-2 rounded-full font-headline-sm text-body-sm bg-primary-container text-on-primary-container shadow-sm font-bold transition-all";
+
+    const cards = document.querySelectorAll('.job-card');
+    let visible = 0;
+    cards.forEach(card => {
+      if (category === 'all' || card.getAttribute('data-category') === category) {
+        card.style.display = 'flex';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    document.getElementById('jobs-count-label').innerText = 'Показано: ' + visible + ' з 16';
+  }
+
+  function filterJobCards() {
+    const query = document.getElementById('job-search-input').value.toLowerCase();
+    const cards = document.querySelectorAll('.job-card');
+    let visible = 0;
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name').toLowerCase();
+      if (name.includes(query)) {
+        card.style.display = 'flex';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    document.getElementById('jobs-count-label').innerText = 'Показано: ' + visible + ' з 16';
+  }
+
+  // Job Modal Content Switcher
+  const jobDetails = {
+    bus: {
+      title: 'Водій автобуса',
+      badge: 'Легальна',
+      badgeClass: 'bg-status-success/20 text-status-success',
+      req: 'з 1 рівня',
+      desc: 'Орендуємо автобус на спеціальній точці, після чого відкриваємо планшет маршрутів на літеру "J" та вирушаємо по відзначених на мапі мітках.',
+      pay: 'Залежить від маршруту, вартість вказана в планшеті та нараховується під час видачі PayDay.'
+    },
+    inkas: {
+      title: 'Інкасатор',
+      badge: 'Небезпечна',
+      badgeClass: 'bg-status-danger/20 text-status-danger',
+      req: 'з 3 рівня',
+      desc: 'Отримайте інкасаторський фургон біля головного сховища банку. Збирайте мішки з готівкою по банкоматах і терміналах Лос-Сантоса.',
+      pay: 'Від 45,000 $ за один повний рейс банкоматами. Можливі бонуси при грі в парі з охоронцем.'
+    },
+    trucker: {
+      title: 'Далекобійник',
+      badge: 'Власний тягач',
+      badgeClass: 'bg-status-info/20 text-status-info',
+      req: 'з 4 рівня',
+      desc: 'Орендуйте або придбайте власний тягач. Беріть контракти на логістичній базі на перевезення палива, техніки чи контейнерів по всьому штату.',
+      pay: 'Високий заробіток до 120,000 $ за міжміський рейс в округ Блейн.'
+    },
+    miner: {
+      title: 'Шахтар / Гірник',
+      badge: 'Фізична праця',
+      badgeClass: 'bg-surface-container-high text-secondary',
+      req: 'з 1 рівня',
+      desc: 'Видобувайте корисні копалини в кар’єрі Девіс-Кварц за допомогою кайла та відбійного молотка. Переплавляйте руду або здавайте скупникам.',
+      pay: 'Оплата нараховується за кожен кілограм добутої залізної або мідної руди.'
+    },
+    pilot: {
+      title: 'Пілот літаків',
+      badge: 'Ліцензія пілота',
+      badgeClass: 'bg-status-info/20 text-status-info',
+      req: 'з 5 рівня',
+      desc: 'Вантажні та поштові рейси між міжнародним аеропортом Лос-Сантоса та злітною смугою Сенді-Шорс. Потрібна льотна ліцензія.',
+      pay: 'Високий дохід, від 90,000 $ за рейс з урахуванням швидкості доставки.'
+    },
+    waste: {
+      title: 'Сміттєвоз',
+      badge: 'Кооперативна',
+      badgeClass: 'bg-surface-container-high text-secondary',
+      req: 'з 1 рівня',
+      desc: 'Збір відходів міськими вулицями у складі екіпажу з 2 осіб. Прискорює проходження вдвічі при грі з другом.',
+      pay: 'Фіксована ставка за бак плюс премія за заповненість прес-камери сміттєвоза.'
+    }
+  };
+
+  function selectJobModal(key) {
+    const data = jobDetails[key] || jobDetails.bus;
+    document.getElementById('modal-job-title').innerText = data.title;
+    const badgeEl = document.getElementById('modal-job-badge');
+    badgeEl.innerText = data.badge;
+    badgeEl.className = 'px-3 py-0.5 rounded-full font-label-mono-md font-semibold ' + data.badgeClass;
+    document.getElementById('modal-job-req').innerHTML = '<span class="material-symbols-outlined text-[16px] text-accent-neon-orange">emoji_events</span><span>' + data.req + '</span>';
+    document.getElementById('modal-job-desc').innerText = data.desc;
+    document.getElementById('modal-job-pay').innerText = data.pay;
+  }
+
+  // Vehicles Data and Tuning Calculator
+  const vehicleDatabase = {
+    jes: {
+      name: 'Överflöd Jes',
+      salonPrice: 28000000,
+      govPrice: 20000000,
+      maxSpeed: '470 км/год',
+      stage1: '494 км/год',
+      stage2: '517 км/год',
+      stage3: '540 км/год',
+      stage4: '564 км/год',
+      engine: 'Пальне'
+    },
+    itali: {
+      name: 'Grotti Itali GTO',
+      salonPrice: 8500000,
+      govPrice: 5500000,
+      maxSpeed: '360 км/год',
+      stage1: '382 км/год',
+      stage2: '398 км/год',
+      stage3: '412 км/год',
+      stage4: '430 км/год',
+      engine: 'Пальне'
+    },
+    comet: {
+      name: 'Pfister Comet S2',
+      salonPrice: 6200000,
+      govPrice: 4000000,
+      maxSpeed: '345 км/год',
+      stage1: '362 км/год',
+      stage2: '378 км/год',
+      stage3: '395 км/год',
+      stage4: '410 км/год',
+      engine: 'Пальне'
+    },
+    krieger: {
+      name: 'Benefactor Krieger',
+      salonPrice: 22000000,
+      govPrice: 16000000,
+      maxSpeed: '440 км/год',
+      stage1: '462 км/год',
+      stage2: '480 км/год',
+      stage3: '502 км/год',
+      stage4: '525 км/год',
+      engine: 'Гібрид'
+    },
+    omnis: {
+      name: 'Obey Omnis e-GT',
+      salonPrice: 4200000,
+      govPrice: 3000000,
+      maxSpeed: '310 км/год',
+      stage1: '325 км/год',
+      stage2: '340 км/год',
+      stage3: '355 км/год',
+      stage4: '370 км/год',
+      engine: 'Електро'
+    }
+  };
+
+  function changeActiveVehicle(key) {
+    const v = vehicleDatabase[key];
+    if (!v) return;
+
+    document.getElementById('active-vehicle-title').innerText = v.name;
+    document.getElementById('info-veh-name').innerText = v.name;
+    document.getElementById('info-veh-salon').innerText = formatMoney(v.salonPrice) + ' $';
+    document.getElementById('info-veh-gov').innerText = formatMoney(v.govPrice) + ' $';
+    document.getElementById('info-veh-speed').innerText = v.maxSpeed;
+    document.getElementById('stage-1-speed').innerText = v.stage1;
+    document.getElementById('stage-2-speed').innerText = v.stage2;
+    document.getElementById('stage-3-speed').innerText = v.stage3;
+    document.getElementById('stage-4-speed').innerText = v.stage4;
+    document.getElementById('info-veh-engine').innerText = v.engine;
+
+    calculateTuningTotal();
+  }
+
+  function selectAllTuning(check) {
+    document.querySelectorAll('.tuning-chk').forEach(c => {
+      c.checked = check;
+    });
+    calculateTuningTotal();
+  }
+
+  function formatMoney(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  function calculateTuningTotal() {
+    let total = 0;
+    let count = 0;
+
+    // Checkboxes
+    document.querySelectorAll('.tuning-chk').forEach(c => {
+      if (c.checked) {
+        if (c.id === 'xenon-chk') {
+          const customXenon = parseInt(document.getElementById('xenon-custom-price').value) || 0;
+          total += customXenon;
+        } else {
+          total += parseInt(c.getAttribute('data-price')) || 0;
+        }
+        count++;
+      }
+    });
+
+    // Stage chip radio
+    const stageRadio = document.getElementById('stage-custom-radio');
+    if (stageRadio && stageRadio.checked) {
+      const stagePrice = parseInt(document.getElementById('stage-custom-price').value) || 0;
+      total += stagePrice;
+      if (stagePrice > 0) count++;
+    }
+
+    // Update Live Total Labels
+    document.getElementById('tuning-total-display').innerText = formatMoney(total) + ' $';
+    document.getElementById('selected-mods-count').innerText = 'Обрано: ' + count + ' елементів';
+
+    // Total with car
+    const currentKey = document.getElementById('vehicle-select').value;
+    const baseCarPrice = vehicleDatabase[currentKey] ? vehicleDatabase[currentKey].salonPrice : 28000000;
+    document.getElementById('total-with-car-display').innerText = formatMoney(baseCarPrice + total) + ' $';
+  }
+
+  // Initial Calculation on Load
+  calculateTuningTotal();
+</script></main><footer class="w-full bg-surface-container-lowest mt-space-2xl"><div class="max-w-[1360px] mx-auto px-margin py-12 flex flex-col gap-8"><div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8"><div class="flex flex-col gap-2 max-w-xl"><div class="flex items-center gap-3"><img alt="Q-Hub Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw"/><span class="font-label-mono-sm text-label-mono-sm uppercase px-2 py-0.5 rounded bg-surface-panel text-text-muted">v2.4 Core</span></div><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Q-Hub — незалежний фан-проєкт гравців, не пов'язаний з офіційною адміністрацією QuantRP. Всі торгові марки, зображення та найменування належать їх відповідним правовласникам.</p></div><div class="flex flex-wrap items-center gap-3"><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-primary text-[20px]">forum</span><span>Discord спільнота</span></a><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-status-success text-[20px]">sync_alt</span><span>Статус серверів</span></a></div></div><div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-4"><div class="flex flex-wrap items-center gap-6"><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="holovna" href="#">Головна</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="iventy" href="#">Івенти</a></div><div class="font-label-mono-sm text-label-mono-sm text-text-muted">© 2025 Q-Hub Community. Всі права захищено.</div></div></div></footer>
+</body></html>

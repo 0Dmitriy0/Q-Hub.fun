@@ -1115,3 +1115,94 @@ fieldset .static-form .btn { align-self: end; }
   .bp-calc-in, .bp-calc-out { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .bp-lead, .bp-lead:hover { transition: none; transform: none; } }
+
+/* ---------- WIKI: роботи й транспорт (design/stitch/wiki*.html, src/pages/Wiki.tsx) — один стиль для обох розділів ---------- */
+.wiki { display: flex; flex-direction: column; gap: 22px; }
+.wiki-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wiki-crumbs { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
+.wiki-crumbs a { color: var(--muted); text-decoration: none; }
+.wiki-crumbs a:hover { color: var(--fg); }
+.wiki-crumbs [aria-current] { color: var(--accent-hi); font-weight: 700; }
+.wiki-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); }
+.wiki-tabs a { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 700; font-size: 14px; }
+.wiki-tabs a:hover { color: var(--fg); }
+.wiki-tabs a.active { background: var(--accent); color: var(--accent-fg); box-shadow: 0 4px 14px rgba(255, 107, 0, .3); }
+.wiki-tabs .cnt { padding: 0 7px; border-radius: 999px; background: var(--bg); color: var(--faint); font-size: 11px; line-height: 18px; }
+.wiki-tabs a.active .cnt { background: rgba(22, 8, 0, .18); color: var(--accent-fg); }
+.wiki-tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wiki-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; padding: 28px; border-radius: 20px; background: radial-gradient(80% 140% at 100% 0%, rgba(255, 107, 0, .14), transparent 60%), var(--surface); border: 1px solid var(--line2); }
+.wiki-hero > div:first-child { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; max-width: 720px; }
+.wiki-hero h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.03em; }
+.wiki-hero p { font-size: 14.5px; line-height: 23px; }
+.wiki-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.wiki-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 12px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line2); }
+.wiki-stats b { font-size: 24px; line-height: 1.2; }
+.wiki-stats b.good { color: var(--good); } .wiki-stats b.bad { color: var(--bad); }
+.wiki-stats small { color: var(--faint); font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.wiki .tbar { padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.wiki .tbar .tabs a { background: var(--bg); border-color: var(--line2); }
+.wiki .tbar .tabs a.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.wiki-count { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--faint); font-size: 13px; margin-bottom: -8px; }
+.wiki-count b { color: var(--fg); }
+.wiki-none { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 16px; }
+.wiki-none b { font-size: 18px; color: var(--fg); }
+.wiki-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.wiki-tiles.one { grid-template-columns: 1fr; }
+.wiki-tiles .card { flex-direction: row; align-items: flex-start; gap: 12px; }
+.wiki-tiles b { font-size: 15px; }
+.wiki-tiles p { font-size: 13.5px; line-height: 21px; margin-top: 2px; }
+/* картки робіт */
+.wiki .jgrid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.wiki .jcard { border-radius: 16px; padding: 22px 14px 16px; }
+.wiki .jcard:hover { border-color: rgba(255, 107, 0, .5); }
+.wiki .jcard.ill { background: linear-gradient(160deg, var(--bad-soft), transparent 55%), var(--surface); }
+.wiki .jcard.ill:hover { border-color: color-mix(in srgb, var(--bad) 55%, transparent); }
+.wiki .jico { border-radius: 16px; background: var(--bg); border: 1px solid var(--line2); }
+/* теги робіт: легальна — зелений, нелегальна — червоний (як статуси всюди на сайті) */
+.jtag.ill { background: var(--bad-soft); color: var(--bad); }
+.jtag:not(.ill):not(.lvl) { background: var(--good-soft); color: var(--good); }
+/* картки транспорту */
+.wiki .vgrid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.wiki .vcard { border-radius: 16px; padding: 12px 12px 14px; }
+.wiki .vcard:hover { border-color: rgba(255, 107, 0, .5); }
+.wiki .vcard.excl:hover { border-color: var(--gold); }
+.wiki .vpic { border-radius: 12px; background: var(--bg); }
+.wiki .vhead { padding: 0 4px; }
+.wiki .vprice { padding: 0 4px; font-size: 20px; }
+.wiki .vspec { padding: 0 4px; }
+.wiki .vspec li { padding: 3px 8px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line2); }
+.wiki .stars { padding: 10px 4px 0; border-top: 1px solid var(--line); }
+/* вікна роботи й транспорту — однаковий заголовок і блоки */
+.wdlg { border-radius: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .7); }
+.wdlg::backdrop { background: rgba(7, 10, 14, .7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.wdlg .modal-box { padding: 22px; gap: 14px; }
+.wdlg-h { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line2); }
+.wdlg-ico { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; background: rgba(255, 107, 0, .14); border: 1px solid rgba(255, 107, 0, .3); color: var(--accent-hi); }
+.wdlg-ico.ill { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.wdlg-t { flex: 1; min-width: 0; }
+.wdlg-t h2 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.wdlg-x { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); }
+.wdlg-box { padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line2); }
+.wdlg .jd-sec h3 { font: 700 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-hi); border: 0; padding: 0; margin-bottom: 8px; }
+.wdlg .jd-sec ul { padding-left: 16px; }
+.wdlg .jd-sec li::marker { color: var(--accent-hi); }
+.wdlg-f { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line2); }
+.wdlg-f .jd-src { margin: 0; }
+.wdlg .vd-pic { position: relative; background: radial-gradient(70% 90% at 50% 100%, rgba(255, 107, 0, .18), transparent 70%), linear-gradient(180deg, #141b24, #0a0e14); border: 1px solid var(--line2); }
+.vd-chip { position: absolute; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(7, 10, 14, .8); border: 1px solid #263344; color: #f4f7fb; font-size: 12px; font-weight: 700; }
+.wdlg .vd-cols > section { padding: 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line2); }
+.wdlg .vd-cols h3 { font-size: 15px; border-color: var(--line2); }
+.wdlg .vd-stages { border-color: rgba(255, 107, 0, .4); background: rgba(255, 107, 0, .08); }
+.wdlg .vd-total { background: var(--surface); border: 1px solid rgba(255, 107, 0, .35); }
+@media (max-width: 900px) { .wiki-tiles { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .wiki-top { flex-direction: column; align-items: stretch; }
+  .wiki-tabs { display: flex; } .wiki-tabs a { flex: 1; justify-content: center; }
+  .wiki-hero { padding: 18px; }
+  .wiki-stats > div { min-width: 0; flex: 1; }
+  .wdlg .modal-box { padding: 16px; }
+  .wdlg-ico { width: 48px; height: 48px; } .wdlg-ico img { width: 38px; height: 38px; }
+  .wdlg-t h2 { font-size: 19px; }
+}
+.wiki > .card.row { flex-direction: row; align-items: center; padding: 12px 16px; }
+@media (max-width: 640px) { .wiki .jgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .wiki .jcard { padding: 16px 10px 12px; } }
