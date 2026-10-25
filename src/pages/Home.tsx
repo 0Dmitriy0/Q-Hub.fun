@@ -7,6 +7,11 @@ export default function Home() {
   const { session, signIn } = useAuth();
   return (
     <>
+      <Link className="promo" to="/mapa">
+        <img src="/promo/ghost-map-2000.webp" srcSet="/promo/ghost-map-1000.webp 1000w, /promo/ghost-map-2000.webp 2000w"
+          sizes="(max-width: 1200px) 100vw, 1168px" width="2000" height="496"
+          alt="Карта привидів вже тут! Швидко знаходь усіх привидів осіннього оновлення Quant RP. Відкрити карту" />
+      </Link>
       <section className="card hero">
         <span className="lbl">Для гравців QuantRP</span>
         <h1>Ціни, угоди й гроші персонажа — в одному місці</h1>
