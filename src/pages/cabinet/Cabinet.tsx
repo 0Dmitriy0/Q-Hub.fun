@@ -48,11 +48,17 @@ export default function Cabinet() {
   if (!supabase) return <div className="card empty">Кабінет запрацює після підключення Supabase (див. README).</div>;
   if (!ready) return <div className="card empty">Завантаження…</div>;
   if (!session) return (
-    <section className="card hero">
-      <h1>Кабінет</h1>
-      <p className="muted">Облік, склад, гараж і угоди твого персонажа. Бачиш їх лише ти — це перевіряє сама база.</p>
-      <div className="row"><button className="btn acc" onClick={signIn}>Увійти через Discord</button></div>
-    </section>
+    <div className="cab">
+      <section className="wiki-hero">
+        <div>
+          <span className="h-pill"><span className="mdot" aria-hidden="true" />Особистий кабінет</span>
+          <h1>Кабінет гравця</h1>
+          <p className="muted">Облік, склад, гараж і угоди твого персонажа. Бачиш їх лише ти — це перевіряє сама база.</p>
+          <div className="row"><button className="btn acc" onClick={signIn}><Icon name="user" />Увійти через Discord</button><Link className="btn ghost" to="/programa"><Icon name="download" />Програма для запису</Link></div>
+        </div>
+      </section>
+      <div className="h-cards">{TABS.slice(1, 5).map(([, l, d, ico]) => <div key={l} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{l}</h3><p className="muted">{d}</p></div>)}</div>
+    </div>
   );
 
   const seg = pathname.split('/')[2] || '';
@@ -82,7 +88,7 @@ export default function Cabinet() {
   if (desktop) return (
     <div className="desk">
       <aside className="dside">
-        <div className="dbrand"><span className="logo" aria-hidden="true">Q</span><div><b>Q-Hub</b><small>{current?.name || name}{gameName ? ' · QuantRP' : ''}</small></div></div>
+        <div className="dbrand"><img className="logo" src="/brand/q-hub-logo.svg" alt="" width={36} height={36} /><div><b>Q-Hub</b><small>{current?.name || name}{gameName ? ' · QuantRP' : ''}</small></div></div>
         <nav className="dnav" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => (
           <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={18} />{l}</NavLink>))}
         </nav>
@@ -101,17 +107,26 @@ export default function Cabinet() {
     </div>
   );
 
+  /* сайт: шапка й вкладки в стилі WIKI (src/pages/Wiki.tsx), під ними — розділ кабінету */
   return (
-    <>
-      <div className="row between">
-        <div><span className="lbl">{who}{staticId ? <> <Link to="/kabinet/nalashtuvannya">змінити</Link></> : null}</span><h1>{current ? current.name : 'Кабінет'}</h1></div>
+    <div className="cab">
+      <div className="wiki-top">
+        <nav className="wiki-crumbs mono" aria-label="Де ти зараз"><Link to="/">Q-Hub</Link><span aria-hidden="true">/</span><Link to="/kabinet">Кабінет</Link><span aria-hidden="true">/</span><span aria-current="page">{tab[1]}</span></nav>
         <div className="row">{pick}<button className="btn ghost sm" onClick={signOut}>Вийти</button></div>
       </div>
-      <nav className="tabs" aria-label="Кабінет">{TABS.map(([p, l]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end>{l}</NavLink>)}</nav>
+      <section className="wiki-hero cab-hero">
+        <div>
+          <span className="h-pill"><span className="mdot good" aria-hidden="true" />{who}{staticId ? <> · <Link to="/kabinet/nalashtuvannya">змінити</Link></> : null}</span>
+          <h1>{current ? current.name : 'Кабінет'}</h1>
+          <p className="muted">{tab[2]}</p>
+        </div>
+        {avatar && <img className="cab-ava" src={avatar} alt="" width={72} height={72} />}
+      </section>
+      <nav className="wiki-tabs cab-tabs" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={16} />{l}</NavLink>)}</nav>
       {!canEdit && (
         <p className="card note" role="note">Тут — лише перегляд статистики. Записувати угоди, облік, склад і гараж — у програмі Q-Hub для Windows.</p>
       )}
       {body}
-    </>
+    </div>
   );
 }

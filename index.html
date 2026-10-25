@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#070707" />
+    <meta name="theme-color" content="#10141a" />
     <meta name="google" content="notranslate" />
     <meta name="description" content="Q-Hub — ціни скупників і ринку гравців QuantRP, довідник, облік, склад і гараж персонажа." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Unbounded:wght@500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" />
     <title>Q-Hub</title>
     <script>
-      /* тема до першого кадру, без спалаху: вибір гравця, інакше темна.
+      /* тема до першого кадру, без спалаху: явна світла, інакше темна (колишнє 'auto' теж темна).
          Старий ключ qhub-theme зберігав 'auto' всім підряд, тож з нього беремо лише явну світлу */
       (function () {
-        var t = 'dark'; try { t = localStorage.getItem('qhub-theme2') || (localStorage.getItem('qhub-theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
-        var dark = t === 'dark' || (t === 'auto' && !(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches));
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        var light = false; try { light = localStorage.getItem('qhub-theme2') === 'light' || localStorage.getItem('qhub-theme') === 'light'; } catch (e) {}
+        document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+        if (light) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f3f5f8');
       })();
     </script>
   </head>

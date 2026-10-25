@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uk" style=""><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><title>Q-Hub — Quant RP Hub</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"surface-obsidian":"#070A0E","border-tactical":"#263344","status-danger":"#EF4444","secondary":"#bec7d8","primary":"#ffb693","surface-dim":"#10141a","surface-variant":"#31353c","text-secondary":"#8B9BB0","on-secondary-container":"#b0b9ca","tertiary-fixed":"#ffdbc7","on-surface-variant":"#e2bfb0","on-error":"#690005","surface-tint":"#ffb693","primary-fixed-dim":"#ffb693","outline":"#a98a7d","status-info":"#0EA5E9","error-container":"#93000a","surface-card-subtle":"#10161F","surface":"#10141a","on-tertiary-fixed":"#311300","secondary-fixed-dim":"#bec7d8","text-primary":"#F4F7FB","primary-container":"#ff6b00","status-success":"#10B981","surface-panel-hover":"#1A2330","text-muted":"#56677D","secondary-fixed":"#dae3f5","surface-bright":"#353940","on-secondary":"#28313e","surface-container-high":"#262a31","on-surface":"#dfe2eb","surface-container-lowest":"#0a0e14","on-primary-fixed":"#351000","on-error-container":"#ffdad6","on-secondary-fixed":"#131c29","inverse-on-surface":"#2d3137","inverse-surface":"#dfe2eb","on-background":"#dfe2eb","surface-panel":"#141B24","secondary-container":"#414a58","on-tertiary":"#512400","on-tertiary-container":"#522400","on-secondary-fixed-variant":"#3e4755","inverse-primary":"#a04100","error":"#ffb4ab","on-primary-fixed-variant":"#7a3000","on-primary-container":"#572000","outline-variant":"#5a4136","surface-container":"#1c2026","on-tertiary-fixed-variant":"#733600","primary-fixed":"#ffdbcc","tertiary-fixed-dim":"#ffb688","border-tactical-focus":"#FF7A1A","on-primary":"#561f00","surface-container-low":"#181c22","tertiary-container":"#e47f33","accent-orange-glow":"rgba(255, 107, 0, 0.28)","tertiary":"#ffb688","background":"#10141a","accent-neon-orange":"#FF7A1A","surface-container-highest":"#31353c","status-warning":"#F59E0B"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","margin":"2rem","space-md":"1rem","gutter":"1.25rem","space-lg":"1.5rem","gutter-mobile":"0.75rem","space-2xl":"3.5rem","margin-mobile":"1rem","space-xl":"2.25rem","space-xs":"0.25rem"},"fontFamily":{"headline-lg":["Manrope"],"body-lg":["Manrope"],"label-mono-lg":["JetBrains Mono"],"body-md":["Manrope"],"label-mono-md":["JetBrains Mono"],"headline-md":["Manrope"],"headline-xl-mobile":["Manrope"],"body-sm":["Manrope"],"headline-sm":["Manrope"],"headline-xl":["Manrope"],"label-mono-sm":["JetBrains Mono"],"display-hero":["Manrope"],"display-hero-mobile":["Manrope"]},"fontSize":{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"label-mono-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"label-mono-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"700"}],"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.025em","fontWeight":"800"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"display-hero-mobile":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"800"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col justify-between"><header class="fixed top-0 w-full z-50 bg-surface-obsidian/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-20 max-w-[1360px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-6 lg:gap-8"><a class="flex items-center gap-2.5 group transition-transform hover:scale-105 duration-300" data-path="holovna" href="#"><img alt="Q-Hub Logo" class="h-9 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg2InXIWVpzLBKqvzE1ns5pPahb3mJCHLktduAAEw9ud3NbET1PBwvyJ-6vfDdyu88gl9o6o5prm0R_z3mYcyiJTDTIbXJRasyy_P2lPBIK1W0oAjuFNzyiMzbE7KPiL336QHuRslU9EwK1IimoY7n_47pewXnhLMqJqzYfp5bBomP_ArSDnDYj1SdpdfOPzdB9ddxZ8y7zTfYRHU80DC4tdonnmRczx2-ZMbK6oa8FghKI1FCLGJdSI6rTKa7JV4j1xY"/></a><div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-panel/80 text-text-secondary font-label-mono-sm text-[11px]"><span class="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_#10B981] animate-pulse"></span><span class="text-text-primary font-semibold">Quant RP:</span><span class="text-status-success font-semibold">ONLINE</span></div><nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-surface-panel/90 shadow-inner" data-active-classes="bg-surface-container-high text-primary font-bold shadow-sm"><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="holovna" href="#">Головна</a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="mapa-shtatu" href="#"><span>Мапа штату</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-surface-card-subtle text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">В ГРУ</span></a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="prohrama-overlei" href="#"><span>Програма-оверлей</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-primary-container/15 text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">AI + СКАН</span></a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="iventy" href="#">Івенти</a></nav></div><div class="flex items-center gap-3.5"><button aria-label="Перемкнути тему" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[19px]">dark_mode</span></button><a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:shadow-[0_0_20px_-2px_rgba(255,107,0,0.55)] hover:bg-accent-neon-orange transition-all duration-300" data-path="login-discord" href="#"><span class="material-symbols-outlined text-[18px]">sports_esports</span><span class="whitespace-nowrap">Увійти через Discord</span></a><div class="w-9 h-9 rounded-full bg-surface-card-subtle flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-text-secondary text-[20px]">person</span></div></div></div></header><main class="w-full pt-20 bg-surface flex-grow"><div class="flex flex-col w-full">
+<!-- Subtle Tactical Ambient Glows -->
+<div class="relative w-full overflow-hidden">
+<div class="absolute top-0 right-1/4 w-[500px] h-[300px] bg-primary-container/10 rounded-full blur-[140px] pointer-events-none"></div>
+<div class="absolute top-48 left-10 w-[350px] h-[350px] bg-status-info/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="max-w-[1360px] mx-auto px-margin py-8 flex flex-col gap-8 relative z-10">
+<!-- Breadcrumb & Top Utility Bar -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-2 font-label-mono-sm text-text-muted">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[14px]">grid_view</span> Q-HUB
+          </a>
+<span>/</span>
+<a class="hover:text-primary transition-colors" href="#">WIKI</a>
+<span>/</span>
+<span class="text-accent-neon-orange font-bold uppercase tracking-wider">ТРАНСПОРТ ШТАТУ</span>
+</div>
+<!-- Quick Switcher Tabs: Роботи vs Транспорт -->
+<div class="flex items-center gap-1 p-1 bg-surface-panel rounded-full shadow-inner">
+<a class="flex items-center gap-2 px-5 py-2 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">work</span>
+<span>Роботи</span>
+<span class="font-label-mono-sm px-2 py-0.5 rounded-full bg-surface-card-subtle text-text-muted">30</span>
+</a>
+<a class="flex items-center gap-2 px-5 py-2 rounded-full font-headline-sm text-body-sm bg-primary-container text-on-primary-container font-bold shadow-[0_2px_12px_rgba(255,107,0,0.35)] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">directions_car</span>
+<span>Транспорт</span>
+<span class="font-label-mono-sm px-2 py-0.5 rounded-full bg-on-primary-container/20 text-on-primary-container">240+</span>
+</a>
+</div>
+</div>
+<!-- Main Header Section -->
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-2">
+<div class="flex flex-col gap-2 max-w-3xl">
+<div class="flex items-center gap-3">
+<h1 class="font-display-hero text-headline-xl lg:text-display-hero text-text-primary tracking-tight font-extrabold">
+              Транспорт штату
+            </h1>
+<span class="font-label-mono-sm uppercase px-2.5 py-1 rounded bg-surface-panel text-accent-neon-orange border-none shadow-sm flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-neon-orange animate-pulse"></span>
+              LIVE DATA 2.4
+            </span>
+</div>
+<p class="font-body-lg text-text-secondary leading-relaxed">
+            Каталог автосалонів: державні ціни, швидкість, тип пального та характеристики. Зірки на картці — середня оцінка від жителів штату. Увійдіть у свій профіль, щоб поставити власний бал (1-5).
+          </p>
+</div>
+<!-- Quick Summary Stats Pod -->
+<div class="flex items-center gap-4 bg-surface-card-subtle p-3 rounded-xl shadow-sm self-start lg:self-auto">
+<div class="flex items-center gap-3 px-3 py-1">
+<div class="w-10 h-10 rounded-lg bg-surface-panel flex items-center justify-center text-accent-neon-orange">
+<span class="material-symbols-outlined text-[22px]">garage</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-text-muted">ВСЬОГО МОДЕЛЕЙ</span>
+<span class="font-headline-md text-text-primary">305 шт</span>
+</div>
+</div>
+<div class="w-px h-8 bg-surface-panel"></div>
+<div class="flex items-center gap-3 px-3 py-1">
+<div class="w-10 h-10 rounded-lg bg-surface-panel flex items-center justify-center text-status-success">
+<span class="material-symbols-outlined text-[22px]">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-text-muted">МАКС. ШВИДКІСТЬ</span>
+<span class="font-headline-md text-accent-neon-orange">470 км/г</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tactical Filter & Search Command Strip -->
+<div class="flex flex-col gap-4 bg-surface-panel p-4 rounded-xl shadow-md">
+<!-- Top Row: Category Tabs & View Options -->
+<div class="flex flex-wrap items-center justify-between gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<button class="flex items-center gap-2 px-4 py-2 rounded-full font-headline-sm text-body-sm bg-primary-container text-on-primary-container font-bold shadow-[0_2px_10px_rgba(255,107,0,0.3)] transition-all" type="button">
+<span>Усі</span>
+<span class="font-label-mono-sm px-1.5 py-0.2 rounded-full bg-on-primary-container/20">305</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">directions_car</span>
+<span>Авто</span>
+<span class="font-label-mono-sm px-1.5 py-0.2 rounded-full bg-surface-panel text-text-muted">284</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">two_wheeler</span>
+<span>Мото</span>
+<span class="font-label-mono-sm px-1.5 py-0.2 rounded-full bg-surface-panel text-text-muted">11</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full font-headline-sm text-body-sm bg-surface-card-subtle text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">flight</span>
+<span>Авіа</span>
+<span class="font-label-mono-sm px-1.5 py-0.2 rounded-full bg-surface-panel text-text-muted">11</span>
+</button>
+</div>
+<div class="flex items-center gap-2 font-label-mono-sm text-text-muted">
+<span class="material-symbols-outlined text-[16px] text-accent-neon-orange">tune</span>
+<span>РОЗШИРЕНИЙ ФІЛЬТР</span>
+</div>
+</div>
+<!-- Bottom Row: Search Box & Select Dropdowns -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center pt-2">
+<!-- Search input -->
+<div class="md:col-span-5 relative">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full pl-10 pr-14 py-2.5 bg-surface-card-subtle text-text-primary font-body-md placeholder:text-text-muted rounded-lg focus:outline-none focus:ring-1 focus:ring-accent-neon-orange shadow-inner" placeholder="Пошук за назвою або маркою..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="font-label-mono-sm text-[11px] px-1.5 py-0.5 rounded bg-surface-panel text-text-muted">/</span>
+</div>
+</div>
+<!-- Select 1: Currency -->
+<div class="md:col-span-2 relative">
+<button class="w-full flex items-center justify-between px-3.5 py-2.5 bg-surface-card-subtle text-text-secondary hover:text-text-primary rounded-lg font-body-md transition-colors" type="button">
+<span class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[18px] text-status-warning">attach_money</span>
+<span>Будь-яка валюта</span>
+</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+<!-- Select 2: Fuel type -->
+<div class="md:col-span-2 relative">
+<button class="w-full flex items-center justify-between px-3.5 py-2.5 bg-surface-card-subtle text-text-secondary hover:text-text-primary rounded-lg font-body-md transition-colors" type="button">
+<span class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[18px] text-accent-neon-orange">local_gas_station</span>
+<span>Пальне й електро</span>
+</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+<!-- Select 3: Sorting -->
+<div class="md:col-span-3 relative">
+<button class="w-full flex items-center justify-between px-3.5 py-2.5 bg-surface-card-subtle text-text-secondary hover:text-text-primary rounded-lg font-body-md transition-colors" type="button">
+<span class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[18px] text-primary">sort</span>
+<span>Ціна (За спаданням)</span>
+</span>
+<span class="material-symbols-outlined text-[16px]">swap_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 4-Column Grid of 16 Vehicle Cards matching prompt & screenshot -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- CARD 1: Buckingham OE135 -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">flight</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham</span>
+<span class="font-label-mono-sm text-text-secondary">#OE-135</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham OE135
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              38 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>280 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 2: Enus EXP 100 -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">directions_car</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-status-info/20 text-status-info font-bold">ЕЛЕКТРО</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Enus • Люкс</span>
+<span class="font-label-mono-sm text-text-secondary">CONCEPT</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Enus EXP 100
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              25 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>420 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-status-info bg-status-info/10 px-2.5 py-1.5 rounded-lg font-semibold">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span>Електро</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 3: Buckingham Volatus -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">HELI</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham Volatus
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              20 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>213 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 4: Överflöd Jes (Featured with glowing photo) -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(255,107,0,0.25)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-obsidian overflow-hidden">
+<img class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" data-alt="Modern neon orange Koenigsegg Jesko hypercar parked in a cinematic tactical underground dark showroom with ambient orange rim lighting and glossy carbon reflections on obsidian asphalt." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhowZugtOySK_fGvny3l-ltCY_KHok583brOV1LskP32MRk9XuKaMloSOo1f3W2mSyxDtmA4ZJBd07sdP_Gb9fafLEUFtdJZILBcN6OTcaaXwFjVIxkPkIBVYZbw4HnZ-vbPlbVtnB-Th4RWByiOzHH9pvLNgHTZM7FtKQk-UHJhPFY25rXjCOhTCxj6WH_39O2b1x-c0WhF07xTgYEwMAcw9giacDtg89B5umeUWcXz_fv85H9yJT8Q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card-subtle via-transparent to-transparent"></div>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-primary-container text-on-primary-container font-bold shadow-md">ТОП 1 ШВИДКІСТЬ</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-primary font-label-mono-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-accent-neon-orange font-semibold">Överflöd • Люкс</span>
+<span class="font-label-mono-sm text-text-secondary">HYPERCAR</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Överflöd Jes
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              20 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-accent-neon-orange font-bold bg-primary-container/15 px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span>470 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-status-warning">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-mono-sm ml-1 text-text-primary font-bold">5.0</span>
+<span class="font-label-mono-sm text-text-muted">(24)</span>
+</div>
+<button class="font-label-mono-sm text-accent-neon-orange hover:underline">Оціни</button>
+</div>
+</div>
+<!-- CARD 5: Buckingham Conada -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">HELI</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham Conada
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              19 200 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>224 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 6: Buckingham Supervolito -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">VIP</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham Supervolito
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              18 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>223 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 7: Cheval Striker -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">directions_car</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">СПОРТ</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Cheval • Люкс</span>
+<span class="font-label-mono-sm text-text-secondary">STRIKE</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Cheval Striker
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              18 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>440 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 8: Maibatsu Frogger -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Maibatsu • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">CORP</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Maibatsu Frogger
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              16 800 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>204 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 9: Coil Never (Featured Electric Hypercar with preview photo) -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-obsidian overflow-hidden">
+<img class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" data-alt="Futuristic midnight purple and deep neon blue hypercar electric vehicle Rimac Nevera style studio render with sharp LED headlights against a dark minimalist carbon studio backdrop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBy7xqHwx6l3vaS0r875-2H_IIRrwhaM6M8byCmtjhrp42gPJtIrMcA_m0wM5wvwynmutaLwzIbYAfp6CEUATMroSAXP82ZSha6g38HUTIjOIOLME7ipspd_qp8uQzNfK3WuJb0MDuynJhY8SW0i6hsVfP-cjdEG0dT3yJaNcxTBtH6kBlkDTdu5N7QLXdjjATe0WiHofruOJVEJbW2VJtDXPASJYA0Ze_uXgo4ExhS5HBuqmW6MWV-qg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card-subtle via-transparent to-transparent"></div>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-status-info/20 text-status-info font-bold">EV LUX</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-primary font-label-mono-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Coil • Люкс</span>
+<span class="font-label-mono-sm text-status-info">ELECTRIC</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Coil Never
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              16 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>420 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-status-info bg-status-info/10 px-2.5 py-1.5 rounded-lg font-semibold">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span>Електро</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 10: Buckingham Swift -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">SWIFT</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham Swift
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              15 600 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>210 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 11: Truffade Veyro (Featured with photo) -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-obsidian overflow-hidden">
+<img class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" data-alt="Glossy dark metallic grey Bugatti Veyron supercar profile shot parked in front of high-tech modern hangar with warm floor lighting reflections and carbon aerodynamic trim." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeie_cLlTSfz-feNoBwKA2ogVC2mL8q4ioY5EMp6IpOu0M1h5JSnPd4i0zULoJw-ILFMu_nKgr8sOCxh5GTZdMrhUaTN17Fb4jvPJ0cqNE90fe66DYsDZufu6zHIujvgxJfFR9FmO2GUgU_wMTQzjrSAndAMa1M1TkdCgkMycVPRsrvuK6OQt1iAVQRorB5MJhIYwPQzDaWYgccsmg9fxArTEJhOIVsu2Gc1jUU0MuK24vr6PV2EbZhQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card-subtle via-transparent to-transparent"></div>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-primary">ЛЕГЕНДА</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-primary font-label-mono-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Truffade • Люкс</span>
+<span class="font-label-mono-sm text-text-secondary">W16 QUAD</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Truffade Veyro
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              14 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>400 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 12: Grotti Davinci (Featured with photo) -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-obsidian overflow-hidden">
+<img class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" data-alt="Crimson red Ferrari Daytona SP3 supercar in tactical neon lit urban night scenery with reflective puddle wet asphalt and subtle golden flare highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvi0DRNCL7qDfl4gdvy4ikK-1K_d8smtfK0ARd4aMBX4jkWDaacNPWr8ctuzbO8-NTYPd1eJ5v3MtWoJ9fD2Ce5Du_LPNILpP90lhx8n4y_84tcO7be5-9CbQawUPJvtKsqveqt2f4QrNlu1jC5Fi9fRujY-GxDEVv_e4q-fosh1Cx2T5-AAM2_wf2bFvjV-uD3ybx6G4pLZWI6pj_ef-pCNAeD4d6hAlyGmOxtqsDeqgcNbRZq5Bg3w"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card-subtle via-transparent to-transparent"></div>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-status-info/20 text-status-info font-bold">HYBRID EV</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-primary font-label-mono-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Grotti • Люкс</span>
+<span class="font-label-mono-sm text-status-info">E-TECH</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Grotti Davinci
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              14 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>400 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-status-info bg-status-info/10 px-2.5 py-1.5 rounded-lg font-semibold">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span>Електро</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 13: Nagasaki Buzzard -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Nagasaki • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">AGILE</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Nagasaki Buzzard
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              13 800 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>208 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 14: Buckingham Maverick -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">helicopter</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-secondary">АВІА</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Buckingham • Авіа</span>
+<span class="font-label-mono-sm text-text-secondary">4-SEATER</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Buckingham Maverick
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              12 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>195 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 15: Grotti Bastion -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-panel group-hover:bg-surface-container flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-muted text-[48px] opacity-40 group-hover:scale-110 transition-transform duration-500">directions_car</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-secondary hover:text-text-primary font-label-mono-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-status-info/20 text-status-info font-bold">ЕЛЕКТРО</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Grotti • Люкс</span>
+<span class="font-label-mono-sm text-status-info">GT</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Grotti Bastion
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              12 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>380 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-status-info bg-status-info/10 px-2.5 py-1.5 rounded-lg font-semibold">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span>Електро</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+<!-- CARD 16: Pegassi Sia (Featured with photo) -->
+<div class="group relative bg-surface-card-subtle hover:bg-surface-panel rounded-xl overflow-hidden p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:-translate-y-1">
+<div class="flex flex-col gap-3">
+<div class="relative w-full h-40 rounded-lg bg-surface-obsidian overflow-hidden">
+<img class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" data-alt="Matte dark graphite grey Lamborghini Sian supercar in a futuristic glowing neon hangar showroom with sharp geometric angular body lines and gold rims." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyVRv-NjjoDIxUQAbanBmswUWPHztMI2YaYE26rWKZNKDF1AsGLmJQuUmBTPqFK1oQgZeA3xzrdPGobFahwI4WUHarcceP8547C_XhTkHkVqW2dZi3tRlXdOhBugiFQeKqcx_vNU6DaxTi-EqcVRq5z4xXaPh30jR8nYM1Rj6tRwp2y9agdfY8U4xT0QhHtEanBSrjDUgKf48CemaGWveaVLOROP2SNm0nZnrKWJVutM3Nuks7-TDlSg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card-subtle via-transparent to-transparent"></div>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded font-label-mono-sm bg-surface-obsidian/70 text-text-primary">V12 HYBRID</span>
+<button class="absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-surface-card-subtle/80 backdrop-blur-md text-text-primary font-label-mono-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+<span>Фото</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-label-mono-sm text-text-muted">Pegassi • Люкс</span>
+<span class="font-label-mono-sm text-text-secondary">LIMITED</span>
+</div>
+<h2 class="font-headline-md text-text-primary font-bold group-hover:text-accent-neon-orange transition-colors">
+                Pegassi Sia
+              </h2>
+</div>
+<div class="font-headline-lg text-accent-neon-orange font-extrabold tracking-tight">
+              10 000 000 $
+            </div>
+<div class="grid grid-cols-2 gap-2 pt-1 font-label-mono-sm">
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-primary">speed</span>
+<span>360 км/г</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary bg-surface-panel px-2.5 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[15px] text-status-warning">local_gas_station</span>
+<span>Пальне</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 bg-surface-panel/40 -mx-4 -mb-4 px-4 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+<span class="font-label-mono-sm ml-1 text-text-muted">ще без оцінок</span>
+</div>
+<button class="font-label-mono-sm text-text-muted hover:text-accent-neon-orange transition-colors">Оціни</button>
+</div>
+</div>
+</div>
+<!-- Tactical Pagination & Results Counter -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-8">
+<div class="font-label-mono-sm text-text-muted">
+          ПОКАЗАНО <span class="text-text-primary font-bold">1–16</span> З <span class="text-text-primary font-bold">305</span> ОДИНИЦЬ ТРАНСПОРТУ
+        </div>
+<div class="flex items-center gap-2">
+<button class="w-9 h-9 rounded-lg bg-surface-panel flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-panel-hover transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-primary-container text-on-primary-container font-headline-sm font-bold flex items-center justify-center shadow-md" type="button">
+            1
+          </button>
+<button class="w-9 h-9 rounded-lg bg-surface-panel text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm flex items-center justify-center transition-colors" type="button">
+            2
+          </button>
+<button class="w-9 h-9 rounded-lg bg-surface-panel text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm flex items-center justify-center transition-colors" type="button">
+            3
+          </button>
+<span class="text-text-muted px-1 font-label-mono-sm">...</span>
+<button class="w-9 h-9 rounded-lg bg-surface-panel text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm flex items-center justify-center transition-colors" type="button">
+            20
+          </button>
+<button class="w-9 h-9 rounded-lg bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Tactical Floating HUD Tooltip Widget -->
+<div class="w-full bg-gradient-to-r from-surface-card-subtle via-surface-panel to-surface-card-subtle p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 text-accent-neon-orange flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[28px]">speed</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-text-primary font-bold">Шукаєте калькулятор тюнінгу чи розгін?</span>
+<p class="font-body-md text-text-secondary">У нашому оверлей-додатку доступні повні ТТХ: гальмівний шлях, максималка на чіпі Stage 3 та вартість обслуговування.</p>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<a class="px-5 py-2.5 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:bg-accent-neon-orange transition-all" href="#">
+            Відкрити Оверлей
+          </a>
+</div>
+</div>
+</div>
+</div>
+</div></main><footer class="w-full bg-surface-container-lowest mt-space-2xl"><div class="max-w-[1360px] mx-auto px-margin py-12 flex flex-col gap-8"><div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8"><div class="flex flex-col gap-2 max-w-xl"><div class="flex items-center gap-3"><img alt="Q-Hub Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw"/><span class="font-label-mono-sm text-label-mono-sm uppercase px-2 py-0.5 rounded bg-surface-panel text-text-muted">v2.4 Core</span></div><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Q-Hub — незалежний фан-проєкт гравців, не пов'язаний з офіційною адміністрацією QuantRP. Всі торгові марки, зображення та найменування належать їх відповідним правовласникам.</p></div><div class="flex flex-wrap items-center gap-3"><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-primary text-[20px]">forum</span><span>Discord спільнота</span></a><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-status-success text-[20px]">sync_alt</span><span>Статус серверів</span></a></div></div><div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-4"><div class="flex flex-wrap items-center gap-6"><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="holovna" href="#">Головна</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="iventy" href="#">Івенти</a></div><div class="font-label-mono-sm text-label-mono-sm text-text-muted">© 2025 Q-Hub Community. Всі права захищено.</div></div></div></footer>
+</body></html>

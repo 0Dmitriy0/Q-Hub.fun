@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uk" style=""><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><title>Q-Hub — Quant RP Hub</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"surface-obsidian":"#070A0E","border-tactical":"#263344","status-danger":"#EF4444","secondary":"#bec7d8","primary":"#ffb693","surface-dim":"#10141a","surface-variant":"#31353c","text-secondary":"#8B9BB0","on-secondary-container":"#b0b9ca","tertiary-fixed":"#ffdbc7","on-surface-variant":"#e2bfb0","on-error":"#690005","surface-tint":"#ffb693","primary-fixed-dim":"#ffb693","outline":"#a98a7d","status-info":"#0EA5E9","error-container":"#93000a","surface-card-subtle":"#10161F","surface":"#10141a","on-tertiary-fixed":"#311300","secondary-fixed-dim":"#bec7d8","text-primary":"#F4F7FB","primary-container":"#ff6b00","status-success":"#10B981","surface-panel-hover":"#1A2330","text-muted":"#56677D","secondary-fixed":"#dae3f5","surface-bright":"#353940","on-secondary":"#28313e","surface-container-high":"#262a31","on-surface":"#dfe2eb","surface-container-lowest":"#0a0e14","on-primary-fixed":"#351000","on-error-container":"#ffdad6","on-secondary-fixed":"#131c29","inverse-on-surface":"#2d3137","inverse-surface":"#dfe2eb","on-background":"#dfe2eb","surface-panel":"#141B24","secondary-container":"#414a58","on-tertiary":"#512400","on-tertiary-container":"#522400","on-secondary-fixed-variant":"#3e4755","inverse-primary":"#a04100","error":"#ffb4ab","on-primary-fixed-variant":"#7a3000","on-primary-container":"#572000","outline-variant":"#5a4136","surface-container":"#1c2026","on-tertiary-fixed-variant":"#733600","primary-fixed":"#ffdbcc","tertiary-fixed-dim":"#ffb688","border-tactical-focus":"#FF7A1A","on-primary":"#561f00","surface-container-low":"#181c22","tertiary-container":"#e47f33","accent-orange-glow":"rgba(255, 107, 0, 0.28)","tertiary":"#ffb688","background":"#10141a","accent-neon-orange":"#FF7A1A","surface-container-highest":"#31353c","status-warning":"#F59E0B"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-sm":"0.5rem","margin":"2rem","space-md":"1rem","gutter":"1.25rem","space-lg":"1.5rem","gutter-mobile":"0.75rem","space-2xl":"3.5rem","margin-mobile":"1rem","space-xl":"2.25rem","space-xs":"0.25rem"},"fontFamily":{"headline-lg":["Manrope"],"body-lg":["Manrope"],"label-mono-lg":["JetBrains Mono"],"body-md":["Manrope"],"label-mono-md":["JetBrains Mono"],"headline-md":["Manrope"],"headline-xl-mobile":["Manrope"],"body-sm":["Manrope"],"headline-sm":["Manrope"],"headline-xl":["Manrope"],"label-mono-sm":["JetBrains Mono"],"display-hero":["Manrope"],"display-hero-mobile":["Manrope"]},"fontSize":{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"label-mono-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"label-mono-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"700"}],"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.025em","fontWeight":"800"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"display-hero-mobile":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"800"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col justify-between"><header class="fixed top-0 w-full z-50 bg-surface-obsidian/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-20 max-w-[1360px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-6 lg:gap-8"><a class="flex items-center gap-2.5 group transition-transform hover:scale-105 duration-300" data-path="holovna" href="#"><img alt="Q-Hub Logo" class="h-9 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg2InXIWVpzLBKqvzE1ns5pPahb3mJCHLktduAAEw9ud3NbET1PBwvyJ-6vfDdyu88gl9o6o5prm0R_z3mYcyiJTDTIbXJRasyy_P2lPBIK1W0oAjuFNzyiMzbE7KPiL336QHuRslU9EwK1IimoY7n_47pewXnhLMqJqzYfp5bBomP_ArSDnDYj1SdpdfOPzdB9ddxZ8y7zTfYRHU80DC4tdonnmRczx2-ZMbK6oa8FghKI1FCLGJdSI6rTKa7JV4j1xY"/></a><div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-panel/80 text-text-secondary font-label-mono-sm text-[11px]"><span class="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_#10B981] animate-pulse"></span><span class="text-text-primary font-semibold">Quant RP:</span><span class="text-status-success font-semibold">ONLINE</span></div><nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-surface-panel/90 shadow-inner" data-active-classes="bg-surface-container-high text-primary font-bold shadow-sm"><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="holovna" href="#">Головна</a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="mapa-shtatu" href="#"><span>Мапа штату</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-surface-card-subtle text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">В ГРУ</span></a><a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="prohrama-overlei" href="#"><span>Програма-оверлей</span><span class="font-label-mono-sm text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-primary-container/15 text-accent-neon-orange group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">AI + СКАН</span></a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="iventy" href="#">Івенти</a></nav></div><div class="flex items-center gap-3.5"><button aria-label="Перемкнути тему" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[19px]">dark_mode</span></button><a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:shadow-[0_0_20px_-2px_rgba(255,107,0,0.55)] hover:bg-accent-neon-orange transition-all duration-300" data-path="login-discord" href="#"><span class="material-symbols-outlined text-[18px]">sports_esports</span><span class="whitespace-nowrap">Увійти через Discord</span></a><div class="w-9 h-9 rounded-full bg-surface-card-subtle flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-text-secondary text-[20px]">person</span></div></div></div></header><main class="w-full pt-20 bg-surface flex-grow"><div class="flex flex-col w-full">
+<!-- Subtle Tactical Ambient Background Elements -->
+<div class="relative w-full max-w-[1360px] mx-auto px-margin py-8 flex flex-col gap-8">
+<div class="absolute -top-16 right-1/4 w-96 h-96 bg-primary-container/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute top-96 left-10 w-72 h-72 bg-accent-neon-orange/5 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Breadcrumb & Wiki Section Switcher -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+<div class="flex items-center gap-2 font-label-mono-sm text-text-muted uppercase tracking-wider">
+<a class="hover:text-text-primary transition-colors" href="#">Q-HUB</a>
+<span>/</span>
+<a class="hover:text-text-primary transition-colors" href="#">WIKI</a>
+<span>/</span>
+<span class="text-accent-neon-orange">РОБОТИ ТА ВАКАНСІЇ</span>
+</div>
+<!-- Quick Switcher Tabs (Wiki Categories) -->
+<div class="inline-flex items-center p-1 rounded-full bg-surface-card-subtle shadow-inner">
+<button class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-md transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">work</span>
+<span>Роботи (30)</span>
+</button>
+<a class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-text-secondary hover:text-text-primary font-headline-sm text-body-md font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">directions_car</span>
+<span>Транспорт (240+)</span>
+</a>
+</div>
+</div>
+<!-- Main Header Card -->
+<div class="relative overflow-hidden rounded-xl bg-surface-panel p-6 sm:p-8 shadow-xl">
+<div class="absolute -right-8 -bottom-8 w-64 h-64 bg-primary-container/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+<div class="flex flex-col gap-2 max-w-3xl">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-surface-card-subtle text-accent-neon-orange font-label-mono-sm w-fit uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-neon-orange animate-pulse"></span>
+            База знань штату QuantRP
+          </div>
+<h1 class="font-headline-xl text-headline-xl text-text-primary tracking-tight">Роботи та Професії</h1>
+<p class="font-body-lg text-body-lg text-text-secondary">
+            Повний реєстр легальних та нелегальних джерел прибутку: вимоги рівня, локації влаштування, таймінги зарплатні та потенціал прокачки навички. Натисніть на картку для перегляду докладного гайду.
+          </p>
+</div>
+<!-- Quick Summary Stats Strip -->
+<div class="flex items-center gap-3 shrink-0">
+<div class="px-4 py-3 rounded-lg bg-surface-card-subtle flex flex-col items-center min-w-[90px]">
+<span class="font-headline-md text-headline-md text-text-primary">30</span>
+<span class="font-label-mono-sm text-text-muted uppercase">Всього робіт</span>
+</div>
+<div class="px-4 py-3 rounded-lg bg-surface-card-subtle flex flex-col items-center min-w-[90px]">
+<span class="font-headline-md text-headline-md text-status-success">25</span>
+<span class="font-label-mono-sm text-text-muted uppercase">Легальні</span>
+</div>
+<div class="px-4 py-3 rounded-lg bg-surface-card-subtle flex flex-col items-center min-w-[90px]">
+<span class="font-headline-md text-headline-md text-status-danger">5</span>
+<span class="font-label-mono-sm text-text-muted uppercase">Кримінал</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Filter & Search Command Bar -->
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-2 rounded-xl bg-surface-panel shadow-sm">
+<!-- Filter Segment Pills -->
+<div class="flex items-center gap-1.5 p-1 rounded-lg bg-surface-card-subtle overflow-x-auto" id="filter-container">
+<button class="filter-btn inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary-container text-on-primary-container font-headline-sm text-body-sm font-bold shadow-sm transition-all" data-filter="all" type="button">
+<span>Усі</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-obsidian/30 font-label-mono-sm text-on-primary-container">30</span>
+</button>
+<button class="filter-btn inline-flex items-center gap-2 px-4 py-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm text-body-sm font-semibold transition-all" data-filter="legal" type="button">
+<span>Легальні</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-panel font-label-mono-sm text-status-success">25</span>
+</button>
+<button class="filter-btn inline-flex items-center gap-2 px-4 py-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover font-headline-sm text-body-sm font-semibold transition-all" data-filter="illegal" type="button">
+<span class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-status-danger"></span>
+            Нелегальні
+          </span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-panel font-label-mono-sm text-status-danger">5</span>
+</button>
+</div>
+<!-- Search and Sort controls -->
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+<!-- Search Input with Alt+Q Hotkey -->
+<div class="relative flex-1 sm:w-80">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-[19px]">search</span>
+<input class="w-full pl-10 pr-16 py-2.5 rounded-lg bg-surface-card-subtle text-text-primary placeholder:text-text-muted font-body-sm focus:outline-none focus:bg-surface-panel-hover transition-all" id="job-search" placeholder="Пошук за назвою чи рівнем..." type="text"/>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-surface-panel font-label-mono-sm text-[10px] text-text-muted select-none">
+            ALT + Q
+          </span>
+</div>
+<!-- Sorting dropdown -->
+<div class="relative shrink-0">
+<select class="w-full sm:w-auto appearance-none pl-3.5 pr-9 py-2.5 rounded-lg bg-surface-card-subtle text-text-primary font-body-sm focus:outline-none focus:bg-surface-panel-hover cursor-pointer transition-all" id="job-sort">
+<option value="name">За назвою (А-Я)</option>
+<option value="level-asc">За рівнем (зростання)</option>
+<option value="level-desc">За рівнем (спадання)</option>
+<option value="income">За дохідністю (High)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">unfold_more</span>
+</div>
+</div>
+</div>
+<!-- Active Filter Chips / Counter Notification -->
+<div class="flex items-center justify-between text-body-sm text-text-muted">
+<div class="flex items-center gap-2">
+<span>Відображено:</span>
+<span class="font-label-mono-md text-text-primary font-bold" id="displayed-count">30</span>
+<span>з 30 робіт</span>
+</div>
+<div class="hidden sm:flex items-center gap-2 font-label-mono-sm text-text-muted">
+<span class="material-symbols-outlined text-[15px] text-accent-neon-orange">touch_app</span>
+<span>Клікніть по картці для відкриття детального вікна</span>
+</div>
+</div>
+<!-- 5-Column Tactical Jobs Grid (Matching screenshot dense layout) -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4" id="jobs-grid">
+<!-- Job 1: Автовикрадач (Нелегальна) -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="illegal" data-income="3" data-level="5" data-name="Автовикрадач">
+<div class="absolute top-2.5 right-2.5">
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm text-[10px] uppercase font-bold tracking-wider">Нелегальна</span>
+</div>
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">no_crash</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Автовикрадач</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 5 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5" title="Прибутковість 3/3">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 2: Акванавт -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="3" data-level="7" data-name="Акванавт">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">scuba_diving</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Акванавт</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 7 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5" title="Прибутковість 3/3">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 3: Водій автобуса -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Водій автобуса">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">directions_bus</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Водій автобуса</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5" title="Прибутковість 2/3">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 4: Водій навантажувача -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Водій навантажувача">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">forklift</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Водій навантажувача</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 5: Газонокосильник -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Газонокосильник">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">agriculture</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Газонокосильник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 6: Грибник -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Грибник">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">forest</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Грибник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 7: Далекобійник -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="3" data-level="3" data-name="Далекобійник">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">local_shipping</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Далекобійник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 3 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 8: Детектив -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="3" data-name="Детектив">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">manage_search</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Детектив</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 3 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 9: Донор -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Донор">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">bloodtype</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Донор</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 10: Евакуаторник -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="2" data-name="Евакуаторник">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">car_repair</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Евакуаторник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 2 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 11: Електрик -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="3" data-name="Електрик">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">bolt</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Електрик</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 3 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 12: Закладчик (Нелегальна) -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="illegal" data-income="3" data-level="2" data-name="Закладчик">
+<div class="absolute top-2.5 right-2.5">
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm text-[10px] uppercase font-bold tracking-wider">Нелегальна</span>
+</div>
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">inventory</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Закладчик</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 2 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 13: Зброяр (Нелегальна) -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="illegal" data-income="3" data-level="4" data-name="Зброяр">
+<div class="absolute top-2.5 right-2.5">
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm text-[10px] uppercase font-bold tracking-wider">Нелегальна</span>
+</div>
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">hardware</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Зброяр</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 4 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 14: Інкасатор -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="3" data-level="1" data-name="Інкасатор">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">savings</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Інкасатор</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 15: Каменяр -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Каменяр">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">handyman</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Каменяр</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 16: Крадій-домушник (Нелегальна) -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="illegal" data-income="3" data-level="5" data-name="Крадій-домушник">
+<div class="absolute top-2.5 right-2.5">
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm text-[10px] uppercase font-bold tracking-wider">Нелегальна</span>
+</div>
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">home_work</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Крадій-домушник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 5 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 17: Кур'єр -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Кур'єр">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">package_2</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Кур'єр</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 18: Лісоруб -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Лісоруб">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">carpenter</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Лісоруб</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 19: Механік -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Механік">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">build</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Механік</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 20: Мисливець -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Мисливець">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">filter_center_focus</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Мисливець</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 21: Наркодилер (Нелегальна) -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="illegal" data-income="3" data-level="2" data-name="Наркодилер">
+<div class="absolute top-2.5 right-2.5">
+<span class="px-2 py-0.5 rounded-full bg-status-danger/15 text-status-danger font-label-mono-sm text-[10px] uppercase font-bold tracking-wider">Нелегальна</span>
+</div>
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">masks</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Наркодилер</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 2 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 22: Пожежник -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="3" data-level="10" data-name="Пожежник">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">fire_truck</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Пожежник</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 10 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 23: Поштар -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Поштар">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">mark_email_unread</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Поштар</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 24: Продавець фастфуду -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Продавець фастфуду">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">lunch_dining</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Продавець фастфуду</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 25: Рибак -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Рибак">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">phishing</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Рибак</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 26: Розвізник продуктів -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="2" data-name="Розвізник продуктів">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">local_pizza</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Розвізник продуктів</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 2 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 27: Сміттяр -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="1" data-name="Сміттяр">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">delete_sweep</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Сміттяр</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 28: Таксі -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="2" data-level="2" data-name="Таксі">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">local_taxi</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors">Таксі</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 2 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 29: Шукач мотлоху -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="1" data-level="1" data-name="Шукач мотлоху">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">radar</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Шукач мотлоху</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+<span class="material-symbols-outlined text-[13px] text-text-muted">monetization_on</span>
+</span>
+</div>
+</div>
+<!-- Job 30: Шукач скарбів -->
+<div class="job-card group relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-low hover:bg-surface-panel-hover transition-all duration-300 shadow-md hover:shadow-[0_8px_24px_rgba(255,107,0,0.15)] cursor-pointer overflow-hidden" data-category="legal" data-income="3" data-level="1" data-name="Шукач скарбів">
+<div class="flex flex-col items-center text-center mt-3 mb-4 gap-3">
+<div class="w-14 h-14 rounded-xl bg-surface-card-subtle group-hover:bg-primary-container/20 flex items-center justify-center text-accent-neon-orange transition-colors shadow-inner">
+<span class="material-symbols-outlined text-[32px]">redeem</span>
+</div>
+<span class="font-headline-sm text-body-md text-text-primary font-bold group-hover:text-primary transition-colors text-balance">Шукач скарбів</span>
+</div>
+<div class="pt-3 flex items-center justify-between font-label-mono-sm text-[11px] text-text-secondary">
+<span class="inline-flex items-center gap-1 font-semibold text-text-primary">
+<span class="material-symbols-outlined text-[15px] text-text-muted">military_tech</span> 1 рів.
+          </span>
+<span class="flex items-center text-accent-neon-orange gap-0.5">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</span>
+</div>
+</div>
+</div>
+<!-- Empty State (When Search Matches Zero) -->
+<div class="hidden flex-col items-center justify-center py-16 px-4 text-center rounded-xl bg-surface-panel" id="no-results">
+<div class="w-16 h-16 rounded-full bg-surface-card-subtle flex items-center justify-center text-text-muted mb-4">
+<span class="material-symbols-outlined text-[36px]">search_off</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-text-primary mb-1">Робіт не знайдено</h3>
+<p class="font-body-md text-body-md text-text-secondary max-w-sm mb-6">Спробуйте змінити фільтр категорій або очистити пошуковий рядок.</p>
+<button class="px-5 py-2.5 rounded-full bg-surface-card-subtle text-accent-neon-orange hover:bg-surface-panel-hover font-headline-sm text-body-sm font-bold transition-all" id="reset-search">
+        Скинути пошук
+      </button>
+</div>
+<!-- Bottom Tactical Pro-Tips Card -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+<div class="p-4 rounded-xl bg-surface-panel flex items-start gap-3.5 shadow-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-card-subtle flex items-center justify-center text-status-success shrink-0">
+<span class="material-symbols-outlined text-[20px]">trending_up</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-headline-sm text-body-md text-text-primary font-bold">Прокачка навичок</span>
+<span class="font-body-sm text-body-sm text-text-secondary">Чим вищий рівень навички, тим більша погодинна ставка та рідкісніші предмети під час зміни.</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-surface-panel flex items-start gap-3.5 shadow-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-card-subtle flex items-center justify-center text-status-danger shrink-0">
+<span class="material-symbols-outlined text-[20px]">local_police</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-headline-sm text-body-md text-text-primary font-bold">Ризик нелегалу</span>
+<span class="font-body-sm text-body-sm text-text-secondary">Нелегальні професії видають розшук під час роботи. Рекомендується працювати з напарником-скаутом.</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-surface-panel flex items-start gap-3.5 shadow-sm">
+<div class="w-9 h-9 rounded-lg bg-surface-card-subtle flex items-center justify-center text-accent-neon-orange shrink-0">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-headline-sm text-body-md text-text-primary font-bold">Оверлей помічник</span>
+<span class="font-body-sm text-body-sm text-text-secondary">Увімкніть Q-Hub Overlay для підсвітки точок здачі луту та відстеження таймерів без згортання гри.</span>
+</div>
+</div>
+</div>
+<!-- Footnote Disclaimer (As per prompt) -->
+<div class="text-center py-4">
+<p class="font-body-sm text-body-sm text-text-muted">
+        Q-Hub — фан-проєкт гравців, не пов'язаний з адміністрацією QuantRP. Ціни вносять гравці й перевіряють одне одного.
+      </p>
+</div>
+</div>
+<!-- Interactive Job Detail Modal (Preview on Card Click) -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-surface-obsidian/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 p-4" id="job-modal">
+<div class="relative w-full max-w-lg rounded-2xl bg-surface-panel p-6 shadow-2xl transition-transform duration-300 transform scale-95 flex flex-col gap-5">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-surface-card-subtle flex items-center justify-center text-accent-neon-orange shadow-inner" id="modal-icon-container">
+<span class="material-symbols-outlined text-[28px]" id="modal-icon">work</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary" id="modal-title">Назва роботи</h3>
+<span class="font-label-mono-sm text-[11px] text-text-secondary uppercase" id="modal-badge">Легальна робота</span>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-card-subtle flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors" id="modal-close" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-3 p-3 rounded-xl bg-surface-card-subtle">
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-text-muted">ВИМОГА РІВНЯ:</span>
+<span class="font-headline-sm text-text-primary font-bold" id="modal-level">1 Рівень</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-text-muted">ДОХІДНІСТЬ:</span>
+<span class="font-headline-sm text-accent-neon-orange font-bold" id="modal-income">🪙 🪙 🪙 (Висока)</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-text-secondary">
+        Для початку роботи прибувайте до відміченої мітки на мапі. Візьміть спецтранспорт або підійдіть до бригадира NPC. Зарплата виплачується одразу на банківську картку або готівкою на руки.
+      </p>
+<div class="flex items-center justify-end gap-3 pt-2">
+<a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-card-subtle text-text-primary hover:bg-surface-panel-hover font-headline-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">map</span>
+<span>Знайти на мапі</span>
+</a>
+<button class="px-5 py-2 rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-body-sm font-bold shadow-md hover:bg-accent-neon-orange transition-all" id="modal-close-btn" type="button">
+          Зрозуміло
+        </button>
+</div>
+</div>
+</div>
+<!-- Inline Script for Filtering, Searching, and Modal Functionality -->
+<script>
+    (function() {
+      const searchInput = document.getElementById('job-search');
+      const sortSelect = document.getElementById('job-sort');
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      const grid = document.getElementById('jobs-grid');
+      const cards = Array.from(grid.querySelectorAll('.job-card'));
+      const counterEl = document.getElementById('displayed-count');
+      const noResults = document.getElementById('no-results');
+      const resetSearchBtn = document.getElementById('reset-search');
+
+      const modal = document.getElementById('job-modal');
+      const modalClose = document.getElementById('modal-close');
+      const modalCloseBtn = document.getElementById('modal-close-btn');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBadge = document.getElementById('modal-badge');
+      const modalLevel = document.getElementById('modal-level');
+      const modalIncome = document.getElementById('modal-income');
+      const modalIcon = document.getElementById('modal-icon');
+
+      let currentFilter = 'all';
+
+      function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+          const name = card.dataset.name.toLowerCase();
+          const category = card.dataset.category;
+          const level = card.dataset.level;
+
+          const matchesCategory = (currentFilter === 'all') || (category === currentFilter);
+          const matchesQuery = !query || name.includes(query) || (level + ' рів').includes(query);
+
+          if (matchesCategory && matchesQuery) {
+            card.classList.remove('hidden');
+            visibleCount++;
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+
+        counterEl.textContent = visibleCount;
+        if (visibleCount === 0) {
+          noResults.classList.remove('hidden');
+          noResults.classList.add('flex');
+        } else {
+          noResults.classList.add('hidden');
+          noResults.classList.remove('flex');
+        }
+      }
+
+      function applySort() {
+        const val = sortSelect.value;
+        const sorted = [...cards].sort((a, b) => {
+          if (val === 'name') {
+            return a.dataset.name.localeCompare(b.dataset.name, 'uk');
+          } else if (val === 'level-asc') {
+            return parseInt(a.dataset.level) - parseInt(b.dataset.level);
+          } else if (val === 'level-desc') {
+            return parseInt(b.dataset.level) - parseInt(a.dataset.level);
+          } else if (val === 'income') {
+            return parseInt(b.dataset.income) - parseInt(a.dataset.income);
+          }
+          return 0;
+        });
+
+        sorted.forEach(card => grid.appendChild(card));
+      }
+
+      // Filter Buttons Click
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach(b => {
+            b.classList.remove('bg-primary-container', 'text-on-primary-container', 'shadow-sm', 'font-bold');
+            b.classList.add('text-text-secondary', 'font-semibold');
+          });
+          btn.classList.add('bg-primary-container', 'text-on-primary-container', 'shadow-sm', 'font-bold');
+          btn.classList.remove('text-text-secondary');
+          currentFilter = btn.dataset.filter;
+          applyFilters();
+        });
+      });
+
+      // Search Input Listener
+      searchInput.addEventListener('input', applyFilters);
+
+      // Sort Select Listener
+      sortSelect.addEventListener('change', () => {
+        applySort();
+        applyFilters();
+      });
+
+      // Reset Search Button
+      if (resetSearchBtn) {
+        resetSearchBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          currentFilter = 'all';
+          filterBtns[0].click();
+          applyFilters();
+        });
+      }
+
+      // Hotkey Alt+Q for fast search focus
+      window.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й')) {
+          e.preventDefault();
+          searchInput.focus();
+        }
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
+
+      // Card Modal Open
+      function openModal(card) {
+        const name = card.dataset.name;
+        const isIllegal = card.dataset.category === 'illegal';
+        const level = card.dataset.level;
+        const income = card.dataset.income;
+        const iconSymbol = card.querySelector('.material-symbols-outlined').textContent;
+
+        modalTitle.textContent = name;
+        modalBadge.textContent = isIllegal ? 'Нелегальна діяльність' : 'Офіційна державна робота';
+        modalBadge.className = isIllegal
+          ? 'font-label-mono-sm text-[11px] text-status-danger uppercase'
+          : 'font-label-mono-sm text-[11px] text-status-success uppercase';
+        modalLevel.textContent = level + ' Рівень персонажа';
+        modalIncome.textContent = '🪙'.repeat(parseInt(income)) + (income === '3' ? ' (Висока)' : ' (Середня)');
+        modalIcon.textContent = iconSymbol;
+
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.querySelector('div').classList.remove('scale-95');
+        modal.querySelector('div').classList.add('scale-100');
+      }
+
+      function closeModal() {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        modal.querySelector('div').classList.add('scale-95');
+        modal.querySelector('div').classList.remove('scale-100');
+      }
+
+      cards.forEach(card => {
+        card.addEventListener('click', () => openModal(card));
+      });
+
+      modalClose.addEventListener('click', closeModal);
+      modalCloseBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+    })();
+  </script>
+</div></main><footer class="w-full bg-surface-container-lowest mt-space-2xl"><div class="max-w-[1360px] mx-auto px-margin py-12 flex flex-col gap-8"><div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8"><div class="flex flex-col gap-2 max-w-xl"><div class="flex items-center gap-3"><img alt="Q-Hub Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw"/><span class="font-label-mono-sm text-label-mono-sm uppercase px-2 py-0.5 rounded bg-surface-panel text-text-muted">v2.4 Core</span></div><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Q-Hub — незалежний фан-проєкт гравців, не пов'язаний з офіційною адміністрацією QuantRP. Всі торгові марки, зображення та найменування належать їх відповідним правовласникам.</p></div><div class="flex flex-wrap items-center gap-3"><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-primary text-[20px]">forum</span><span>Discord спільнота</span></a><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-status-success text-[20px]">sync_alt</span><span>Статус серверів</span></a></div></div><div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-4"><div class="flex flex-wrap items-center gap-6"><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="holovna" href="#">Головна</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="wiki" href="#">WIKI (Роботи &amp; Авто)</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="iventy" href="#">Івенти</a></div><div class="font-label-mono-sm text-label-mono-sm text-text-muted">© 2025 Q-Hub Community. Всі права захищено.</div></div></div></footer>
+</body></html>

@@ -53,3 +53,4 @@ $P -c "do \$\$ begin assert (select count(*) from public.map_points where create
 echo 'Мітки з QuantFun ok'
 $P -f supabase/tests/map_drafts_test.sql
 $P -f supabase/tests/map_areas_test.sql
+$P -f supabase/tests/app_online_test.sql

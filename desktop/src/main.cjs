@@ -7,6 +7,7 @@ const { makeClient, login } = require('./auth.cjs');
 const { fileStorage } = require('./store.cjs');
 const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
+const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
 const { createUpdater } = require('./updater.cjs');
@@ -22,7 +23,7 @@ const BAR_W = 960, BAR_MAX_H = 600;
 /* інтерфейс кабінету вбудований у програму (зібраний з src/desktop сайту в ui/) — не сторінка сайту в рамці */
 const UI = path.join(__dirname, 'ui', 'app.html');
 /* власний заголовок вікна: кнопки Windows малює система поверх наших 40 px */
-const TITLE_BAR = { color: '#070707', symbolColor: '#a8a29e', height: 40 };
+const TITLE_BAR = { color: '#10141a', symbolColor: '#8b9bb0', height: 40 };
 
 let sb, win, bar, tray, quitting = false, settings = {};
 const dir = () => app.getPath('userData');
@@ -84,7 +85,7 @@ async function state() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 420, height: 560, resizable: false, maximizable: false, title: 'Q-Hub', backgroundColor: '#070707', show: false,
+    width: 420, height: 560, resizable: false, maximizable: false, title: 'Q-Hub', backgroundColor: '#10141a', show: false,
     icon: path.join(__dirname, 'icon.png'), titleBarStyle: 'hidden', titleBarOverlay: TITLE_BAR,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
   });
@@ -131,12 +132,50 @@ function createBar() {
   });
   /* плашку закрили, не вибравши «надіслати» (Esc, повернувся в гру) — знімок без точки не надсилається */
   bar.on('hide', () => { if (pinAsk) { pinAsk = null; pinLog('F9 без точки — не надіслано (плашку закрито)'); } });
+  /* нижня смужка сесії живе разом з плашкою */
+  bar.on('show', () => { showStrip().catch(() => {}); });
+  bar.on('hide', hideStrip);
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
-/* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор */
+/* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
+   Прозоре вікно на всю ширину екрана, кліки проходять крізь нього в гру, фокус не забирає */
+const STRIP_H = 44, STRIP_GAP = 12;
+let strip = null, stripTimer = null;
+function createStrip() {
+  strip = new BrowserWindow({
+    width: 800, height: STRIP_H, show: false, frame: false, transparent: true, resizable: false, movable: false, focusable: false,
+    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, hasShadow: false, title: 'Q-Hub · сесія',
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  strip.setAlwaysOnTop(true, 'screen-saver');
+  strip.setIgnoreMouseEvents(true);
+  strip.webContents.on('will-navigate', e => e.preventDefault());
+  strip.loadFile(path.join(__dirname, 'strip.html'));
+}
+/* сесія з таймера гри (settings.session) і записи персонажа з її початку; без гри — порожньо */
+async function stripData() {
+  const s = settings.session;
+  if (!s || !settings.character) return { started: null, perHour: null, game: false };
+  const { data } = await sb.from('transactions').select('type,amount,source').eq('character_id', settings.character).gte('ts', new Date(s.started).toISOString());
+  return { started: s.started, perHour: stripCalc.perHour(stripCalc.netOf(data), Date.now() - s.started), game: true };
+}
+async function showStrip() {
+  if (!strip || prefs().strip === false) return;
+  const { bounds: b } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  strip.setBounds({ x: b.x + 16, y: b.y + b.height - STRIP_H - STRIP_GAP, width: b.width - 32, height: STRIP_H });
+  if (strip.webContents.isLoading()) await new Promise(r => strip.webContents.once('did-finish-load', r));
+  const push = async () => { try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(await stripData())})`); } catch { /* мережа — наступна спроба за хвилину */ } };
+  await push();
+  if (!bar.isVisible()) return;   // плашку вже сховали, поки рахували
+  strip.showInactive(); strip.moveTop();
+  clearInterval(stripTimer); stripTimer = setInterval(push, 60e3);
+}
+function hideStrip() { clearInterval(stripTimer); stripTimer = null; strip?.hide(); }
+
+/* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор (унизу — над смужкою сесії) */
 function placeBar() {
   const { workArea: a } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 }[prefs().position];
+  const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 - (prefs().strip === false ? 0 : STRIP_H + STRIP_GAP) }[prefs().position];
   bar.setPosition(Math.round(a.x + (a.width - BAR_W) / 2), Math.max(a.y, y));
 }
 /* показати плашку поверх гри й узяти фокус (blur вище не дає грі одразу сховати її) */
@@ -533,6 +572,12 @@ async function sendDraft(draft, jpeg) {
   if (!error || error.code === '23505') return 'ok';
   return error.code === '42501' ? 'denied' : 'retry';
 }
+/* «онлайн програми» в шапці сайту: раз на хвилину «я тут» (supabase/migrations/0023).
+   Без входу або на старій базі без функції — тихо нічого: лічильник не варто того, щоб заважати */
+function startOnline() {
+  const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping'); };
+  ping().catch(() => {}); setInterval(() => ping().catch(() => {}), 60e3);
+}
 function startDrafts() {
   refreshRole().catch(() => {});
   setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
@@ -764,9 +809,11 @@ app.whenReady().then(() => {
 
   createWindow();
   createBar();
+  createStrip();
   createTray();
   startUpdates();
   startDrafts();
+  startOnline();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
