@@ -58,13 +58,8 @@ export default function Download() {
       <section className="h-sec">
         <div className="h-head row between">
           <div><span className="h-kicker"><Icon name="bolt" size={16} />Демо</span><h2>Як виглядає рядок Alt+Q у грі</h2></div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />Натисни Enter у демо — побачиш інший приклад</span>
         </div>
         <div className="p-screen">
-          <div className="p-hud-top">
-            <span className="p-hud-chip"><Icon name="pin" size={14} />Приклад HUD гри</span>
-            <span className="p-hud-cash mono"><span>Готівка</span><b>248 320 $</b><span>Картка</span><b>1 492 050 $</b></span>
-          </div>
           <div className="p-prompt">
             <div className="p-prompt-h"><span><kbd>Alt+Q</kbd> Помічник Q-Hub</span><span className="p-ready"><span className="mdot good" aria-hidden="true" />Готовий</span></div>
             <form className="p-prompt-in" onSubmit={e => { e.preventDefault(); setD((d + 1) % DEMO.length); }}>

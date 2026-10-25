@@ -1294,3 +1294,5 @@ fieldset .static-form .btn { align-self: end; }
 @media (hover: none) { .mcat-edit { opacity: 1; } }
 .mcat-prev { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: #0b1018; border: 1px solid var(--line2); }
 .mcat-prev b { font-size: 14px; } .mcat-prev small { margin-left: auto; color: var(--faint); font-size: 12px; }
+/* демо Alt+Q без верхньої плашки: рядок по центру екрана, смужка сесії внизу */
+.p-screen .p-prompt { margin-top: auto; margin-bottom: auto; }
