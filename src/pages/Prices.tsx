@@ -362,7 +362,7 @@ export default function Prices() {
               <span className="h-kicker"><Icon name="camera" size={16} />Ціни вносять гравці</span>
               <h2>Бачиш іншу ціну в грі?</h2>
               <ol className="bp-steps">
-                <li><span className="start-n p-n" aria-hidden="true">1</span><div><b>Автоматично через Q-Hub Desktop</b><p className="muted">Відкрий вікно скупника в грі — програма сама надішле ціни від твого імені.</p><Link to="/programa">Про програму →</Link></div></li>
+                <li><span className="start-n p-n" aria-hidden="true">1</span><div><b>Автоматично через Q-Hub Desktop</b><p className="muted">Відкрий вікно скупника в грі — програма сама надішле ціни й час наступної зміни від твого імені.</p><Link to="/programa">Про програму →</Link></div></li>
                 <li><span className="start-n p-n" aria-hidden="true">2</span><div><b>Скріншот вікна скупника</b><p className="muted">Завантаж знімок — сайт розпізнає ціни, а ти перевіриш перед збереженням. Або натисни «Оновити ціну» біля товару.</p></div></li>
               </ol>
               {session

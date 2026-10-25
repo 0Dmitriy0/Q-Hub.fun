@@ -695,6 +695,12 @@ async function autoBaseline({ cash, bank }) {
   refreshCabinet();
 }
 /* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
+/* час наступної зміни цін з вікна скупника — на сайт від імені гравця (база перевіряє, що це найближчі 24 год і є нік зі статіком) */
+async function autoNextChange(buyer, at) {
+  const { error } = await sb.rpc('set_next_change', { p_buyer: buyer, p_at: new Date(at).toISOString() });
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} next sent ${buyer}: ${error ? 'ні — ' + error.message : 'так'}
+`); } catch { /* журнал не обов'язковий */ }
+}
 async function autoPrices(rows) {
   let ok = 0;
   for (const r of rows) if (!(await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop' })).error) ok++;
@@ -709,7 +715,7 @@ function startVision() {
     active: () => !!settings.session && !!settings.character && (prefs().autoLedger !== false || prefs().autoPrices !== false),
     ledger: () => prefs().autoLedger !== false,
     prices: () => prefs().autoPrices !== false,
-    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices,
+    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
   });
   setInterval(() => eye.tick(), 2000);
 }
