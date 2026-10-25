@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
 type Mode = 'auto' | 'dark' | 'light';
-const KEY = 'qhub-theme';
-const ORDER: Mode[] = ['auto', 'dark', 'light'];
+const KEY = 'qhub-theme2';
+const OLD_KEY = 'qhub-theme'; // туди писалось 'auto' всім підряд — вірити можна лише явній світлій
+const ORDER: Mode[] = ['dark', 'light', 'auto'];
 const SHORT: Record<Mode, string> = { auto: 'Авто', dark: 'Темна', light: 'Світла' };
 const LABEL: Record<Mode, string> = { auto: 'Тема: як у системі', dark: 'Тема: темна', light: 'Тема: світла' };
 
@@ -13,9 +14,11 @@ function apply(m: Mode) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#f6f5f3' : '#070707');
 }
 
-/* одна кнопка: як у системі → темна → світла; вибір пам'ятається в браузері */
+/* одна кнопка: темна (за замовчуванням) → світла → як у системі; вибір пам'ятається в браузері */
 export default function ThemeToggle() {
-  const [mode, setMode] = useState<Mode>(() => { try { return (localStorage.getItem(KEY) as Mode) || 'auto'; } catch { return 'auto'; } });
+  const [mode, setMode] = useState<Mode>(() => {
+    try { return (localStorage.getItem(KEY) as Mode) || (localStorage.getItem(OLD_KEY) === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
+  });
   useEffect(() => {
     apply(mode);
     try { localStorage.setItem(KEY, mode); } catch { /* приватний режим */ }
