@@ -93,6 +93,13 @@ export default function MapPage() {
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
   const [tab, setTab] = useState<'admin' | 'drafts'>('admin');
   const [tools, setTools] = useState(false);
+  /* скільки нових чернеток з F9 чекає адміна — видно на кнопці внизу мапи; є нові — плитка відкривається одразу на них */
+  const [newDrafts, setNewDrafts] = useState(0);
+  useEffect(() => {
+    if (!supabase || !isAdmin || tools) return;
+    supabase.from('map_drafts').select('id', { count: 'exact', head: true }).eq('status', 'new')
+      .then(({ count, error }) => { if (!error && count != null) { setNewDrafts(count); if (count) setTab('drafts'); } });
+  }, [isAdmin, tools]);
   /* яку категорію відкрити у формі «Змінити категорію» (олівець на плитці категорії) */
   const [catPick, setCatPick] = useState<string | null>(null);
   /* «Мапа для гри» — вікно по центру екрана; ?game=1 відкриває його одразу (посилання з головної) */
@@ -333,7 +340,7 @@ export default function MapPage() {
           </div>
         </div>
         {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
-          <Icon name="gear" size={18} />{isAdmin ? 'Адмін' : 'Чернетки'}</button>}
+          <Icon name="gear" size={18} />{isAdmin ? 'Адмін' : 'Чернетки'}{isAdmin && newDrafts > 0 && <span className="mtools-n mono">{newDrafts} з F9</span>}</button>}
       </div>
       {wide && !panel && <button type="button" className="hud mtoggle" onClick={() => setPanel(true)} aria-expanded={false} aria-controls="map-panel"><Icon name="map" size={16} />Фільтри міток</button>}
         <aside id="map-panel" className={'mside' + (panel || !wide ? '' : ' hidden')}>
@@ -389,7 +396,7 @@ export default function MapPage() {
           </div>
           {isAdmin && isStaff && <div className="mtabs" role="tablist" aria-label="Інструменти">
             <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Мітки й зони</button>
-            <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки</button>
+            <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки з F9{newDrafts > 0 ? ` · ${newDrafts}` : ''}</button>
           </div>}
           {(tab === 'drafts' || !isAdmin) && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} point={draftPt} picking={picking}
             onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}

@@ -1296,3 +1296,4 @@ fieldset .static-form .btn { align-self: end; }
 .mcat-prev b { font-size: 14px; } .mcat-prev small { margin-left: auto; color: var(--faint); font-size: 12px; }
 /* демо Alt+Q без верхньої плашки: рядок по центру екрана, смужка сесії внизу */
 .p-screen .p-prompt { margin-top: auto; margin-bottom: auto; }
+.mtools-n { margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font-size: 11.5px; font-weight: 700; }
