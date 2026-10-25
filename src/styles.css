@@ -969,3 +969,65 @@ fieldset .static-form .btn { align-self: end; }
 .hud-sq:hover { border-color: var(--accent); }
 .mini-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--faint); font-size: 12px; }
 @media (max-width: 560px) { .mini { padding: 12px; } .mini-map { height: 340px; } }
+
+/* ---------- «Програма» (design/stitch/programs.html, src/pages/Download.tsx) ---------- */
+.prog { display: flex; flex-direction: column; gap: 56px; }
+.prog kbd { padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line2); background: var(--surface2); color: var(--fg); font: 700 .85em var(--mono); }
+.p-hero { position: relative; display: flex; flex-direction: column; gap: 18px; align-items: flex-start; padding: 32px; border-radius: 20px; overflow: hidden; background: radial-gradient(90% 120% at 100% 0%, rgba(255, 107, 0, .16), transparent 60%), var(--surface); border: 1px solid var(--line2); }
+.p-hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.15; letter-spacing: -.03em; }
+.p-hero-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.p-badge { padding: 4px 10px; border-radius: 999px; background: rgba(255, 107, 0, .16); color: var(--accent-hi); font: 700 11px/16px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.p-warn { display: flex; gap: 12px; align-items: flex-start; max-width: 760px; padding: 14px 16px; border-radius: 14px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent); }
+.p-warn-ico { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--warn); color: #1a1000; font: 800 16px var(--sans); }
+.p-warn div { display: flex; flex-direction: column; gap: 2px; }
+.p-warn b { color: var(--warn); font-size: 14px; }
+.p-warn span { font-size: 14px; color: var(--fg); }
+.p-sign { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 12.5px; }
+.p-sign .ico { flex: none; color: var(--good); }
+/* демо екрана гри */
+.p-screen { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 420px; padding: 20px; border-radius: 20px; overflow: hidden; border: 1px solid var(--line2);
+  background: radial-gradient(60% 50% at 20% 100%, rgba(255, 107, 0, .22), transparent 70%), radial-gradient(50% 60% at 90% 10%, rgba(124, 92, 255, .18), transparent 70%), linear-gradient(180deg, #0b1018, #070a0e); color: #f4f7fb; }
+.p-hud-top, .p-hud-bot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.p-hud-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(7, 10, 14, .6); border: 1px solid #263344; color: #8b9bb0; font: 600 12px var(--sans); }
+.p-hud-cash { display: grid; grid-template-columns: auto auto; gap: 2px 10px; align-items: baseline; text-align: right; font-size: 12px; }
+.p-hud-cash span { color: #8b9bb0; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
+.p-hud-cash b { color: #10b981; font-size: 16px; }
+.p-prompt { align-self: center; width: min(560px, 100%); display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: rgba(20, 27, 36, .9); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255, 107, 0, .4); box-shadow: 0 16px 40px -8px rgba(0, 0, 0, .8), 0 0 24px rgba(255, 107, 0, .2); }
+.p-prompt-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 700 13px var(--sans); }
+.p-prompt-h kbd { margin-right: 6px; background: #ff6b00; border-color: #ff6b00; color: #160800; }
+.p-ready { display: inline-flex; align-items: center; gap: 6px; color: #10b981; font: 600 12px var(--mono); }
+.p-prompt-in { position: relative; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 12px; background: #0a0e14; border: 1px solid #263344; }
+.p-prompt-in .ico { flex: none; color: #8b9bb0; }
+.p-prompt-in input { flex: 1; min-width: 0; border: 0; background: none; color: #f4f7fb; font: 600 15px var(--sans); outline: none; }
+.p-prompt-out { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #10161f; border: 1px solid #263344; font-size: 14px; color: #c9d3df; }
+.p-prompt-out b { font-size: 15px; }
+.p-prompt-out .good { color: #10b981; } .p-prompt-out .bad { color: #ef4444; }
+.p-hud-bot { color: #8b9bb0; font-size: 12px; }
+.p-hud-bot span { display: inline-flex; align-items: center; gap: 6px; }
+/* можливості, вимоги, питання */
+.p-feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.p-feats h3, .p-req h3, .p-help h3 { font-size: 16px; line-height: 1.4; }
+.p-feats p, .p-req p { font-size: 14px; line-height: 22px; }
+.p-req { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.p-req .card { gap: 10px; }
+.p-n { position: static; box-shadow: none; }
+.p-safe { border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.p-safe .p-n { background: var(--good); }
+.p-bottom { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.p-faq { display: flex; flex-direction: column; gap: 8px; }
+.p-faq details { border: 1px solid var(--line2); border-radius: 12px; background: var(--bg); }
+.p-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; font-weight: 700; font-size: 14px; list-style: none; }
+.p-faq summary::-webkit-details-marker { display: none; }
+.p-faq summary::after { content: "+"; flex: none; color: var(--accent-hi); font: 700 18px var(--mono); }
+.p-faq details[open] summary::after { content: "−"; }
+.p-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+.p-faq p { padding: 0 14px 14px; font-size: 14px; line-height: 22px; }
+.p-help { gap: 10px; align-items: flex-start; }
+@media (max-width: 1000px) { .p-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .p-req, .p-bottom { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .prog { gap: 40px; }
+  .p-hero { padding: 20px; }
+  .p-feats { grid-template-columns: 1fr; }
+  .p-screen { padding: 14px; min-height: 0; }
+  .p-hud-cash { text-align: left; }
+}
