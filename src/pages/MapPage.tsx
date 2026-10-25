@@ -11,7 +11,7 @@ import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
-import MapAdmin, { MarkEdit } from '../components/MapAdmin';
+import MapAdmin, { CatEdit, MarkEdit } from '../components/MapAdmin';
 import GameMapExport from '../components/GameMapExport';
 import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw from '../components/MapAreaDraw';
@@ -90,7 +90,11 @@ export default function MapPage() {
 
   const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp);
   /* панель: вкладки й згорнуті групи */
-  const [tab, setTab] = useState<'filters' | 'admin' | 'drafts'>('filters');
+  /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
+  const [tab, setTab] = useState<'admin' | 'drafts'>('admin');
+  const [tools, setTools] = useState(false);
+  /* яку категорію відкрити у формі «Змінити категорію» (олівець на плитці категорії) */
+  const [catPick, setCatPick] = useState<string | null>(null);
   /* «Мапа для гри» — вікно по центру екрана; ?game=1 відкриває його одразу (посилання з головної) */
   const [params] = useSearchParams();
   const [game, setGame] = useState(() => params.get('game') === '1');
@@ -270,7 +274,7 @@ export default function MapPage() {
   }
   function startEdit(id: number) {
     const mk = marks.find(x => x.dbId === id); if (!mk) return;
-    map.current?.closePopup(); setPanel(true); setTab('admin'); setEditing(mk);
+    map.current?.closePopup(); setTools(true); setTab('admin'); setEditing(mk);
     setTimeout(() => document.getElementById('mark-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   async function delCat(c: MapCategory) {
@@ -328,6 +332,8 @@ export default function MapPage() {
             {wide && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
           </div>
         </div>
+        {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
+          <Icon name="gear" size={18} />{isAdmin ? 'Адмін' : 'Чернетки'}</button>}
       </div>
       {wide && !panel && <button type="button" className="hud mtoggle" onClick={() => setPanel(true)} aria-expanded={false} aria-controls="map-panel"><Icon name="map" size={16} />Фільтри міток</button>}
         <aside id="map-panel" className={'mside' + (panel || !wide ? '' : ' hidden')}>
@@ -338,16 +344,8 @@ export default function MapPage() {
           </div>
           {!wide && search}
           {!wide && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
-          {/* гостям вкладок немає — лише фільтри; модераторам і адміну — ще чернетки й інструменти */}
-          {(isStaff || isAdmin) && <div className="mtabs" role="tablist" aria-label="Панель мапи">
-            <button type="button" role="tab" aria-selected={tab === 'filters'} onClick={() => setTab('filters')}>Фільтри</button>
-            {isStaff && <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки</button>}
-            {isAdmin && <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Адмін</button>}
-          </div>}
-          {tab === 'drafts' && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} point={draftPt} picking={picking}
-            onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}
-            onPublished={mk => { setMarks(ms => [...ms, mk]); setMany([mk.category], true); }} />}
-          {tab === 'filters' && <section className="mfilters" role="tabpanel" aria-label="Фільтри">
+          {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
+          <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
               <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Усі</button>
               <button type="button" onClick={resetOn}>Як спочатку</button>
@@ -373,6 +371,7 @@ export default function MapPage() {
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
                             <img src={c.icon} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
+                          {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
                         </span>
                       );
@@ -381,18 +380,32 @@ export default function MapPage() {
                 </section>
               );
             })}
-          </section>}
+          </section>
+        </aside>
+        {(isStaff || isAdmin) && tools && <aside id="map-tools" className="mside mtools" aria-label="Інструменти мапи">
+          <div className="mside-h">
+            <span className="mside-t">{isAdmin ? 'Адмін мапи' : 'Чернетки'}</span>
+            <button type="button" className="hud-b" onClick={() => setTools(false)} aria-label="Закрити інструменти" title="Закрити"><Icon name="x" size={16} /></button>
+          </div>
+          {isAdmin && isStaff && <div className="mtabs" role="tablist" aria-label="Інструменти">
+            <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Мітки й зони</button>
+            <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки</button>
+          </div>}
+          {(tab === 'drafts' || !isAdmin) && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} point={draftPt} picking={picking}
+            onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}
+            onPublished={mk => { setMarks(ms => [...ms, mk]); setMany([mk.category], true); }} />}
           {tab === 'admin' && isAdmin && <>
             {editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
               onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
             {dbMissing
               ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
-              : <><MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
+              : <><CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
+                <MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
                   onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />
                 <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
                   onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} /></>}
           </>}
-        </aside>
+        </aside>}
       <dialog ref={dlg} className="mdlg" aria-labelledby="mdlg-t" onClose={() => setGame(false)} onClick={e => { if (e.target === dlg.current) setGame(false); }}>
         <div className="mdlg-in">
           <div className="mdlg-h">

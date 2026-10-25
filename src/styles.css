@@ -1279,3 +1279,18 @@ fieldset .static-form .btn { align-self: end; }
 .dhead h1 { font-weight: 800; letter-spacing: -.025em; }
 .me { border-color: var(--line2); }
 @media (max-width: 640px) { .cab-hero { flex-direction: row; } .cab-ava { width: 52px; height: 52px; border-radius: 14px; } }
+
+/* мапа: плитка «Адмін / Чернетки» праворуч і кнопка, що її відкриває (внизу мапи) */
+.mtools { left: auto; right: 16px; width: 380px; }
+.mtools-b { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 700; height: 42px; padding: 0 18px; gap: 8px; font: 700 14px var(--sans); cursor: pointer; }
+.mtools-b .ico { color: var(--accent-hi); }
+.mtools-b:hover { border-color: var(--accent); }
+.mapflow .mtools-b { display: none; }
+.mapflow .mtools { position: static; width: auto; max-height: none; }
+/* олівець «змінити категорію» на плитці — поруч із ✕ */
+.mcat-edit { position: absolute; top: -6px; right: 18px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line2); background: var(--surface); color: var(--faint); cursor: pointer; padding: 0; opacity: 0; transition: opacity .15s; }
+.mchip:hover .mcat-edit, .mcat-edit:focus-visible { opacity: 1; }
+.mcat-edit:hover { color: var(--accent-hi); border-color: var(--accent); }
+@media (hover: none) { .mcat-edit { opacity: 1; } }
+.mcat-prev { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: #0b1018; border: 1px solid var(--line2); }
+.mcat-prev b { font-size: 14px; } .mcat-prev small { margin-left: auto; color: var(--faint); font-size: 12px; }
