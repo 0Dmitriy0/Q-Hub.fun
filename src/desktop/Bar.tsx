@@ -43,7 +43,7 @@ interface BarApi {
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
 interface Shot { name: string; preview: string; black: boolean }
-interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[] }
+interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null }
 interface PinHint { category: string; note: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
@@ -340,7 +340,8 @@ function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n:
 }
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
-/* F9 не знайшов точку на карті: показати, що знято, і спитати — надіслати без точки (поставить адмін) чи ні */
+/* F9: показати знімок і дати одразу вибрати категорію й опис (підказка адміну).
+   Точку знайдено — надіслати з точкою; не знайдено — надіслати без точки (поставить адмін) чи ні */
 function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: PinHint) => void }) {
   const [text, setText] = useState(''); const [pick, setPick] = useState(0); const [note, setNote] = useState('');
   const first = useRef<HTMLInputElement>(null), box = useRef<HTMLDivElement>(null);
@@ -360,8 +361,11 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
   return <>
     <div className="bleft bshot"><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
     <div className="bright" ref={box} onKeyDown={onKey}>
-      <h3>Точку не знайдено</h3>
-      <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p>
+      {ask.point
+        ? <><h3>Точку знайдено</h3>
+            <p className="muted">X <b className="mono">{ask.point.x}</b> · Y <b className="mono">{ask.point.y}</b>. Вибери категорію — адміну буде простіше опублікувати мітку. Повернешся в гру, нічого не вибравши, — точка піде без категорії.</p></>
+        : <><h3>Точку не знайдено</h3>
+            <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p></>}
       <label className="bnote">Категорія (необов’язково)
         <input ref={first} value={text} onChange={e => { setText(e.target.value); setPick(0); }} placeholder="почни писати: бак, заправка, 24/7…"
           role="combobox" aria-expanded={found.length > 0} aria-controls="pin-cats" aria-activedescendant={chosen ? 'pin-cat-' + chosen.id : undefined} /></label>
@@ -373,7 +377,7 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
       </div>}
       <label className="bnote">Опис (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={600} placeholder="напр. бак за магазином 24/7, біля входу" /></label>
       <div className="row">
-        <button className="btn acc" onClick={() => send(true)}>Надіслати без точки</button>
+        <button className="btn acc" onClick={() => send(true)}>{ask.point ? 'Надіслати точку' : 'Надіслати без точки'}</button>
         <button className="btn" onClick={() => send(false)}>Не надсилати</button>
       </div>
       <small className="muted"><kbd>↑↓</kbd> інша категорія · <kbd>Tab</kbd> до опису · <kbd>Enter</kbd> надіслати · <kbd>Esc</kbd> не надсилати</small>

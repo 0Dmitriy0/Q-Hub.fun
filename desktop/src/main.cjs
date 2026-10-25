@@ -131,7 +131,13 @@ function createBar() {
     bar.hide();
   });
   /* плашку закрили, не вибравши «надіслати» (Esc, повернувся в гру) — знімок без точки не надсилається */
-  bar.on('hide', () => { if (pinAsk) { pinAsk = null; pinLog('F9 без точки — не надіслано (плашку закрито)'); } });
+  /* плашку закрили, нічого не вибравши: знайдена точка однаково йде на сайт (без категорії), знімок без точки — ні */
+  bar.on('hide', () => {
+    if (!pinAsk) return;
+    const a = pinAsk; pinAsk = null;
+    if (a.pt) { pinLog('F9 з точкою — плашку закрито, надсилаю без категорії'); sendPin(a.draft, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); }
+    else pinLog('F9 без точки — не надіслано (плашку закрито)');
+  });
   /* нижня смужка сесії живе разом з плашкою */
   bar.on('show', () => { showStrip().catch(() => {}); });
   bar.on('hide', hideStrip);
@@ -521,12 +527,13 @@ async function pinShot() {
   const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
   const draft = { taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
     match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } };
-  /* точку знайдено — одразу на сайт; ні — спершу спитати: на знімку може бути не гра, а чат, Discord тощо */
-  if (pt) return sendPin(draft, img.toJPEG(80), `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}`);
-  pinAsk = { draft, jpeg: img.toJPEG(80) };
+  /* і з точкою, і без — спершу форма з категорією й описом (підказка адміну). Точку знайдено: Enter — надіслати з категорією,
+     закрив плашку — надсилається без категорії. Не знайдено: на знімку може бути не гра (чат, Discord) — без «так» не надсилаємо */
+  const what = pt ? `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}` : 'Без точки — поставить адмін';
+  pinAsk = { draft, jpeg: img.toJPEG(80), pt, what };
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
-  bar.webContents.send('pin-ask', { reason: WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats() });
+  bar.webContents.send('pin-ask', { reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null });
 }
 /* категорії мапи для вікна «точку не знайдено» — раз на 30 хв */
 let catsAt = 0, catsCache = [];
@@ -550,7 +557,7 @@ function pinDecide(send, hint = {}) {
   if (!a) return;
   const category_id = typeof hint.category === 'string' && hint.category ? hint.category : null;
   const note = typeof hint.note === 'string' ? hint.note.trim().slice(0, 600) : '';
-  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, 'Без точки — поставить адмін').catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
+  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
   else showPin('Не надіслано.');
 }
 /* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
@@ -805,7 +812,7 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
-  /* F9 без точки: «надіслати без точки» чи «не надсилати» */
+  /* F9: форма категорії — «надіслати» чи «не надсилати» */
   ipcMain.handle('pin-decide', (e, send, hint) => {
     if (!fromBar(e) || !pinAsk) return;
     const a = pinAsk; pinAsk = null; bar.hide(); pinAsk = a;   // hide не має скасувати те, що вибрали
