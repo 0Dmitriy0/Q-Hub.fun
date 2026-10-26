@@ -46,10 +46,10 @@ export default function Home() {
           </div>
         </div>
         <Link className="h-promo" to="/mapa">
-          <img src="/promo/ghost-map-1000.webp" alt="" width="1000" height="248" />
+          <img src="/promo/ghost-tile.webp" alt="" width="700" height="380" fetchPriority="high" />
           <span className="h-promo-body">
             <span className="h-promo-tag">Сезонний івент</span>
-            <b>Карта привидів</b>
+            <b>Карта привидів уже тут</b>
             <span>Швидко знаходь усіх привидів осіннього оновлення Quant RP.</span>
             <span className="h-promo-go">Відкрити мапу →</span>
           </span>

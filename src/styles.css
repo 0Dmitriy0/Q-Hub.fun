@@ -883,16 +883,19 @@ fieldset .static-form .btn { align-self: end; }
 .h-hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.15; letter-spacing: -.03em; }
 .h-pill { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); color: var(--muted); font: 600 12px var(--mono); }
 .h-lead { color: var(--muted); font-size: 16px; line-height: 26px; max-width: 62ch; }
-.h-promo { position: relative; display: flex; flex-direction: column; background: var(--surface); border-radius: 16px; overflow: hidden; text-decoration: none; color: var(--fg); border: 1px solid rgba(255, 107, 0, .35); box-shadow: 0 20px 50px -20px rgba(255, 107, 0, .45); transition: transform .15s ease, box-shadow .15s ease; }
-/* банер з текстом усередині картинки — показуємо цілим, підпис під ним */
-.h-promo img { display: block; width: 100%; height: auto; }
+/* плитка-банер: картинка на всю плитку, текст і кнопка — справжній текст поверх темного переходу.
+   Кольори тексту сталі (світлі) в обох темах: під ним завжди темна картинка */
+.h-promo { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 300px; background: #0b0e14; border-radius: 16px; overflow: hidden; text-decoration: none; color: #fff; border: 1px solid rgba(255, 107, 0, .35); box-shadow: 0 20px 50px -20px rgba(255, 107, 0, .45); transition: transform .15s ease, box-shadow .15s ease; }
+.h-promo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 30%; }
+.h-promo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 10, 16, 0) 25%, rgba(8, 10, 16, .78) 62%, rgba(8, 10, 16, .96) 100%); }
 .h-promo:hover { transform: translateY(-2px); box-shadow: 0 24px 56px -20px rgba(255, 107, 0, .6); }
 .h-promo:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.h-promo-body .h-promo-tag { align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font: 700 10.5px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.h-promo-body .h-promo-tag { align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: #ff6a1f; color: #160800; font: 700 10.5px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .h-promo-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; padding: 20px; }
-.h-promo-body b { font: 800 24px/1.2 var(--disp); letter-spacing: -.02em; }
-.h-promo-body span { color: var(--muted); font-size: 14px; }
-.h-promo-body .h-promo-go { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; color: var(--accent-hi); font-weight: 700; }
+.h-promo-body b { font: 800 26px/1.15 var(--disp); letter-spacing: -.02em; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, .6); }
+.h-promo-body span { color: rgba(255, 255, 255, .82); font-size: 14px; }
+.h-promo-body .h-promo-go { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 8px 14px; border-radius: 999px; background: #ff6a1f; color: #160800; font-weight: 700; }
+.h-promo:hover .h-promo-go { background: #ff8a4c; }
 .h-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: -24px; }
 .h-stat { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
 .h-stat b { font-size: 28px; line-height: 1.2; color: var(--fg); }
