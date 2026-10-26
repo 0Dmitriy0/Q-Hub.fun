@@ -10,7 +10,7 @@ const gameSession = require('./session.cjs');
 const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
-const { createUpdater, installPending } = require('./updater.cjs');
+const { createUpdater, installPending, updateDirs } = require('./updater.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
@@ -236,13 +236,25 @@ const installMark = () => path.join(dir(), 'installing.json');   // «стави
 function startUpdates() {
   if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
   const { autoUpdater } = require('electron-updater');
+  const log = m => { try { fs.appendFileSync(path.join(dir(), 'update.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
+  /* завантаження й розпакування — на диску програми (updateDirs), не на C:; теку не створити — лишаються звичайні шляхи */
+  const ud = updateDirs(app.getPath('exe'));
+  let ownDirs = false;
+  try { fs.mkdirSync(ud.cache, { recursive: true }); fs.mkdirSync(ud.temp, { recursive: true }); ownDirs = true; } catch (e) { log('update dirs ' + (e?.message || e)); }
+  if (ownDirs) {
+    Object.defineProperty(autoUpdater.app, 'baseCachePath', { get: () => ud.cache });
+    /* старий кеш на C: (~220 МБ) більше не потрібен */
+    if (process.env.LOCALAPPDATA) fs.rm(path.join(process.env.LOCALAPPDATA, 'q-hub-desktop-updater'), { recursive: true, force: true }, () => {});
+  }
   updates = createUpdater({
     autoUpdater,
     beforeInstall: () => {
       quitting = true;
       try { fs.writeFileSync(installMark(), JSON.stringify({ from: app.getVersion(), at: Date.now() })); } catch { /* без позначки — як раніше */ }
+      /* інсталятор бере %TEMP% від програми, яка його запускає — і розпаковує туди ~400 МБ */
+      if (ownDirs) process.env.TEMP = process.env.TMP = ud.temp;
     },
-    log: m => { try { fs.appendFileSync(path.join(dir(), 'update.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } },
+    log,
     onChange: s => {
       win?.webContents.send('update', s);
       trayMenu();

@@ -25,6 +25,14 @@ function reduce(s, [type, data]) {
 const INSTALL_WAIT = 3 * 60e3;
 const installPending = (mark, version, now) => !!mark && mark.from === version && now - mark.at >= 0 && now - mark.at < INSTALL_WAIT;
 
+/* де оновлення тримає файли: на тому ж диску, що й програма, а не на C: (2026-10-26: на C: лишалось 60–260 МБ, і інсталятор
+   падав — він розпаковує ~400 МБ у %TEMP%, а завантаження лежать у %LOCALAPPDATA%). Тека — поруч з текою програми, не всередині:
+   інсталятор очищає теку програми. D:\Q-HUB\Q-Hub.exe → D:\Q-Hub-update\{cache,temp} */
+function updateDirs(exe, path = require('node:path').win32) {
+  const appDir = path.dirname(exe), root = path.join(path.dirname(appDir), path.basename(appDir) + '-update');
+  return { root, cache: path.join(root, 'cache'), temp: path.join(root, 'temp') };
+}
+
 /* deps: autoUpdater (electron-updater), onChange(state), beforeInstall() — щоб хрестик вікна не перехопив вихід, log(text) */
 function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} }) {
   let st = { ...IDLE }, installing = false;
@@ -55,4 +63,4 @@ function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} })
   };
 }
 
-module.exports = { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT };
+module.exports = { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT, updateDirs };

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT } = require('./updater.cjs');
+const { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT, updateDirs } = require('./updater.cjs');
 
 const run = (...evs) => evs.reduce(reduce, IDLE);
 
@@ -77,4 +77,10 @@ test('оновлення ще ставиться: та сама версія й 
   assert.equal(installPending(mark, '0.2.59', at + INSTALL_WAIT), false);  // давно — інсталятор упав, запускатись
   assert.equal(installPending(mark, '0.2.59', at - 1), false);             // годинник перевели назад
   assert.equal(installPending(null, '0.2.59', at), false);
+});
+
+test('файли оновлення — поруч з текою програми, на тому ж диску', () => {
+  assert.deepEqual(updateDirs(String.raw`D:\Q-HUB\Q-Hub.exe`), { root: String.raw`D:\Q-HUB-update`, cache: String.raw`D:\Q-HUB-update\cache`, temp: String.raw`D:\Q-HUB-update\temp` });
+  const d = updateDirs(String.raw`C:\Users\U\AppData\Local\Programs\Q-Hub\Q-Hub.exe`);
+  assert.equal(d.root, String.raw`C:\Users\U\AppData\Local\Programs\Q-Hub-update`);   // не всередині теки програми: її очищає інсталятор
 });
