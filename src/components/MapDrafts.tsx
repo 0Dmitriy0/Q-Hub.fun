@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Select from './Select';
 import type { MapCategory, MapMark } from '../lib/mapData';
 import {
-  authorName, loadDrafts, publishDraft, purgeExpiredShots, rejectDraft, shotUrl, shotUrls, statusLabel, type MapDraft,
+  authorName, loadDrafts, nearby, publishDraft, purgeExpiredShots, rejectDraft, shotUrl, shotUrls, statusLabel, type MapDraft,
 } from '../lib/mapDrafts';
 
 const when = (iso: string) => new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -10,8 +10,8 @@ const when = (iso: string) => new Date(iso).toLocaleString('uk-UA', { day: '2-di
 /* вкладка «Чернетки» на мапі: точки, які редактори зняли в грі клавішею F9.
    Адмін бачить усі нові, ставить або пересуває точку, обирає категорію й публікує чи відхиляє.
    editor і moderator бачать лише свої й їхній статус — без дій (права перевіряє база, не цей інтерфейс). */
-export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPick, onFocus, onPublished }: {
-  isAdmin: boolean; cats: MapCategory[]; point: [number, number] | null; picking: boolean;
+export default function MapDrafts({ isAdmin, cats, marks, point, picking, onPoint, onPick, onFocus, onPublished }: {
+  isAdmin: boolean; cats: MapCategory[]; marks: MapMark[]; point: [number, number] | null; picking: boolean;
   onPoint: (p: [number, number] | null) => void; onPick: (on: boolean) => void;
   onFocus: (p: [number, number]) => void; onPublished: (m: MapMark) => void;
 }) {
@@ -78,6 +78,10 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
     done(sel.id, { status: 'rejected', reviewed_at: new Date().toISOString() });
   }
 
+  /* перед публікацією — що вже є поруч (FR-017); рахується від поточної точки й категорії, тож оновлюється при їх зміні */
+  const near = isAdmin && sel?.status === 'new' && point ? nearby(point, cat, marks, drafts || [], sel.id) : [];
+  const catName = (id: string) => cats.find(c => c.id === id)?.name || 'мітка';
+
   if (drafts === null) return <p className="muted mdr-note">Завантажую чернетки…</p>;
   if (err) return <p className="card err">{err}</p>;
 
@@ -91,6 +95,9 @@ export default function MapDrafts({ isAdmin, cats, point, picking, onPoint, onPi
         : <p className="muted">Завантажую знімок…</p>}
       <p className="mono mdr-xy">{point ? `X ${Math.round(point[0])} · Y ${Math.round(point[1])}` : 'Точку не визначено'}</p>
       {hintText(sel) && <p className="mdr-hint">Редактор: {hintText(sel)}</p>}
+      {near.length > 0 && <p className="mdr-near" role="status">Поруч уже є: {near.slice(0, 3).map((n, i) => <Fragment key={n.kind + n.id}>{i ? ', ' : ''}
+        <button type="button" onClick={() => onFocus([n.x, n.y])} title="Показати на мапі">{n.name || catName(cat)} · {Math.round(n.dist)} м</button></Fragment>)}
+        {near.length > 3 && ` і ще ${near.length - 3}`}</p>}
       {isAdmin && sel.status === 'new' && <>
         <p className="muted">{point ? 'Точку можна перетягнути на мапі або поставити заново.' : 'Подивіться на знімок і поставте точку на мапі.'}</p>
         <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => onPick(!picking)} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : point ? 'Поставити заново' : 'Поставити на мапі'}</button>

@@ -398,7 +398,7 @@ export default function MapPage() {
             <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Мітки й зони</button>
             <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки з F9{newDrafts > 0 ? ` · ${newDrafts}` : ''}</button>
           </div>}
-          {(tab === 'drafts' || !isAdmin) && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} point={draftPt} picking={picking}
+          {(tab === 'drafts' || !isAdmin) && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} marks={marks} point={draftPt} picking={picking}
             onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}
             onPublished={mk => { setMarks(ms => [...ms, mk]); setMany([mk.category], true); }} />}
           {tab === 'admin' && isAdmin && <>

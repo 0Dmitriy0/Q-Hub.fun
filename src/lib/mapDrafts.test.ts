@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authorName, expiredShots, rpcError, statusLabel, type MapDraft } from './mapDrafts';
+import { authorName, expiredShots, nearby, rpcError, statusLabel, type MapDraft } from './mapDrafts';
 
 const d = (over: Partial<MapDraft>): MapDraft => ({
   id: 'x', author: 'a', taken_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z', shot: 'a/x.jpg',
@@ -37,5 +37,22 @@ describe('чернетки міток', () => {
       d({ id: 'gone', status: 'rejected', reviewed_at: '2026-09-01T00:00:00Z', shot_deleted_at: '2026-10-02T00:00:00Z' }),
     ];
     expect(expiredShots(list, now).map(x => x.id)).toEqual(['old']);
+  });
+
+  it('поруч: мітки тієї ж категорії й інші нові чернетки в радіусі 30 м, ближчі — першими', () => {
+    const m = (id: string, category: string, x: number, y: number) => ({ id, category, name: id, note: '', x, y });
+    const points = [m('edge', 'bins', 30, 0), m('far', 'bins', 30.1, 0), m('other', 'atm', 1, 0), m('close', 'bins', 0, 10)];
+    const drafts = [
+      d({ id: 'self', x: 0, y: 0 }),
+      d({ id: 'twin', x: 0, y: -5, category_id: 'atm', who: { game_name: 'Vova', name: null } }),
+      d({ id: 'done', x: 1, y: 1, status: 'published' }),
+      d({ id: 'blind', x: null, y: null }),
+      d({ id: 'away', x: 0, y: 30.1 }),
+    ];
+    const near = nearby([0, 0], 'bins', points, drafts, 'self');
+    expect(near.map(n => n.id)).toEqual(['twin', 'close', 'edge']);
+    expect(near[0]).toMatchObject({ kind: 'draft', name: 'чернетка від Vova', dist: 5 });
+    expect(near[2]).toMatchObject({ kind: 'point', name: 'edge', dist: 30 });
+    expect(nearby([0, 0], '', points, drafts, 'self').map(n => n.id)).toEqual(['twin']);   // категорію ще не обрано — лише чернетки
   });
 });

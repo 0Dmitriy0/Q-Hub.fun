@@ -1,6 +1,7 @@
 /* Чернетки міток з гри (specs/001-map-pin-drafts): редактор тисне F9 у програмі — сюди приходить знімок і точка.
    Публікує в мапу чи відхиляє лише адмін — функціями бази publish_map_draft / reject_map_draft (міграція 0019). */
 import { supabase } from './supabase';
+import type { MapMark } from './mapData';
 
 export type DraftStatus = 'new' | 'published' | 'rejected';
 export interface MapDraft {
@@ -31,6 +32,21 @@ export const SHOT_DAYS = 30;
 export function expiredShots(drafts: MapDraft[], now: Date): MapDraft[] {
   const edge = now.getTime() - SHOT_DAYS * 864e5;
   return drafts.filter(d => d.status !== 'new' && d.reviewed_at && new Date(d.reviewed_at).getTime() < edge && !d.shot_deleted_at);
+}
+
+/* щоб не плодити дублікатів (FR-017): опубліковані мітки тієї ж категорії й інші нові чернетки в радіусі r метрів гри.
+   Категорію ще не обрано — лише чернетки. Ближчі — першими */
+export interface Near { kind: 'point' | 'draft'; id: string; name: string; x: number; y: number; dist: number }
+export function nearby(p: [number, number], category: string, points: Pick<MapMark, 'id' | 'category' | 'name' | 'x' | 'y'>[],
+  drafts: MapDraft[], selfId: string, r = 30): Near[] {
+  const dist = (x: number, y: number) => Math.hypot(x - p[0], y - p[1]);
+  const out: Near[] = [];
+  if (category) for (const m of points) if (m.category === category && dist(m.x, m.y) <= r) out.push({ kind: 'point', id: m.id, name: m.name, x: m.x, y: m.y, dist: dist(m.x, m.y) });
+  for (const d of drafts) {
+    if (d.id === selfId || d.status !== 'new' || d.x === null || d.y === null || dist(d.x, d.y) > r) continue;
+    out.push({ kind: 'draft', id: d.id, name: 'чернетка від ' + authorName(d), x: d.x, y: d.y, dist: dist(d.x, d.y) });
+  }
+  return out.sort((a, b) => a.dist - b.dist);
 }
 
 const BUCKET = 'map-drafts';
