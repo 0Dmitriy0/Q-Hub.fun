@@ -53,6 +53,7 @@ body.in-bar input { user-select: text; }
 .bkico.ai { color: var(--accent); background: rgba(255, 106, 31, .12); }
 .bkico.plan { color: var(--good); background: var(--good-soft); }
 .bkico.err { color: var(--bad); background: var(--bad-soft); }
+.bkico.sell { color: var(--good); background: var(--good-soft); }
 .brow.on .bkico.rules { color: var(--fg); }
 .brow .pill { flex: none; }
 .bhead { display: flex; align-items: center; gap: 12px; }
@@ -150,3 +151,11 @@ body.in-bar input { user-select: text; }
 .bcats button small { color: var(--muted); font-weight: 500; font-size: 11px; }
 .bcats button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .bcats .muted { font-size: 12px; }
+
+/* «що продати?» — три позиції складу */
+.bsells { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bsells li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: #18212d; border: 1px solid var(--line); }
+.bsells img, .bsells .bava { flex: none; width: 32px; height: 32px; border-radius: 8px; object-fit: contain; }
+.bsell-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bsell-txt small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bsells .mono { font-size: 15px; white-space: nowrap; }

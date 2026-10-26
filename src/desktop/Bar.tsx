@@ -8,6 +8,7 @@ import { matchCats } from './catMatch';
 import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
+import { isSellQuestion, sellAdvice, type Sell } from './sellAdvice';
 
 /* Плашка Alt+Q поверх гри: рядок як у помічників для RP-серверів, що розгортається в дві панелі.
    Режими: «Пошук» (Enter — пошук у правилах сервера чи запис із сумою без ШІ, Shift+Enter — спитати ШІ-помічника)
@@ -28,7 +29,7 @@ type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?:
 interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
-interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[] }
+interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
   barData(): Promise<Data>; barHistory(): Promise<Hist[]>; barCharacter(id: string): Promise<boolean>;
@@ -150,6 +151,11 @@ export default function Bar() {
     const text = q.trim(); if (!text || busy) return;
     if (pending(text)) { runPlan(); return; }
     if (rule && !text.includes('?')) { quickRule(); return; }
+    /* «що продати?» — відповідь зі складу й цін скупників, без ШІ */
+    if (d && isSellQuestion(text)) {
+      setAsks(a => [{ q: text, reply: '', actions: [], done: true, sells: sellAdvice(d.prices, d.stock) }, ...a].slice(0, 30));
+      setSel(0); setNote(null); return;
+    }
     const hits = searchRules(TOPICS, text);
     setAsks(a => [{ q: text, reply: hits.length ? '' : 'У правилах сервера такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits }, ...a].slice(0, 30));
     setSel(0); setNote(null);
@@ -258,9 +264,9 @@ const cites = (t: string) => t.split(/(\([^()]*п\.\s*\d[^()]*\))/g).map((p, i) 
 
 function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string }) {
   const a = asks[sel];
-  const kind = (x: Ask) => (x.error ? 'err' : x.hits ? 'rules' : x.actions.length ? 'plan' : 'ai');
-  const meta = (x: Ask) => x.error ? 'помилка' : x.hits ? (x.hits.length ? `правила · ${x.hits.length}` : 'нічого не знайдено') : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь ШІ';
-  const ICO = { rules: 'search', ai: 'spark', plan: 'coin', err: 'x' } as const;
+  const kind = (x: Ask) => (x.error ? 'err' : x.sells ? 'sell' : x.hits ? 'rules' : x.actions.length ? 'plan' : 'ai');
+  const meta = (x: Ask) => x.error ? 'помилка' : x.sells ? (x.sells.length ? `склад · ${x.sells.length}` : 'на складі нічого продати') : x.hits ? (x.hits.length ? `правила · ${x.hits.length}` : 'нічого не знайдено') : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь ШІ';
+  const ICO = { rules: 'search', ai: 'spark', plan: 'coin', err: 'x', sell: 'tag' } as const;
   return <>
     <div className="bleft">
       {busy && <div className="brow item on"><span className="bkico ai"><Icon name="spark" size={15} /></span><span><b>{q.trim()}</b><small>ШІ думає…</small></span></div>}
@@ -268,7 +274,7 @@ function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; set
         <span className={'bkico ' + kind(x)}><Icon name={ICO[kind(x)]} size={15} /></span><span><b>{x.q}</b><small>{meta(x)}</small></span></button>)}
     </div>
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
-      {a.hits ? <>
+      {a.sells ? <SellList sells={a.sells} /> : a.hits ? <>
         <div className="bkind"><Icon name="search" size={14} />Правила сервера{a.hits.length ? ` · ${a.hits.length} збігів` : ''}</div>
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
@@ -282,6 +288,24 @@ function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; set
         {!a.error && !a.actions.length && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : null}</div>
+  </>;
+}
+
+/* «що продати?»: найдорожче зі складу разом, кому здати і скільки дасть наступний скупник */
+function SellList({ sells }: { sells: Sell[] }) {
+  if (!sells.length) return <>
+    <div className="bkind"><Icon name="tag" size={14} />Що продати зі складу</div>
+    <p className="bnone">На складі немає товарів, які беруть скупники. Склад — це «Купив» і «Нафармив» у режимі «Ціни» (<kbd>Tab</kbd>) або в кабінеті.</p>
+  </>;
+  return <>
+    <div className="bkind"><Icon name="tag" size={14} />Що продати зі складу · за цінами скупників</div>
+    <ul className="bsells">{sells.map(x => <li key={x.item}>
+      {x.icon ? <img src={asset(x.icon)} alt="" width={32} height={32} /> : <span className="bava">{x.item[0]}</span>}
+      <span className="bsell-txt"><b>{x.item} × {x.qty}</b>
+        <small>{x.buyer} · {money(x.price)} / {x.unit}{x.next && x.next.price < x.price ? ` · у «${x.next.buyer}» на ${money((x.price - x.next.price) * x.qty)} менше` : ''}</small></span>
+      <b className="good mono">{money(x.total)}</b>
+    </li>)}</ul>
+    <p className="bfine">Ціни — останні, які внесли гравці; у грі вони могли змінитися. Продаж записується в режимі «Ціни» (<kbd>Tab</kbd>).</p>
   </>;
 }
 

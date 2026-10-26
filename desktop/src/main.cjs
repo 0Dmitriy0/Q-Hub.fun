@@ -159,11 +159,21 @@ function createStrip() {
   strip.loadFile(path.join(__dirname, 'strip.html'));
 }
 /* сесія з таймера гри (settings.session) і записи персонажа з її початку; без гри — порожньо */
+/* ціль персонажа — з усіх його записів, незалежно від сесії (strip.cjs → goalOf) */
+async function stripGoal(c) {
+  const [{ data: ch }, { data: rows }] = await Promise.all([
+    sb.from('characters').select('start_balance,goal_name,goal').eq('id', c).maybeSingle(),
+    sb.from('transactions').select('type,amount,source').eq('character_id', c).limit(20000),
+  ]);
+  return stripCalc.goalOf(ch, rows);
+}
 async function stripData() {
-  const s = settings.session;
-  if (!s || !settings.character) return { started: null, perHour: null, game: false };
-  const { data } = await sb.from('transactions').select('type,amount,source').eq('character_id', settings.character).gte('ts', new Date(s.started).toISOString());
-  return { started: s.started, perHour: stripCalc.perHour(stripCalc.netOf(data), Date.now() - s.started), game: true };
+  const s = settings.session, c = settings.character;
+  if (!c) return { started: null, perHour: null, game: false, goal: null };
+  const goal = await stripGoal(c).catch(() => null);
+  if (!s) return { started: null, perHour: null, game: false, goal };
+  const { data } = await sb.from('transactions').select('type,amount,source').eq('character_id', c).gte('ts', new Date(s.started).toISOString());
+  return { started: s.started, perHour: stripCalc.perHour(stripCalc.netOf(data), Date.now() - s.started), game: true, goal };
 }
 async function showStrip() {
   if (!strip || prefs().strip === false) return;

@@ -17,6 +17,14 @@
   .mode { color: #8b9bb0; font-weight: 600; font-size: 12px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
   .dot.off { background: #56677d; box-shadow: none; }
+  /* ціль персонажа посередині: назва, смужка прогресу, скільки лишилось */
+  .goal { min-width: 0; flex: 0 1 auto; margin: 0 12px; }
+  .goal[hidden] { display: none; }
+  .goal .gname { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; }
+  .bar { width: 96px; height: 6px; border-radius: 99px; background: #263344; overflow: hidden; flex: none; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #ff7a1a, #ffb066); }
+  .goal .left { color: #8b9bb0; }
+  .goal.done .bar i { background: #10b981; } .goal.done .left { color: #10b981; }
 </style>
 </head>
 <body>
@@ -25,6 +33,10 @@
     <span id="ses">Сесія: —</span>
     <span class="sep"></span>
     <span id="prof" class="p none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px;margin-right:8px"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span id="pv">Прибуток: —</span></span>
+  </div>
+  <div id="goal" class="pill goal" hidden>
+    <span class="t"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+    <span class="gname" id="gname"></span><span id="gpct"></span><span class="bar"><i id="gbar"></i></span><span class="left" id="gleft"></span>
   </div>
   <div class="pill mode"><span id="mode">Гру не запущено</span><span id="dot" class="dot off"></span></div>
 <script>
@@ -37,7 +49,18 @@
     const s = Math.max(0, Math.floor((Date.now() - started) / 1000));
     el.textContent = 'Сесія: ' + pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
   }
-  /* d: { started: ms|null, perHour: число|null, game: bool } — надсилає main.cjs */
+  /* «4,7 млн» / «850 тис» / «900 $» — коротко, щоб смужка не розросталась */
+  const short = n => n >= 1e6 ? (Math.round(n / 1e5) / 10).toString().replace('.', ',') + ' млн' : n >= 1e4 ? Math.round(n / 1e3) + ' тис' : fmt(n) + ' $';
+  function goal(g) {
+    const el = document.getElementById('goal');
+    el.hidden = !g; if (!g) return;
+    el.className = 'pill goal' + (g.left === 0 ? ' done' : '');
+    document.getElementById('gname').textContent = g.name + ':';
+    document.getElementById('gpct').textContent = g.pct + '%';
+    document.getElementById('gbar').style.width = g.pct + '%';
+    document.getElementById('gleft').textContent = g.left === 0 ? 'досягнуто' : 'ще ' + short(g.left);
+  }
+  /* d: { started: ms|null, perHour: число|null, game: bool, goal: {name, pct, left}|null } — надсилає main.cjs */
   window.render = d => {
     started = d.started || null; tick();
     const p = document.getElementById('prof'), v = document.getElementById('pv');
@@ -45,6 +68,7 @@
     else { p.className = 'p' + (d.perHour < 0 ? ' neg' : ''); v.textContent = 'Прибуток: ~' + (d.perHour < 0 ? '−' : '') + fmt(d.perHour) + ' $/год'; }
     document.getElementById('mode').textContent = d.game ? 'Режим: вікно без рамки' : 'Гру не запущено';
     document.getElementById('dot').className = 'dot' + (d.game ? '' : ' off');
+    goal(d.goal);
   };
   setInterval(tick, 1000);
 </script>
