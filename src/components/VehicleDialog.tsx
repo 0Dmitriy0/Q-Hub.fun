@@ -6,10 +6,12 @@ import { priceKind, salonLabel } from '../lib/vehiclePrice';
 import VehicleEdit from './VehicleEdit';
 
 export interface VehicleFull {
-  id: number; kind: 'auto' | 'moto' | 'avia'; name: string; brand: string; salon: string; price: number;
+  id: number; kind: 'auto' | 'moto' | 'avia' | 'boat'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
   real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric'; currency?: 'game' | 'donate';
 }
+
+export const KIND_ICON: Record<VehicleFull['kind'], string> = { auto: 'car', moto: 'moto', avia: 'plane', boat: 'boat' };
 
 /* вікно транспорту як у грі: фото, тюнінг з калькулятором і характеристики.
    Тюнінг рахується від держ. вартості; ціну чіпа STAGE і ксенону гравець вписує сам (їх купують у гравців) */
@@ -40,14 +42,14 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
     <dialog ref={dlg} className="modal vmodal wdlg" aria-labelledby="vd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
       <div className="modal-box">
         <div className="wdlg-h">
-          <span className="wdlg-ico"><Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={26} /></span>
+          <span className="wdlg-ico"><Icon name={KIND_ICON[v.kind]} size={26} /></span>
           <div className="wdlg-t"><h2 id="vd-title">{v.name}{v.real_name ? <span className="muted vd-real"> ({v.real_name})</span> : null}</h2>
             <div className="jd-tags">{v.brand && <span className="jtag lvl">{v.brand}{v.salon ? ' · ' + v.salon : ''}</span>}{v.exclusive && <span className="excl-badge inline"><Icon name="star" size={14} />Ексклюзив</span>}</div></div>
           {canEdit && !edit && <button type="button" className="btn sm" onClick={() => setEdit(true)}><Icon name="tag" size={15} />Редагувати</button>}
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
-        <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={56} />}
+        <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={KIND_ICON[v.kind]} size={56} />}
           {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {v.fuel === 'electric' ? 'електро' : 'пальне'}</span>}</div>
         <div className="vd-cols">
           <section>

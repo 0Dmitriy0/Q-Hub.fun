@@ -45,7 +45,7 @@ export default function VehicleEdit({ v, onSaved, onCancel }: { v: VehicleFull; 
         <label>Реальна назва<input className="min" value={f.real_name} onChange={e => set('real_name', e.target.value)} placeholder="напр. BMW M5" /></label>
         <label>Марка<input className="min" value={f.brand} onChange={e => set('brand', e.target.value)} /></label>
         <label>Салон<input className="min" value={f.salon} onChange={e => set('salon', e.target.value)} /></label>
-        <div className="vedit-sel"><span>Тип</span><Select label="Тип" value={f.kind} onChange={v2 => set('kind', v2)} options={[{ value: 'auto', label: 'Авто' }, { value: 'moto', label: 'Мото' }, { value: 'avia', label: 'Авіа' }]} /></div>
+        <div className="vedit-sel"><span>Тип</span><Select label="Тип" value={f.kind} onChange={v2 => set('kind', v2)} options={[{ value: 'auto', label: 'Авто' }, { value: 'moto', label: 'Мото' }, { value: 'avia', label: 'Авіа' }, { value: 'boat', label: 'Водний' }]} /></div>
         <div className="vedit-sel"><span>Двигун</span><Select label="Двигун" value={f.fuel} onChange={v2 => set('fuel', v2)} options={[{ value: 'petrol', label: 'Пальне' }, { value: 'electric', label: 'Електро' }]} /></div>
         <div className="vedit-sel"><span>Валюта салону</span><Select label="Валюта салону" value={f.currency} onChange={v2 => set('currency', v2)} options={[{ value: 'game', label: 'Ігрова ($)' }, { value: 'donate', label: 'Донатна' }]} /></div>
         {NUMS.map(([k, label, hint]) => (

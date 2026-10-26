@@ -3,16 +3,16 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
-import VehicleDialog, { type VehicleFull } from '../components/VehicleDialog';
+import VehicleDialog, { KIND_ICON, type VehicleFull } from '../components/VehicleDialog';
 import Select from '../components/Select';
 import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
 
-type Kind = 'auto' | 'moto' | 'avia';
+type Kind = VehicleFull['kind'];
 type Vehicle = VehicleFull;
 interface Score { vehicle_id: number; avg: number; votes: number }
 type Sort = 'price' | 'speed' | 'trunk' | 'rating' | 'name';
 
-const KINDS: [Kind | 'all', string, string][] = [['all', 'Усі', 'car'], ['auto', 'Авто', 'car'], ['moto', 'Мото', 'moto'], ['avia', 'Авіа', 'plane']];
+const KINDS: [Kind | 'all', string, string][] = [['all', 'Усі', 'car'], ['auto', 'Авто', 'car'], ['moto', 'Мото', 'moto'], ['avia', 'Авіа', 'plane'], ['boat', 'Водний', 'boat']];
 const SORT_ICON: Record<Sort, string> = { price: 'tag', speed: 'speed', trunk: 'box', rating: 'star', name: 'search' };
 const SORTS: [Sort, string][] = [['price', 'Ціна'], ['speed', 'Швидкість'], ['trunk', 'Багажник'], ['rating', 'Оцінка гравців'], ['name', 'Назва']];
 
@@ -96,7 +96,7 @@ export default function Transport() {
   }
 
   const topSpeed = useMemo(() => list.reduce((m, v) => Math.max(m, v.speed || 0), 0), [list]);
-  const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length }), [list]);
+  const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length, boat: list.filter(v => v.kind === 'boat').length }), [list]);
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
     const r = list.filter(v => (kind === 'all' || v.kind === kind) && (fuel === 'all' || (v.fuel || 'petrol') === fuel) && (cur === 'all' || priceKind(v) === cur) && (!ql || (v.name + ' ' + v.brand).toLowerCase().includes(ql)));
@@ -144,7 +144,7 @@ export default function Transport() {
           return (
             /* уся плитка відкриває вікно транспорту; кнопки всередині (оцінка, фото) працюють як і раніше */
             <article className={'card vcard' + (v.exclusive ? ' excl' : '')} key={v.id} onClick={e => { if (!(e.target as HTMLElement).closest('button, input, label, select, a')) setOpenId(v.id); }}>
-              <div className="vpic">{v.exclusive && <span className="excl-badge" title="Ексклюзивний транспорт — у салоні не купити"><Icon name="star" size={14} />Ексклюзив</span>}{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={40} />}
+              <div className="vpic">{v.exclusive && <span className="excl-badge" title="Ексклюзивний транспорт — у салоні не купити"><Icon name="star" size={14} />Ексклюзив</span>}{v.image_url ? <img src={v.image_url} alt={v.name} loading="lazy" /> : <Icon name={KIND_ICON[v.kind]} size={40} />}
                 {isAdmin && <span className="vpic-up"><PicUpload label={'Фото транспорту ' + v.name} path={`vehicles/${v.id}.webp`} frame={{ w: 640, h: 360 }} onDone={async url => {
                   const { error } = await supabase!.from('vehicles').update({ image_url: url }).eq('id', v.id); if (error) throw error;
                   setList(l => l.map(x => (x.id === v.id ? { ...x, image_url: url } : x)));
