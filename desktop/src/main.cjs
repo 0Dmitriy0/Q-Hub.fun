@@ -258,8 +258,30 @@ const charName = async () => (await sb.from('characters').select('name').eq('id'
 /* відкритий кабінет одразу показує нові записи — сторінки перечитують дані, без перезавантаження */
 const refreshCabinet = () => { if (isCabinet(win.webContents.getURL())) win.webContents.send('changed'); };
 
+/* товари для угод одним рядком («нафармив 20 гливи»): товари скупників з найвищою ціною і те, що вже є на складі.
+   Склад — не частіше раз на 30 с (плашка питає на кожну літеру) */
+let stockAt = 0, stockCache = {};
+async function dealCatalog() {
+  const prices = await barPrices();
+  if (Date.now() - stockAt > 30e3 && settings.character) { stockCache = await barStock(settings.character); stockAt = Date.now(); }
+  const m = new Map();
+  for (const p of prices) m.set(p.item, { name: p.item, unit: p.unit, best: Math.max(m.get(p.item)?.best || 0, p.price) });
+  for (const k of Object.keys(stockCache)) if (!m.has(k)) m.set(k, { name: k, unit: 'шт', best: 0 });
+  return [...m.values()];
+}
+/* що запише Enter: угода зі складом, переказ чи запис грошей. Каталог не завантажився — лишається звичайний запис */
+async function quickParse(text) { return quick.parseDeal(text, await dealCatalog().catch(() => [])) || quick.parse(text); }
+
 /* Enter із сумою: записати рядок за правилами, без помічника */
 async function quickAdd(text) {
+  /* «нафармив / купив / продав N товару» — угода: склад + запис в облік (як «Купив / Продав» у плашці цін) */
+  const d = quick.parseDeal(text, await dealCatalog().catch(() => []));
+  if (d) {
+    if (d.price === null) return { error: `Вкажи ціну: «${text.trim()} по 300» (за ${d.unit === 'кг' ? 'кг' : 'штуку'}) або «за 3000» (за все)` };
+    const r = await quickDeal(d.op, d.item, d.qty, d.price);
+    if (r.ok) stockAt = 0;   // склад змінився
+    return r;
+  }
   const r = quick.parse(text);
   if (!r) return { error: 'Немає суми — напиши, наприклад, 450к' };
   const err = r.kind === 'transfer' ? await insertTransfer(settings.character, r.from, r.to, r.amount)
@@ -796,7 +818,7 @@ app.whenReady().then(() => {
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));
   /* швидкий запис — лише з плашки, не зі сторінок сайту */
   const fromBar = e => bar && e.sender === bar.webContents;
-  ipcMain.handle('quick-parse', (e, text) => (fromBar(e) ? quick.parse(text) : null));
+  ipcMain.handle('quick-parse', (e, text) => (fromBar(e) ? quickParse(text) : null));
   ipcMain.handle('quick-add', (e, text) => (fromBar(e) ? quickAdd(text) : null));
   ipcMain.handle('quick-ask', (e, text, rules) => (fromBar(e) ? quickAsk(text, rules) : null));
   ipcMain.handle('quick-run', e => (fromBar(e) ? quickRun() : null));

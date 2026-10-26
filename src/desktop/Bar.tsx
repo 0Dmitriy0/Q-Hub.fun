@@ -25,7 +25,8 @@ interface EditAct { kind: 'edit'; id: string; rec: Rec; set: Partial<Pick<Rec, '
 interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
-type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc } | null;
+type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
+  | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
 interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean }
 interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
@@ -225,7 +226,7 @@ export default function Bar() {
         </div>}
 
         <div className="bhint">
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Ціни скупників з сайту · ↑↓ вибір')}</span>
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Ціни скупників з сайту · ↑↓ вибір')}</span>
           <span className="bkeys">{mode === 'ai'
             ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
             : <span className="on"><kbd>Enter</kbd>кількість</span>}
@@ -313,14 +314,17 @@ function Prices({ found, sel, setSel, qtyRef, q, done, fail }: { found: Found[];
   const f = found[sel];
   const [op, setOp] = useState<Op>('sell');
   const [qty, setQty] = useState(''); const [price, setPrice] = useState('');
-  useEffect(() => { setQty(f?.have ? String(f.have) : ''); setOp(f?.have ? 'sell' : 'buy'); }, [f?.item]);
+  /* рибу гра рахує штуками, а склад і ціна — у кг: 1000 шт = 1 кг. Тут вводять штуки, як у грі */
+  const per = f?.unit === 'кг' ? 1000 : 1;
+  const kg = (s: string) => { const n = Number(s.replace(',', '.')); return per === 1 || !(n > 0) ? n : Math.max(0.01, Math.round(n / per * 100) / 100); };
+  useEffect(() => { setQty(f?.have ? String(Math.round(f.have * per * 100) / 100) : ''); setOp(f?.have ? 'sell' : 'buy'); }, [f?.item]);
   /* продаж — за ціною найкращого скупника; купівля в гравців — своя ціна, тож поле порожнє */
   useEffect(() => { setPrice(op === 'sell' && f?.best ? String(f.best.price) : ''); }, [op, f?.item]);
   if (!f) return <div className="bempty">{q.trim() ? `Скупники не беруть «${q.trim()}». Перевір назву.` : 'На складі порожньо — почни вводити товар.'}</div>;
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const r = await api.quickDeal(op, f.item, Number(qty.replace(',', '.')), Number(price.replace(/\s/g, '')));
-    if (r.error) fail(r.error); else done(`${OPS[op]} ${f.item} × ${qty} · ${r.character}`);
+    const r = await api.quickDeal(op, f.item, kg(qty), Number(price.replace(/\s/g, '')));
+    if (r.error) fail(r.error); else done(`${OPS[op]} ${f.item} × ${per > 1 ? `${qty} шт (${kg(qty)} кг)` : qty} · ${r.character}`);
   }
   return <>
     <div className="bleft">{found.map((x, i) => { const p = x.best ? pos(x.best) : null; return (
@@ -340,9 +344,9 @@ function Prices({ found, sel, setSel, qtyRef, q, done, fail }: { found: Found[];
         </div>); })}</div>
       <form className="bdeal" onSubmit={save}>
         <div className="bseg sm">{(['sell', 'buy', 'farm'] as Op[]).map(o => <button type="button" key={o} aria-pressed={op === o} onClick={() => setOp(o)}>{OPS[o]}</button>)}</div>
-        <label>Кількість<input ref={qtyRef} value={qty} onChange={e => setQty(e.target.value)} inputMode="decimal" /></label>
+        <label title={per > 1 ? '1000 шт = 1 кг' : undefined}>{per > 1 ? 'Кількість, шт (1000 = 1 кг)' : 'Кількість'}<input ref={qtyRef} value={qty} onChange={e => setQty(e.target.value)} inputMode="decimal" /></label>
         {op !== 'farm' && <label>Ціна за {f.unit}, $<input value={price} onChange={e => setPrice(e.target.value)} inputMode="numeric" /></label>}
-        <button className="btn acc">Записати{op !== 'farm' && Number(qty) > 0 && Number(price) > 0 ? ` · ${signed((op === 'sell' ? 1 : -1) * Number(qty) * Number(price))}` : ''}</button>
+        <button className="btn acc">Записати{op !== 'farm' && kg(qty) > 0 && Number(price) > 0 ? ` · ${signed(Math.round((op === 'sell' ? 1 : -1) * kg(qty) * Number(price)))}` : ''}</button>
       </form>
     </div>
   </>;
@@ -361,6 +365,14 @@ function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n:
       <button className="btn" onClick={() => api.barCabinet()}>Відкрити облік у кабінеті</button>
     </> : null}</div>
   </>;
+}
+
+/* підказка під рядком для угоди: що Enter запише на склад і в облік */
+function DealLine({ d }: { d: { op: Op; item: string; qty: number; unit: string; price: number | null } }) {
+  const n = d.unit === 'кг' ? `${d.qty} кг` : d.qty;   // риба: показати, у скільки кг перераховано штуки
+  if (d.op === 'farm') return <>Enter запише: нафармив {d.item} × {n} — на склад</>;
+  if (d.price === null) return <>Угода: {OPS[d.op].toLowerCase()} {d.item} × {n} — допиши ціну: «по 300» або «за 3000»</>;
+  return <>Enter запише: {OPS[d.op].toLowerCase()} {d.item} × {n} по {money(d.price)}{d.unit === 'кг' ? '/кг' : ''} = {sum(d.op === 'buy' ? 'out' : 'in', Math.round(d.qty * d.price))} · {d.op === 'buy' ? 'на склад' : 'зі складу'}</>;
 }
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */

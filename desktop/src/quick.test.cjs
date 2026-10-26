@@ -41,3 +41,36 @@ test('швидкий запис: готівка чи картка й перек�
   assert.deepEqual(parse('зняв 200к з картки'), { kind: 'transfer', from: 'card', to: 'cash', amount: 200000 });
   assert.deepEqual(parse('поклав на картку 1,5кк'), { kind: 'transfer', from: 'cash', to: 'card', amount: 1500000 });
 });
+
+const { parseDeal } = require('./quick.cjs');
+const CAT = [{ name: 'Глива', best: 1500 }, { name: 'Мідна руда', best: 1850 }, { name: 'Роздерта шкура кролика', best: 280 },
+  { name: 'Ціла шкура кролика', best: 400 }, { name: 'Мак', best: 1267 }];
+
+test('угода одним рядком: нафармив / купив / продав → склад', () => {
+  assert.deepEqual(parseDeal('нафармив 20 гливи', CAT), { kind: 'deal', op: 'farm', item: 'Глива', qty: 20, unit: 'шт', price: 0 });
+  assert.deepEqual(parseDeal('купив 10 гливи по 300', CAT), { kind: 'deal', op: 'buy', item: 'Глива', qty: 10, unit: 'шт', price: 300 });
+  assert.deepEqual(parseDeal('продав 10 гливи по 1500', CAT), { kind: 'deal', op: 'sell', item: 'Глива', qty: 10, unit: 'шт', price: 1500 });
+  assert.deepEqual(parseDeal('продав 5 мідної руди за 9к', CAT), { kind: 'deal', op: 'sell', item: 'Мідна руда', qty: 5, unit: 'шт', price: 1800 });
+  assert.deepEqual(parseDeal('здав 40 мідної руди', CAT), { kind: 'deal', op: 'sell', item: 'Мідна руда', qty: 40, unit: 'шт', price: 1850 });   // ціна найкращого скупника
+  assert.deepEqual(parseDeal('купив гливи 15 за 4500$', CAT), { kind: 'deal', op: 'buy', item: 'Глива', qty: 15, unit: 'шт', price: 300 });
+  assert.deepEqual(parseDeal('купив 10 гливи', CAT), { kind: 'deal', op: 'buy', item: 'Глива', qty: 10, unit: 'шт', price: null });   // ціну треба вписати
+  assert.deepEqual(parseDeal('нафармив 3 роздертих шкури кролика', CAT), { kind: 'deal', op: 'farm', item: 'Роздерта шкура кролика', qty: 3, unit: 'шт', price: 0 });
+});
+
+test('не угода: невідомий товар, без кількості, неоднозначно', () => {
+  assert.equal(parseDeal('продав Sultan 450к', CAT), null);            // авто — звичайний запис грошей
+  assert.equal(parseDeal('купив ремкомплект 2500', CAT), null);
+  assert.equal(parseDeal('продав гливу', CAT), null);                  // без кількості
+  assert.equal(parseDeal('нафармив 5 шкур кролика', CAT), null);       // яких саме — роздертих чи цілих?
+  assert.equal(parseDeal('зп 1,5кк', CAT), null);
+});
+
+test('риба: гра рахує штуками, скупник платить за кг — 1000 шт = 1 кг', () => {
+  const FISH = [...CAT, { name: 'Окунь', best: 900, unit: 'кг' }];
+  assert.deepEqual(parseDeal('наловив 2500 окуня', FISH), { kind: 'deal', op: 'farm', item: 'Окунь', qty: 2.5, unit: 'кг', price: 0 });
+  assert.deepEqual(parseDeal('продав 1500 окуня', FISH), { kind: 'deal', op: 'sell', item: 'Окунь', qty: 1.5, unit: 'кг', price: 900 });
+  assert.deepEqual(parseDeal('продав 2000 шт окуня за 2к', FISH), { kind: 'deal', op: 'sell', item: 'Окунь', qty: 2, unit: 'кг', price: 1000 });   // «за все» ділиться на кг
+  assert.deepEqual(parseDeal('купив 3 кг окуня по 800', FISH), { kind: 'deal', op: 'buy', item: 'Окунь', qty: 3, unit: 'кг', price: 800 });       // явні кг — як є
+  assert.deepEqual(parseDeal('купив 1,5кг окуня по 800', FISH), { kind: 'deal', op: 'buy', item: 'Окунь', qty: 1.5, unit: 'кг', price: 800 });
+  assert.equal(parseDeal('наловив 3 окуня', FISH).qty, 0.01);   // 3 г — менше за крок обліку, але не нуль
+});

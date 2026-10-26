@@ -44,4 +44,58 @@ function parse(text, type) {
   return { type: kind, amount, category, note, account };
 }
 
-module.exports = { parse, CATS };
+/* ---------- угоди одним рядком: «нафармив 20 гливи», «купив 10 гливи по 300», «продав 5 мідної руди за 9к» ----------
+   Товар має збігтися з відомим (товари скупників і склад персонажа) — інакше це звичайний запис грошей («продав Sultan 450к»).
+   catalog: [{ name, best, unit }] — best — найвища ціна скупника (для «продав» без ціни). Повертає null, якщо це не угода.
+   Рибу гра рахує штуками, а скупник платить за кг: 1000 шт = 1 кг. Тож для товарів «кг» число — штуки, якщо не дописано «кг» */
+const DEAL_OPS = [['farm', /(^|\s)(на)?фарм|(^|\s)(зібра|накопа|наловив|наловила|добу[вл]|нарубав|нарубала|назбира)/],
+  ['buy', /(^|\s)(купи|скупи|прикупи)/], ['sell', /(^|\s)(прода|зда[вл]|здала|збув)/]];
+const NUM = '(\\d{1,3}(?:[  ]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s?(кк|kk|к|k|тис)?';
+const words = s => s.toLowerCase().replace(/[^a-zа-яіїєґ'’ ]/g, ' ').split(/\s+/).filter(Boolean);
+/* основа слова без закінчення: «гливи» → «глив», «мідної» → «мідн», «руди» → «руд» */
+const stem = w => (w.length > 5 ? w.slice(0, -2) : w.length > 3 ? w.slice(0, -1) : w);
+const SKIP = new Set(['по', 'за', 'шт', 'штук', 'кг', 'од', 'на', 'у', 'в', 'з', 'і', 'та', 'скупнику', 'скупника', 'гравцю', 'гравця']);
+
+function matchItem(query, catalog) {
+  const qs = words(query).filter(w => w.length >= 3 && !SKIP.has(w)).map(stem);
+  if (!qs.length) return null;
+  let best = null, tie = false;
+  for (const c of catalog) {
+    const nw = words(c.name);
+    const hit = qs.filter(q => nw.some(n => n.startsWith(q))).length;
+    if (!hit) continue;
+    /* усі слова назви мають бути названі (крім одного в довгих назвах), а зайвих слів у запиті — не більше одного */
+    if (hit < nw.length - (nw.length > 2 ? 1 : 0) || qs.length - hit > 1) continue;
+    const sc = hit * 10 - (nw.length - hit);
+    if (!best || sc > best.sc) { best = { c, sc }; tie = false; } else if (sc === best.sc) tie = true;
+  }
+  return best && !tie ? best.c : null;   // «шкури кролика» при кількох шкурах кролика — неоднозначно, хай уточнить
+}
+
+function parseDeal(text, catalog = []) {
+  const t = String(text || '').trim(), low = t.toLowerCase();
+  const op = (DEAL_OPS.find(([, re]) => re.test(low)) || [])[0];
+  if (!op) return null;
+  let rest = ' ' + low + ' ', price = null, total = null;
+  /* «по 300» — за штуку; «за 9к» / «9000$» — за все */
+  const per = rest.match(new RegExp('\\sпо\\s*\\$?\\s*' + NUM + '\\$?(?=\\s)'));
+  const all = rest.match(new RegExp('\\sза\\s*\\$?\\s*' + NUM + '\\$?(?=\\s)')) || rest.match(new RegExp('\\s\\$\\s*' + NUM + '(?=\\s)')) || rest.match(new RegExp('\\s' + NUM + '\\s?\\$(?=\\s)'));
+  if (per) { price = amountOf(per[1], per[2]); rest = rest.replace(per[0], ' '); }
+  else if (all) { total = amountOf(all[1], all[2]); rest = rest.replace(all[0], ' '); }
+  const q = rest.match(/\s(\d+(?:[.,]\d+)?)\s?(кг|шт)?(?=\s)/);
+  if (!q) return null;
+  let qty = parseFloat(q[1].replace(',', '.'));
+  if (!(qty > 0)) return null;
+  rest = rest.replace(q[0], ' ').replace(DEAL_OPS.find(([o]) => o === op)[1], ' ');
+  const item = matchItem(rest, catalog);
+  if (!item) return null;
+  const unit = item.unit || 'шт';
+  if (unit === 'кг' && q[2] !== 'кг') qty /= 1000;
+  qty = Math.max(0.01, Math.round(qty * 100) / 100);   // в базі — 2 знаки: для риби крок 10 г, менше — не нуль, а 10 г
+  if (op === 'farm') price = 0;
+  else if (price === null && total !== null) price = Math.round(total / qty);
+  else if (price === null && op === 'sell' && item.best > 0) price = item.best;   // продав без ціни — за найкращим скупником
+  return { kind: 'deal', op, item: item.name, qty, unit, price: price ?? null };
+}
+
+module.exports = { parse, parseDeal, CATS };
