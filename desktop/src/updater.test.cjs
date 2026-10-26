@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { IDLE, reduce, createUpdater } = require('./updater.cjs');
+const { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT } = require('./updater.cjs');
 
 const run = (...evs) => evs.reduce(reduce, IDLE);
 
@@ -57,7 +57,7 @@ test('без натискання — лише перевірка; кнопка 
   up.install();
   u.emit('download-progress', { percent: 50 });
   u.emit('update-downloaded', { version: '0.2.57' });
-  assert.deepEqual(u.calls, ['check', 'download', 'install true true']);
+  assert.deepEqual(u.calls, ['check', 'download', 'install false true']);   // з вікном, не тихо
   assert.equal(before, 1);
   assert.deepEqual(seen, ['available', 'downloading', 'downloading', 'ready']);
 });
@@ -68,4 +68,13 @@ test('подвійне натискання не запускає два зав�
   u.emit('update-available', { version: '0.2.57' });
   up.install(); up.install();
   assert.deepEqual(u.calls, ['download']);
+});
+
+test('оновлення ще ставиться: та сама версія й позначка свіжа — не запускатись', () => {
+  const at = 1_000_000, mark = { from: '0.2.59', at };
+  assert.equal(installPending(mark, '0.2.59', at + 30e3), true);
+  assert.equal(installPending(mark, '0.2.60', at + 30e3), false);          // нова версія вже встановилась
+  assert.equal(installPending(mark, '0.2.59', at + INSTALL_WAIT), false);  // давно — інсталятор упав, запускатись
+  assert.equal(installPending(mark, '0.2.59', at - 1), false);             // годинник перевели назад
+  assert.equal(installPending(null, '0.2.59', at), false);
 });

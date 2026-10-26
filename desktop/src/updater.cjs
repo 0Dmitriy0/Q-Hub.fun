@@ -1,6 +1,6 @@
 /* Оновлення програми: раз на кілька годин програма дивиться в реліз «desktop-latest» (latest.yml поруч з інсталятором).
    Є новіша версія — кабінет і трей показують кнопку «Оновити»; натиснув — програма завантажує інсталятор,
-   закривається, тихо ставить нову версію й запускається знову. Без кнопки сама нічого не завантажує.
+   закривається, ставить нову версію (вікно інсталятора з прогресом) і запускається знову. Без кнопки сама нічого не завантажує.
    Перехід станів — чиста функція reduce (перевіряється updater.test.cjs), робота з electron-updater — у createUpdater. */
 
 /* status: idle — нового немає; available — є нова версія; downloading — завантажується; ready — завантажено, ставиться */
@@ -19,10 +19,18 @@ function reduce(s, [type, data]) {
   }
 }
 
+/* поки інсталятор міняє файли, програму не запускати: запущена копія тримає їх, і інсталятор падає з «не вдалось видалити
+   старі файли» (2026-10-26, 0.2.59 — тихе встановлення, вікна не видно, і програму відкрили знову). Перед встановленням
+   програма лишає позначку { from: стара версія, at }; запуск тієї ж версії протягом INSTALL_WAIT — оновлення ще йде */
+const INSTALL_WAIT = 3 * 60e3;
+const installPending = (mark, version, now) => !!mark && mark.from === version && now - mark.at >= 0 && now - mark.at < INSTALL_WAIT;
+
 /* deps: autoUpdater (electron-updater), onChange(state), beforeInstall() — щоб хрестик вікна не перехопив вихід, log(text) */
 function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} }) {
   let st = { ...IDLE }, installing = false;
   const set = ev => { const next = reduce(st, ev); if (next !== st) { st = next; onChange(st); } };
+  /* інсталятор з вікном і прогресом (не тихо): видно, що оновлення ще ставиться; після — програма запуститься сама */
+  const quitAndInstall = () => { beforeInstall(); autoUpdater.quitAndInstall(false, true); };
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.on('update-available', i => set(['available', i]));
@@ -30,7 +38,7 @@ function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} })
   autoUpdater.on('download-progress', p => set(['progress', p]));
   autoUpdater.on('update-downloaded', i => {
     set(['downloaded', i]);
-    if (installing) { beforeInstall(); autoUpdater.quitAndInstall(true, true); }
+    if (installing) quitAndInstall();
   });
   autoUpdater.on('error', e => { log('update error ' + (e?.message || e)); installing = false; set(['error']); });
 
@@ -39,7 +47,7 @@ function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} })
     check: () => { if (st.status === 'idle' || st.status === 'available') autoUpdater.checkForUpdates().catch(e => log('update check ' + (e?.message || e))); },
     /* кнопка «Оновити»: завантажити (якщо ще ні) і поставити */
     install: () => {
-      if (st.status === 'ready') { beforeInstall(); autoUpdater.quitAndInstall(true, true); return; }
+      if (st.status === 'ready') { quitAndInstall(); return; }
       if (st.status !== 'available' || installing) return;
       installing = true; set(['start']);
       autoUpdater.downloadUpdate().catch(() => { /* подію error уже оброблено вище */ });
@@ -47,4 +55,4 @@ function createUpdater({ autoUpdater, onChange, beforeInstall, log = () => {} })
   };
 }
 
-module.exports = { IDLE, reduce, createUpdater };
+module.exports = { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT };

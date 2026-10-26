@@ -10,7 +10,7 @@ const gameSession = require('./session.cjs');
 const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
-const { createUpdater } = require('./updater.cjs');
+const { createUpdater, installPending } = require('./updater.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
@@ -232,12 +232,16 @@ function trayMenu() {
 
 /* ---------- оновлення програми (updater.cjs): перевірка раз на 3 год, ставиться лише після кнопки «Оновити» ---------- */
 let updates = null, notifiedVersion = null;
+const installMark = () => path.join(dir(), 'installing.json');   // «ставиться оновлення» — див. installPending в updater.cjs
 function startUpdates() {
   if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
   const { autoUpdater } = require('electron-updater');
   updates = createUpdater({
     autoUpdater,
-    beforeInstall: () => { quitting = true; },
+    beforeInstall: () => {
+      quitting = true;
+      try { fs.writeFileSync(installMark(), JSON.stringify({ from: app.getVersion(), at: Date.now() })); } catch { /* без позначки — як раніше */ }
+    },
     log: m => { try { fs.appendFileSync(path.join(dir(), 'update.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } },
     onChange: s => {
       win?.webContents.send('update', s);
@@ -785,6 +789,14 @@ const fail = e => { dialog.showErrorBox('Q-Hub не запустився', Strin
 process.on('uncaughtException', fail);
 
 app.whenReady().then(() => {
+  /* відкрили посеред оновлення — не заважати інсталятору: він сам запустить нову версію */
+  let mark = null;
+  try { mark = JSON.parse(fs.readFileSync(installMark(), 'utf8')); } catch { /* немає — звичайний запуск */ }
+  if (installPending(mark, app.getVersion(), Date.now())) {
+    dialog.showMessageBoxSync({ type: 'info', title: 'Q-Hub', message: 'Q-Hub оновлюється', detail: 'Зачекай, поки вікно встановлення закінчить роботу, — програма відкриється сама.' });
+    return app.exit(0);
+  }
+  if (mark) try { fs.unlinkSync(installMark()); } catch { /* не страшно: застаріла позначка нічого не блокує */ }
   Menu.setApplicationMenu(null);   // без меню «File / Edit / View» і його гарячих клавіш — це програма, не браузер
   try { settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { settings = {}; }
   const enc = s => (safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s) : Buffer.from(s));
