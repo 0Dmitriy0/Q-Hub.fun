@@ -1,0 +1,559 @@
+<!DOCTYPE html><html class="dark" lang="uk" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_standard" name="shell-type"><title>Q-Hub — Мапа штату Quant RP</title><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"inverse-on-surface":"#2d3137","background":"#10141a","surface-container-high":"#262a31","on-secondary-fixed-variant":"#3e4755","on-background":"#dfe2eb","inverse-surface":"#dfe2eb","surface-container-highest":"#31353c","surface-card-subtle":"#10161F","primary-fixed-dim":"#ffb693","surface-panel":"#141B24","surface-variant":"#31353c","accent-neon-orange":"#FF7A1A","on-primary":"#561f00","on-primary-container":"#572000","surface-tint":"#ffb693","text-muted":"#56677D","on-surface-variant":"#e2bfb0","border-tactical-focus":"#FF7A1A","surface-dim":"#10141a","inverse-primary":"#a04100","surface":"#10141a","status-danger":"#EF4444","status-warning":"#F59E0B","border-tactical":"#263344","surface-panel-hover":"#1A2330","on-secondary-container":"#b0b9ca","error":"#ffb4ab","surface-bright":"#353940","outline":"#a98a7d","error-container":"#93000a","on-tertiary-fixed-variant":"#733600","on-tertiary":"#512400","text-secondary":"#8B9BB0","on-error":"#690005","tertiary-container":"#e47f33","on-error-container":"#ffdad6","surface-container":"#1c2026","on-secondary":"#28313e","outline-variant":"#5a4136","accent-orange-glow":"rgba(255, 107, 0, 0.28)","on-tertiary-fixed":"#311300","primary-container":"#ff6b00","secondary-container":"#414a58","on-primary-fixed":"#351000","on-surface":"#dfe2eb","surface-container-low":"#181c22","primary-fixed":"#ffdbcc","primary":"#ffb693","on-primary-fixed-variant":"#7a3000","secondary-fixed-dim":"#bec7d8","on-tertiary-container":"#522400","status-info":"#0EA5E9","tertiary-fixed":"#ffdbc7","text-primary":"#F4F7FB","on-secondary-fixed":"#131c29","secondary-fixed":"#dae3f5","tertiary-fixed-dim":"#ffb688","surface-container-lowest":"#0a0e14","status-success":"#10B981","secondary":"#bec7d8","tertiary":"#ffb688","surface-obsidian":"#070A0E"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-2xl":"3.5rem","margin-mobile":"1rem","space-xl":"2.25rem","gutter":"1.25rem","space-lg":"1.5rem","margin":"2rem","gutter-mobile":"0.75rem","space-md":"1rem","space-sm":"0.5rem","space-xs":"0.25rem"},"fontFamily":{"headline-lg":["Manrope"],"body-lg":["Manrope"],"headline-xl":["Manrope"],"headline-xl-mobile":["Manrope"],"display-hero-mobile":["Manrope"],"body-md":["Manrope"],"body-sm":["Manrope"],"display-hero":["Manrope"],"label-mono-sm":["JetBrains Mono"],"headline-md":["Manrope"],"label-mono-md":["JetBrains Mono"],"headline-sm":["Manrope"],"label-mono-lg":["JetBrains Mono"]},"fontSize":{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"26px","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-xl-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"display-hero-mobile":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"800"}],"body-md":["14px",{"lineHeight":"22px","fontWeight":"400"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"700"}],"label-mono-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"500"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"label-mono-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"600"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col justify-between"><header class="fixed top-0 w-full z-50 bg-surface-obsidian/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-20 max-w-[1360px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-6 lg:gap-8"><a class="flex items-center group transition-transform hover:scale-105 duration-300" data-path="holovna" href="#"><img alt="Q-Hub Logo" class="h-8 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw"></a><nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-surface-panel/90 shadow-inner" data-active-classes="bg-surface-container-high text-primary font-bold rounded-full"><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="holovna" href="#">Головна</a><a aria-current="page" class="px-3.5 py-1.5 transition-all bg-surface-container-high text-primary font-bold rounded-full" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="transport" href="#">Транспорт</a><a class="px-3.5 py-1.5 rounded-full font-headline-sm text-body-sm text-text-secondary hover:text-text-primary hover:bg-surface-container-high transition-all" data-path="iventy" href="#">Івенти</a></nav></div><div class="flex items-center gap-3.5"><button aria-label="Перемкнути тему" class="w-9 h-9 rounded-full bg-surface-panel flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[19px]">dark_mode</span></button><a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-body-md font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] hover:shadow-[0_0_20px_-2px_rgba(255,107,0,0.55)] hover:bg-accent-neon-orange transition-all duration-300" data-path="login-discord" href="#"><span class="material-symbols-outlined text-[18px]">sports_esports</span><span class="whitespace-nowrap">Увійти через Discord</span></a><div class="w-9 h-9 rounded-full bg-surface-card-subtle flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-text-secondary text-[20px]">person</span></div></div></div></header><main class="w-full pt-20 bg-surface flex-grow"><div class="flex flex-col w-full relative select-none">
+<!-- Interactive Map Canvas Container -->
+<div class="relative w-full h-[calc(100vh-5rem)] min-h-[760px] overflow-hidden bg-surface-obsidian">
+<!-- Deep Space Grid & Neon Ambient Aura -->
+<div class="absolute inset-0 pointer-events-none opacity-30 bg-[radial-gradient(#263344_1px,transparent_1px)] [background-size:24px_24px]"></div>
+<div class="absolute -top-40 -left-40 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute bottom-10 right-10 w-[500px] h-[500px] bg-status-info/5 rounded-full blur-3xl pointer-events-none"></div>
+<!-- MAP INTERACTIVE VIEWPORT -->
+<div class="absolute inset-0 cursor-grab active:cursor-grabbing transition-transform duration-300 ease-out flex items-center justify-center" id="map-viewport">
+<!-- High Resolution GTA V Tactical Satellite Map Layer -->
+<div class="relative w-[1920px] h-[1080px] shrink-0 scale-100 origin-center transition-transform duration-200" id="map-plane" style="transform: scale(1.35) translate(0px, -240px);">
+<!-- GTA V Satellite High-Def Glowing Radar Map -->
+
+<!-- Radar Pulse & GPS Grid Vectors -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-45" fill="none" viewBox="0 0 1920 1080">
+<circle class="text-status-info" cx="960" cy="540" r="420" stroke="currentColor" stroke-dasharray="6 6" stroke-width="1"></circle>
+<circle class="text-primary-container" cx="960" cy="540" r="280" stroke="currentColor" stroke-opacity="0.4" stroke-width="0.8"></circle>
+<!-- Active Nav Waypoint Flight Line from Los Santos to Sandy Shores -->
+<path class="animate-pulse" d="M 980 840 Q 1120 620 1145 460" stroke="#FF7A1A" stroke-dasharray="8 6" stroke-linecap="round" stroke-width="3"></path>
+<path d="M 850 780 L 720 620 L 780 430" stroke="#0EA5E9" stroke-dasharray="4 4" stroke-opacity="0.6" stroke-width="1.5"></path>
+<!-- Green Zone Radii (Sandy Hospital & Legion Square) -->
+<circle cx="985" cy="855" fill="rgba(16, 185, 129, 0.08)" r="75" stroke="#10B981" stroke-dasharray="3 3" stroke-width="1.5"></circle>
+<circle cx="1145" cy="460" fill="rgba(255, 122, 26, 0.12)" r="55" stroke="#FF7A1A" stroke-width="1.5"></circle>
+</svg>
+<!-- PINS & POI MARKERS -->
+<!-- Pin: Selected Dealer Sandy Shores (Target POI) -->
+
+<!-- Pin: LSPD Central Mission Row -->
+<div class="absolute top-[850px] left-[980px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+
+<span class="opacity-0 group-hover:opacity-100 transition-opacity absolute top-9 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-surface-obsidian text-text-primary text-label-mono-sm font-label-mono-sm whitespace-nowrap shadow-md">
+            LSPD Station
+          </span>
+</div>
+<!-- Pin: Pillbox Hill Medical Center EMS -->
+<div class="absolute top-[815px] left-[940px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+
+</div>
+<!-- Pin: Sandy Shores Airfield Scrap Dealer -->
+<div class="absolute top-[490px] left-[1080px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+
+</div>
+<!-- Pin: Sand Mine Paleto Bay Quarry -->
+<div class="absolute top-[340px] left-[1220px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+<div class="flex items-center justify-center w-7 h-7 rounded-full bg-surface-panel/90 text-primary border border-primary/70 hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[15px]">construction</span>
+</div>
+</div>
+<!-- Pin: Black Market Clandestine Spot -->
+<div class="absolute top-[620px] left-[890px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+
+</div>
+<!-- Pin: Los Santos Customs LS -->
+<div class="absolute top-[885px] left-[915px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+
+</div>
+<!-- Pin: Grape Seed Farm / Agro Drop -->
+<div class="absolute top-[310px] left-[1190px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+<div class="flex items-center justify-center w-7 h-7 rounded-full bg-surface-panel/90 text-status-success border border-status-success/70 hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[15px]">agriculture</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 1. TOP TACTICAL CONTROL BAR -->
+<div class="absolute top-4 left-4 right-4 z-40 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+<!-- Left Cluster: Live GPS Telemetry HUD & Search Bar -->
+<div class="flex items-center gap-2.5 pointer-events-auto flex-wrap">
+<!-- Live Coordinates Telemetry Pill -->
+<div class="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-surface-panel/90 backdrop-blur-xl border border-border-tactical shadow-lg text-text-primary">
+<span class="w-2.5 h-2.5 rounded-full bg-accent-neon-orange animate-pulse"></span>
+<div class="flex items-baseline gap-1.5 font-label-mono-sm text-label-mono-sm">
+<span class="text-text-muted">GPS:</span>
+<span class="text-primary font-bold">X: <span id="telemetry-x" class="">124.50</span></span>
+<span class="text-text-muted font-normal">|</span>
+<span class="text-primary font-bold">Y: <span id="telemetry-y" class="">-980.20</span></span>
+<span class="text-text-muted font-normal">|</span>
+<span class="text-text-secondary">Z: 18.5</span>
+</div>
+<button class="ml-1 p-1 rounded-md hover:bg-surface-panel-hover text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center" onclick="copyGpsCoordinates()" title="Скопіювати координати в буфер" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<!-- Map Search Input with Hotkey -->
+<div class="relative w-72 md:w-84">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="w-full pl-9 pr-12 py-2 rounded-xl bg-surface-card-subtle/90 backdrop-blur-md border border-border-tactical text-text-primary placeholder:text-text-muted font-body-sm text-body-sm focus:outline-none focus:border-border-tactical-focus focus:shadow-[0_0_16px_rgba(255,107,0,0.3)] transition-all" placeholder="Пошук локацій, NPC чи руди..." type="text">
+<kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-surface-panel border border-border-tactical text-text-muted font-label-mono-sm text-label-mono-sm">
+            /
+          </kbd>
+</div>
+<!-- Quick View Jump Center Buttons -->
+
+</div>
+<!-- Right Cluster: Map Mode Switches, Zoom, and Game Mod Installer -->
+<div class="flex items-center gap-2.5 pointer-events-auto">
+<!-- Toggle Toggles HUD Filters -->
+<div class="hidden xl:flex items-center gap-1.5 p-1 rounded-xl bg-surface-panel/90 backdrop-blur-xl border border-border-tactical">
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-container-high text-primary font-headline-sm text-body-sm" type="button">
+<span class="material-symbols-outlined text-[16px]">layers</span>
+<span class="">Зони &amp; GZ</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors font-headline-sm text-body-sm" type="button">
+
+
+</button>
+
+</div>
+<!-- Tactical Zoom Pad -->
+<div class="flex items-center rounded-xl bg-surface-panel/90 backdrop-blur-xl border border-border-tactical p-1 shadow-lg">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors" onclick="zoomIn()" title="Збільшити масштаб" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors font-label-mono-sm text-label-mono-sm" onclick="zoomReset()" title="Скинути зум" type="button">
+            100%
+          </button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-panel-hover transition-colors" onclick="zoomOut()" title="Зменшити масштаб" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+</div>
+<!-- Download Map Mod Button -->
+<a class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-panel/95 hover:bg-surface-panel-hover border border-border-tactical hover:border-primary-container text-text-primary font-headline-sm text-body-md transition-all shadow-[0_4px_16px_rgba(0,0,0,0.5)] group" href="#mod-modal" onclick="toggleModGuide()">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform text-[18px]">folder_zip</span>
+<span class="hidden sm:inline">Мод карти для гри</span>
+<span class="px-1.5 py-0.5 rounded bg-primary-container/20 text-accent-neon-orange font-label-mono-sm text-label-mono-sm">v2.4</span>
+</a>
+</div>
+</div>
+<!-- 2. LEFT FLOATING DRAWER (Interactive Filter & Categories Explorer) -->
+<div class="absolute top-20 left-4 bottom-24 w-80 md:w-88 z-30 pointer-events-auto flex flex-col rounded-2xl bg-surface-panel/90 backdrop-blur-2xl border border-border-tactical shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all duration-300">
+<!-- Drawer Header & Quick Switch -->
+<div class="p-4 border-b border-border-tactical flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-status-success animate-ping"></div>
+<span class="font-headline-md text-headline-sm text-text-primary">Фільтри міток</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted px-2 py-0.5 rounded bg-surface-card-subtle">
+            348 точок
+          </span>
+</div>
+<!-- Category Tabs Carousel -->
+<div class="flex gap-1.5 overflow-x-auto pb-1 text-label-mono-sm font-label-mono-sm">
+<button class="px-2.5 py-1.5 rounded-lg bg-primary-container text-on-primary font-bold whitespace-nowrap shadow-sm">
+            Всі (348)
+          </button>
+<button class="px-2.5 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary whitespace-nowrap border border-border-tactical">
+            Скупники (18)
+          </button>
+<button class="px-2.5 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary whitespace-nowrap border border-border-tactical">
+            Держ. органи (34)
+          </button>
+<button class="px-2.5 py-1.5 rounded-lg bg-surface-card-subtle text-text-secondary hover:text-text-primary whitespace-nowrap border border-border-tactical">
+            Бізнеси (142)
+          </button>
+</div>
+</div>
+<!-- Scrollable Categories Accordion List -->
+<div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+<!-- Category: Скупники & Жива Економіка (Expanded) -->
+<div class="rounded-xl bg-surface-card-subtle/80 border border-border-tactical/80 p-3 flex flex-col gap-2.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-primary-container/20 text-accent-neon-orange flex items-center justify-center">
+<span class="material-symbols-outlined text-[17px]">paid</span>
+</span>
+<div>
+<p class="font-headline-sm text-body-sm text-text-primary">Скупники &amp; Економіка</p>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Ціни синхронізовано з Quant</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[18px]">expand_less</span>
+</div>
+<!-- Sub items -->
+<div class="flex flex-col gap-1.5 pt-1 border-t border-border-tactical/40">
+<!-- Active Dealer Point 1 -->
+<button class="flex items-center justify-between p-2 rounded-lg bg-surface-panel hover:bg-surface-panel-hover border border-primary-container/30 transition-all text-left group" onclick="showPoiModal()" type="button">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-accent-neon-orange shadow-[0_0_8px_rgba(255,107,0,0.8)]"></span>
+<div>
+<div class="font-headline-sm text-body-sm text-text-primary group-hover:text-primary transition-colors">Скупник металів #2</div>
+<div class="font-label-mono-sm text-label-mono-sm text-status-success font-semibold">Мідь: $1,850/од (+14%)</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary text-[16px]">my_location</span>
+</button>
+<!-- Scrap Dealer Sandy -->
+<button class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-panel transition-all text-left" type="button">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-warning"></span>
+<div>
+<div class="font-headline-sm text-body-sm text-text-primary">Скупник скрапу &amp; автодеталей</div>
+<div class="font-label-mono-sm text-label-mono-sm text-text-muted">Аеродром Сенді-Шорс</div>
+</div>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-text-secondary">$940/т</span>
+</button>
+<!-- Fish Buyer Paleto Bay -->
+<button class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-panel transition-all text-left" type="button">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-info"></span>
+<div>
+<div class="font-headline-sm text-body-sm text-text-primary">Оптовий скупник риби</div>
+<div class="font-label-mono-sm text-label-mono-sm text-text-muted">Пірс Палето-Бей</div>
+</div>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-text-secondary">$320/кг</span>
+</button>
+<!-- Black Market Underground -->
+<button class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-panel transition-all text-left" type="button">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-danger"></span>
+<div>
+<div class="font-headline-sm text-body-sm text-text-primary">Чорний ринок (Нічний)</div>
+<div class="font-label-mono-sm text-label-mono-sm text-status-danger">Закрито (з 22:00)</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[16px]">lock</span>
+</button>
+</div>
+</div>
+<!-- Category: Державні Органи -->
+<div class="rounded-xl bg-surface-card-subtle/80 border border-border-tactical/80 p-3 flex items-center justify-between hover:border-border-tactical transition-colors cursor-pointer">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-status-info/10 text-status-info flex items-center justify-center">
+<span class="material-symbols-outlined text-[17px]">shield</span>
+</span>
+<div>
+<p class="font-headline-sm text-body-sm text-text-primary">Державні органи</p>
+<p class="font-body-sm text-label-mono-sm text-text-muted">LSPD, FIB, EMS, Мерія (12)</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[18px]">expand_more</span>
+</div>
+<!-- Category: Банди & Мафії -->
+<div class="rounded-xl bg-surface-card-subtle/80 border border-border-tactical/80 p-3 flex items-center justify-between hover:border-border-tactical transition-colors cursor-pointer">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-status-danger/10 text-status-danger flex items-center justify-center">
+<span class="material-symbols-outlined text-[17px]">swords</span>
+</span>
+<div>
+<p class="font-headline-sm text-body-sm text-text-primary">Банди &amp; Мафії</p>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Бази, тайники, графіті (46)</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[18px]">expand_more</span>
+</div>
+<!-- Category: Роботи та видобуток -->
+<div class="rounded-xl bg-surface-card-subtle/80 border border-border-tactical/80 p-3 flex items-center justify-between hover:border-border-tactical transition-colors cursor-pointer">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[17px]">search_music_note</span>
+</span>
+<div>
+<p class="font-headline-sm text-body-sm text-text-primary">Роботи &amp; Шахти</p>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Піщаний кар'єр, порт, ферма (28)</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[18px]">expand_more</span>
+</div>
+<!-- Category: Бізнеси & Тюнінг LSC -->
+<div class="rounded-xl bg-surface-card-subtle/80 border border-border-tactical/80 p-3 flex items-center justify-between hover:border-border-tactical transition-colors cursor-pointer">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-surface-container-high text-text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[17px]">storefront</span>
+</span>
+<div>
+<p class="font-headline-sm text-body-sm text-text-primary">Бізнеси &amp; Заправки</p>
+<p class="font-body-sm text-label-mono-sm text-text-muted">АЗС, 24/7, Автосалони, LSC (142)</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[18px]">expand_more</span>
+</div>
+<!-- Live Filters Toggle Checklist -->
+<div class="pt-2 flex flex-col gap-2">
+
+
+</div>
+</div>
+<!-- Drawer Footer with Server Sync Pulse -->
+<div class="p-3 bg-surface-obsidian/90 border-t border-border-tactical flex items-center justify-between text-label-mono-sm font-label-mono-sm">
+<div class="flex items-center gap-2 text-status-success">
+<span class="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
+
+</div>
+
+</div>
+</div>
+<!-- 3. SELECTED POI TARGET MODAL CARD (Floating HUD Overlay) -->
+<div class="absolute right-6 top-24 w-88 md:w-96 z-40 pointer-events-auto rounded-2xl bg-surface-panel/95 backdrop-blur-2xl border border-primary-container/40 p-5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.8),0_0_24px_rgba(255,107,0,0.2)] transition-all flex flex-col gap-4" id="poi-card">
+<!-- Card Top: Tag + Close Button -->
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary-container/20 text-accent-neon-orange font-label-mono-sm text-label-mono-sm font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-neon-orange animate-ping"></span>
+              СКУПНИК РУДИ
+            </span>
+<span class="text-status-success font-label-mono-sm text-label-mono-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Працює
+            </span>
+</div>
+<h2 class="font-headline-lg text-headline-sm text-text-primary font-bold">Скупник металів #2 (Сенді)</h2>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Округ Блейн, поворот на аеродром</p>
+</div>
+<button class="w-7 h-7 rounded-full bg-surface-card-subtle flex items-center justify-center text-text-muted hover:text-text-primary transition-colors" onclick="hidePoiModal()" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+<!-- Quick Coordinates & Distance HUD Strip -->
+<div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-surface-card-subtle border border-border-tactical font-label-mono-sm text-label-mono-sm">
+<div>
+<span class="text-text-muted">GPS точка:</span>
+<p class="text-primary font-bold">X: 402, Y: 2074</p>
+</div>
+<div class="text-right">
+<span class="text-text-muted">Відстань від вас:</span>
+<p class="text-text-primary font-semibold">1,240 м (Шосе 68)</p>
+</div>
+</div>
+<!-- Live Buyer Pricing Table -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between text-label-mono-sm font-label-mono-sm text-text-muted">
+<span class="">СКУПОВУЄТЬСЯ ЗАРАЗ</span>
+<span class="text-primary">ПРАЙС ЗА 1 ОД.</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-card-subtle border border-border-tactical/60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-neon-orange text-[18px]">diamond</span>
+<span class="font-body-sm text-body-sm text-text-primary">Мідна руда (чиста)</span>
+</div>
+<div class="text-right">
+<div class="font-label-mono-md text-label-mono-sm text-status-success font-bold">$1,850</div>
+<span class="font-label-mono-sm text-label-mono-sm text-status-success">+14% вигода</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-card-subtle border border-border-tactical/60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">token</span>
+<span class="font-body-sm text-body-sm text-text-primary">Золотий самородок</span>
+</div>
+<div class="text-right">
+<div class="font-label-mono-md text-label-mono-sm text-text-primary font-bold">$4,200</div>
+<span class="font-label-mono-sm text-label-mono-sm text-text-muted">Базова ціна</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-card-subtle border border-border-tactical/60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">iron</span>
+<span class="font-body-sm text-body-sm text-text-primary">Залізна руда</span>
+</div>
+<div class="text-right">
+<div class="font-label-mono-md text-label-mono-sm text-text-primary font-bold">$780</div>
+<span class="font-label-mono-sm text-label-mono-sm text-status-danger">-3% спад</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Overlay Contributor Credit -->
+<div class="flex items-center justify-between text-body-sm font-label-mono-sm text-text-muted pt-1">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[15px]">sensors</span>
+          Через оверлей Q-Hub
+        </span>
+<span class="text-text-secondary">4 хв тому (гравець #3910)</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex items-center gap-2 pt-1">
+<button class="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary-container hover:bg-accent-neon-orange text-on-primary font-headline-sm text-body-sm font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] transition-all" onclick="copyInGameCommand()" type="button">
+<span class="material-symbols-outlined text-[17px]">navigation</span>
+<span class="">Встановити GPS</span>
+</button>
+<button class="p-2.5 rounded-xl bg-surface-card-subtle hover:bg-surface-panel-hover border border-border-tactical text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center" title="Відкрити в оверлеї" type="button">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- 4. BOTTOM FLOATING HUD CONTROLS & RADAR MOD PROMO -->
+<div class="absolute bottom-4 left-4 right-4 z-40 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
+<!-- Keybinding Tactical Legend Bar -->
+<div class="pointer-events-auto flex items-center gap-4 px-4 py-2.5 rounded-xl bg-surface-panel/90 backdrop-blur-xl border border-border-tactical shadow-lg text-text-secondary font-label-mono-sm text-label-mono-sm overflow-x-auto max-w-full">
+<div class="flex items-center gap-2 text-text-primary">
+<span class="material-symbols-outlined text-primary text-[16px]">touch_app</span>
+<span class="">Управління:</span>
+</div>
+<div class="flex items-center gap-1.5">
+<kbd class="px-1.5 py-0.5 rounded bg-surface-card-subtle border border-border-tactical text-text-primary font-bold">ПКМ</kbd>
+<span class="">Власна мітка</span>
+</div>
+<span class="text-border-tactical">|</span>
+<div class="flex items-center gap-1.5">
+<kbd class="px-1.5 py-0.5 rounded bg-surface-card-subtle border border-border-tactical text-text-primary font-bold">Scroll</kbd>
+<span class="">Масштабування</span>
+</div>
+<span class="text-border-tactical">|</span>
+<div class="flex items-center gap-1.5">
+<kbd class="px-1.5 py-0.5 rounded bg-primary-container text-on-primary font-bold">Alt + Q</kbd>
+<span class="text-text-primary font-medium">Оверлей у грі</span>
+</div>
+</div>
+<!-- Radar Mod Banner Card (Direct Download Pill) -->
+<div class="pointer-events-auto flex items-center gap-3 px-4 py-2 rounded-xl bg-surface-panel/95 backdrop-blur-xl border border-border-tactical hover:border-border-tactical-focus transition-colors shadow-2xl">
+<div class="w-8 h-8 rounded-lg bg-primary-container/20 text-accent-neon-orange flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[19px]">satellite_alt</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-sm text-text-primary font-bold">HD Радар-Мапа для GTA V</span>
+<span class="flex items-center gap-1 text-[10px] text-status-success font-label-mono-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+              Античит Clean
+            </span>
+</div>
+<span class="font-body-sm text-label-mono-sm text-text-muted">Замініть стандартну карту на версію з усіма мітками</span>
+</div>
+<a class="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-card-subtle hover:bg-primary-container hover:text-on-primary text-primary font-headline-sm text-body-sm transition-all border border-border-tactical" href="#" onclick="alert('Завантаження інсталятора Q-Hub Radar Pack v2.4 розпочато (.oiv)'); return false;">
+<span class="material-symbols-outlined text-[16px]">download</span>
+<span class="">Завантажити</span>
+</a>
+</div>
+</div>
+<!-- MODAL: RADAR MOD INSTALLATION GUIDE POPUP (Hidden by default) -->
+<div class="hidden absolute inset-0 z-50 bg-surface-obsidian/80 backdrop-blur-md flex items-center justify-center p-4" id="mod-modal">
+<div class="relative w-full max-w-2xl rounded-2xl bg-surface-panel border border-border-tactical p-6 shadow-2xl flex flex-col gap-5">
+<div class="flex items-center justify-between border-b border-border-tactical pb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container/20 text-accent-neon-orange flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">folder_zip</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-sm text-text-primary font-bold">Встановлення мапи в гру (Quant RP)</h3>
+<p class="font-body-sm text-body-sm text-text-muted">Пакет текстур та радарів високої чіткості v2.4</p>
+</div>
+</div>
+<button class="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-panel-hover" onclick="toggleModGuide()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="p-3 rounded-xl bg-surface-card-subtle border border-border-tactical flex flex-col gap-1.5">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary font-bold text-label-mono-sm flex items-center justify-center">1</span>
+<h4 class="font-headline-sm text-body-sm text-text-primary">Завантажте архів</h4>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Розпакуйте .oiv файл на робочий стіл чи в папку завантажень.</p>
+</div>
+<div class="p-3 rounded-xl bg-surface-card-subtle border border-border-tactical flex flex-col gap-1.5">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary font-bold text-label-mono-sm flex items-center justify-center">2</span>
+<h4 class="font-headline-sm text-body-sm text-text-primary">Відкрийте OpenIV</h4>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Оберіть вкладку "Package Installer" та виберіть QHub_Map_v2.4.oiv.</p>
+</div>
+<div class="p-3 rounded-xl bg-surface-card-subtle border border-border-tactical flex flex-col gap-1.5">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary font-bold text-label-mono-sm flex items-center justify-center">3</span>
+<h4 class="font-headline-sm text-body-sm text-text-primary">Запускайте гру</h4>
+<p class="font-body-sm text-label-mono-sm text-text-muted">Мапа повністю замінює ESC-меню та мінімапу в авто без банів.</p>
+</div>
+</div>
+<div class="p-3.5 rounded-xl bg-primary-container/10 border border-primary-container/30 flex items-center gap-3">
+<span class="material-symbols-outlined text-accent-neon-orange text-[22px]">verified_user</span>
+<p class="font-body-sm text-body-sm text-text-primary">
+            Модифікація офіційно дозволена правилами сервера Quant RP: не змінює колізії та не дає переваги у стрільбі.
+          </p>
+</div>
+<div class="flex items-center justify-end gap-3 pt-2">
+<button class="px-4 py-2 rounded-xl bg-surface-card-subtle text-text-secondary hover:text-text-primary font-headline-sm text-body-sm transition-colors" onclick="toggleModGuide()" type="button">
+            Закрити
+          </button>
+<a class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-container hover:bg-accent-neon-orange text-on-primary font-headline-sm text-body-sm font-bold shadow-[0_4px_16px_rgba(255,107,0,0.35)] transition-all" href="#" onclick="alert('Завантаження QHub_Map_v2.4.zip розпочато!'); toggleModGuide(); return false;">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="">Завантажити архів (.ZIP, 142 МБ)</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  let currentZoom = 1;
+  const mapPlane = document.getElementById('map-plane');
+  const poiCard = document.getElementById('poi-card');
+  const modModal = document.getElementById('mod-modal');
+
+  function zoomIn() {
+    if (currentZoom < 2.5) {
+      currentZoom += 0.25;
+      updateMapTransform();
+    }
+  }
+
+  function zoomOut() {
+    if (currentZoom > 0.6) {
+      currentZoom -= 0.25;
+      updateMapTransform();
+    }
+  }
+
+  function zoomReset() {
+    currentZoom = 1;
+    mapPlane.style.transform = `scale(1) translate(0px, 0px)`;
+  }
+
+  function updateMapTransform(tx = 0, ty = 0) {
+    mapPlane.style.transform = `scale(${currentZoom}) translate(${tx}px, ${ty}px)`;
+  }
+
+  function centerLosSantos() {
+    currentZoom = 1.35;
+    mapPlane.style.transform = `scale(${currentZoom}) translate(0px, -240px)`;
+    document.getElementById('telemetry-x').innerText = '124.50';
+    document.getElementById('telemetry-y').innerText = '-980.20';
+  }
+
+  function centerSandyShores() {
+    currentZoom = 1.5;
+    mapPlane.style.transform = `scale(${currentZoom}) translate(-140px, 60px)`;
+    document.getElementById('telemetry-x').innerText = '402.14';
+    document.getElementById('telemetry-y').innerText = '2074.80';
+    showPoiModal();
+  }
+
+  function centerPaleto() {
+    currentZoom = 1.4;
+    mapPlane.style.transform = `scale(${currentZoom}) translate(-160px, 220px)`;
+    document.getElementById('telemetry-x').innerText = '-120.32';
+    document.getElementById('telemetry-y').innerText = '6450.11';
+  }
+
+  function showPoiModal() {
+    if (poiCard) poiCard.classList.remove('hidden');
+  }
+
+  function hidePoiModal() {
+    if (poiCard) poiCard.classList.add('hidden');
+  }
+
+  function toggleModGuide() {
+    if (modModal) {
+      modModal.classList.toggle('hidden');
+    }
+  }
+
+  function copyGpsCoordinates() {
+    const coords = '/gps 402 2074';
+    navigator.clipboard.writeText(coords).then(() => {
+      alert('Скопійовано команду для гри: ' + coords);
+    });
+  }
+
+  function copyInGameCommand() {
+    const cmd = '/gps 402 2074';
+    navigator.clipboard.writeText(cmd).then(() => {
+      alert('Мітку відправлено в буфер! Вставте у чат гри Quant RP: ' + cmd);
+    });
+  }
+</script></main><footer class="w-full bg-surface-container-lowest mt-space-2xl"><div class="max-w-[1360px] mx-auto px-margin py-12 flex flex-col gap-8"><div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8"><div class="flex flex-col gap-2 max-w-xl"><div class="flex items-center gap-3"><img alt="Q-Hub Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCiFvBs8I7zYZe5RVnxwl_e0mnjc57Bv443eTybHNInj3A8WFyNBlt6O7TnldOQVbCDRYAHMT9l8sVCfI_YQ1EGgRNJroR5vlCDbVapHlSX7Hadbbkrgw15d4OhpdqUSe1AHj_fO2qReFUPFy1MvM3HxzR7vHFNhO19npquyDMkZXqEmA2cpb6L7wXVcETB2wkbc7nVncoDKFSfcH-_zRYz3fxLXeMgeY6UzYxZbQGJAMrMjMYszqmGZ0K_5D3cB4jSbw"><span class="font-label-mono-sm text-label-mono-sm uppercase px-2 py-0.5 rounded bg-surface-panel text-text-muted">v2.4 Core</span></div><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Q-Hub — незалежний фан-проєкт гравців, не пов'язаний з офіційною адміністрацією QuantRP. Всі торгові марки, зображення та найменування належать їх відповідним правовласникам.</p></div><div class="flex flex-wrap items-center gap-3"><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-primary text-[20px]">forum</span><span class="">Discord спільнота</span></a><a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-panel text-text-primary hover:bg-surface-panel-hover transition-colors font-headline-sm text-headline-sm" href="#"><span class="material-symbols-outlined text-status-success text-[20px]">sync_alt</span><span class="">Статус серверів</span></a></div></div><div class="flex flex-col md:flex-row items-center justify-between gap-4 pt-4"><div class="flex flex-wrap items-center gap-6"><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="holovna" href="#">Головна</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="mapa-shtatu" href="#">Мапа штату</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="prohrama-overlei" href="#">Програма-оверлей</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="tsiny-skupnykiv" href="#">Ціни скупників</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="transport" href="#">Транспорт</a><a class="font-body-sm text-body-sm text-text-secondary hover:text-text-primary transition-colors" data-path="iventy" href="#">Івенти</a></div><div class="font-label-mono-sm text-label-mono-sm text-text-muted">© 2025 Q-Hub Community. Всі права захищено.</div></div></div></footer>
+
+
+
+</body></html>

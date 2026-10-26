@@ -7,6 +7,7 @@ const { makeClient, login } = require('./auth.cjs');
 const { fileStorage } = require('./store.cjs');
 const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
+const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
 const { createUpdater } = require('./updater.cjs');
@@ -22,7 +23,7 @@ const BAR_W = 960, BAR_MAX_H = 600;
 /* інтерфейс кабінету вбудований у програму (зібраний з src/desktop сайту в ui/) — не сторінка сайту в рамці */
 const UI = path.join(__dirname, 'ui', 'app.html');
 /* власний заголовок вікна: кнопки Windows малює система поверх наших 40 px */
-const TITLE_BAR = { color: '#070707', symbolColor: '#a8a29e', height: 40 };
+const TITLE_BAR = { color: '#10141a', symbolColor: '#8b9bb0', height: 40 };
 
 let sb, win, bar, tray, quitting = false, settings = {};
 const dir = () => app.getPath('userData');
@@ -84,7 +85,7 @@ async function state() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 420, height: 560, resizable: false, maximizable: false, title: 'Q-Hub', backgroundColor: '#070707', show: false,
+    width: 420, height: 560, resizable: false, maximizable: false, title: 'Q-Hub', backgroundColor: '#10141a', show: false,
     icon: path.join(__dirname, 'icon.png'), titleBarStyle: 'hidden', titleBarOverlay: TITLE_BAR,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
   });
@@ -130,13 +131,57 @@ function createBar() {
     bar.hide();
   });
   /* плашку закрили, не вибравши «надіслати» (Esc, повернувся в гру) — знімок без точки не надсилається */
-  bar.on('hide', () => { if (pinAsk) { pinAsk = null; pinLog('F9 без точки — не надіслано (плашку закрито)'); } });
+  /* плашку закрили, нічого не вибравши: знайдена точка однаково йде на сайт (без категорії), знімок без точки — ні */
+  bar.on('hide', () => {
+    if (!pinAsk) return;
+    const a = pinAsk; pinAsk = null;
+    if (a.pt) { pinLog('F9 з точкою — плашку закрито, надсилаю без категорії'); sendPin(a.draft, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); }
+    else pinLog('F9 без точки — не надіслано (плашку закрито)');
+  });
+  /* нижня смужка сесії живе разом з плашкою */
+  bar.on('show', () => { showStrip().catch(() => {}); });
+  bar.on('hide', hideStrip);
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
-/* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор */
+/* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
+   Прозоре вікно на всю ширину екрана, кліки проходять крізь нього в гру, фокус не забирає */
+const STRIP_H = 44, STRIP_GAP = 12;
+let strip = null, stripTimer = null;
+function createStrip() {
+  strip = new BrowserWindow({
+    width: 800, height: STRIP_H, show: false, frame: false, transparent: true, resizable: false, movable: false, focusable: false,
+    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, hasShadow: false, title: 'Q-Hub · сесія',
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  strip.setAlwaysOnTop(true, 'screen-saver');
+  strip.setIgnoreMouseEvents(true);
+  strip.webContents.on('will-navigate', e => e.preventDefault());
+  strip.loadFile(path.join(__dirname, 'strip.html'));
+}
+/* сесія з таймера гри (settings.session) і записи персонажа з її початку; без гри — порожньо */
+async function stripData() {
+  const s = settings.session;
+  if (!s || !settings.character) return { started: null, perHour: null, game: false };
+  const { data } = await sb.from('transactions').select('type,amount,source').eq('character_id', settings.character).gte('ts', new Date(s.started).toISOString());
+  return { started: s.started, perHour: stripCalc.perHour(stripCalc.netOf(data), Date.now() - s.started), game: true };
+}
+async function showStrip() {
+  if (!strip || prefs().strip === false) return;
+  const { bounds: b } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  strip.setBounds({ x: b.x + 16, y: b.y + b.height - STRIP_H - STRIP_GAP, width: b.width - 32, height: STRIP_H });
+  if (strip.webContents.isLoading()) await new Promise(r => strip.webContents.once('did-finish-load', r));
+  const push = async () => { try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(await stripData())})`); } catch { /* мережа — наступна спроба за хвилину */ } };
+  await push();
+  if (!bar.isVisible()) return;   // плашку вже сховали, поки рахували
+  strip.showInactive(); strip.moveTop();
+  clearInterval(stripTimer); stripTimer = setInterval(push, 60e3);
+}
+function hideStrip() { clearInterval(stripTimer); stripTimer = null; strip?.hide(); }
+
+/* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор (унизу — над смужкою сесії) */
 function placeBar() {
   const { workArea: a } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 }[prefs().position];
+  const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 - (prefs().strip === false ? 0 : STRIP_H + STRIP_GAP) }[prefs().position];
   bar.setPosition(Math.round(a.x + (a.width - BAR_W) / 2), Math.max(a.y, y));
 }
 /* показати плашку поверх гри й узяти фокус (blur вище не дає грі одразу сховати її) */
@@ -196,7 +241,7 @@ function startUpdates() {
     },
   });
   setTimeout(() => updates.check(), 15e3);
-  setInterval(() => updates.check(), 3 * 3600e3);
+  setInterval(() => updates.check(), 30 * 60e3);   // нова версія доходить за пів години, а не за три
 }
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
@@ -482,12 +527,13 @@ async function pinShot() {
   const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
   const draft = { taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
     match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } };
-  /* точку знайдено — одразу на сайт; ні — спершу спитати: на знімку може бути не гра, а чат, Discord тощо */
-  if (pt) return sendPin(draft, img.toJPEG(80), `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}`);
-  pinAsk = { draft, jpeg: img.toJPEG(80) };
+  /* і з точкою, і без — спершу форма з категорією й описом (підказка адміну). Точку знайдено: Enter — надіслати з категорією,
+     закрив плашку — надсилається без категорії. Не знайдено: на знімку може бути не гра (чат, Discord) — без «так» не надсилаємо */
+  const what = pt ? `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}` : 'Без точки — поставить адмін';
+  pinAsk = { draft, jpeg: img.toJPEG(80), pt, what };
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
-  bar.webContents.send('pin-ask', { reason: WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats() });
+  bar.webContents.send('pin-ask', { reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null });
 }
 /* категорії мапи для вікна «точку не знайдено» — раз на 30 хв */
 let catsAt = 0, catsCache = [];
@@ -511,7 +557,7 @@ function pinDecide(send, hint = {}) {
   if (!a) return;
   const category_id = typeof hint.category === 'string' && hint.category ? hint.category : null;
   const note = typeof hint.note === 'string' ? hint.note.trim().slice(0, 600) : '';
-  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, 'Без точки — поставить адмін').catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
+  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
   else showPin('Не надіслано.');
 }
 /* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
@@ -532,6 +578,12 @@ async function sendDraft(draft, jpeg) {
     ({ error } = await sb.from('map_drafts').insert(row));
   if (!error || error.code === '23505') return 'ok';
   return error.code === '42501' ? 'denied' : 'retry';
+}
+/* «онлайн програми» в шапці сайту: раз на хвилину «я тут» (supabase/migrations/0023).
+   Без входу або на старій базі без функції — тихо нічого: лічильник не варто того, щоб заважати */
+function startOnline() {
+  const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping'); };
+  ping().catch(() => {}); setInterval(() => ping().catch(() => {}), 60e3);
 }
 function startDrafts() {
   refreshRole().catch(() => {});
@@ -610,8 +662,9 @@ const visionLog = () => path.join(dir(), 'vision.log');
 let catalogAt = 0, catalogCache = [];
 async function visionCatalog() {
   if (Date.now() - catalogAt < 30 * 60e3 && catalogCache.length) return catalogCache;
-  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,items(name)');
-  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id })); catalogAt = Date.now(); }
+  /* min/max — межі скупника: з ними ціну з прокручуваного списку можна взяти з одного кадру (pricescan.cjs) */
+  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,items(name)');
+  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0 })); catalogAt = Date.now(); }
   return catalogCache;
 }
 /* кадр екрана гри (основний монітор) у повному розмірі */
@@ -650,6 +703,12 @@ async function autoBaseline({ cash, bank }) {
   refreshCabinet();
 }
 /* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
+/* час наступної зміни цін з вікна скупника — на сайт від імені гравця (база перевіряє, що це найближчі 24 год і є нік зі статіком) */
+async function autoNextChange(buyer, at) {
+  const { error } = await sb.rpc('set_next_change', { p_buyer: buyer, p_at: new Date(at).toISOString() });
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} next sent ${buyer}: ${error ? 'ні — ' + error.message : 'так'}
+`); } catch { /* журнал не обов'язковий */ }
+}
 async function autoPrices(rows) {
   let ok = 0;
   for (const r of rows) if (!(await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop' })).error) ok++;
@@ -660,9 +719,11 @@ function startVision() {
   try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
   const eye = vision({
     nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
-    active: () => !!settings.session && !!settings.character && prefs().autoLedger !== false,
+    /* зір працює, якщо ввімкнено хоч щось: автооблік або ціни скупників (раніше вимкнений автооблік вимикав і ціни) */
+    active: () => !!settings.session && !!settings.character && (prefs().autoLedger !== false || prefs().autoPrices !== false),
+    ledger: () => prefs().autoLedger !== false,
     prices: () => prefs().autoPrices !== false,
-    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices,
+    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
   });
   setInterval(() => eye.tick(), 2000);
 }
@@ -752,7 +813,7 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
-  /* F9 без точки: «надіслати без точки» чи «не надсилати» */
+  /* F9: форма категорії — «надіслати» чи «не надсилати» */
   ipcMain.handle('pin-decide', (e, send, hint) => {
     if (!fromBar(e) || !pinAsk) return;
     const a = pinAsk; pinAsk = null; bar.hide(); pinAsk = a;   // hide не має скасувати те, що вибрали
@@ -764,9 +825,11 @@ app.whenReady().then(() => {
 
   createWindow();
   createBar();
+  createStrip();
   createTray();
   startUpdates();
   startDrafts();
+  startOnline();
   startSessionTimer();
   startVision();
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))

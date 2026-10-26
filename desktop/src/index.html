@@ -6,8 +6,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@600;700&display=swap">
 <title>Q-Hub</title>
 <style>
-  /* ті самі кольори й шрифти, що в кабінеті (src/styles.css): графіт, помаранчевий акцент, Unbounded + Manrope */
-  :root { --bg: #070707; --surface: #111111; --surface2: #1a1a1a; --line: rgba(255, 255, 255, .07); --line2: #333; --fg: #f5f5f4; --muted: #a8a29e; --acc: #ff6a1f; --acc-hi: #ff8a4c; --bad: #f87171; }
+  /* ті самі кольори й шрифти, що в кабінеті (src/styles.css): холодний графіт, помаранчевий акцент, Manrope (Unbounded — лише літера логотипа) */
+  :root { --bg: #10141a; --surface: #141b24; --surface2: #1a2330; --line: rgba(38, 51, 68, .8); --line2: #263344; --fg: #f4f7fb; --muted: #8b9bb0; --acc: #ff6b00; --acc-hi: #ff7a1a; --bad: #ef4444; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; background: radial-gradient(120% 70% at 50% 0%, rgba(255, 106, 31, .16), transparent 60%), var(--bg); color: var(--fg); font: 15px/1.5 Manrope, system-ui, 'Segoe UI', sans-serif; user-select: none; cursor: default; display: flex; flex-direction: column; }
@@ -16,7 +16,7 @@
   main { flex: 1; padding: 4px 28px 24px; display: flex; flex-direction: column; gap: 18px; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand i { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 700 20px Unbounded, sans-serif; font-style: normal; color: #160800; background: linear-gradient(150deg, #ff7a2e, #d9480f); box-shadow: 0 10px 24px -8px rgba(255, 106, 31, .7); }
-  .brand b { display: block; font: 700 19px Unbounded, sans-serif; letter-spacing: -.02em; }
+  .brand b { display: block; font: 800 19px Manrope, sans-serif; letter-spacing: -.02em; }
   .brand small { color: var(--muted); font-size: 12.5px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .muted { color: var(--muted); margin: 0; }

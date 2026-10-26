@@ -37,13 +37,18 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
   const speeds = v.speed ? stageSpeeds(v.speed) : [];
 
   return (
-    <dialog ref={dlg} className="modal vmodal" aria-labelledby="vd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
+    <dialog ref={dlg} className="modal vmodal wdlg" aria-labelledby="vd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
       <div className="modal-box">
-        <div className="row between"><h2 id="vd-title" className="ih"><Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} />{v.name}{v.exclusive && <span className="excl-badge inline"><Icon name="star" size={14} />Ексклюзив</span>}{v.real_name ? <span className="muted vd-real"> ({v.real_name})</span> : null}</h2>
-          <span className="row">{canEdit && !edit && <button type="button" className="btn sm" onClick={() => setEdit(true)}><Icon name="tag" size={15} />Редагувати</button>}
-            <button type="button" className="btn sm ghost" onClick={onClose} aria-label="Закрити">✕</button></span></div>
+        <div className="wdlg-h">
+          <span className="wdlg-ico"><Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={26} /></span>
+          <div className="wdlg-t"><h2 id="vd-title">{v.name}{v.real_name ? <span className="muted vd-real"> ({v.real_name})</span> : null}</h2>
+            <div className="jd-tags">{v.brand && <span className="jtag lvl">{v.brand}{v.salon ? ' · ' + v.salon : ''}</span>}{v.exclusive && <span className="excl-badge inline"><Icon name="star" size={14} />Ексклюзив</span>}</div></div>
+          {canEdit && !edit && <button type="button" className="btn sm" onClick={() => setEdit(true)}><Icon name="tag" size={15} />Редагувати</button>}
+          <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
+        </div>
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
-        <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={56} />}</div>
+        <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={v.kind === 'moto' ? 'moto' : v.kind === 'avia' ? 'plane' : 'car'} size={56} />}
+          {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {v.fuel === 'electric' ? 'електро' : 'пальне'}</span>}</div>
         <div className="vd-cols">
           <section>
             <h3 className="ih"><Icon name="bolt" size={16} />Елементи тюнінгу</h3>

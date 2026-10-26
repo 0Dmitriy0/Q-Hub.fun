@@ -38,7 +38,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Q-Hub",
-      "artifactName": "Q-Hub-Setup.${ext}"
+      "artifactName": "Q-Hub-Setup-${version}.${ext}"
     },
     "publish": [
       {

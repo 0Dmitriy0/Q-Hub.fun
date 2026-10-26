@@ -1,0 +1,76 @@
+const test = require('node:test');
+const assert = require('node:assert');
+const { pricePicker } = require('./pricescan.cjs');
+
+const r = (item_id, price) => ({ buyer_id: 'fish', item_id, price });
+
+test('ціна йде на сайт після двох однакових кадрів, товари з різних кадрів збираються', () => {
+  const pick = pricePicker(600e3);
+  assert.deepStrictEqual(pick('fish', [r(1, 100), r(2, 200)], 0), []);              // перший кадр — лише запам'ятати
+  assert.deepStrictEqual(pick('fish', [r(1, 100), r(2, 200), r(3, 300)], 4e3), [r(1, 100), r(2, 200)]);
+  assert.deepStrictEqual(pick('fish', [r(1, 100), r(3, 300)], 8e3), [r(3, 300)]);   // товар, якого не було на першому кадрі
+  assert.deepStrictEqual(pick('fish', [r(1, 100), r(2, 200), r(3, 300)], 12e3), []); // уже надіслані не повторюються
+});
+
+test('криве розпізнавання не проходить, нова ціна — проходить, стара — лише через проміжок', () => {
+  const pick = pricePicker(600e3);
+  pick('fish', [r(1, 100)], 0); assert.deepStrictEqual(pick('fish', [r(1, 100)], 4e3), [r(1, 100)]);
+  assert.deepStrictEqual(pick('fish', [r(1, 108)], 8e3), []);                       // один кадр з іншим числом
+  assert.deepStrictEqual(pick('fish', [r(1, 100)], 12e3), []);                      // знову стара — вже надсилали
+  pick('fish', [r(1, 120)], 16e3); assert.deepStrictEqual(pick('fish', [r(1, 120)], 20e3), [r(1, 120)]);
+  assert.deepStrictEqual(pick('fish', [r(1, 120)], 700e3), [r(1, 120)]);             // минув проміжок — та сама ціна знову
+  assert.deepStrictEqual(pick('fish', [r(1, 120)], 704e3), []);
+});
+
+const { parseChange, changePicker } = require('./pricescan.cjs');
+
+test('таймер зміни цін: справжні результати OCR з вікон скупників', () => {
+  assert.strictEqual(parseChange('Е ЗМІНА ЦІН НА. £\n= ТОВАРИ ЧЕРЕЗ i\n| 2 год. 55 хв. Е\n'), 175);
+  assert.strictEqual(parseChange('ЗМІНА ЦІН НА.\nTOBAPH HEPES Оу\n2 год. 54 xB.\n'), 174);
+  assert.strictEqual(parseChange('2 змінАЦІННА ;\n\noGAPH UEPEs\n3rop. 12xe. }\nя E:\n'), 192);
+  assert.strictEqual(parseChange('. ЗМІНА ЦІН HA X\nТОВАРИ ЧЕРЕЗ\n\nй\n\nЗ год. 9 хв.\n'), 189);
+  assert.strictEqual(parseChange('=\nШЕ |\n\n2ron. 35x. ©\nЗ г\n'), 155);
+  assert.strictEqual(parseChange('45 хв.'), 45);
+  assert.strictEqual(parseChange('1 год.'), 60);
+  assert.strictEqual(parseChange('ЗМІНА ЦІН НА ТОВАРИ ЧЕРЕЗ'), null);
+  assert.strictEqual(parseChange('2 год. 75 хв.'), null);
+});
+
+test('час зміни надсилається після двох кадрів і лише при новому циклі', () => {
+  const pick = changePicker(), at = 10 * 36e5;
+  assert.strictEqual(pick('food', at), false);            // перший кадр
+  assert.strictEqual(pick('food', at + 60e3), true);      // другий, ±1 хв — надіслати
+  assert.strictEqual(pick('food', at), false);            // той самий момент — не повторювати
+  assert.strictEqual(pick('food', at + 3 * 36e5), false); // новий цикл — спершу підтвердити
+  assert.strictEqual(pick('food', at + 3 * 36e5), true);
+  assert.strictEqual(pick('fish', at), false);            // інший скупник — окремо
+});
+
+test('прокручуваний список: один кадр, якщо назва впевнена й ціна в межах скупника', () => {
+  const pick = pricePicker(600e3);
+  const sure = (item_id, price, score = 0.95) => ({ buyer_id: 'hide', item_id, price, score, min: 400, max: 900 });
+  assert.deepStrictEqual(pick('hide', [sure(1, 556)], 0), [{ buyer_id: 'hide', item_id: 1, price: 556 }]);
+  assert.deepStrictEqual(pick('hide', [sure(2, 1556)], 0), []);         // поза межами — чекати другого кадру
+  assert.deepStrictEqual(pick('hide', [sure(3, 605, 0.7)], 0), []);     // назва невпевнена — чекати
+  assert.deepStrictEqual(pick('hide', [{ ...sure(4, 605), min: 0, max: 0 }], 0), []);   // меж немає — чекати
+  assert.deepStrictEqual(pick('hide', [sure(1, 556)], 2e3), []);        // уже надіслано
+  assert.deepStrictEqual(pick('hide', [sure(1, 656)], 4e3), [{ buyer_id: 'hide', item_id: 1, price: 656 }]);   // інша ціна — виправлення
+});
+
+const { headerBuyer } = require('./pricescan.cjs');
+
+test('скупник за заголовком «Купує …» ліворуч', () => {
+  const L = (...t) => t.map((text, i) => ({ text, y: i * 40, col: 0 }));
+  /* справжні результати OCR лівої смуги вікон (shots/*.png) */
+  assert.strictEqual(headerBuyer(L('що', 'HAROLD BROWN', 'Купує', 'харчі')), 'food');
+  assert.strictEqual(headerBuyer(L('129 kc', 'f', 'WALTER GREEN', 'Kv', 'врожай')), 'harvest');
+  assert.strictEqual(headerBuyer(L('ЛЕ', 'f', 'ASHLEY WILLIAMS', 'колоди', 'ліміт ПРОДАЖУ')), 'wood');
+  assert.strictEqual(headerBuyer(L('102 Kic', 'f', 'віск MALONE', '“nye', 'пальне')), 'fuel');
+  assert.strictEqual(headerBuyer(L('f', 'Kyrye', 'о puby', 'ra і')), 'fish');
+  assert.strictEqual(headerBuyer(L('fa', '[—', 'Kynye', 'метали')), 'metal');
+  assert.strictEqual(headerBuyer(L('B1 Kie', 'fa', 'BRAD SHIDER', 'Купує', 'шкури')), 'hide');
+  assert.strictEqual(headerBuyer(L('Купуе', "м'ясо")), 'meat');
+  assert.strictEqual(headerBuyer([{ text: 'метали', y: 0, x: 900, col: 0 }], { maxX: 800 }), null);   // картка товару, не заголовок
+  assert.strictEqual(headerBuyer([{ text: 'рибу', y: 40, col: 1 }]), null);                            // права половина екрана
+  assert.strictEqual(headerBuyer(L('ЛІМІТ ПРОДАЖУ', '0')), null);
+});

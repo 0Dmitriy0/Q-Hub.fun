@@ -61,6 +61,46 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   );
 }
 
+/* зміна категорії цілком: назва, група, колір обводки й іконка — одразу для всіх її міток.
+   Вбудовані категорії (назви, зелені зони, роботи, скупники) живуть у коді сайту, тож тут їх немає */
+export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: string | null; onSaved: (c: MapCategory) => void }) {
+  const own = cats.filter(c => !c.builtin);
+  const [id, setId] = useState(pick && own.some(c => c.id === pick) ? pick : own[0]?.id || '');
+  const cur = own.find(c => c.id === id);
+  const [f, setF] = useState(() => cur ? { name: cur.name, grp: cur.grp, color: cur.color, icon: cur.icon } : null);
+  const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
+  const groups = [...new Set(cats.map(c => c.grp))];
+  /* інша категорія у списку (або категорії підвантажились пізніше) — форма бере її значення */
+  useEffect(() => { const c = own.find(x => x.id === id) || own[0]; if (c) { setId(c.id); setF({ name: c.name, grp: c.grp, color: c.color, icon: c.icon }); } setMsg(''); }, [id, own.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+  if (!own.length || !f || !cur) return null;
+  async function save() {
+    const name = f!.name.trim(), grp = f!.grp.trim() || 'Інше';
+    if (!name) return setMsg('Впиши назву категорії.');
+    if (!/^#[0-9a-f]{6}$/i.test(f!.color)) return setMsg('Колір — у форматі #ff6a1f.');
+    setBusy(true); setMsg('');
+    const { error } = await supabase!.from('map_categories').update({ name, grp, color: f!.color, icon: f!.icon }).eq('id', id);
+    setBusy(false);
+    if (error) return setMsg(dbErr(error.message));
+    onSaved({ ...cur!, name, grp, color: f!.color, icon: f!.icon }); setMsg(`Категорію «${name}» збережено — мітки на мапі вже оновились.`);
+  }
+  return (
+    <section className="madmin medit-box" aria-label="Змінити категорію">
+      <h4>Змінити категорію</h4>
+      <Select label="Яку категорію змінити" value={id} onChange={setId} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
+      <div className="mcat-prev" aria-hidden="true"><span className="mpin" style={{ borderColor: f.color, boxShadow: `0 0 0 3px ${f.color}38` }}><img src={f.icon} alt="" width={24} height={24} /></span><b>{f.name || 'Назва'}</b><small>{f.grp}</small></div>
+      <input className="min" placeholder="Назва категорії" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} aria-label="Назва категорії" maxLength={80} />
+      <input className="min" list="map-groups-edit" placeholder="Група" value={f.grp} onChange={e => setF({ ...f, grp: e.target.value })} aria-label="Група" />
+      <datalist id="map-groups-edit">{groups.map(g => <option key={g} value={g} />)}</datalist>
+      <label className="mrow mcolor">Колір обводки <input type="color" value={f.color} onChange={e => setF({ ...f, color: e.target.value })} /></label>
+      <IconGrid value={f.icon} onChange={v => v && setF({ ...f, icon: v })} label="Іконка категорії" />
+      <div className="mrow"><span className="muted">або своя:</span>
+        <PicUpload label="Своя іконка категорії" path={`map/${id}-${Date.now().toString(36)}.webp`} frame={{ w: 128, h: 128 }} onDone={async url => { setF(x => x && { ...x, icon: url }); }} /></div>
+      <button type="button" className="btn sm acc" disabled={busy} onClick={save}>Зберегти категорію</button>
+      {msg && <p className="mmsg" role="status">{msg}</p>}
+    </section>
+  );
+}
+
 /* інструменти адміна на мапі: нова мітка (координати вписати або взяти кліком), багато міток рядками, нова категорія */
 export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat }: {
   cats: MapCategory[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;

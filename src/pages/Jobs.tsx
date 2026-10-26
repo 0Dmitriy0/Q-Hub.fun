@@ -23,7 +23,18 @@ export default function Jobs() {
 
   return (
     <>
-      <div><h1>Роботи</h1><p className="muted">Легальні й нелегальні роботи QuantRP: з якого рівня, де влаштуватися, як прокачати навичку. Натисни на роботу, щоб відкрити подробиці.</p></div>
+      <section className="wiki-hero">
+        <div>
+          <span className="h-pill"><span className="mdot" aria-hidden="true" />База знань штату QuantRP</span>
+          <h1>Роботи та професії</h1>
+          <p className="muted">Легальні й нелегальні роботи QuantRP: з якого рівня, де влаштуватися, як прокачати навичку. Натисни на роботу, щоб відкрити подробиці.</p>
+        </div>
+        <div className="wiki-stats">
+          <div><b className="mono">{counts.all}</b><small>Усього робіт</small></div>
+          <div><b className="mono good">{counts.legal}</b><small>Легальні</small></div>
+          <div><b className="mono bad">{counts.illegal}</b><small>Нелегальні</small></div>
+        </div>
+      </section>
       <div className="tbar">
         <div className="tabs" role="tablist" aria-label="Тип роботи">{KINDS.map(([k, label]) => (
           <a key={k} href={'#' + k} role="tab" aria-selected={kind === k} className={'tabpic' + (kind === k ? ' active' : '')} onClick={e => { e.preventDefault(); setKind(k); }}>
@@ -34,7 +45,8 @@ export default function Jobs() {
           <div className="fld sortf"><Select label="Сортування" value={sort} onChange={setSort} options={SORTS.map(([v, l, i]) => ({ value: v, label: l, icon: i }))} /></div>
         </div>
       </div>
-      {!shown.length && <div className="card empty">Нічого не знайдено. Спробуй іншу назву.</div>}
+      <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {counts.all} робіт</span><span className="muted">Натисни на картку — відкриється опис</span></div>
+      {!shown.length && <div className="card empty wiki-none"><b>Робіт не знайдено</b><span className="muted">Зміни фільтр або очисти пошук.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); }}>Скинути пошук</button></div>}
       <div className="jgrid">{shown.map(j => (
         <button type="button" key={j.id} className={'card jcard' + (j.legal ? '' : ' ill')} onClick={() => setOpenId(j.id)} aria-haspopup="dialog">
           <img className="jico" src={`/icons/jobs/${j.id}.svg`} alt="" width={64} height={64} loading="lazy" />
@@ -43,6 +55,11 @@ export default function Jobs() {
           {!j.legal && <span className="jtag ill jcorner">Нелегальна</span>}
         </button>
       ))}</div>
+      <div className="wiki-tiles">
+        <div className="card"><span className="ibub"><Icon name="chart" /></span><div><b>Прокачка навичок</b><p className="muted">У кожної роботи свої рівні навички: що вищий рівень, то більша надбавка. Скільки очок потрібно — в описі роботи.</p></div></div>
+        <div className="card"><span className="ibub"><Icon name="shield" /></span><div><b>Нелегальні роботи</b><p className="muted">Позначені червоним. Перед тим як братися, прочитай вимоги й поради в описі.</p></div></div>
+        <div className="card"><span className="ibub"><Icon name="map" /></span><div><b>Точки на мапі</b><p className="muted">Кнопка «Мітка на мапі» в описі роботи відкриває мапу штату одразу на місці влаштування.</p></div></div>
+      </div>
       <JobDialog job={JOBS.find(j => j.id === openId) || null} onClose={() => setOpenId('')} />
     </>
   );
