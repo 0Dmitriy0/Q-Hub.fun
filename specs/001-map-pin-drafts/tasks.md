@@ -126,7 +126,7 @@
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [ ] T037 [P] Пройти `specs/001-map-pin-drafts/quickstart.md` повністю на тестовій базі й позначити результати; невідповідності — окремими задачами
-- [ ] T038 [P] Оновити `README.md` (розділ програми): F9 для editor/moderator/admin, де змінити клавішу, що знімок бачать лише admin і автор
+- [x] T038 [P] Оновити `README.md` (розділ програми): F9 для editor/moderator/admin, де змінити клавішу, що знімок бачать лише admin і автор
 - [ ] T039 Підняти версію програми в `desktop/package.json` (0.2.0 → 0.3.0) і перевірити, що `npm.cmd test` (сайт), `cd desktop; npm.cmd test` і CI `deploy.yml` зелені
 
 ---
