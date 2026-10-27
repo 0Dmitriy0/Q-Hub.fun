@@ -9,6 +9,8 @@ interface Bridge {
   onChanged?: (cb: () => void) => () => void;
   openBar?: () => Promise<string>;
   hotkey?: () => Promise<string | null>;
+  /* сторінка сайту в браузері */
+  site?: (path: string) => Promise<unknown>;
   updateState?: () => Promise<UpdateState | null>;
   updateInstall?: () => Promise<unknown>;
   onUpdate?: (cb: (s: UpdateState) => void) => () => void;

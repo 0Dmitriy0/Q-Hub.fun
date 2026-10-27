@@ -124,12 +124,14 @@ do $$ begin
 end $$;
 reset role;
 
--- ШІ-помічник: 150 запитів на добу, лічильник не видно й не змінити напряму, анонім не отримує нічого
+-- ШІ-помічник: 50 запитів на добу (0027), лишок — assistant_left(), лічильник не видно й не змінити напряму, анонім не отримує нічого
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
 set role authenticated;
 do $$ begin
-  for i in 1..150 loop assert public.assistant_take(), 'ліміт спрацював зарано: ' || i; end loop;
-  assert not public.assistant_take(), '151-й запит пройшов';
+  assert public.assistant_left() = 50, 'на початку доби не 50 питань';
+  for i in 1..50 loop assert public.assistant_take(), 'ліміт спрацював зарано: ' || i; end loop;
+  assert public.assistant_left() = 0, 'після 50 питань лишок не 0';
+  assert not public.assistant_take(), '51-й запит пройшов';
   assert (select count(*) from public.assistant_usage) = 0, 'лічильник видно гравцю';
   update public.assistant_usage set n = 0;
   assert not public.assistant_take(), 'лічильник скинуто напряму';

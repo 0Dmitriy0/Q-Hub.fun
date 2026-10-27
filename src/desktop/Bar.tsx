@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Hub from './Hub';
+import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import { dur, eventStatus, kyHM } from '../lib/events';
-import { money, signed, when } from '../lib/format';
-import { search, pos, type BarPrice, type Found } from './barSearch';
-import { toAccelerator } from './hotkey';
+import { money, when } from '../lib/format';
+import { buyers, pos, type BarPrice, type BuyerHit } from './barSearch';
+import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import { matchCats } from './catMatch';
 import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isSellQuestion, sellAdvice, type Sell } from './sellAdvice';
 
-/* Плашка Alt+Q поверх гри: рядок як у помічників для RP-серверів, що розгортається в дві панелі.
+/* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
+   а щойно пишеш — дві панелі пошуку.
    Режими: «Пошук» (Enter — пошук у правилах сервера чи запис із сумою без ШІ, Shift+Enter — спитати ШІ-помічника)
    і «Ціни» (миттєвий пошук по скупниках, без ШІ).
    Даних із бази тут немає — усе дає головний процес програми через міст (desktop/src/preload.cjs). */
@@ -25,20 +29,23 @@ interface EditAct { kind: 'edit'; id: string; rec: Rec; set: Partial<Pick<Rec, '
 interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
+/* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
+const BAR_NARROW = 820, BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
-interface Prefs { pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
-interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean }
-interface Hist { id: string; type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; source: string; account?: Acc }
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string }
+interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean; version?: string }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
-  barData(): Promise<Data>; barHistory(): Promise<Hist[]>; barCharacter(id: string): Promise<boolean>;
-  barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>; barCabinet(): Promise<void>;
-  quickParse(t: string): Promise<Rule>;
-  quickAdd(t: string): Promise<Res>; quickAsk(t: string, rules: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
-  quickRun(): Promise<Res>; quickDeal(op: Op, item: string, qty: number, price: number): Promise<Res>;
-  quickSize(h: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
+  barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
+  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; histToggle(): Promise<boolean>;
+  onHistPick(cb: (it: { kind: 'ai' | 'search' | 'tx'; q?: string; reply?: string }) => void): void;
+  barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
+  quickParse(t: string, buyer?: string | null): Promise<Rule>;
+  quickAdd(t: string, buyer?: string | null): Promise<Res>; quickAsk(t: string, rules: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
+  quickRun(): Promise<Res>;
+  quickSize(h: number, w: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
   onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
@@ -52,8 +59,11 @@ const api = (window as unknown as { qhub: BarApi }).qhub;
 const TOPICS = (RULES as { topics: RuleTopic[] }).topics;
 
 const OPS: Record<Op, string> = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
+/* рядок починається з угоди («продав …», «нафармив …») — як DEAL_OPS у desktop/src/quick.cjs */
+const DEAL = /^\s*((на)?фарм|зібра|накопа|налов|добу|нарубав|нарубала|назбира|купи|скупи|прикупи|прода|зда|збув)/i;
+/* пошук у правилах сервера без ШІ — і для Enter, і для повтору з історії */
+const rulesAsk = (text: string): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length ? '' : 'У правилах сервера такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits }; };
 const sum = (type: 'in' | 'out', n: number) => <b className={type === 'in' ? 'good' : 'bad'}>{type === 'in' ? '+' : '−'}{money(n)}</b>;
-const tone = (p: number | null) => (p === null ? '' : p >= 80 ? 'good' : p >= 40 ? 'warn' : 'bad');
 
 /* запис, який помічник пропонує змінити чи видалити */
 const RecLine = ({ r }: { r: Rec }) => <>{sum(r.type, r.amount)} · {r.category} · {ACC[r.account ?? 'cash']}{r.note ? ` · «${r.note}»` : ''} <small className="muted">{when(r.ts)}</small></>;
@@ -80,7 +90,7 @@ export default function Bar() {
   const [d, setD] = useState<Data | null>(null);
   const [q, setQ] = useState('');
   const [mode, setMode] = useState<'ai' | 'prices'>('ai');
-  const [view, setView] = useState<'main' | 'history' | 'settings' | 'shot' | 'pinask'>('main');
+  const [view, setView] = useState<'hub' | 'main' | 'settings' | 'shot' | 'pinask'>('main');
   const [pinQ, setPinQ] = useState<PinAskT | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [sel, setSel] = useState(0);
@@ -88,47 +98,73 @@ export default function Bar() {
   const [rule, setRule] = useState<Rule>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
-  const [hist, setHist] = useState<Hist[]>([]);
+  const [histOn, setHistOn] = useState(false);
+  /* журнал оновлень: що гравець уже бачив — у сховищі плашки; після оновлення внизу з'являється «що нового» */
+  const [seenLog, setSeenLog] = useState<string | null>(() => { try { return localStorage.getItem('qhub.seenLog'); } catch { return null; } });
+  const unseen = unseenCount(seenLog);
+  const markSeen = useCallback(() => { const top = CHANGES[0]?.id ?? null; setSeenLog(top); try { if (top) localStorage.setItem('qhub.seenLog', top); } catch { /* не страшно: покаже ще раз */ } }, []);
+  const [setStart, setSetStart] = useState<SetSec>('main');
   const [chars, setChars] = useState(false);
   const [shift, setShift] = useState(false);   // затиснутий Shift — Enter піде до ШІ, показати це одразу
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
-  const qtyRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => { const x = await api.barData(); setD(x); if (x.prefs) setMode(x.prefs.mode); }, []);
   useEffect(() => {
     load();
-    api.onQuickShow(() => { setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); load(); setTimeout(() => input.current?.focus(), 0); });
+    api.onQuickShow(() => { setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setBuyer(null); load(); setTimeout(() => input.current?.focus(), 0); });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
     /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
+    /* вибрали рядок в історії: пошук і відповідь ШІ — показати знову без нового запиту, запис — облік */
+    api.onHistPick(it => {
+      setChars(false); setNote(null); setSel(0);
+      if (it.kind === 'tx' || !it.q) { nav('/kabinet/oblik'); setQ(''); setView('hub'); return; }
+      const text = it.q;
+      setQ(text); setMode('ai'); setView('main');
+      setAsks(a => [it.kind === 'ai' ? { q: text, reply: it.reply || '', actions: [], done: true } : rulesAsk(text), ...a].slice(0, 30));
+      setTimeout(() => input.current?.focus(), 0);
+    });
   }, [load]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => setShift(e.shiftKey), off = () => setShift(false);
     window.addEventListener('keydown', k); window.addEventListener('keyup', k); window.addEventListener('blur', off);
     return () => { window.removeEventListener('keydown', k); window.removeEventListener('keyup', k); window.removeEventListener('blur', off); };
   }, []);
-  /* вікно точно під вміст: згорнута плашка — низька, розгорнута — до 600 px */
+  /* вікно точно під вміст: згорнута плашка — вузька й низька (лише рядок), розгорнута — широка, висота під вміст */
+  const width = useRef(BAR_NARROW);
+  const fit = useCallback(() => { const el = root.current; if (el) api.quickSize(Math.ceil(el.getBoundingClientRect().height) + 28, width.current); }, []);
   useLayoutEffect(() => {
     const el = root.current; if (!el) return;
-    const ro = new ResizeObserver(() => api.quickSize(Math.ceil(el.getBoundingClientRect().height) + 28));
+    const ro = new ResizeObserver(fit);
     ro.observe(el); return () => ro.disconnect();
-  }, []);
+  }, [fit]);
 
-  const found = useMemo(() => (d ? search(d.prices, q, d.stock) : []), [d, q]);
+  /* «Ціни»: назвав скупника чи товар — відкривається скупник; «продав …» у цьому режимі — угода за ціною відкритого скупника */
+  const [buyer, setBuyer] = useState<string | null>(null);
+  const dealish = mode === 'prices' && DEAL.test(q);
+  const hits = useMemo(() => (d && mode === 'prices' && !dealish ? buyers(d.prices, q, d.stock) : []), [d, q, mode, dealish]);
+  useEffect(() => { if (hits.length) setBuyer(hits[Math.min(sel, hits.length - 1)].buyer); }, [hits, sel]);
+  const cur = useMemo(() => (d && buyer ? buyers(d.prices, buyer, d.stock).find(b => b.buyer === buyer) ?? null : null), [d, buyer]);
+  /* розділ кабінету — у головній плашки; почав писати на головній — під рядком пошук, стер — знову головна */
+  const nav = useNavigate();
+  const { signOut } = useAuth();
+  const go = (p: string) => { nav(p); setQ(''); setView('hub'); setChars(false); };
+  const v = view === 'hub' && q.trim() ? 'main' : view;
+  const dash = useLocation().pathname === '/kabinet/dashbord' && v === 'hub';
   const prefs = d?.prefs;
   const decidePin = (send: boolean, hint?: PinHint) => { setPinQ(null); setView('main'); api.pinDecide(send, hint); };
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
-  const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); savePrefs({ mode: m }); input.current?.focus(); };
+  const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
   /* «без ШІ» підказка під рядком: що запишеться по Enter (з питанням «?» — пошук у правилах) */
   useEffect(() => {
-    if (mode !== 'ai' || !q.trim()) { setRule(null); return; }
-    let live = true; api.quickParse(q).then(r => live && setRule(r)); return () => { live = false; };
-  }, [q, mode]);
+    if ((mode !== 'ai' && !dealish) || !q.trim()) { setRule(null); return; }
+    let live = true; api.quickParse(q, mode === 'prices' ? buyer : null).then(r => live && setRule(r)); return () => { live = false; };
+  }, [q, mode, dealish, buyer]);
 
   const latest = asks[0];
   async function ask() {
@@ -140,6 +176,7 @@ export default function Bar() {
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', actions: r.actions || [], done: !(r.actions || []).length, error: r.error }, ...a].slice(0, 30));
     setSel(0);
+    if (!r.error && r.reply) api.histAdd({ kind: 'ai', q: text, reply: r.reply });
   }
   const pending = (text: string) => !!latest && !latest.done && latest.actions.length > 0 && latest.q === text;
   async function runPlan() {   // Enter після відповіді помічника — записати його план
@@ -155,46 +192,54 @@ export default function Bar() {
     /* «що продати?» — відповідь зі складу й цін скупників, без ШІ */
     if (d && isSellQuestion(text)) {
       setAsks(a => [{ q: text, reply: '', actions: [], done: true, sells: sellAdvice(d.prices, d.stock) }, ...a].slice(0, 30));
-      setSel(0); setNote(null); return;
+      setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text }); return;
     }
-    const hits = searchRules(TOPICS, text);
-    setAsks(a => [{ q: text, reply: hits.length ? '' : 'У правилах сервера такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits }, ...a].slice(0, 30));
-    setSel(0); setNote(null);
+    setAsks(a => [rulesAsk(text), ...a].slice(0, 30));
+    setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text });
   }
   async function quickRule() {
     if (!rule) { setNote({ text: 'Без ШІ потрібна сума — наприклад, 450к', bad: true }); return; }
-    setBusy(true); const r = await api.quickAdd(q); setBusy(false);
+    setBusy(true); const r = await api.quickAdd(q, mode === 'prices' ? buyer : null); setBusy(false);
     setNote(r.error ? { text: r.error, bad: true } : { text: `Записано · ${r.character}` }); if (!r.error) { setQ(''); load(); }
   }
-  async function openHistory() { setView(v => (v === 'history' ? 'main' : 'history')); setSel(0); setHist(await api.barHistory()); }
+  /* історія — окрема плашка ліворуч (src/desktop/History.tsx) */
+  async function toggleHistory() { setHistOn(await api.histToggle()); }
 
   function onKey(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') { e.preventDefault(); if (chars) setChars(false); else if (view !== 'main' && view !== 'shot') setView('main'); else api.quickHide(); return; }
+    /* Esc: меню → рядок → головна → сховати */
+    if (e.key === 'Escape') { e.preventDefault(); if (chars) setChars(false); else if (q) setQ(''); else if (mode === 'prices' && buyer && view === 'main') setBuyer(null); else if (view !== 'main' && view !== 'shot') setView('main'); else api.quickHide(); return; }
     if (e.key === 'Tab') { e.preventDefault(); switchMode(mode === 'ai' ? 'prices' : 'ai'); return; }
     if (e.target !== input.current) return;   // стрілки й Enter у полях форми — їхні
-    const n = view === 'history' ? hist.length : mode === 'prices' ? found.length : asks.length;
+    const n = mode === 'prices' ? hits.length : asks.length;
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) { e.preventDefault(); setSel(s => (s + (e.key === 'ArrowDown' ? 1 : n - 1)) % n); return; }
-    if (e.key === 'Enter' && view === 'main') {
+    if (e.key === 'Enter' && v === 'main') {
       e.preventDefault();
-      if (mode === 'prices') { qtyRef.current?.focus(); qtyRef.current?.select(); return; }
+      if (mode === 'prices') { if (saves) quickRule(); return; }
       if (e.shiftKey) ask(); else plain();
     }
   }
 
-  const expanded = !!d && (view !== 'main' || (mode === 'prices' && (q.trim() !== '' || found.length > 0)) || (mode === 'ai' && (asks.length > 0 || busy)));
+  const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy)));
+  useLayoutEffect(() => { width.current = expanded ? BAR_WIDE : BAR_NARROW; fit(); }, [expanded, fit]);
   const ch = d?.characters.find(c => c.id === d.character);
   const aiNext = mode === 'ai' && shift;
-  const saves = mode === 'ai' && !aiNext && !!rule && !q.includes('?');   // Enter запише суму, а не шукатиме
+  const saves = (mode === 'ai' && !aiNext && !!rule && !q.includes('?')) || (dealish && rule?.kind === 'deal');   // Enter запише, а не шукатиме
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey}>
       {prefs?.tab !== false && <NextEvent />}
       <div className="bbox">
         <div className="bbar">
+          <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
+          {/* ‹ › — лише коли відкрита головна з кабінетом */}
+          {v === 'hub' && <>
+            <button className="bico" onClick={() => nav(-1)} title="Назад" aria-label="Назад"><Icon name="chev" size={16} className="tl" /></button>
+            <button className="bico" onClick={() => nav(1)} title="Вперед" aria-label="Вперед"><Icon name="chev" size={16} className="tr" /></button>
+          </>}
           {/* що зробить Enter: пошук, ШІ (з Shift) чи ціни */}
           <span className={'blead' + (aiNext ? ' ai' : saves ? ' save' : '')} aria-hidden="true"><Icon name={mode === 'prices' ? 'tag' : aiNext ? 'spark' : saves ? 'coin' : 'search'} size={18} /></span>
           <input ref={input} value={q} autoFocus spellCheck={false} onChange={e => { setQ(e.target.value); setSel(0); setNote(null); }}
-            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, сума для обліку або питання') : 'Товар або скупник: глива, шкура, мотлох…'} aria-label="Запит" />
+            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, сума для обліку або питання') : 'Скупник: шкури, риба, гриби… або «продав 20 …»'} aria-label="Запит" />
           {q && <button className="bico" title="Очистити" onClick={() => { setQ(''); input.current?.focus(); }}><Icon name="x" size={15} /></button>}
           <div className="bseg" role="group" aria-label="Режим">
             <button aria-pressed={mode === 'ai'} onClick={() => switchMode('ai')}><Icon name="search" size={14} />Пошук</button>
@@ -207,29 +252,31 @@ export default function Bar() {
             </button>
             {chars && d && <div className="bmenu" role="menu">{d.characters.map(c => (
               <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}</button>))}
-              <button onClick={() => api.barCabinet()}>Відкрити кабінет…</button></div>}
+              <button onClick={() => go('/kabinet/nalashtuvannya')}>Персонажі й профіль…</button>
+              <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}
           </div>
           <span className="bsep" aria-hidden="true" />
+          {/* дашборд — окремо від головної: відкрити й сховати однією кнопкою */}
+          <button className={'bico' + (dash ? ' on' : '')} aria-pressed={dash} title={dash ? 'Сховати дашборд' : 'Дашборд'} onClick={() => (dash ? setView('main') : go('/kabinet/dashbord'))}><Icon name="chart" size={17} /></button>
           <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
-          <button className={'bico' + (view === 'history' ? ' on' : '')} title="Історія записів" onClick={openHistory}><Icon name="history" size={17} /></button>
-          <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => setView(v => (v === 'settings' ? 'main' : 'settings'))}><Icon name="gear" size={17} /></button>
+          <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки, питання до ШІ й записи" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
+          <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => { setSetStart('main'); setView(x => (x === 'settings' ? 'main' : 'settings')); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
-        {expanded && <div className="bpanes">
-          {view === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
-           view === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
-           view === 'settings' && prefs ? <Settings prefs={prefs} staff={!!d?.staff} save={savePrefs} /> :
-           view === 'history' ? <History rows={hist} sel={sel} setSel={setSel} /> :
-           mode === 'prices' ? <Prices found={found} sel={Math.min(sel, Math.max(0, found.length - 1))} setSel={setSel} qtyRef={qtyRef} q={q}
-             done={t => { setNote({ text: t }); load(); }} fail={t => setNote({ text: t, bad: true })} /> :
+        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
+          {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
+           v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
+           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q}
+             pick={t => { setQ(t); setTimeout(() => input.current?.focus(), 0); }} /> :
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} run={ask} q={q} />}
-        </div>}
+        </div>)}
 
         <div className="bhint">
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Ціни скупників з сайту · ↑↓ вибір')}</span>
+          {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника')}</span>}
           <span className="bkeys">{mode === 'ai'
             ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
-            : <span className="on"><kbd>Enter</kbd>кількість</span>}
+            : <span className="on"><kbd>↑</kbd><kbd>↓</kbd>вибір</span>}
             <span><kbd>Tab</kbd>{mode === 'ai' ? 'ціни' : 'пошук'}</span><span><kbd>Esc</kbd>сховати</span></span>
         </div>
       </div>
@@ -310,60 +357,27 @@ function SellList({ sells }: { sells: Sell[] }) {
   </>;
 }
 
-function Prices({ found, sel, setSel, qtyRef, q, done, fail }: { found: Found[]; sel: number; setSel: (n: number) => void; qtyRef: React.RefObject<HTMLInputElement | null>; q: string; done: (t: string) => void; fail: (t: string) => void }) {
-  const f = found[sel];
-  const [op, setOp] = useState<Op>('sell');
-  const [qty, setQty] = useState(''); const [price, setPrice] = useState('');
-  /* рибу гра рахує штуками, а склад і ціна — у кг: 1000 шт = 1 кг. Тут вводять штуки, як у грі */
-  const per = f?.unit === 'кг' ? 1000 : 1;
-  const kg = (s: string) => { const n = Number(s.replace(',', '.')); return per === 1 || !(n > 0) ? n : Math.max(0.01, Math.round(n / per * 100) / 100); };
-  useEffect(() => { setQty(f?.have ? String(Math.round(f.have * per * 100) / 100) : ''); setOp(f?.have ? 'sell' : 'buy'); }, [f?.item]);
-  /* продаж — за ціною найкращого скупника; купівля в гравців — своя ціна, тож поле порожнє */
-  useEffect(() => { setPrice(op === 'sell' && f?.best ? String(f.best.price) : ''); }, [op, f?.item]);
-  if (!f) return <div className="bempty">{q.trim() ? `Скупники не беруть «${q.trim()}». Перевір назву.` : 'На складі порожньо — почни вводити товар.'}</div>;
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    const r = await api.quickDeal(op, f.item, kg(qty), Number(price.replace(/\s/g, '')));
-    if (r.error) fail(r.error); else done(`${OPS[op]} ${f.item} × ${per > 1 ? `${qty} шт (${kg(qty)} кг)` : qty} · ${r.character}`);
-  }
+/* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами.
+   Клік по товару — рядок «продав <скільки є> <товар>»: Enter запише за ціною цього скупника */
+function Prices({ hits, setSel, cur, q, pick }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string; pick: (t: string) => void }) {
+  if (!cur) return <div className="bempty">{q.trim() && !DEAL.test(q) ? `Скупника «${q.trim()}» не знайшов. Спробуй «шкури», «риба», «гриби».` : 'Спершу назви скупника — тоді «продав …» запишеться за його ціною.'}</div>;
+  const left = hits.length ? hits : [cur];
   return <>
-    <div className="bleft">{found.map((x, i) => { const p = x.best ? pos(x.best) : null; return (
-      <button key={x.item} className={'brow item' + (i === sel ? ' on' : '')} onClick={() => setSel(i)}>
-        {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
-        <span><b>{x.item}</b><small>{x.best ? `${x.best.buyer} · ${money(x.best.price)}/${x.unit}` : 'ціни ще немає'}{x.have ? ` · у тебе ${x.have}` : ''}</small></span>
-        {p !== null && <span className={'pill ' + tone(p)}>{p}%</span>}
-      </button>); })}</div>
+    <div className="bleft">{left.map((b, i) => (
+      <button key={b.buyer} className={'brow item' + (b.buyer === cur.buyer ? ' on' : '')} onClick={() => hits.length && setSel(i)}>
+        {b.icon ? <img src={asset(b.icon)} alt="" /> : <span className="bava" />}
+        <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}{b.items.some(x => x.have > 0) ? ' · є на складі' : ''}</small></span>
+      </button>))}</div>
     <div className="bright">
-      <div className="bhead">{f.icon ? <img src={asset(f.icon)} alt="" /> : null}<div><h3>{f.item}</h3><small className="muted">{f.have ? `на складі ${f.have} ${f.unit}${f.best ? ` · ≈ ${money(f.have * f.best.price)}` : ''}` : 'на складі немає'}</small></div></div>
-      <div className="bbuyers">{f.buyers.map(b => { const p = pos(b); return (
-        <div key={b.buyer} className="bbuy">
-          {b.buyerIcon ? <img src={asset(b.buyerIcon)} alt="" /> : <span className="bava" />}
-          <span><b>{b.buyer}</b><small>{b.max > b.min ? `межі ${money(b.min)}–${money(b.max)}` : 'межі не вписані'}{b.at ? ` · ${when(b.at)}` : ''}</small></span>
+      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">«продав …» у цьому режимі — за цінами цього скупника</small></div></div>
+      <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
+        <button key={x.item} className="bbuy" title="Підставити в рядок «продав …»" onClick={() => pick(`продав ${x.have > 0 ? (x.unit === 'кг' ? `${x.have} кг ` : `${x.have} `) : ''}${x.item.toLowerCase()}`)}>
+          {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
+          <span><b>{x.item}</b><small>{x.have > 0 ? `у тебе ${x.have} ${x.unit}` : x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}</small></span>
           {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
-          <b className="mono">{b.price ? money(b.price) : '—'}</b>
-        </div>); })}</div>
-      <form className="bdeal" onSubmit={save}>
-        <div className="bseg sm">{(['sell', 'buy', 'farm'] as Op[]).map(o => <button type="button" key={o} aria-pressed={op === o} onClick={() => setOp(o)}>{OPS[o]}</button>)}</div>
-        <label title={per > 1 ? '1000 шт = 1 кг' : undefined}>{per > 1 ? 'Кількість, шт (1000 = 1 кг)' : 'Кількість'}<input ref={qtyRef} value={qty} onChange={e => setQty(e.target.value)} inputMode="decimal" /></label>
-        {op !== 'farm' && <label>Ціна за {f.unit}, $<input value={price} onChange={e => setPrice(e.target.value)} inputMode="numeric" /></label>}
-        <button className="btn acc">Записати{op !== 'farm' && kg(qty) > 0 && Number(price) > 0 ? ` · ${signed(Math.round((op === 'sell' ? 1 : -1) * kg(qty) * Number(price)))}` : ''}</button>
-      </form>
+          <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
+        </button>); })}</div>
     </div>
-  </>;
-}
-
-function History({ rows, sel, setSel }: { rows: Hist[]; sel: number; setSel: (n: number) => void }) {
-  const t = rows[sel];
-  return <>
-    <div className="bleft">{rows.length ? rows.map((r, i) => (
-      <button key={r.id} className={'brow' + (i === sel ? ' on' : '')} onClick={() => setSel(i)}>
-        <b>{sum(r.type, r.amount)} · {r.category} · {ACC[r.account ?? 'cash']}</b><small>{when(r.ts)}{r.note ? ` · ${r.note}` : ''}</small></button>)) : <p className="muted">Записів ще немає.</p>}</div>
-    <div className="bright">{t ? <>
-      <h3>{sum(t.type, t.amount)}</h3>
-      <div className="bkv"><span>Категорія</span><b>{t.category}</b><span>Рахунок</span><b>{ACC[t.account ?? 'cash']}</b><span>Коли</span><b>{when(t.ts)}</b><span>Звідки</span><b>{({ desktop: 'Alt+Q', deal: 'угода', reconcile: 'звірка', manual: 'кабінет', import: 'імпорт' } as Record<string, string>)[t.source] || t.source}</b></div>
-      {t.note && <p>{t.note}</p>}
-      <button className="btn" onClick={() => api.barCabinet()}>Відкрити облік у кабінеті</button>
-    </> : null}</div>
   </>;
 }
 
@@ -454,46 +468,3 @@ function ShotView({ shot, share0, done }: { shot: Shot; share0: boolean; done: (
   </>;
 }
 
-function Settings({ prefs, staff, save }: { prefs: Prefs; staff: boolean; save: (p: Partial<Prefs>) => void }) {
-  const [rec, setRec] = useState(false);
-  const [recPin, setRecPin] = useState(false);
-  const [st, setSt] = useState<ShotStats | null>(null);
-  useEffect(() => { api.shotsStats().then(setSt); }, []);
-  return (
-    <div className="bset">
-      <h3>Налаштування плашки</h3>
-      <div className="bkv wide">
-        <span>Клавіша виклику</span>
-        <button className={'btn' + (rec ? ' acc' : '')} onClick={() => setRec(true)}
-          onKeyDown={e => { if (!rec) return; e.preventDefault(); e.stopPropagation(); if (e.key === 'Escape') { setRec(false); return; } const a = toAccelerator(e); if (a) { setRec(false); save({ hotkey: a }); } }}>
-          {rec ? 'Натисни комбінацію… (Esc — скасувати)' : prefs.hotkey}</button>
-        {staff && <>
-          <span>Мітка з гри</span>
-          <div className="grid" style={{ gap: 6 }}>
-            <button className={'btn' + (recPin ? ' acc' : '')} onClick={() => setRecPin(true)}
-              onKeyDown={e => { if (!recPin) return; e.preventDefault(); e.stopPropagation(); if (e.key === 'Escape') { setRecPin(false); return; } const a = toAccelerator(e); if (a) { setRecPin(false); save({ pinKey: a }); } }}>
-              {recPin ? 'Натисни клавішу… (Esc — скасувати)' : prefs.pinKey || 'F9'}</button>
-            <small className="muted">На великій карті в грі — знімок іде чернеткою на сайт, мітку публікує адмін. Поки клавіша тут, гра її не отримує.</small>
-          </div>
-        </>}
-        <span>Де з’являється</span>
-        <div className="bseg sm">{([['top', 'Зверху'], ['center', 'По центру'], ['bottom', 'Знизу']] as const).map(([k, l]) => <button key={k} aria-pressed={prefs.position === k} onClick={() => save({ position: k })}>{l}</button>)}</div>
-        <span>Прозорість</span>
-        <input type="range" min={60} max={100} value={Math.round(prefs.opacity * 100)} onChange={e => save({ opacity: Number(e.target.value) / 100 })} aria-label="Прозорість" />
-        <span>Вкладка з івентом</span>
-        <label className="bchk"><input type="checkbox" checked={prefs.tab} onChange={e => save({ tab: e.target.checked })} /> показувати найближчий івент над плашкою</label>
-        <span>Шпилька</span>
-        <label className="bchk"><input type="checkbox" checked={prefs.pinned} onChange={e => save({ pinned: e.target.checked })} /> не ховати, коли повертаюсь у гру</label>
-        <span>Зір програми</span>
-        <div className="grid" style={{ gap: 6 }}>
-          <label className="bchk"><input type="checkbox" checked={prefs.autoLedger} onChange={e => save({ autoLedger: e.target.checked })} /> автооблік з екрана: гроші з HUD → записи з місцем (магазин, скупник…)</label>
-          <label className="bchk"><input type="checkbox" checked={prefs.autoPrices} onChange={e => save({ autoPrices: e.target.checked })} /> надсилати ціни скупників на сайт від мого імені</label>
-          <small className="muted">Працює, лише коли запущена гра. <button className="btn sm" onClick={() => api.visionLogOpen()}>Журнал зору</button></small>
-        </div>
-        <span>Навчальні знімки</span>
-        <div className="row"><span><kbd>{st?.key ?? 'Alt+S'}</kbd> у грі · зібрано {st ? Object.values(st.stats).reduce((a, b) => a + b, 0) : 0}</span><button className="btn sm" onClick={() => api.shotsOpen()}>Відкрити папку</button></div>
-      </div>
-      <button className="btn" onClick={() => api.barCabinet()}>Відкрити кабінет</button>
-    </div>
-  );
-}

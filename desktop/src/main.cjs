@@ -18,21 +18,18 @@ const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
 const SHOT_KEY = 'Alt+S';
 
-/* плашка Alt+Q: ширина й найбільша висота (розгорнута на дві панелі) */
-const BAR_W = 960, BAR_MAX_H = 600;
-/* інтерфейс кабінету вбудований у програму (зібраний з src/desktop сайту в ui/) — не сторінка сайту в рамці */
-const UI = path.join(__dirname, 'ui', 'app.html');
-/* власний заголовок вікна: кнопки Windows малює система поверх наших 40 px */
-const TITLE_BAR = { color: '#10141a', symbolColor: '#8b9bb0', height: 40 };
+/* плашка Alt+Q — уся програма: ширина згорнутої (лише рядок), найбільша ширина й висота розгорнутої */
+const BAR_W = 820, BAR_MAX_W = 1120, BAR_MAX_H = 860;
+/* ширина вікна плашки входу: сама плашка + прозоре поле під тінь */
+const GATE_W = 520;
 
-let sb, win, bar, tray, quitting = false, settings = {};
+let sb, gate, bar, tray, quitting = false, settings = {};
 const dir = () => app.getPath('userData');
 const settingsFile = () => path.join(dir(), 'settings.json');
 const saveSettings = () => fs.writeFileSync(settingsFile(), JSON.stringify(settings, null, 2));
 
 /* лише адреси сайту й Discord відкриваються в браузері; все інше — ні */
 const openExternal = url => { if (/^https:\/\//.test(url)) shell.openExternal(url); };
-const isCabinet = url => url.startsWith('file:') && url.includes('/ui/app.html');
 /* токени — лише нашим власним сторінкам з диска (вхід і кабінет) */
 const trusted = e => (e.senderFrame?.url || '').startsWith('file:');
 
@@ -42,29 +39,25 @@ async function tokens() {
   return session ? { access_token: session.access_token, refresh_token: session.refresh_token, character: settings.character || null } : null;
 }
 
+/* вхід і вибір персонажа — окрема плашка без рамки, напівпрозора */
 function showLogin() {
-  win.setResizable(false); win.setMaximizable(false); if (win.isMaximized()) win.unmaximize();
-  win.setMinimumSize(420, 560); win.setSize(420, 560); win.center();
-  win.setTitleBarOverlay(TITLE_BAR);
-  win.loadFile(path.join(__dirname, 'index.html'));
+  if (gate) { gate.reload(); gate.show(); gate.focus(); return; }
+  gate = new BrowserWindow({
+    width: GATE_W, height: 420, frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false,
+    resizable: false, maximizable: false, fullscreenable: false, title: 'Q-Hub', show: false, icon: path.join(__dirname, 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  guardPage(gate);
+  gate.once('ready-to-show', () => { gate.center(); gate.show(); });
+  gate.on('close', e => { if (!quitting) { e.preventDefault(); gate.hide(); } });
+  gate.on('closed', () => { gate = null; });
+  gate.loadFile(path.join(__dirname, 'index.html'));
 }
-/* кабінет відкривається там і такого розміру, як його лишили минулого разу */
-function showCabinet() {
-  const b = settings.bounds;
-  win.setResizable(true); win.setMaximizable(true); win.setMinimumSize(1000, 680);
-  if (b && screen.getAllDisplays().some(d => { const a = d.workArea; return b.x < a.x + a.width && b.x + b.width > a.x && b.y < a.y + a.height && b.y + b.height > a.y; })) win.setBounds(b);
-  else { win.setSize(1280, 820); win.center(); }
-  if (settings.maximized) win.maximize();
-  win.setTitleBarOverlay(TITLE_BAR);
-  win.loadFile(UI, { hash: '/kabinet' });
+/* персонажа вибрано — далі вся програма живе в плашці Alt+Q, плашка входу зникає */
+function openHub() {
+  if (gate) { const g = gate; gate = null; g.destroy(); }
+  return showBar();
 }
-const rememberBounds = () => {
-  if (!isCabinet(win.webContents.getURL())) return;
-  settings.maximized = win.isMaximized();
-  if (!settings.maximized) settings.bounds = win.getBounds();
-  saveSettings();
-};
-
 async function state() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { user: null };
@@ -83,29 +76,17 @@ async function state() {
   };
 }
 
-function createWindow() {
-  win = new BrowserWindow({
-    width: 420, height: 560, resizable: false, maximizable: false, title: 'Q-Hub', backgroundColor: '#10141a', show: false,
-    icon: path.join(__dirname, 'icon.png'), titleBarStyle: 'hidden', titleBarOverlay: TITLE_BAR,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
-  });
-  win.once('ready-to-show', () => win.show());   // без білого спалаху до першого кадру
-  win.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
-  /* вікно не переходить нікуди з наших сторінок: посилання назовні — у браузер */
-  win.webContents.on('will-navigate', (e, url) => { e.preventDefault(); openExternal(url); });
-  /* як програма, а не сторінка: без масштабування Ctrl+колесо / Ctrl±, без перезавантаження F5 */
-  win.webContents.setVisualZoomLevelLimits(1, 1);
-  win.webContents.on('before-input-event', (e, i) => {
+/* наші сторінки не переходять нікуди: посилання назовні — у браузер; як програма, а не сторінка — без масштабу й F5 */
+function guardPage(w) {
+  w.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
+  w.webContents.on('will-navigate', (e, url) => { e.preventDefault(); openExternal(url); });
+  w.webContents.setVisualZoomLevelLimits(1, 1);
+  w.webContents.on('before-input-event', (e, i) => {
     if ((i.control && ['+', '-', '=', '0', 'r', 'R'].includes(i.key)) || i.key === 'F5') e.preventDefault();
   });
-  win.webContents.on('zoom-changed', () => win.webContents.setZoomFactor(1));
-  win.on('resized', rememberBounds); win.on('moved', rememberBounds);
-  win.on('maximize', rememberBounds); win.on('unmaximize', rememberBounds);
-  /* хрестик ховає в трей: Alt+Q має працювати й без вікна */
-  win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
-  showLogin();
+  w.webContents.on('zoom-changed', () => w.webContents.setZoomFactor(1));
 }
-const showMain = () => { win.show(); win.focus(); };
+const showMain = () => { if (gate) { gate.show(); gate.focus(); } else showBar().catch(() => {}); };
 
 /* плашка швидкого запису: без рамки, поверх усього, зникає, щойно фокус пішов (повернувся в гру) */
 function createBar() {
@@ -128,7 +109,7 @@ function createBar() {
       if (barSteals++ < 2) setTimeout(() => { if (bar.isVisible()) { bar.moveTop(); bar.focus(); } }, 60);
       return;
     }
-    bar.hide();
+    hideUnlessOurs();
   });
   /* плашку закрили, не вибравши «надіслати» (Esc, повернувся в гру) — знімок без точки не надсилається */
   /* плашку закрили, нічого не вибравши: знайдена точка однаково йде на сайт (без категорії), знімок без точки — ні */
@@ -141,8 +122,49 @@ function createBar() {
   /* нижня смужка сесії живе разом з плашкою */
   bar.on('show', () => { showStrip().catch(() => {}); });
   bar.on('hide', hideStrip);
+  bar.on('hide', () => hist?.hide());   // історія живе разом з плашкою
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
+/* фокус пішов з плашки чи історії: перейшов в іншу з них — лишаються обидві, у гру — ховаються (якщо не закріплено) */
+function hideUnlessOurs() {
+  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== hist) bar.hide(); }, 80);
+}
+
+/* ---------- історія: окрема плашка ліворуч (history.html). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
+const HIST_W = 420, HIST_MAX = 300;
+let hist = null, histItems = null;
+const histFile = () => path.join(dir(), 'history.json');
+const histLoad = () => { if (!histItems) { try { histItems = JSON.parse(fs.readFileSync(histFile(), 'utf8')); } catch { histItems = []; } } return histItems; };
+const histSave = () => { try { fs.writeFileSync(histFile(), JSON.stringify(histItems)); } catch { /* історія не обов'язкова */ } hist?.webContents.send('hist-changed'); };
+function histAdd(it) {
+  if (!it || !['ai', 'search'].includes(it.kind) || typeof it.q !== 'string' || !it.q.trim()) return;
+  const items = histLoad();
+  items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: it.kind, q: it.q.trim().slice(0, 500),
+    reply: it.kind === 'ai' && typeof it.reply === 'string' ? it.reply.slice(0, 4000) : '', ts: new Date().toISOString() });
+  items.length = Math.min(items.length, HIST_MAX);
+  histSave();
+}
+function createHist() {
+  hist = new BrowserWindow({
+    width: HIST_W, height: 560, show: false, frame: false, transparent: true, resizable: false, movable: false, hasShadow: false,
+    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, title: 'Q-Hub · історія',
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  hist.setAlwaysOnTop(true, 'screen-saver');
+  hist.webContents.on('will-navigate', e => e.preventDefault());
+  hist.on('blur', hideUnlessOurs);
+  hist.loadFile(path.join(__dirname, 'ui', 'history.html'));
+}
+/* ліворуч на тому ж екрані, що й плашка, від її верху */
+function toggleHist() {
+  if (hist.isVisible()) { hist.hide(); return false; }
+  const b = bar.getBounds(), { workArea: a } = screen.getDisplayMatching(b);
+  hist.setBounds({ x: a.x + 12, y: b.y, width: HIST_W, height: Math.min(640, a.y + a.height - b.y - 12) });
+  hist.webContents.send('hist-changed');
+  hist.showInactive(); hist.moveTop();
+  return true;
+}
+
 /* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
    Прозоре вікно на всю ширину екрана, кліки проходять крізь нього в гру, фокус не забирає */
 const STRIP_H = 44, STRIP_GAP = 12;
@@ -192,7 +214,7 @@ function hideStrip() { clearInterval(stripTimer); stripTimer = null; strip?.hide
 function placeBar() {
   const { workArea: a } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const y = { top: a.y + 24, center: a.y + Math.round(a.height * 0.22), bottom: a.y + a.height - bar.getSize()[1] - 24 - (prefs().strip === false ? 0 : STRIP_H + STRIP_GAP) }[prefs().position];
-  bar.setPosition(Math.round(a.x + (a.width - BAR_W) / 2), Math.max(a.y, y));
+  bar.setPosition(Math.round(a.x + (a.width - bar.getSize()[0]) / 2), Math.max(a.y, y));
 }
 /* показати плашку поверх гри й узяти фокус (blur вище не дає грі одразу сховати її) */
 let barShownAt = 0, barSteals = 0;
@@ -206,7 +228,7 @@ async function toggleBar() {
 }
 async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session || !settings.character) { showMain(); return; }   // спершу вхід і персонаж
+  if (!session || !settings.character) { showLogin(); return; }   // спершу вхід і персонаж
   placeBar();
   raiseBar();
   bar.webContents.send('quick-show');
@@ -256,7 +278,7 @@ function startUpdates() {
     },
     log,
     onChange: s => {
-      win?.webContents.send('update', s);
+      bar?.webContents.send('update', s);
       trayMenu();
       /* сповіщення Windows — один раз на кожну нову версію */
       if (s.status === 'available' && s.version !== notifiedVersion && Notification.isSupported()) {
@@ -272,26 +294,27 @@ function startUpdates() {
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
 /* відкритий кабінет одразу показує нові записи — сторінки перечитують дані, без перезавантаження */
-const refreshCabinet = () => { if (isCabinet(win.webContents.getURL())) win.webContents.send('changed'); };
+const refreshCabinet = () => bar?.webContents.send('changed');
 
-/* товари для угод одним рядком («нафармив 20 гливи»): товари скупників з найвищою ціною і те, що вже є на складі.
-   Склад — не частіше раз на 30 с (плашка питає на кожну літеру) */
+/* товари для угод одним рядком («нафармив 20 гливи»): товари скупників і те, що вже є на складі.
+   buyer — скупник, відкритий у режимі «Ціни»: «продав» без ціни — за його ціною. Без нього (режим «Пошук») угода з гравцем —
+   ціну гравець пише сам (best = 0). Склад — не частіше раз на 30 с (плашка питає на кожну літеру) */
 let stockAt = 0, stockCache = {};
-async function dealCatalog() {
+async function dealCatalog(buyer = null) {
   const prices = await barPrices();
   if (Date.now() - stockAt > 30e3 && settings.character) { stockCache = await barStock(settings.character); stockAt = Date.now(); }
   const m = new Map();
-  for (const p of prices) m.set(p.item, { name: p.item, unit: p.unit, best: Math.max(m.get(p.item)?.best || 0, p.price) });
+  for (const p of prices) m.set(p.item, { name: p.item, unit: p.unit, best: Math.max(m.get(p.item)?.best || 0, p.buyer === buyer ? p.price : 0) });
   for (const k of Object.keys(stockCache)) if (!m.has(k)) m.set(k, { name: k, unit: 'шт', best: 0 });
   return [...m.values()];
 }
 /* що запише Enter: угода зі складом, переказ чи запис грошей. Каталог не завантажився — лишається звичайний запис */
-async function quickParse(text) { return quick.parseDeal(text, await dealCatalog().catch(() => [])) || quick.parse(text); }
+async function quickParse(text, buyer) { return quick.parseDeal(text, await dealCatalog(buyer).catch(() => [])) || quick.parse(text); }
 
 /* Enter із сумою: записати рядок за правилами, без помічника */
-async function quickAdd(text) {
-  /* «нафармив / купив / продав N товару» — угода: склад + запис в облік (як «Купив / Продав» у плашці цін) */
-  const d = quick.parseDeal(text, await dealCatalog().catch(() => []));
+async function quickAdd(text, buyer) {
+  /* «нафармив / купив / продав N товару» — угода: склад + запис в облік (ціна скупника — лише з режиму «Ціни») */
+  const d = quick.parseDeal(text, await dealCatalog(buyer).catch(() => []));
   if (d) {
     if (d.price === null) return { error: `Вкажи ціну: «${text.trim()} по 300» (за ${d.unit === 'кг' ? 'кг' : 'штуку'}) або «за 3000» (за все)` };
     const r = await quickDeal(d.op, d.item, d.qty, d.price);
@@ -407,6 +430,8 @@ const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' 
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
 const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'F9' };
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
+/* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
+const autostart = () => app.isPackaged && app.getLoginItemSettings().openAtLogin;
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
 let pricesAt = 0, pricesCache = [];
@@ -432,13 +457,13 @@ async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
   const [prices, stock] = await Promise.all([barPrices(), barStock(s.character)]);
-  return { ...s, prices, stock, prefs: prefs(), staff: STAFF.includes(myRole) };
+  return { ...s, prices, stock, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion() };
 }
 async function barHistory() {
-  const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(20);
+  const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(50);
   return data || [];
 }
-/* «Купив / Продав / Нафармив» прямо з картки товару в плашці */
+/* «Купив / Продав / Нафармив» з плану ШІ-помічника (quickRun) */
 async function quickDeal(op, item, qty, price) {
   if (!OPS[op] || typeof item !== 'string' || !item.trim()) return { error: 'Обери товар' };
   qty = Math.round(Number(qty) * 100) / 100; price = op === 'farm' ? 0 : Math.round(Number(price));
@@ -460,7 +485,7 @@ async function quickDeal(op, item, qty, price) {
 async function barCharacter(id) {
   if (typeof id !== 'string') return false;
   settings.character = id; saveSettings();
-  if (isCabinet(win.webContents.getURL())) win.webContents.send('session', await tokens());
+  bar?.webContents.send('session', await tokens());
   return true;
 }
 /* знімок екрана, на якому зараз курсор (там гра), у повному розмірі; плашка не має потрапити в кадр */
@@ -684,6 +709,10 @@ function barPrefs(p) {
   if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
+  if (typeof p?.autostart === 'boolean') {
+    if (!app.isPackaged) return { error: 'Автозапуск вмикається лише у встановленій програмі', prefs: { ...cur, autostart: false } };
+    app.setLoginItemSettings({ openAtLogin: p.autostart });
+  }
   if (typeof p?.pinKey === 'string' && p.pinKey !== cur.pinKey) {
     const bad = pinKeyConflict(p.pinKey, cur.hotkey, SHOT_KEY);
     if (bad) return { error: bad, prefs: cur };
@@ -702,7 +731,7 @@ function barPrefs(p) {
   }
   settings.bar = next; saveSettings();
   bar.setOpacity(next.opacity);
-  return { prefs: next };
+  return { prefs: { ...next, autostart: autostart() } };
 }
 
 /* ---------- «зір» програми (vision.cjs): гроші з HUD → облік, вікна скупників → ціни на сайт ---------- */
@@ -815,50 +844,70 @@ app.whenReady().then(() => {
   const dec = b => (safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : b.toString());
   sb = makeClient(cfg, fileStorage(path.join(dir(), 'session.bin'), enc, dec));
 
-  /* оновлені токени — одразу в кабінет, інакше він за годину лишиться з простроченим ключем */
+  /* оновлені токени — одразу в кабінет плашки, інакше він за годину лишиться з простроченим ключем */
   sb.auth.onAuthStateChange((ev) => {
     if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(() => refreshRole().catch(() => {}), 0);   // F9 — лише для редакторів
-    if (!win || !isCabinet(win.webContents.getURL())) return;
-    if (ev === 'TOKEN_REFRESHED' || ev === 'SIGNED_IN') tokens().then(t => win.webContents.send('session', t));
-    if (ev === 'SIGNED_OUT') { win.webContents.send('session', null); showLogin(); }
+    if (!bar) return;
+    if (ev === 'TOKEN_REFRESHED' || ev === 'SIGNED_IN') tokens().then(t => bar?.webContents.send('session', t));
+    if (ev === 'SIGNED_OUT') { bar.webContents.send('session', null); bar.hide(); showLogin(); }
   });
 
   ipcMain.handle('state', () => state());
   ipcMain.handle('session', e => (trusted(e) ? tokens() : null));
-  ipcMain.handle('cabinet', () => showCabinet());
+  ipcMain.handle('cabinet', () => openHub());
+  /* плашка входу підганяє висоту вікна під себе (довкола неї — прозоре поле під тінь) і ховається в трей своїм хрестиком */
+  const fromGate = e => gate && e.sender === gate.webContents;
+  ipcMain.handle('gate-size', (e, h) => {
+    if (!fromGate(e) || !Number.isFinite(h)) return;
+    const b = gate.getBounds(), nh = Math.round(Math.min(720, Math.max(240, h)));
+    gate.setBounds({ x: b.x, y: Math.round(b.y + (b.height - nh) / 2), width: GATE_W, height: nh });
+  });
+  ipcMain.handle('gate-hide', e => { if (fromGate(e)) gate.hide(); });
   /* «Швидкий запис» у кабінеті відкриває ту саму плашку, що й Alt+Q */
   ipcMain.handle('open-bar', e => { if (trusted(e)) return showBar().then(() => prefs().hotkey); });
   ipcMain.handle('hotkey', e => (trusted(e) ? prefs().hotkey : null));
   ipcMain.handle('login', async () => {
-    try { await login(sb, openExternal); win?.show(); win?.focus(); return await state(); }
+    try { await login(sb, openExternal); gate?.show(); gate?.focus(); return await state(); }
     catch (e) { return { user: null, error: 'Вхід не вдався: ' + e.message }; }
   });
-  ipcMain.handle('logout', async () => {
+  ipcMain.handle('logout', async e => {
     await sb.auth.signOut();
-    if (isCabinet(win.webContents.getURL())) showLogin();
+    if (bar && e.sender === bar.webContents) { bar.hide(); showLogin(); }   // вийшов з плашки — назад до входу
     return { user: null };
   });
   ipcMain.handle('character', (_e, id) => { if (typeof id === 'string') { settings.character = id; saveSettings(); } return true; });
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));
   /* швидкий запис — лише з плашки, не зі сторінок сайту */
   const fromBar = e => bar && e.sender === bar.webContents;
-  ipcMain.handle('quick-parse', (e, text) => (fromBar(e) ? quickParse(text) : null));
-  ipcMain.handle('quick-add', (e, text) => (fromBar(e) ? quickAdd(text) : null));
+  /* buyer — скупник, відкритий у режимі «Ціни» (його ціна для «продав» без ціни); інакше — угода з гравцем */
+  const buyerOf = b => (typeof b === 'string' && b ? b : null);
+  ipcMain.handle('quick-parse', (e, text, buyer) => (fromBar(e) ? quickParse(text, buyerOf(buyer)) : null));
+  ipcMain.handle('quick-add', (e, text, buyer) => (fromBar(e) ? quickAdd(text, buyerOf(buyer)) : null));
   ipcMain.handle('quick-ask', (e, text, rules) => (fromBar(e) ? quickAsk(text, rules) : null));
   ipcMain.handle('quick-run', e => (fromBar(e) ? quickRun() : null));
   /* плашка росте під відповідь помічника */
   /* плашка росте під вміст; знизу екрана — угору, щоб не вилізти за край */
-  ipcMain.handle('quick-size', (e, h) => {
+  ipcMain.handle('quick-size', (e, h, w) => {
     if (!fromBar(e) || !Number.isFinite(h)) return;
     h = Math.round(Math.min(BAR_MAX_H, Math.max(90, h)));
     const b = bar.getBounds();
-    bar.setBounds({ x: b.x, y: prefs().position === 'bottom' ? b.y + b.height - h : b.y, width: BAR_W, height: h });
+    w = Math.round(Math.min(BAR_MAX_W, Math.max(BAR_W, Number.isFinite(w) ? w : BAR_W)));   // ширшає й вужчає від центру
+    bar.setBounds({ x: Math.round(b.x + (b.width - w) / 2), y: prefs().position === 'bottom' ? b.y + b.height - h : b.y, width: w, height: h });
   });
   ipcMain.handle('bar-data', e => (fromBar(e) ? barData() : null));
-  ipcMain.handle('bar-history', e => (fromBar(e) ? barHistory() : null));
+  /* історія: плашка пише пошуки й відповіді ШІ, вікно історії читає їх разом із записами й повертає вибране в плашку */
+  const fromHist = e => hist && e.sender === hist.webContents;
+  ipcMain.handle('hist-add', (e, it) => { if (fromBar(e)) histAdd(it); });
+  ipcMain.handle('hist-toggle', e => (fromBar(e) ? toggleHist() : null));
+  ipcMain.handle('hist-data', async e => (fromHist(e) ? { items: histLoad(), tx: await barHistory().catch(() => []) } : null));
+  ipcMain.handle('hist-pick', (e, it) => { if (fromHist(e) && it && typeof it === 'object') { bar.webContents.send('hist-pick', it); bar.focus(); } });
+  ipcMain.handle('hist-del', (e, id) => { if (fromHist(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
+  ipcMain.handle('hist-clear', e => { if (fromHist(e)) { histItems = []; histSave(); } });
+  ipcMain.handle('hist-hide', e => { if (fromHist(e)) { hist.hide(); bar.focus(); } });
+  /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
+  ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));
   ipcMain.handle('bar-prefs', (e, p) => (fromBar(e) ? barPrefs(p) : null));
-  ipcMain.handle('quick-deal', (e, op, item, qty, price) => (fromBar(e) ? quickDeal(op, item, qty, price) : null));
   ipcMain.handle('shot-label', async (e, name, label, note, share) => {
     if (!fromBar(e) || !shotStore || !shotStore.label(name, label, note)) return { ok: false };
     if (typeof share === 'boolean' && share !== prefs().shareShots) barPrefs({ shareShots: share });
@@ -867,7 +916,6 @@ app.whenReady().then(() => {
   ipcMain.handle('shots-stats', e => { if (!fromBar(e)) return null; shotStore ??= shots.store(path.join(dir(), 'shots')); return { stats: shotStore.stats(), labels: shots.LABELS, key: SHOT_KEY }; });
   ipcMain.handle('vision-log-open', e => { if (fromBar(e)) shell.openPath(visionLog()); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
-  ipcMain.handle('bar-cabinet', e => { if (fromBar(e)) { bar.hide(); showMain(); if (!isCabinet(win.webContents.getURL())) showCabinet(); } });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
   /* F9: форма категорії — «надіслати» чи «не надсилати» */
   ipcMain.handle('pin-decide', (e, send, hint) => {
@@ -879,8 +927,9 @@ app.whenReady().then(() => {
   ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion() } : null));
   ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });
 
-  createWindow();
+  showLogin();
   createBar();
+  createHist();
   createStrip();
   createTray();
   startUpdates();
@@ -896,7 +945,7 @@ app.whenReady().then(() => {
 
 /* друга копія програми не запускається — просто показує першу (інакше Alt+Q і порти входу зайняті) */
 if (!app.requestSingleInstanceLock()) app.exit(0);
-app.on('second-instance', () => win && showMain());
+app.on('second-instance', () => showMain());
 app.on('before-quit', () => { quitting = true; });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 app.on('window-all-closed', () => app.quit());

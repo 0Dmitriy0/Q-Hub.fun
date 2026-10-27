@@ -1,12 +1,13 @@
 /* Плашка Alt+Q: вікно прозоре, видно лише панель; поля навколо — під тінь */
 html, body.in-bar { background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
 body.in-bar input { user-select: text; }
-.bwrap { padding: 4px 14px 14px; display: flex; flex-direction: column; align-items: center; }
-.btab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px 6px; margin-bottom: -1px; border: 1px solid var(--line2); border-bottom: 0; border-radius: 10px 10px 0 0; background: #141b24; color: var(--muted); font: 600 12px var(--sans); position: relative; z-index: 1; }
+/* вікно прозоре: поля довкола плашки — рівно під тінь, щоб її не обрізав край вікна */
+.bwrap { padding: 4px 14px 22px; display: flex; flex-direction: column; align-items: center; }
+.btab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px 6px; margin-bottom: -1px; border: 1px solid var(--line2); border-bottom: 0; border-radius: 10px 10px 0 0; background: rgba(14, 18, 24, .96); color: var(--muted); font: 600 12px var(--sans); position: relative; z-index: 1; }
 .btab.soon { color: var(--accent-hi); }
 .btab.soon .ico { color: var(--accent); }
-.bbox { width: 100%; background: #141b24; border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .4); overflow: hidden; transition: border-color .15s; }
-.bbox:focus-within { border-color: rgba(255, 107, 0, .5); }
+.bbox { width: 100%; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7); overflow: hidden; transition: border-color .15s; }
+.bbox:focus-within { border-color: rgba(255, 107, 0, .35); }
 
 /* рядок */
 .bbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
@@ -37,7 +38,7 @@ body.in-bar input { user-select: text; }
 .bmenu button:last-child { color: var(--muted); border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 3px; }
 
 /* дві панелі */
-.bpanes { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); height: 420px; border-top: 1px solid var(--line); }
+.bpanes { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); height: 480px; border-top: 1px solid var(--line); }
 .bleft { overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--line); }
 .bright { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
 .bempty { grid-column: 1 / -1; display: grid; place-items: center; color: var(--muted); padding: 30px; }
@@ -60,19 +61,14 @@ body.in-bar input { user-select: text; }
 .bhead img { width: 56px; height: 56px; border-radius: 14px; background: #0a0e14; object-fit: contain; padding: 6px; }
 .bhead h3, .bright h3 { font-size: 18px; }
 .bbuyers { display: flex; flex-direction: column; gap: 6px; }
-.bbuy { display: grid; grid-template-columns: 28px minmax(0, 1fr) 90px auto; align-items: center; gap: 10px; padding: 8px 10px; background: #1a2330; border-radius: 10px; }
+.bbuy { width: 100%; display: grid; grid-template-columns: 28px minmax(0, 1fr) 90px auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid transparent; background: #1a2330; border-radius: 10px; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.bbuy:hover { border-color: rgba(255, 107, 0, .4); }
 .bbuy img, .bbuy .bava { width: 28px; height: 28px; border-radius: 7px; object-fit: contain; }
 .bbuy span:not(.bava):not(.brange) { display: flex; flex-direction: column; min-width: 0; }
 .bbuy small { color: var(--muted); font-size: 11.5px; }
 .bbuy .mono { font-size: 14px; text-align: right; }
 .brange { position: relative; height: 5px; border-radius: 3px; background: linear-gradient(90deg, rgba(248, 113, 113, .35), rgba(250, 204, 21, .35) 50%, rgba(74, 222, 128, .45)); }
 .brange i { position: absolute; top: -4px; width: 4px; height: 13px; border-radius: 2px; background: var(--fg); transform: translateX(-2px); }
-.bdeal { display: grid; grid-template-columns: auto auto 1fr; align-items: end; justify-items: start; gap: 10px 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
-.bdeal .bseg { grid-column: 1 / -1; }
-.bdeal label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-.bdeal input { width: 120px; background: #0a0e14; color: var(--fg); border: 1px solid var(--line2); border-radius: 9px; padding: 8px 10px; font: 600 15px var(--mono); outline: 0; }
-.bdeal input:focus { border-color: var(--accent); }
-.bdeal .btn { min-height: 38px; padding: 8px 16px; }
 .bq { color: var(--muted); font-size: 13px; }
 .breply { font-size: 15.5px; line-height: 1.5; }
 .bacts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
@@ -107,13 +103,6 @@ body.in-bar input { user-select: text; }
 @keyframes bshim { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .bskel i { animation: none; } .bbox, .blead { transition: none; } }
 .bright .btn { align-self: flex-start; }
-.bkv { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 14px; align-items: center; font-size: 14px; }
-.bkv > span { color: var(--muted); }
-.bkv.wide { grid-template-columns: 170px minmax(0, 1fr); }
-.bkv > * { justify-self: start; }
-.bset { grid-column: 1 / -1; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
-.bset .btn { align-self: flex-start; }
-.bset input[type="range"] { accent-color: var(--accent); width: 220px; }
 .bchk { display: flex; align-items: center; gap: 8px; color: var(--fg); }
 .bchk input { accent-color: var(--accent); width: 16px; height: 16px; }
 
@@ -159,3 +148,104 @@ body.in-bar input { user-select: text; }
 .bsell-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .bsell-txt small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bsells .mono { font-size: 15px; white-space: nowrap; }
+
+/* лого в рядку — повертає на головну */
+.blogo { flex: none; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 9px; }
+.blogo img { display: block; border-radius: 9px; }
+/* головна: кабінет під рядком, прокручується лише він */
+.bhub { overflow-y: auto; scrollbar-gutter: stable; padding: 16px 10px 20px 18px; border-top: 1px solid var(--line); user-select: none; }
+.bhub input, .bhub textarea, .bhub td, .bhub .mono { user-select: text; }
+body.in-bar ::-webkit-scrollbar { width: 10px; height: 10px; }
+body.in-bar ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+body.in-bar ::-webkit-scrollbar-thumb:hover { background: var(--faint); background-clip: content-box; }
+body.in-bar ::-webkit-scrollbar-track { background: transparent; }
+.blogo.on img { box-shadow: 0 0 0 2px rgba(255, 106, 31, .55); }
+
+/* ---------- налаштування: ліворуч профіль, розділи й версія; праворуч картки «назва — перемикач» (Settings.tsx) ---------- */
+.sset { display: grid; grid-template-columns: 230px minmax(0, 1fr); height: 520px; border-top: 1px solid var(--line); }
+.snav { display: flex; flex-direction: column; gap: 14px; padding: 14px 12px; border-right: 1px solid var(--line); }
+.sme { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: #1a2330; }
+.sme img, .sme .bava { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; }
+.sme b { display: block; font-size: 14px; line-height: 1.2; }
+.sme small { color: var(--muted); font-size: 12px; }
+.snav nav { display: flex; flex-direction: column; gap: 2px; }
+.snav nav button { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0; border-radius: 10px; background: none; color: var(--muted); font: 600 14px var(--sans); text-align: left; cursor: pointer; }
+.snav nav button:hover { background: #1a2330; color: var(--fg); }
+.snav nav button[aria-current="page"] { background: #1f2a38; color: var(--fg); }
+.snav nav button[aria-current="page"] .ico { color: var(--accent); }
+.sver { margin-top: auto; padding: 0 6px; color: var(--faint); font: 500 12px var(--mono); }
+.sbody { overflow-y: auto; scrollbar-gutter: stable; padding: 16px 14px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sbody h3 { font-size: 18px; }
+.sbody > .muted { font-size: 13px; }
+.scard { display: flex; flex-direction: column; border-radius: 14px; background: #161e29; border: 1px solid var(--line); }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 16px; min-height: 54px; }
+.srow + .srow, .scard details + details { border-top: 1px solid var(--line); }
+.srow > div:first-child { min-width: 0; }
+.srow b { display: block; font-size: 14.5px; }
+.srow small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.srow input[type="range"] { accent-color: var(--accent); width: 180px; }
+.srow .row { gap: 10px; flex-wrap: nowrap; }
+/* перемикач */
+.stog { flex: none; position: relative; width: 40px; height: 22px; border: 0; border-radius: 99px; background: #2a3646; cursor: pointer; transition: background .15s; }
+.stog i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #c9d3df; transition: transform .15s, background .15s; }
+.stog.on { background: var(--accent); }
+.stog.on i { transform: translateX(18px); background: #fff; }
+@media (prefers-reduced-motion: reduce) { .stog, .stog i { transition: none; } }
+.skeys { display: inline-flex; gap: 4px; flex: none; }
+.skeys kbd, .skrec kbd { min-width: 30px; text-align: center; font: 700 12px var(--sans); color: var(--fg); padding: 4px 8px; border-radius: 7px; background: #0a0e14; border: 1px solid var(--line2); }
+.skrec { flex: none; display: inline-flex; padding: 3px; border: 1px solid var(--line2); border-radius: 10px; background: none; color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
+.skrec.on { padding: 7px 12px; border-color: var(--accent); color: var(--accent); }
+.skrec .skeys { gap: 3px; }
+.slink { border: 0; background: none; color: var(--muted); font: 600 12.5px var(--sans); cursor: pointer; }
+.slink:hover { color: var(--fg); }
+.sbig { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.sbig b { font: 800 22px var(--sans); color: var(--fg); }
+.sfaq h4 { margin: 4px 0 8px; color: var(--muted); font: 600 12.5px var(--sans); }
+.scard details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; font-weight: 700; font-size: 14.5px; cursor: pointer; list-style: none; }
+.scard details summary::-webkit-details-marker { display: none; }
+.scard details summary .ico { color: var(--faint); transform: rotate(-90deg); transition: transform .15s; }
+.scard details[open] summary .ico { transform: none; }
+.scard details p { padding: 0 16px 14px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+
+/* ---------- історія: окрема плашка ліворуч від плашки (History.tsx) ---------- */
+.hwrap { height: 100vh; padding: 0 0 4px; }
+.hbox { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; overflow: hidden; }
+.hhead { display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 0 6px; }
+.hhead b { font-size: 15px; }
+.hfind { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 11px; background: #0a0e14; border: 1px solid var(--line2); color: var(--muted); }
+.hfind:focus-within { border-color: rgba(255, 106, 31, .5); color: var(--fg); }
+.hfind input { flex: 1; min-width: 0; padding: 10px 0; border: 0; outline: 0; background: none; color: var(--fg); font: 500 14px var(--sans); user-select: text; }
+.hseg { align-self: flex-start; }
+.hlist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
+.hlist h4 { margin: 4px 6px 4px; color: var(--muted); font: 600 12px var(--sans); }
+.hrow { position: relative; display: flex; align-items: center; border-radius: 11px; }
+.hrow:hover { background: #1a2330; }
+.hpick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; background: none; color: var(--fg); text-align: left; cursor: pointer; font: inherit; }
+.hpick > span:last-child { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hpick b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hpick small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdel { width: 28px; height: 28px; margin-right: 4px; opacity: 0; }
+.hrow:hover .hdel, .hdel:focus-visible { opacity: 1; }
+.hempty { padding: 20px 8px; font-size: 13.5px; }
+.hclear { align-self: center; border: 0; background: none; color: var(--faint); font: 600 12.5px var(--sans); cursor: pointer; padding: 4px 8px; }
+.hclear:hover { color: var(--bad); }
+
+/* ---------- журнал оновлень (Settings.tsx) і «що нового» в плашці ---------- */
+.snav nav button { position: relative; }
+.sdot { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; display: grid; place-items: center; border-radius: 99px; background: var(--accent); color: var(--accent-fg); font: 800 11px var(--sans); }
+.slog { padding: 14px 16px; gap: 12px; }
+.slog header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.slog header b { font-size: 15.5px; }
+.slog header small { color: var(--muted); font-size: 12.5px; }
+.slog header .pill { margin-left: auto; }
+.slog-g h4 { margin: 0 0 6px; font: 700 12px var(--sans); text-transform: uppercase; letter-spacing: .06em; }
+.slog-g.good h4 { color: var(--good); }
+.slog-g.warn h4 { color: var(--warn); }
+.slog-g.acc h4 { color: var(--accent-hi); }
+.slog-g ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--fg); font-size: 13.5px; line-height: 1.5; }
+.slog-g li::marker { color: var(--faint); }
+/* крапка на шестерні: є непрочитані оновлення */
+.bico { position: relative; }
+.bdot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px rgba(14, 18, 24, .96); }
+.bnew { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--accent-hi); font: 700 12.5px var(--sans); cursor: pointer; }
+.bnew:hover { text-decoration: underline; }

@@ -6,7 +6,7 @@ name: Desktop (Windows)
 on:
   workflow_dispatch:
   push:
-    paths: ['desktop/**', 'src/**', 'app.html', 'bar.html', 'vite.app.config.ts', 'vite.lib.config.ts', '.github/workflows/desktop.yml']
+    paths: ['desktop/**', 'src/**', 'bar.html', 'history.html', 'vite.app.config.ts', 'vite.lib.config.ts', '.github/workflows/desktop.yml']
 
 permissions:
   contents: write   # реліз з інсталятором
@@ -22,6 +22,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # повна історія: версія = коміти відтоді, як змінили перші дві цифри (scripts/version.mjs)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -35,7 +37,7 @@ jobs:
       - run: npm test
         working-directory: desktop
       - name: Номер збірки у версії (програма бачить оновлення лише за більшою версією)
-        run: node scripts/version.mjs ${{ github.run_number }}
+        run: node scripts/version.mjs
         working-directory: desktop
       - run: npm run dist
         working-directory: desktop

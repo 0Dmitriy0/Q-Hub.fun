@@ -651,29 +651,31 @@ fieldset.ro, fieldset.rw { border: 0; padding: 0; margin: 0; min-width: 0; displ
 .ro section.card:has(form), .ro .danger-zone, .ro .edit-only { display: none; }
 .ro .grid.side:has(> section.card:has(form)) { grid-template-columns: 1fr; }
 
-/* ---------- програма Q-Hub: кабінет у вигляді Quant Hub (бічне меню, заголовок розділу, «+ Запис») ---------- */
-.desk { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100dvh; }
-.dside { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 18px; padding: 18px 14px; background: var(--surface); border-right: 1px solid var(--line); }
-.dbrand { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
-.dbrand b { display: block; font: 700 16px var(--disp); }
-.dbrand small { color: var(--muted); font-size: 12px; }
-.dnav { display: flex; flex-direction: column; gap: 4px; }
-.dnav a { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 14px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 15px; }
-.dnav a:hover { color: var(--fg); background: var(--surface2); }
-.dnav a.active { color: var(--fg); background: var(--surface2); box-shadow: inset 3px 0 0 var(--accent); }
-.dnav a.active .ico { color: var(--accent); }
-.dadd { margin-top: auto; }
-.dmain { min-width: 0; padding: 0 28px 48px; display: flex; flex-direction: column; gap: 18px; }
-.dhead { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 0 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
-.dhead h1 { font-size: 26px; }
-.dhead small { color: var(--muted); font-size: 13px; }
-@media (max-width: 899px) {
-  .desk { grid-template-columns: 1fr; }
-  .dside { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
-  .dnav { flex-direction: row; overflow-x: auto; flex: 1 1 100%; }
-  .dadd { margin-top: 0; }
-  .dmain { padding: 0 16px 40px; }
-}
+/* ---------- програма Q-Hub: кабінет — головна плашки Alt+Q (src/desktop/Hub.tsx, прокручує .bhub) ---------- */
+.deck { display: flex; flex-direction: column; gap: 16px; }
+.deck > * { flex-shrink: 0; }
+.ico.tl { transform: rotate(90deg); }
+.ico.tr { transform: rotate(-90deg); }
+/* плитки розділів: іконка в підсвіченому квадраті, назва, підпис, стрілка; відкритий розділ — помаранчева рамка */
+.dtiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.dtiles a { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-decoration: none; transition: border-color .15s, background .15s; }
+.dtiles a:hover { background: var(--surface2); }
+.dtiles a.active { border-color: rgba(255, 107, 0, .55); background: linear-gradient(180deg, rgba(255, 107, 0, .08), transparent), var(--surface); }
+.dtiles a > span:nth-child(2) { flex: 1; min-width: 0; }
+.dtiles b { display: block; font-size: 15px; }
+.dtiles small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dgo { flex: none; color: var(--faint); }
+.dbub { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 10px; color: var(--accent); background: rgba(255, 107, 0, .12); border: 1px solid rgba(255, 107, 0, .22); }
+.dtitle h1 { font-size: 24px; line-height: 1.15; }
+.dtitle small { color: var(--muted); font-size: 13px; }
+.dsect { margin-top: 4px; font-size: 15px; }
+.dsite { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.dsite button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-align: left; cursor: pointer; font: inherit; }
+.dsite button:hover { background: var(--surface2); border-color: var(--line2); }
+.dsite .dbub { margin-bottom: 6px; }
+.dsite b { font-size: 15px; }
+.dsite small { color: var(--muted); font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .dtiles a { transition: none; } }
 
 /* розкладки сторінок */
 .dash, .stockg { display: grid; gap: 16px; align-items: start; }
@@ -747,13 +749,6 @@ input.search:focus { border-color: var(--accent); outline: 0; }
 body.in-app { overflow: hidden; user-select: none; cursor: default; }
 body.in-app input, body.in-app textarea, body.in-app .li, body.in-app td, body.in-app .mono { user-select: text; }
 body.in-app #root { height: 100dvh; }
-body.in-app .desk { height: 100dvh; min-height: 0; }
-body.in-app .dside { height: 100dvh; }
-/* прокручується лише вміст, бічне меню й заголовок стоять на місці */
-body.in-app .dmain { height: 100dvh; overflow-y: auto; scrollbar-gutter: stable; }
-/* за заголовок і верх меню вікно перетягується; справа — місце під кнопки Windows (згорнути / розгорнути / закрити) */
-body.in-app .dhead, body.in-app .dbrand { -webkit-app-region: drag; }
-body.in-app .dhead :is(a, button, input, select, label, [role="button"]) { -webkit-app-region: no-drag; }
 body.in-app ::-webkit-scrollbar { width: 10px; height: 10px; }
 body.in-app ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
 body.in-app ::-webkit-scrollbar-thumb:hover { background: var(--faint); background-clip: content-box; }
@@ -764,17 +759,6 @@ body.in-app img { -webkit-user-drag: none; }
 .ev.soon { background: rgba(255, 106, 31, .12); box-shadow: inset 3px 0 0 var(--accent); }
 .ev.on { box-shadow: inset 3px 0 0 var(--good); }
 
-/* шапка розділу в програмі: зверху вільна смуга під кнопки Windows (за неї ж тягнуть вікно), нижче — заголовок і гравець */
-body.in-app .dhead { padding: 44px 4px 16px; padding-right: 4px; min-height: 0; align-items: flex-end; }
-body.in-app .dhead h1 { font-size: 28px; line-height: 1.1; }
-body.in-app .dhead small { display: block; margin-top: 4px; }
-body.in-app .dside { padding-top: 44px; }
-.me { display: flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
-.me img, .me .logo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; font-size: 15px; }
-.me b { display: block; font-size: 14px; line-height: 1.2; }
-.me small { color: var(--muted); font: 500 12px var(--mono); }
-/* у вікні фіксованої висоти блоки не стискаються — прокручується .dmain */
-body.in-app .dmain > * { flex-shrink: 0; }
 
 /* іконки товарів з каталогу сайту — на складі й у «що вигідно» */
 .ico-item { width: 26px; height: 26px; flex: none; border-radius: 7px; background: var(--surface2); object-fit: contain; padding: 2px; }
@@ -793,13 +777,6 @@ body.in-app .dmain > * { flex-shrink: 0; }
 
 /* ---------- етап 5: зрозуміліше й спокійніше ---------- */
 /* низ бічного меню: гроші завжди перед очима і один вхід для будь-якого запису */
-.dfoot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
-.dwallet { display: grid; gap: 6px; padding: 12px; border-radius: 14px; background: var(--surface2); }
-.dwallet div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.dwallet small { color: var(--muted); font-size: 12.5px; }
-.dwallet b { font-size: 14px; }
-.dadd { margin-top: 0; gap: 8px; white-space: nowrap; padding: 11px 14px; font-size: 14px; }
-.dadd kbd { margin-left: auto; font: 700 11px var(--sans); padding: 2px 6px; border-radius: 6px; background: rgba(20, 7, 0, .18); }
 /* картка балансу: гроші ліворуч, три швидкі дії праворуч — темні, щоб не сперечатися з помаранчевим тлом */
 .hero-foot { align-items: flex-end; gap: 12px; }
 .hero-act { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1269,26 +1246,12 @@ fieldset .static-form .btn { align-self: end; }
 .cab-tabs { align-self: flex-start; max-width: 100%; overflow-x: auto; scrollbar-width: none; border-radius: 16px; }
 .cab-tabs::-webkit-scrollbar { display: none; }
 .cab-tabs a { flex: none; border-radius: 12px; }
-:is(.cab, .desk) .lbl { color: var(--faint); font: 600 10.5px/14px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-:is(.cab, .desk) .card { border-radius: 16px; }
-:is(.cab, .desk) .card.note { border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); }
-:is(.cab, .desk) .big { font-weight: 800; letter-spacing: -.03em; }
-:is(.cab, .desk) .li small { color: var(--faint); }
-:is(.cab, .desk) .seg { background: var(--bg); border-color: var(--line2); }
-/* програма: бічне меню, шапка розділу й гаманець */
-.dside { background: #0b0f15; border-right: 1px solid var(--line2); }
-:root[data-theme="light"] .dside { background: var(--surface); }
-.dbrand b { font: 800 17px var(--disp); letter-spacing: -.02em; }
-.dnav a { border-radius: 12px; font-size: 14.5px; }
-.dnav a.active { color: var(--accent-hi); background: rgba(255, 107, 0, .12); box-shadow: inset 3px 0 0 var(--accent); font-weight: 800; }
-.dnav a.active .ico { color: var(--accent-hi); }
-.dwallet { background: var(--bg); border: 1px solid var(--line2); border-radius: 12px; }
-.dwallet small { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
-.dwallet b { color: var(--good); font-size: 15px; }
-.dadd { box-shadow: 0 4px 16px rgba(255, 107, 0, .35); }
-.dhead { background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-bottom-color: var(--line2); }
-.dhead h1 { font-weight: 800; letter-spacing: -.025em; }
-.me { border-color: var(--line2); }
+:is(.cab, .deck) .lbl { color: var(--faint); font: 600 10.5px/14px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+:is(.cab, .deck) .card { border-radius: 16px; }
+:is(.cab, .deck) .card.note { border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); }
+:is(.cab, .deck) .big { font-weight: 800; letter-spacing: -.03em; }
+:is(.cab, .deck) .li small { color: var(--faint); }
+:is(.cab, .deck) .seg { background: var(--bg); border-color: var(--line2); }
 @media (max-width: 640px) { .cab-hero { flex-direction: row; } .cab-ava { width: 52px; height: 52px; border-radius: 14px; } }
 
 /* мапа: плитка «Адмін / Чернетки» праворуч і кнопка, що її відкриває (внизу мапи) */

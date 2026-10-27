@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useRows } from '../../lib/useRows';
 import { balances } from '../../lib/ledger';
 import { useAuth } from '../../lib/auth';
+import { canEdit } from '../../lib/app';
 import { balanceSeries, lastDays, summary, type Period } from '../../lib/ledgerStats';
 import { money, parseMoney, signed, when } from '../../lib/format';
 import { ACCOUNTS, TX_CATS, defaultAccount, type Account } from '../../lib/cats';
@@ -11,7 +12,8 @@ import { hm, perHour, played, type GameSession } from '../../lib/sessions';
 import type { Character, Tx } from './types';
 import Select from '../../components/Select';
 
-const PERIODS: [Period, string][] = [['all', 'Усе'], ['today', 'Сьогодні'], ['yesterday', 'Вчора'], ['week', '7 днів'], ['month', '30 днів']];
+const FEW = 8;   // скільки останніх записів історії видно без «Показати все»
+const PERIODS: [Period, string][] =[['all', 'Усе'], ['today', 'Сьогодні'], ['yesterday', 'Вчора'], ['week', '7 днів'], ['month', '30 днів']];
 
 /* кільце цілі: дуга від верху за годинниковою стрілкою */
 function Ring({ pct }: { pct: number }) {
@@ -51,6 +53,8 @@ export default function LedgerPage({ c }: { c: Character }) {
   const [realCash, setRealCash] = useState(''); const [realCard, setRealCard] = useState('');
   const [msg, setMsg] = useState(''); const [sure, setSure] = useState('');
   const [period, setPeriod] = useState<Period>('all');
+  /* історія: у програмі — останні FEW і «Показати все»; на сайті кнопки вимкнено (fieldset), тож одразу все */
+  const [all, setAll] = useState(!canEdit);
   const b = balances(c, rows), bal = b.total;
   const today = summary(rows, 'today'), sum = summary(rows, period);
   const todayMs = played(games, 'today'), sumMs = played(games, period);
@@ -153,6 +157,17 @@ export default function LedgerPage({ c }: { c: Character }) {
               <button className="btn acc">Записати</button>
             </form>
           </section>
+          {/* історія — у лівій колонці під формою (там було порожньо): спершу останні, «Показати все» — решта */}
+          <section className="card">
+            <div className="row between"><h2>Історія</h2><span className="muted">{rows.length} записів</span></div>
+            {error && <p className="err">{error}</p>}
+            {rows.length ? <div className="list">{rows.slice(0, all ? 200 : FEW).map(t => (
+              <div className="li" key={t.id}>
+                <div><b className={t.source === 'transfer' ? '' : t.type === 'in' ? 'good' : 'bad'}>{signed(t.type === 'in' ? t.amount : -t.amount)}</b> · {t.category} <span className="pill">{ACCOUNTS[t.account ?? 'cash']}</span><br /><small>{when(t.ts)}{t.note ? ' · ' + t.note : ''}</small></div>
+                <button className="btn sm ghost edit-only" onClick={() => del(t)}>{sure === t.id ? (t.source === 'transfer' ? 'Так, обидва записи' : 'Так, видалити') : 'Видалити'}</button>
+              </div>))}</div> : <div className="empty">Записів ще немає. Додай перший прибуток або витрату — дата й час проставляться самі.</div>}
+            {canEdit && rows.length > FEW && <button className="btn ghost sm" style={{ alignSelf: 'center' }} aria-expanded={all} onClick={() => setAll(a => !a)}>{all ? 'Сховати' : `Показати все (${Math.min(rows.length, 200)})`}</button>}
+          </section>
         </div>
         <div className="grid">
           <section className="card"><h2>Баланс у часі</h2><BalanceChart pts={balanceSeries(c.start_balance, rows)} /></section>
@@ -175,15 +190,6 @@ export default function LedgerPage({ c }: { c: Character }) {
           </section>
         </div>
       </div>
-      <section className="card">
-        <div className="row between"><h2>Історія</h2><span className="muted">{rows.length} записів</span></div>
-        {error && <p className="err">{error}</p>}
-        {rows.length ? <div className="list">{rows.slice(0, 200).map(t => (
-          <div className="li" key={t.id}>
-            <div><b className={t.source === 'transfer' ? '' : t.type === 'in' ? 'good' : 'bad'}>{signed(t.type === 'in' ? t.amount : -t.amount)}</b> · {t.category} <span className="pill">{ACCOUNTS[t.account ?? 'cash']}</span><br /><small>{when(t.ts)}{t.note ? ' · ' + t.note : ''}</small></div>
-            <button className="btn sm ghost edit-only" onClick={() => del(t)}>{sure === t.id ? (t.source === 'transfer' ? 'Так, обидва записи' : 'Так, видалити') : 'Видалити'}</button>
-          </div>))}</div> : <div className="empty">Записів ще немає. Додай перший прибуток або витрату — дата й час проставляться самі.</div>}
-      </section>
     </>
   );
 }
