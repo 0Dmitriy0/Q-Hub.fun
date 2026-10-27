@@ -47,3 +47,45 @@ export default function MapAreaDraw({ cats, ring, drawing, onDraw, onUndo, onCle
     </section>
   );
 }
+
+/* зміна зони адміном: назва, примітка, категорія й контур. Контур правлять на мапі (MapPage): тягнути точки,
+   середини ребер (нова точка), подвійний клік — прибрати точку, ручка в центрі — перенести всю зону */
+export function MapAreaEdit({ area, cats, ring, onReset, onCancel, onDone }: {
+  area: MapArea; cats: MapCategory[]; ring: [number, number][];
+  onReset: () => void; onCancel: () => void; onDone: (a: MapArea) => void;
+}) {
+  const own = cats.filter(c => !c.builtin);
+  const [cat, setCat] = useState(area.category);
+  const [name, setName] = useState(area.name); const [note, setNote] = useState(area.note);
+  const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
+  const moved = ring !== area.ring;
+
+  async function save() {
+    const bad = ringProblem(ring); if (bad) return setMsg(bad);
+    setBusy(true); setMsg('');
+    const r = ring.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10] as [number, number]);
+    const { error } = await supabase!.from('map_areas').update({ category_id: cat, name: name.trim(), note: note.trim(), ring: r }).eq('id', area.dbId);
+    setBusy(false);
+    if (error) return setMsg(/row-level|permission/i.test(error.message) ? 'Це може лише адмін.' : error.message);
+    onDone({ ...area, category: cat, name: name.trim(), note: note.trim(), ring: r });
+  }
+
+  return (
+    <section className="madmin medit-box" aria-label="Змінити зону">
+      <h4>Змінити зону{area.name ? ` «${area.name}»` : ''}</h4>
+      <p className="muted">На мапі: тягни білі точки межі, ручку в центрі — щоб перенести всю зону. Потягни середину ребра — буде нова точка, подвійний клік по точці — прибрати її.</p>
+      <input className="min" placeholder="Назва" value={name} onChange={e => setName(e.target.value)} aria-label="Назва зони" maxLength={160} />
+      <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка до зони" maxLength={600} />
+      <Select label="Категорія зони" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
+      <div className="mrow">
+        <button type="button" className="btn sm ghost" disabled={!moved} onClick={onReset}>Повернути контур</button>
+        <span className="muted mono">точок: {ring.length}</span>
+      </div>
+      <div className="mrow">
+        <button type="button" className="btn sm ghost" onClick={onCancel}>Скасувати</button>
+        <button type="button" className="btn sm acc" disabled={busy} onClick={save}>Зберегти зону</button>
+      </div>
+      {msg && <p className="mmsg" role="status">{msg}</p>}
+    </section>
+  );
+}
