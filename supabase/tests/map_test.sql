@@ -1,12 +1,12 @@
 -- Мапа: мітки бачать усі, додає/видаляє лише адмін; координати в межах штату.
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
-do $$ begin assert (select count(*) from public.map_categories) = 39, 'початкових категорій не 39'; end $$;
+do $$ begin assert (select count(*) from public.map_categories) = 40, 'початкових категорій не 40'; end $$;
 
 set role anon;
 select set_config('request.jwt.claim.sub', '', false) \gset
 do $$ begin
-  assert (select count(*) from public.map_categories) = 39, 'гість не бачить категорій';
+  assert (select count(*) from public.map_categories) = 40, 'гість не бачить категорій';
   begin insert into public.map_points (category_id, name, x, y) values ('trash-bins', 'бак', 0, 0); raise exception 'гість додав мітку';
   exception when insufficient_privilege then null; end;
 end $$;
