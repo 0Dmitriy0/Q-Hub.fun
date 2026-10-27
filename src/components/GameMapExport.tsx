@@ -7,7 +7,7 @@ import ZONES from '../data/mapZones.json';
 const LAYER_COUNT = { names: LABELS.length, zones: ZONES.length };
 
 /* це адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію чи шар сховано */
-const PRESET = new Set(['names', 'zones', 'treasure-fields', 'graffiti', 'ufo-land', 'oil']);
+const PRESET = new Set(['names', 'zones', 'treasure-fields', 'hunting-fields', 'graffiti', 'ufo-land', 'oil']);
 
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур) */
 export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
