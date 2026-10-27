@@ -45,7 +45,7 @@ export default function Home() {
             <Link className="btn ghost" to="/tsiny"><Icon name="buyer" />Ціни скупників</Link>
           </div>
         </div>
-        <Link className="h-promo" to="/mapa">
+        <Link className="h-promo" to="/mapa?show=pryvydy">
           <img src="/promo/ghost-tile.webp" alt="" width="700" height="380" fetchPriority="high" />
           <span className="h-promo-body">
             <span className="h-promo-tag">Сезонний івент</span>

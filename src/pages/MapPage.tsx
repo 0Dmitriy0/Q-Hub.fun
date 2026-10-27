@@ -88,7 +88,10 @@ export default function MapPage() {
     return () => { ro.disconnect(); document.body.classList.remove('map-open'); };
   }, [wide]);
 
-  const isOn = (c: MapCategory) => on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp);
+  /* ?show=pryvydy (банер на головній; значення — id категорії в базі): лише ця категорія й назви місць, збережені фільтри не чіпаємо,
+     доки гравець сам щось не перемкне; немає такої категорії чи міток у ній — звичайна мапа */
+  const [only, setOnly] = useState<string | null>(() => (supabase && new URLSearchParams(location.search).get('show')) || null);
+  const isOn = (c: MapCategory) => (only ? c.id === only || c.id === 'names' : on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp));
   /* панель: вкладки й згорнуті групи */
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
   const [tab, setTab] = useState<'admin' | 'drafts'>('admin');
@@ -107,7 +110,7 @@ export default function MapPage() {
   const [game, setGame] = useState(() => params.get('game') === '1');
   const dlg = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    if (params.get('game')) history.replaceState(null, '', location.pathname + location.hash);
+    if (params.get('game') || params.get('show')) history.replaceState(null, '', location.pathname + location.hash);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const d = dlg.current; if (!d) return;
@@ -128,10 +131,11 @@ export default function MapPage() {
   useEffect(() => {
     if (!supabase) return;
     loadMapData().then(d => {
-      if (!d) { setDbMissing(true); return; }
+      if (!d) { setDbMissing(true); setOnly(null); return; }
       if (d.areas) setAreas(d.areas);
       if (d.owners) setOwners(d.owners);
       setCats(d.cats); setMarks(d.marks);
+      setOnly(o => (o && d.marks.some(mk => mk.category === o) ? o : null));
     });
   }, []);
 
@@ -204,7 +208,16 @@ export default function MapPage() {
     const m = map.current; if (!m) return;
     for (const c of cats) { const g = layers.current[c.id]; if (!g) continue; if (isOn(c)) g.addTo(m); else g.remove(); }
     m.fire('zoomend');
-  }, [on]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [on, only]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ?show= без координат в адресі: кадр — на всі мітки категорії (привиди розкидані по всьому штату), один раз */
+  const fitted = useRef(!!parseHash(location.hash));
+  useEffect(() => {
+    const m = map.current; if (!m || !only || fitted.current) return;
+    const pts = marks.filter(mk => mk.category === only); if (!pts.length) return;
+    fitted.current = true;
+    m.fitBounds(L.latLngBounds(pts.map(mk => m.unproject(toPx(mk.x, mk.y), ZMAX))), { paddingTopLeft: [wide ? 380 : 30, 90], paddingBottomRight: [30, 30] });
+  }, [marks, only]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* маркер чернетки: білий з помаранчевою обводкою, щоб не сплутати з опублікованими мітками */
   useEffect(() => {
@@ -250,8 +263,12 @@ export default function MapPage() {
     addEventListener('keydown', f); return () => removeEventListener('keydown', f);
   }, []);
 
-  function resetOn() { setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
-  function setMany(ids: string[], v: boolean) { setOn(o => { const n = { ...saved, ...o }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
+  function resetOn() { setOnly(null); setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
+  /* перше перемикання після ?show= береться від того, що гравець бачить зараз, і зберігається як звичайно */
+  function setMany(ids: string[], v: boolean) {
+    const seen = only ? Object.fromEntries(cats.map(c => [c.id, isOn(c)])) : {};
+    if (only) setOnly(null);
+    setOn(o => { const n = { ...saved, ...o, ...seen }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
   function pick(v: boolean, forDraft = false) { pickFor.current = forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
