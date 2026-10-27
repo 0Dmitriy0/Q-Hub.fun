@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import EventList from '../components/EventList';
+import EventsBlock from '../components/EventsBlock';
 import MiniMap from '../components/MiniMap';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
@@ -108,10 +108,7 @@ export default function Home() {
 
       {/* 4. івенти й свіжі ціни */}
       <section className="grid two">
-        <div className="card">
-          <h2 className="ih"><Icon name="clock" />Найближчі івенти</h2>
-          <EventList compact />
-        </div>
+        <EventsBlock />
         <div className="card">
           <div className="row between"><h2 className="ih"><Icon name="buyer" />Свіжі ціни скупників</h2><Link className="h-more" to="/tsiny">Вся таблиця →</Link></div>
           <div className="list">
