@@ -1297,3 +1297,11 @@ fieldset .static-form .btn { align-self: end; }
 .pmeta dt { color: var(--muted); font-size: 12px; } .pmeta dd { margin: 0; font-weight: 700; font-size: 14px; }
 .svform .wide { grid-column: 1 / -1; }
 .fld textarea { resize: vertical; min-height: 0; }
+
+/* «Скрін мапи» (MapShot.tsx) */
+.mshot { display: flex; flex-direction: column; gap: 12px; }
+.mshot p { margin: 0; }
+.mshot-n { font-size: 14px; color: var(--muted); } .mshot-n b { color: var(--fg); font-family: var(--mono); }
+.mshot .mseg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.mshot-prev { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--line2); background: #0a0e11; }
+.mshot-prev img { display: block; width: 100%; height: auto; max-height: 38dvh; object-fit: contain; }

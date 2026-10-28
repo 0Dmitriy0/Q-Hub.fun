@@ -1,4 +1,4 @@
-import { mapUrl } from './mapGeo';
+import { OCEAN, mapUrl } from './mapGeo';
 import { triPath } from './mapChunk';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>.png, 2x3 тайли),
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
@@ -218,7 +218,13 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
-  const r = pinPx / 2;
+  drawPins(ctx, size, pins, pinPx, imgs);
+  return cv;
+}
+
+/* мітки поверх мапи: кружок кольору категорії з іконкою всередині; дрібні (r < 2) — крапка */
+function drawPins(ctx: CanvasRenderingContext2D, size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>) {
+  const W = size * GAME.cols, H = size * GAME.rows, r = pinPx / 2;
   for (const p of pins) {
     const [px, py] = gamePx(p.x, p.y, size); if (px < 0 || py < 0 || px > W || py > H) continue;
     if (r < 2) { ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#111'; ctx.stroke(); continue; }
@@ -226,7 +232,6 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     ctx.lineWidth = Math.max(1, pinPx / 12); ctx.strokeStyle = p.color; ctx.stroke();
     const im = imgs.get(p.icon); if (im && r >= 4) ctx.drawImage(im, px - r * 0.72, py - r * 0.72, r * 1.44, r * 1.44);
   }
-  return cv;
 }
 
 const png = (c: HTMLCanvasElement) => new Promise<Blob>((res, rej) => c.toBlob(x => (x ? res(x) : rej(new Error('PNG'))), 'image/png'))
@@ -371,4 +376,53 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...tex]) as BlobPart], { type: 'application/zip' });
+}
+
+/* «Скрін мапи»: уся мапа одним зображенням з мітками, вибраними у фільтрах. PNG — щоб кинути в Discord чи Telegram
+   (SVG вони картинкою не показують); SVG — та сама мапа картинкою всередині, а мітки вектором: чіткі при збільшенні,
+   назва — при наведенні. Обидва з тлом океану й підписом q-hub.fun */
+export type ShotPin = GamePin & { name?: string };
+const dataUrl = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+const xml = (t: string) => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
+  const size = opt.size ?? 1024, areas = opt.areas ?? [];
+  step?.('Готую значки…');
+  const imgs = new Map<string, HTMLImageElement | null>();
+  for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
+  step?.('Малюю мапу…');
+  const map = await drawMap(size, [], 0, imgs, opt.layers, areas, true);
+  const W = map.width, H = map.height;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d')!;
+  ctx.fillStyle = OCEAN; ctx.fillRect(0, 0, W, H); ctx.drawImage(map, 0, 0);
+  const sign = (c: CanvasRenderingContext2D) => {
+    const f = Math.round(W / 64); c.font = `700 ${f}px system-ui, sans-serif`; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillStyle = 'rgba(255, 255, 255, .55)'; c.fillText('q-hub.fun', W - f, H - f * 0.8);
+  };
+  sign(ctx);
+  const basePng = await png(cv);
+  step?.('Ставлю мітки…');
+  drawPins(ctx, size, pins, opt.pinPx, imgs);
+  const full = await png(cv);
+
+  /* SVG: тло — мапа без міток, мітки — кружки з іконками (кожна іконка вбудована один раз) */
+  const ids = new Map<string, string>(), defs: string[] = [];
+  for (const src of imgs.keys()) {
+    const b = await fetch(src).then(r => (r.ok ? r.blob() : null)).catch(() => null);
+    if (!b) continue;
+    const id = 'i' + ids.size; ids.set(src, id);
+    defs.push(`<image id="${id}" href="${await dataUrl(b)}" width="1" height="1"/>`);
+  }
+  const r = opt.pinPx / 2, sw = Math.max(1, opt.pinPx / 12);
+  const marks = pins.map(p => {
+    const [x, y] = gamePx(p.x, p.y, size); if (x < 0 || y < 0 || x > W || y > H) return '';
+    const id = ids.get(p.icon), k = r * 1.44;
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${p.name ? `<title>${xml(p.name)}</title>` : ''}<circle r="${r}" fill="#111" stroke="${xml(p.color)}" stroke-width="${sw}"/>`
+      + (id && r >= 4 ? `<use href="#${id}" transform="translate(${(-k / 2).toFixed(2)} ${(-k / 2).toFixed(2)}) scale(${k.toFixed(2)})"/>` : '') + '</g>';
+  }).join('');
+  const bg = await dataUrl(new Blob([basePng as BlobPart], { type: 'image/png' }));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><title>Мапа штату · q-hub.fun</title>`
+    + `<defs>${defs.join('')}</defs><image href="${bg}" width="${W}" height="${H}"/><g>${marks}</g></svg>`;
+  return { png: new Blob([full as BlobPart], { type: 'image/png' }), svg: new Blob([svg], { type: 'image/svg+xml' }), w: W, h: H };
 }

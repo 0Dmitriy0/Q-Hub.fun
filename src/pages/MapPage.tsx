@@ -13,6 +13,7 @@ import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import MapAdmin, { CatEdit, MarkEdit } from '../components/MapAdmin';
 import GameMapExport from '../components/GameMapExport';
+import MapShot from '../components/MapShot';
 import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
 
@@ -113,6 +114,13 @@ export default function MapPage() {
   const [params] = useSearchParams();
   const [game, setGame] = useState(() => params.get('game') === '1');
   const dlg = useRef<HTMLDialogElement>(null);
+  /* «Скрін мапи» — таке саме вікно з картинкою всієї мапи й увімкнених міток */
+  const [shotOpen, setShotOpen] = useState(false);
+  const shotDlg = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = shotDlg.current; if (!d) return;
+    if (shotOpen && !d.open) d.showModal(); else if (!shotOpen && d.open) d.close();
+  }, [shotOpen]);
   useEffect(() => {
     if (params.get('game') || params.get('show')) history.replaceState(null, '', location.pathname + location.hash);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -396,6 +404,7 @@ export default function MapPage() {
               <button type="button" className="hud-b mono" onClick={zoomHome} title="Повернути початковий вигляд">{Math.round(2 ** (zoom - HOME_Z) * 100)}%</button>
               <button type="button" className="hud-b" onClick={() => map.current?.zoomOut()} aria-label="Зменшити" title="Зменшити"><Icon name="minus" size={18} /></button>
             </div>
+            {wide && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
             {wide && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
           </div>
         </div>
@@ -410,6 +419,7 @@ export default function MapPage() {
             {wide && <button type="button" className="hud-b" onClick={() => setPanel(false)} aria-expanded={true} aria-controls="map-panel" aria-label="Сховати панель" title="Сховати панель"><Icon name="x" size={16} /></button>}
           </div>
           {!wide && search}
+          {!wide && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
           {!wide && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
           {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
           <section className="mfilters" aria-label="Фільтри">
@@ -483,6 +493,16 @@ export default function MapPage() {
             <button type="button" className="hud-b" onClick={() => setGame(false)} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
           </div>
           {game && <GameMapExport groups={groups} marks={marks} areas={areas} catById={catById} isOn={isOn} />}
+        </div>
+      </dialog>
+      <dialog ref={shotDlg} className="mdlg" aria-labelledby="mshot-t" onClose={() => setShotOpen(false)} onClick={e => { if (e.target === shotDlg.current) setShotOpen(false); }}>
+        <div className="mdlg-in">
+          <div className="mdlg-h">
+            <span className="mdlg-ico" aria-hidden="true"><Icon name="camera" size={20} /></span>
+            <div><h2 id="mshot-t">Скрін мапи</h2><small>Уся мапа з увімкненими мітками · PNG або SVG</small></div>
+            <button type="button" className="hud-b" onClick={() => setShotOpen(false)} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
+          </div>
+          {shotOpen && <MapShot marks={marks} areas={areas} catById={catById} isOn={isOn} />}
         </div>
       </dialog>
     </div>
