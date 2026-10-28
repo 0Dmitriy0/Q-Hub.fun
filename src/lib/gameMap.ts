@@ -380,10 +380,36 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
 
 /* «Скрін мапи»: уся мапа одним зображенням з мітками, вибраними у фільтрах. PNG — щоб кинути в Discord чи Telegram
    (SVG вони картинкою не показують); SVG — та сама мапа картинкою всередині, а мітки вектором: чіткі при збільшенні,
-   назва — при наведенні. Обидва з тлом океану й підписом q-hub.fun */
+   назва — при наведенні. Обидва з тлом океану й водяним знаком Q-HUB.fun (brand) */
 export type ShotPin = GamePin & { name?: string };
 const dataUrl = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
 const xml = (t: string) => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+/* водяний знак для реклами сайту: плашка з логотипом, «Q-HUB.fun» і підписом — у правому нижньому куті, над морем,
+   щоб не закривати місто. Розміри — від ширини знімка, тож однаково видно на будь-якому розмірі */
+async function brand(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const u = W / 2048, pad = 28 * u, logo = 96 * u, gap = 22 * u, big = 64 * u, small = 26 * u, m = 56 * u;
+  const font = getComputedStyle(document.documentElement).getPropertyValue('--sans').trim() || 'system-ui, sans-serif';
+  ctx.font = `800 ${big}px ${font}`;
+  const t1 = 'Q-HUB', t2 = '.fun', w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
+  ctx.font = `600 ${small}px ${font}`;
+  const sub = 'Мапа штату Quant RP · ціни · програма', ws = ctx.measureText(sub).width;
+  const tw = Math.max(w1 + w2, ws), bw = pad * 2 + logo + gap + tw, bh = pad * 2 + logo, x = W - m - bw, y = H - m - bh;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, .55)'; ctx.shadowBlur = 40 * u;
+  ctx.fillStyle = 'rgba(10, 14, 17, .82)'; ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 28 * u); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255, 106, 31, .55)'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 28 * u); ctx.stroke();
+  const im = await loadImg('/brand/q-hub-logo.svg');
+  if (im) ctx.drawImage(im, x + pad, y + pad, logo, logo);
+  const tx = x + pad + logo + gap;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `800 ${big}px ${font}`;
+  ctx.fillStyle = '#ffffff'; ctx.fillText(t1, tx, y + pad + big * 0.92);
+  ctx.fillStyle = '#ff6a1f'; ctx.fillText(t2, tx + w1, y + pad + big * 0.92);
+  ctx.font = `600 ${small}px ${font}`; ctx.fillStyle = 'rgba(244, 241, 236, .78)';
+  ctx.fillText(sub, tx, y + pad + logo - small * 0.15);
+}
 
 export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
   const size = opt.size ?? 1024, areas = opt.areas ?? [];
@@ -396,11 +422,7 @@ export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: Gam
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
   ctx.fillStyle = OCEAN; ctx.fillRect(0, 0, W, H); ctx.drawImage(map, 0, 0);
-  const sign = (c: CanvasRenderingContext2D) => {
-    const f = Math.round(W / 64); c.font = `700 ${f}px system-ui, sans-serif`; c.textAlign = 'right'; c.textBaseline = 'bottom';
-    c.fillStyle = 'rgba(255, 255, 255, .55)'; c.fillText('q-hub.fun', W - f, H - f * 0.8);
-  };
-  sign(ctx);
+  await brand(ctx, W, H);
   const basePng = await png(cv);
   step?.('Ставлю мітки…');
   drawPins(ctx, size, pins, opt.pinPx, imgs);
