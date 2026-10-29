@@ -18,7 +18,7 @@
     -webkit-app-region: drag; animation: rise .18s ease-out; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px) scale(.985); } }
   @media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
-  button, select, a { -webkit-app-region: no-drag; }
+  button, select, a, input { -webkit-app-region: no-drag; }
   .x { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); cursor: pointer; }
   .x:hover { background: var(--surface); color: var(--fg); }
   button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
@@ -66,6 +66,13 @@
   .tile.add { border-style: dashed; background: transparent; color: var(--muted); }
   .tile.add .ava { background: var(--surface); color: var(--muted); box-shadow: none; font: 600 28px Manrope, sans-serif; }
   .tile.add:hover { color: var(--fg); }
+  .addf { display: grid; gap: 10px; margin-top: 14px; padding: 14px; border-radius: 16px; border: 1px solid var(--line2); background: var(--surface); }
+  .addf label { display: grid; gap: 5px; font: 600 12.5px Manrope, sans-serif; color: var(--muted); }
+  .addf input { font: 600 14.5px Manrope, sans-serif; color: var(--fg); background: rgba(10, 14, 20, .7); border: 1px solid var(--line2); border-radius: 10px; padding: 9px 11px; outline: 0; user-select: text; }
+  .addf input:focus { border-color: rgba(255, 107, 0, .6); }
+  .addf button { font: 700 14px Manrope, sans-serif; color: #fff; background: var(--acc); border: 0; border-radius: 12px; padding: 11px; cursor: pointer; }
+  .addf button:hover { background: var(--acc-hi); }
+  .addf button:disabled { opacity: .6; cursor: progress; }
 </style>
 </head>
 <body>
@@ -97,7 +104,13 @@
     </div>
     <h2>Обери персонажа</h2>
     <div class="tiles" id="tiles"></div>
-    <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — створи його на сайті, і він з'явиться тут.</p>
+    <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: у кожного свій облік, склад і гараж.</p>
+    <form class="addf" id="addf" hidden>
+      <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="31" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required pattern="[A-Z][a-zA-Z]{1,14}_[A-Z][a-zA-Z]{1,14}" title="Латиницею через «_», з великих літер: Dmitriy_Core"></label>
+      <label>Статік<input id="cstatic" inputmode="numeric" maxlength="9" placeholder="162183" autocomplete="off" required pattern="d{1,9}" title="Число з гри"></label>
+      <label>Баланс у грі зараз, $<input id="cstart" inputmode="numeric" placeholder="6 900 661" autocomplete="off"></label>
+      <button id="cadd">Додати персонажа</button>
+    </form>
   </section>
 
   <p class="err" id="err" role="alert" hidden></p>

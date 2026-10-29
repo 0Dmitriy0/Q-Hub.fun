@@ -240,7 +240,7 @@ export default function Bar() {
   const saves = (mode === 'ai' && !aiNext && !!rule && !q.includes('?')) || (dealish && rule?.kind === 'deal');   // Enter запише, а не шукатиме
 
   return (
-    <div className="bwrap" ref={root} onKeyDown={onKey}>
+    <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
       {prefs?.tab !== false && <NextEvent />}
       <div className="bbox">
         <div className="bbar">

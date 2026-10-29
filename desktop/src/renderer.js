@@ -11,11 +11,24 @@ function tile(c, last) {
 }
 function addTile() {
   const b = document.createElement('button');
-  b.className = 'tile add'; b.title = 'Новий персонаж — у кабінеті на сайті';
+  b.className = 'tile add'; b.title = 'Новий персонаж';
   b.innerHTML = '<span class="ava">+</span><span class="nm">Новий</span>';
-  b.onclick = () => window.qhub.site('/kabinet');
+  b.onclick = () => addForm(true);
   return b;
 }
+/* форма нового персонажа: без персонажів — відкрита одразу */
+function addForm(on) {
+  $('addf').hidden = !on;
+  if (on) $('cname').focus();
+}
+$('addf').onsubmit = async e => {
+  e.preventDefault();
+  $('cadd').disabled = true;
+  const s = await window.qhub.charAdd({ name: $('cname').value, static: $('cstatic').value, start: $('cstart').value });
+  $('cadd').disabled = false;
+  if (!s.error) { $('cname').value = ''; $('cstatic').value = ''; $('cstart').value = ''; }
+  show(s);
+};
 function waiting(on) {
   $('login').disabled = on;
   $('loginText').textContent = on ? 'Чекаю підтвердження в браузері…' : 'Увійти через Discord';
@@ -33,6 +46,8 @@ function show(s) {
   $('ph').hidden = !!s.user.avatar; $('ph').textContent = initial(s.user.name);
   $('tiles').replaceChildren(...s.characters.map(c => tile(c, s.characters.length > 1 && c.id === s.character)), addTile());
   $('nochar').hidden = !!s.characters.length;
+  if (!$('cstatic').value && s.user.staticId) $('cstatic').value = s.user.staticId;
+  addForm(!s.characters.length || !!s.error && !$('addf').hidden);
 }
 $('login').onclick = async () => { waiting(true); show(await window.qhub.login()); };
 $('logout').onclick = async () => show(await window.qhub.logout());
