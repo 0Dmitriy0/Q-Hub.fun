@@ -223,11 +223,11 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
       </section>
       <section>
         <h4>Багато міток одразу</h4>
-        <p className="muted">У вибрану вище категорію{src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        <p className="muted">У категорію <b>«{own.find(c => c.id === cat)?.name || '—'}»</b> (вибирається вгорі, у «Нова мітка»){src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
         {src === 'ohm' && <label className="mrow"><span className="muted">Файл з Open Hydra Map (.json):</span><input type="file" accept=".json,application/json" onChange={e => { const fl = e.target.files?.[0]; if (fl) ohmFile(fl); e.target.value = ''; }} /></label>}
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
         {bulk.trim() && <p className="muted" role="status">Рядків з координатами: {pre.ok.length}{pre.bad.length > 0 && <> · не зрозумів або поза мапою: {pre.bad.length} (рядки {pre.bad.slice(0, 8).join(', ')}{pre.bad.length > 8 ? '…' : ''})</>}{dups > 0 && <> · дублів (ближче 10 м): {dups} — їх пропущу</>}</p>}
-        <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
+        <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію в «${own.find(c => c.id === cat)?.name || '—'}»: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
       </section>
       <Batches cats={cats} onReload={onReload} setMsg={setMsg} />
       <section>
