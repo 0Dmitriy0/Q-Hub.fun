@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import { cellOf, parseChunk, triPath, type Chunk, type Index } from './mapChunk';
 import { mapUrl } from './mapGeo';
+import { followTheme, mapTheme, tone } from './mapTheme';
 
 /* Чітке наближення (z7+): замість розтягнутих картинок браузер сам малює трикутники мінікарти.
    Дані — шматки 800x800 м у /map/v (scripts/map-chunks.py). Тайл z>=7 завжди лежить в одному шматку,
@@ -36,14 +37,14 @@ export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bound
           for (; i < n && c[i] === col; i++) {
             const o = i * 6; triPath(ctx, xy, o);
           }
-          ctx.fillStyle = ctx.strokeStyle = ix.palette[col]; ctx.fill(); ctx.stroke();
+          ctx.fillStyle = ctx.strokeStyle = tone(ix.palette[col]); ctx.fill(); ctx.stroke();
         }
         done(undefined, t);
       });
       return t;
     },
   });
-  return new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: VZ, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1 });
+  return followTheme(new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: VZ, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1 }));
 }
 
 /* Назви місць — трикутники тексту з експорту Hydra (public/map/game/names.bin, ті самі, що в «Карті для гри»):
@@ -66,14 +67,14 @@ const getNamesIndex = () => namesIndex ??= fetch(mapUrl('/map/n/index.json')).th
 export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds) {
   const Layer = L.GridLayer.extend({
     createTile(coords: L.Coords, done: L.DoneCallback) {
-      /* до z6 — готові картинки (scripts/map-names-tiles.py): 200 тис. трикутників на дальньому зумі вішали браузер */
+      /* до z6 — готові картинки (scripts/map-names-tiles.py; світлі — scripts/map-light-tiles.cjs, той самий список плиток): 200 тис. трикутників на дальньому зумі вішали браузер */
       if (coords.z <= zmax) {
         const box = document.createElement('div');   // img без src браузер обводить рамкою — у порожні тайли картинка не кладеться
         getNamesIndex().then(ix => {
           if (!ix || !ix.have[coords.z]?.includes(coords.x * ix.n + coords.y)) return done(undefined, box);
           const img = document.createElement('img'); img.alt = ''; img.width = img.height = 256; img.style.display = 'block';
           img.onload = () => done(undefined, box); img.onerror = () => done(undefined, box);
-          img.src = mapUrl(`/map/n/${coords.z}/${coords.x}/${coords.y}.webp`); box.append(img);
+          img.src = mapUrl(`/map/${mapTheme() === 'light' ? 'n-light' : 'n'}/${coords.z}/${coords.x}/${coords.y}.webp`); box.append(img);
         });
         return box;
       }
@@ -105,12 +106,12 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
           for (; j < vis.length && c[vis[j]] === col; j++) {
             const o = vis[j] * 6; triPath(ctx, xy, o);
           }
-          ctx.fillStyle = ctx.strokeStyle = pal[col]; ctx.fill(); ctx.stroke();
+          ctx.fillStyle = ctx.strokeStyle = tone(pal[col]); ctx.fill(); ctx.stroke();
         }
         done(undefined, t);
       });
       return t;
     },
   });
-  return new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: 3, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1, updateWhenZooming: false, pane: 'names' });
+  return followTheme(new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: 3, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1, updateWhenZooming: false, pane: 'names' }));
 }
