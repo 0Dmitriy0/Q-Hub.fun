@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { OCEAN, ZMAX, makeHash, toGame, toPx } from '../lib/mapGeo';
+import { ZMAX, makeHash, toGame, toPx } from '../lib/mapGeo';
 import { groupCategories, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
 import Icon from './Icon';
@@ -77,7 +77,7 @@ export default function MiniMap() {
           return <button key={g} type="button" aria-pressed={grp === g} onClick={() => { setQ(''); setGrp(grp === g ? '' : g); }}>{g}<span>{n}</span></button>;
         })}
       </div>
-      <div className="mini-map" style={{ background: OCEAN }}
+      <div className="mini-map"
         onClick={e => { const a = (e.target as HTMLElement).closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); } }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату (прев'ю)" />
         <div className="fld has-ico msearch mini-search">

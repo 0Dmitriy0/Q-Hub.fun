@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import { PX_PER_M, TILE, ZMAX, mapUrl, toPx } from './mapGeo';
 import { vectorLayer } from './mapVector';
+import { followTheme, mapTheme } from './mapTheme';
 import type { MapArea, MapCategory, MapMark } from './mapData';
 import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
@@ -56,8 +57,11 @@ export function baseMap(el: HTMLElement, opts: L.MapOptions = {}) {
   const full = TILE * 2 ** ZMAX;
   const bounds = L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX));
   m.setMaxBounds(bounds.pad(0.05));
-  L.tileLayer(mapUrl('/map/{z}/{x}/{y}.webp'), { maxNativeZoom: ZMAX, maxZoom: ZMAX + 2, tileSize: TILE, noWrap: true, bounds,
-    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }).addTo(m);
+  /* світлі плитки (specs/019, scripts/map-light-tiles.cjs) вантажаться лише в світлій темі сайту */
+  const url = () => mapUrl(mapTheme() === 'light' ? '/map/light/{z}/{x}/{y}.webp' : '/map/{z}/{x}/{y}.webp');
+  const tiles = L.tileLayer(url(), { maxNativeZoom: ZMAX, maxZoom: ZMAX + 2, tileSize: TILE, noWrap: true, bounds,
+    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' });
+  followTheme(tiles, () => tiles.setUrl(url(), true)).addTo(m);
   vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds).addTo(m);
   const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
   return { m, bounds, ll };

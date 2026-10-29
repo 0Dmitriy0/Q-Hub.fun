@@ -459,6 +459,9 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jd-src a { color: var(--accent-hi); }
 
 /* мапа */
+/* тло поза мапою — найглибше море; у світлій темі — світле (specs/019, src/data/mapLight.json) */
+:root { --ocean: #0a0e11; } :root[data-theme="light"] { --ocean: #8fb3cc; }
+.mapbox, .mini-map { background: var(--ocean); }
 .mapbox { position: absolute; inset: 0; overflow: hidden; }
 .mapel { position: absolute; inset: 0; background: transparent; font: inherit; }
 .mpin-wrap { background: none; border: 0; }

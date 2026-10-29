@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
-import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
+import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
@@ -378,7 +378,7 @@ export default function MapPage() {
   return (
     <div className={wide ? 'mapfull' : 'mapflow'} style={wide ? { top } : undefined}>
       <h1 className="vh">Мапа штату</h1>
-      <div className={'mapbox' + (picking ? ' picking' : '')} style={{ background: OCEAN }}
+      <div className={'mapbox' + (picking ? ' picking' : '')}
         onClick={e => {
           const t = e.target as HTMLElement;
           const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
