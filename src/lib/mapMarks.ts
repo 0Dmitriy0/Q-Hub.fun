@@ -6,6 +6,7 @@ import type { MapArea, MapCategory, MapMark } from './mapData';
 import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
 import { supabase } from './supabase';
+import { asset } from './app';
 
 /* спільне для повної мапи (/mapa) і мапи-прев'ю на головній */
 
@@ -70,5 +71,5 @@ export function baseMap(el: HTMLElement, opts: L.MapOptions = {}) {
 /* значок мітки: напівпрозорий розмитий кружок з обводкою кольору категорії (.mpin) */
 export function pinIcon(c: MapCategory, icon?: string) {
   return L.divIcon({ className: 'mpin-wrap', iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -18],
-    html: `<span class="mpin" style="border-color:${c.color};box-shadow:0 0 0 3px ${c.color}38,0 6px 14px rgba(0,0,0,.5)"><img src="${esc(icon || c.icon)}" alt="" width="24" height="24"></span>` });
+    html: `<span class="mpin" style="border-color:${c.color};box-shadow:0 0 0 3px ${c.color}38,0 6px 14px rgba(0,0,0,.5)"><img src="${esc(asset(icon || c.icon))}" alt="" width="24" height="24"></span>` });
 }

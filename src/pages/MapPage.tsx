@@ -4,11 +4,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
-import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
+import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, readView, saveView, toGame, toPx } from '../lib/mapGeo';
+import { asset } from '../lib/app';
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
-import { isVisible, onlyIds, toggled } from '../lib/mapFilters';
+import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
@@ -36,7 +37,9 @@ const HOME_Z = 3;
 /* швидкі перемикачі шарів у верхній панелі (як «Зони & GZ» у макеті) */
 const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names', 'Назви']];
 
-export default function MapPage() {
+/* embed — мапа у вікні програми (specs/014): лише перегляд — без інструментів адміна, «Скріну», «Мапи для гри» й чернеток;
+   кадр — у localStorage (адреси немає), посилання на сторінки сайту — onLink (програма відкриває їх у браузері) */
+export default function MapPage({ embed = false, onLink }: { embed?: boolean; onLink?: (href: string) => void } = {}) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layers = useRef<Record<string, L.LayerGroup>>({});
@@ -44,8 +47,8 @@ export default function MapPage() {
   const pickRef = useRef(false);
   const pickMarker = useRef<L.CircleMarker | null>(null);
   const nav = useNavigate();
-  const { role, isStaff } = useAuth();
-  const isAdmin = role === 'admin';
+  const auth = useAuth();
+  const { isAdmin, isStaff } = mapRights(auth.role, auth.isStaff, embed);   // у програмі мапу не змінюють (FR-014)
   /* точка відкритої чернетки: маркер на мапі (адмін його перетягує); клік у режимі «поставити» ставить її сюди */
   const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
   const draftMarker = useRef<L.Marker | null>(null);
@@ -77,18 +80,19 @@ export default function MapPage() {
   /* комп'ютер: мапа на весь екран під шапкою, панель фільтрів поверх мапи і згортається.
      телефон: звичайна сторінка — мапа зверху, фільтри під нею */
   const mq = typeof matchMedia === 'function' ? matchMedia('(min-width: 861px)') : null;
-  const [wide, setWide] = useState(() => !!mq?.matches);
-  const [panel, setPanel] = useState(true);
+  /* у вікні програми — завжди «комп'ютер»: вікно не прокручується; на вузькому вікні (1366×768) фільтри спершу згорнуті */
+  const [wide, setWide] = useState(() => embed || !!mq?.matches);
+  const [panel, setPanel] = useState(() => !embed || typeof innerWidth !== 'number' || innerWidth >= 1000);
   const [top, setTop] = useState(64);
   useEffect(() => {
     if (!mq) return;
-    const f = () => setWide(mq.matches); mq.addEventListener('change', f);
+    const f = () => setWide(embed || mq.matches); mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     map.current?.invalidateSize();
     if (!wide) return;
-    const h = document.querySelector('header.top'); if (!h) return;
+    const h = document.querySelector(embed ? '.mapwin-h' : 'header.top'); if (!h) return;
     const upd = () => { setTop(Math.round(h.getBoundingClientRect().height)); map.current?.invalidateSize(); };
     upd(); const ro = new ResizeObserver(upd); ro.observe(h);
     document.body.classList.add('map-open');
@@ -161,7 +165,7 @@ export default function MapPage() {
     /* кнопки масштабу — свої, у HUD (див. .mzoom), тому стандартний контрол Leaflet вимкнено (baseMap) */
     const { m, ll } = baseMap(el);
     const np = m.createPane('names'); np.style.zIndex = '450'; np.style.pointerEvents = 'none';   // назви над зеленими зонами (overlayPane 400), під мітками (600)
-    const h = parseHash(location.hash);
+    const h = embed ? readView() : parseHash(location.hash);
     if (h) m.setView(ll(h.x, h.y), h.z); else m.setView(ll(...HOME), HOME_Z);
     const game = (e: L.LeafletMouseEvent) => { const pt = m.project(e.latlng, ZMAX); return toGame(pt.x, pt.y); };
     /* координати курсора лишаються після виходу з мапи — щоб їх можна було скопіювати кнопкою в HUD */
@@ -181,7 +185,7 @@ export default function MapPage() {
       setZoom(m.getZoom());
     };
     m.on('zoomend', labels); labels();
-    m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
+    m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); if (embed) saveView(x, y, m.getZoom()); else history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
     return () => { m.remove(); map.current = null; layers.current = {}; markers.current = {}; };
   }, []);
@@ -194,7 +198,7 @@ export default function MapPage() {
     /* велика категорія (specs/017: 700+ гарбузів) — близькі мітки на віддаленні збираються в один значок з числом */
     const per: Record<string, number> = {}; for (const mk of marks) per[mk.category] = (per[mk.category] || 0) + 1;
     for (const c of cats) layers.current[c.id] = (per[c.id] || 0) > CLUSTER_MIN
-      ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, disableClusteringAtZoom: ZMAX - 1, iconCreateFunction: g => L.divIcon({ className: 'mclu-wrap', iconSize: [34, 34], html: `<span class="mclu" style="--c:${c.color}"><img src="${esc(c.icon)}" alt="">${g.getChildCount()}</span>` }) })
+      ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, disableClusteringAtZoom: ZMAX - 1, iconCreateFunction: g => L.divIcon({ className: 'mclu-wrap', iconSize: [34, 34], html: `<span class="mclu" style="--c:${c.color}"><img src="${esc(asset(c.icon))}" alt="">${g.getChildCount()}</span>` }) })
       : L.layerGroup();
     for (const mk of marks) {
       const c = catById[mk.category]; if (!c) continue;
@@ -372,7 +376,7 @@ export default function MapPage() {
   const search = (
     <div className="fld has-ico msearch"><Icon name="search" /><input ref={qRef} type="search" placeholder="Знайти мітку" value={q} onChange={e => setQ(e.target.value)} aria-label="Пошук на мапі" aria-keyshortcuts="/" />
       {wide && <kbd className="mkbd" aria-hidden="true">/</kbd>}
-      {found.length > 0 && <ul className="mfound">{found.map(mk => <li key={mk.id}><button type="button" onClick={() => go(mk)}><img src={mk.icon || catById[mk.category]?.icon} alt="" width={18} height={18} />{mk.name || catById[mk.category]?.name}<small>{mk.name ? catById[mk.category]?.name : ''}</small></button></li>)}</ul>}
+      {found.length > 0 && <ul className="mfound">{found.map(mk => <li key={mk.id}><button type="button" onClick={() => go(mk)}><img src={asset(mk.icon || catById[mk.category]?.icon || '')} alt="" width={18} height={18} />{mk.name || catById[mk.category]?.name}<small>{mk.name ? catById[mk.category]?.name : ''}</small></button></li>)}</ul>}
     </div>
   );
   return (
@@ -381,7 +385,7 @@ export default function MapPage() {
       <div className={'mapbox' + (picking ? ' picking' : '')}
         onClick={e => {
           const t = e.target as HTMLElement;
-          const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); nav(a.getAttribute('href')!); return; }
+          const a = t.closest('a[data-nav]'); if (a) { e.preventDefault(); if (embed) onLink?.(a.getAttribute('href')!); else nav(a.getAttribute('href')!); return; }
           const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
           const da = t.closest('button[data-del-area]'); if (da) delArea(Number(da.getAttribute('data-del-area')));
           const ea = t.closest('button[data-edit-area]'); if (ea) startAreaEdit(Number(ea.getAttribute('data-edit-area')));
@@ -392,7 +396,7 @@ export default function MapPage() {
         {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
-        <span className="mbrand"><img src="/brand/q-hub-logo.svg?v=2" alt="" width="22" height="22" />Q-Hub</span>
+        <span className="mbrand"><img src={asset('/brand/q-hub-logo.svg') + '?v=2'} alt="" width="22" height="22" />Q-Hub</span>
         {/* HUD за макетом Stitch (design/stitch/mapa.html): координати й пошук зліва, шари, масштаб і мапа для гри справа */}
         <div className="mhud">
           {wide && <div className="mhud-l">
@@ -413,8 +417,8 @@ export default function MapPage() {
               <button type="button" className="hud-b mono" onClick={zoomHome} title="Повернути початковий вигляд">{Math.round(2 ** (zoom - HOME_Z) * 100)}%</button>
               <button type="button" className="hud-b" onClick={() => map.current?.zoomOut()} aria-label="Зменшити" title="Зменшити"><Icon name="minus" size={18} /></button>
             </div>
-            {wide && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
-            {wide && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
+            {wide && !embed && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
+            {wide && !embed && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
           </div>
         </div>
         {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
@@ -428,8 +432,8 @@ export default function MapPage() {
             {wide && <button type="button" className="hud-b" onClick={() => setPanel(false)} aria-expanded={true} aria-controls="map-panel" aria-label="Сховати панель" title="Сховати панель"><Icon name="x" size={16} /></button>}
           </div>
           {!wide && search}
-          {!wide && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
-          {!wide && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
+          {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
+          {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
           {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
           <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
@@ -454,7 +458,7 @@ export default function MapPage() {
                       return (
                         <span key={c.id} className={'mchip' + (v ? ' on' : '')} style={{ '--c': c.color } as CSSProperties}>
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
-                            <img src={c.icon} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.description || c.starts_on || c.ends_on) && <small className="mcat-sub">{[period(c.starts_on, c.ends_on, today), c.description].filter(Boolean).join(' · ')}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
+                            <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.description || c.starts_on || c.ends_on) && <small className="mcat-sub">{[period(c.starts_on, c.ends_on, today), c.description].filter(Boolean).join(' · ')}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
                           {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}

@@ -33,13 +33,13 @@ const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' 
 const BAR_NARROW = 820, BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
-export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean }
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
 interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean; version?: string }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
-  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; histToggle(): Promise<boolean>;
+  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; histToggle(): Promise<boolean>; mapToggle(): Promise<boolean>;
   onHistPick(cb: (it: { kind: 'ai' | 'search' | 'tx'; q?: string; reply?: string }) => void): void;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
   quickParse(t: string, buyer?: string | null): Promise<Rule>;
@@ -99,6 +99,7 @@ export default function Bar() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
   const [histOn, setHistOn] = useState(false);
+  const [mapOn, setMapOn] = useState(false);
   /* журнал оновлень: що гравець уже бачив — у сховищі плашки; після оновлення внизу з'являється «що нового» */
   const [seenLog, setSeenLog] = useState<string | null>(() => { try { return localStorage.getItem('qhub.seenLog'); } catch { return null; } });
   const unseen = unseenCount(seenLog);
@@ -204,6 +205,8 @@ export default function Bar() {
   }
   /* історія — окрема плашка ліворуч (src/desktop/History.tsx) */
   async function toggleHistory() { setHistOn(await api.histToggle()); }
+  /* мапа Q-Hub — окрема плашка під цією, праворуч від історії (map.html, specs/014) */
+  async function toggleMap() { setMapOn(await api.mapToggle()); }
 
   function onKey(e: React.KeyboardEvent) {
     /* Esc: меню → рядок → головна → сховати */
@@ -260,6 +263,7 @@ export default function Bar() {
           <button className={'bico' + (dash ? ' on' : '')} aria-pressed={dash} title={dash ? 'Сховати дашборд' : 'Дашборд'} onClick={() => (dash ? setView('main') : go('/kabinet/dashbord'))}><Icon name="chart" size={17} /></button>
           <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
           <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки, питання до ШІ й записи" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
+          <button className={'bico' + (mapOn ? ' on' : '')} title={`Мапа Q-Hub · ${prefs?.mapKey || 'Alt+M'}`} aria-label="Мапа Q-Hub" aria-pressed={mapOn} onClick={toggleMap}><Icon name="map" size={17} /></button>
           <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => { setSetStart('main'); setView(x => (x === 'settings' ? 'main' : 'settings')); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 

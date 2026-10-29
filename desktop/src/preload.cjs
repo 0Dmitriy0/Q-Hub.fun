@@ -30,6 +30,11 @@ contextBridge.exposeInMainWorld('qhub', {
   histClear: () => ipcRenderer.invoke('hist-clear'),
   histHide: () => ipcRenderer.invoke('hist-hide'),
   onHistChanged: cb => { ipcRenderer.on('hist-changed', () => cb()); },
+  /* мапа Q-Hub поверх гри (specs/014): плашка відкриває, вікно мапи ховається */
+  mapToggle: () => ipcRenderer.invoke('map-toggle'),
+  mapHide: () => ipcRenderer.invoke('map-hide'),
+  mapKey: () => ipcRenderer.invoke('map-key'),
+  onMapShown: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('map-shown', f); return () => ipcRenderer.removeListener('map-shown', f); },
   aiLeft: () => ipcRenderer.invoke('ai-left'),
   barCharacter: id => ipcRenderer.invoke('bar-character', id),
   barPrefs: p => ipcRenderer.invoke('bar-prefs', p),

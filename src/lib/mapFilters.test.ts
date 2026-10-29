@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isVisible, onlyIds, toggled, type Filters } from './mapFilters';
+import { isVisible, mapRights, onlyIds, toggled, type Filters } from './mapFilters';
 
 const cats = [
   { id: 'shop-247', grp: 'Магазини' },
@@ -54,5 +54,15 @@ describe('фільтри мапи', () => {
   it('?show= з кількома категоріями через кому (банер Хелловіну) — лише вони й назви', () => {
     expect(onlyIds(' pryvydy, harbuzy ,')).toEqual(['pryvydy', 'harbuzy']);
     expect(shown(f({ only: 'pryvydy,harbuzy', saved: { 'shop-247': true } }))).toEqual(['pryvydy', 'harbuzy', 'names']);
+  });
+});
+
+describe('мапа у вікні програми — лише перегляд (specs/014 FR-014)', () => {
+  it('на сайті admin і staff мають інструменти, у програмі — ніхто', () => {
+    expect(mapRights('admin', true, false)).toEqual({ isAdmin: true, isStaff: true });
+    expect(mapRights('editor', true, false)).toEqual({ isAdmin: false, isStaff: true });
+    expect(mapRights('admin', true, true)).toEqual({ isAdmin: false, isStaff: false });
+    expect(mapRights('user', false, true)).toEqual({ isAdmin: false, isStaff: false });
+    expect(mapRights(null, false, false)).toEqual({ isAdmin: false, isStaff: false });
   });
 });

@@ -28,4 +28,16 @@ export const fromOpenHydra = (x: number, y: number): [number, number] =>
 /* версія даних мапи (тайли, шматки, назви, файли гри): міняти при кожній перебудові public/map — інакше браузер
    показує старі тайли зі свого кешу (адреси ті самі), і нових локацій не видно навіть після Ctrl+F5 */
 export const MAP_V = '2026-10-22c';
-export const mapUrl = (path: string) => `${path}?v=${MAP_V}`;
+/* у вікні мапи програми (specs/014) сторінка відкрита з file://, а сайт не віддає CORS — файли мапи дає протокол програми qmap:// */
+const MAP_BASE = typeof location !== 'undefined' && location.protocol === 'file:' ? 'qmap://site' : '';
+export const mapUrl = (path: string) => `${MAP_BASE}${path}?v=${MAP_V}`;
+
+/* кадр мапи там, де немає адреси з #x,y,z (вікно програми): { x, y, z } у localStorage */
+const VIEW_KEY = 'qhub:map:view';
+export function readView(): { x: number; y: number; z: number } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null');
+    return v && [v.x, v.y, v.z].every(Number.isFinite) ? { x: v.x, y: v.y, z: v.z } : null;
+  } catch { return null; }
+}
+export function saveView(x: number, y: number, z: number) { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ x: Math.round(x), y: Math.round(y), z })); } catch { /* приватний режим */ } }

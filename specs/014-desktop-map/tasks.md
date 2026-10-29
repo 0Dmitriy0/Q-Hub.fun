@@ -25,8 +25,8 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 **Purpose**: нова точка входу вікна мапи в збірці інтерфейсу програми
 
-- [ ] T001 Створити `map.html` у корені (як `history.html`: `<div id="root">`, `<script type="module" src="/src/desktop/mapMain.tsx">`, `data-theme="dark"` на `<html>`, заголовок «Q-Hub · мапа»)
-- [ ] T002 Додати `map: 'map.html'` у `rollupOptions.input` в `vite.app.config.ts` і оновити коментар про вікна програми
+- [X] T001 Створити `map.html` у корені (як `history.html`: `<div id="root">`, `<script type="module" src="/src/desktop/mapMain.tsx">`, `data-theme="dark"` на `<html>`, заголовок «Q-Hub · мапа»)
+- [X] T002 Додати `map: 'map.html'` у `rollupOptions.input` в `vite.app.config.ts` і оновити коментар про вікна програми
 
 ---
 
@@ -34,13 +34,13 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 **Purpose**: файли мапи у вікні з `file://` (сайт не віддає CORS — research R2) і режим «лише перегляд» сторінки мапи
 
-- [ ] T003 [P] Тест `desktop/src/qmap.test.cjs`: шлях лише `[A-Za-z0-9_./-]` без `..` (інакше 400); той самий `v` у кеші — без мережі; інший `v` — завантаження й запис у кеш; помилка мережі зі старим файлом — старий; без файлу — 404; `Content-Type` за розширенням (`.webp` image/webp, `.json` application/json, `.bin` application/octet-stream) — за contracts/qmap-protocol.md
-- [ ] T004 Реалізувати `desktop/src/qmap.cjs`: `createQmap({ site, dir, fetch })` → `handle(request) → Response`, кеш у `dir` (`%APPDATA%\Q-Hub\map\site`), `index.json` кешу `{ "<шлях>": { v, lm } }`; лише `/map/…` з `cfg.site` (contracts/qmap-protocol.md)
-- [ ] T005 Підключити протокол у `desktop/src/main.cjs`: `protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])` до `app.whenReady`, `protocol.handle('qmap', …)` після нього
-- [ ] T006 [P] Тест `src/lib/mapGeo.test.ts`: `mapUrl('/map/v/index.json')` на `http(s):` — як зараз (`/map/…?v=MAP_V`), на `file:` — `qmap://site/map/…?v=MAP_V`
-- [ ] T007 Змінити `mapUrl()` у `src/lib/mapGeo.ts`: база `qmap://site` для `location.protocol === 'file:'` (як `asset()` у `src/lib/app.ts`)
-- [ ] T008 Додати проп `embed?: boolean` у `src/pages/MapPage.tsx`: при `embed` не рендерити `MapAdmin`, `CatEdit`, `MarkEdit`, `GameMapExport`, `MapShot`, `MapDrafts`, `MapAreaDraw`, `MapAreaEdit`, кнопки «Змінити / Власник / Видалити» в картках (`isAdmin && !embed`), кадр не писати в `history.replaceState` (FR-014)
-- [ ] T009 [P] Тест `src/pages/MapPage.embed.test.tsx` (vitest + jsdom, якщо вже налаштовано; інакше — винести рішення «що показувати» в чисту функцію `mapTools(role, embed)` у `src/lib/mapFilters.ts` і тестувати її): при `embed` і ролі `admin` немає жодного інструмента правки
+- [X] T003 [P] Тест `desktop/src/qmap.test.cjs`: шлях лише `[A-Za-z0-9_./-]` без `..` (інакше 400); той самий `v` у кеші — без мережі; інший `v` — завантаження й запис у кеш; помилка мережі зі старим файлом — старий; без файлу — 404; `Content-Type` за розширенням (`.webp` image/webp, `.json` application/json, `.bin` application/octet-stream) — за contracts/qmap-protocol.md
+- [X] T004 Реалізувати `desktop/src/qmap.cjs`: `createQmap({ site, dir, fetch })` → `handle(request) → Response`, кеш у `dir` (`%APPDATA%\Q-Hub\map\site`), `index.json` кешу `{ "<шлях>": { v, lm } }`; лише `/map/…` з `cfg.site` (contracts/qmap-protocol.md)
+- [X] T005 Підключити протокол у `desktop/src/main.cjs`: `protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])` до `app.whenReady`, `protocol.handle('qmap', …)` після нього
+- [X] T006 [P] Тест `src/lib/mapGeo.test.ts`: `mapUrl('/map/v/index.json')` на `http(s):` — як зараз (`/map/…?v=MAP_V`), на `file:` — `qmap://site/map/…?v=MAP_V`
+- [X] T007 Змінити `mapUrl()` у `src/lib/mapGeo.ts`: база `qmap://site` для `location.protocol === 'file:'` (як `asset()` у `src/lib/app.ts`)
+- [X] T008 Додати проп `embed?: boolean` у `src/pages/MapPage.tsx`: при `embed` не рендерити `MapAdmin`, `CatEdit`, `MarkEdit`, `GameMapExport`, `MapShot`, `MapDrafts`, `MapAreaDraw`, `MapAreaEdit`, кнопки «Змінити / Власник / Видалити» в картках (`isAdmin && !embed`), кадр не писати в `history.replaceState` (FR-014)
+- [X] T009 [P] jsdom у проєкті немає — рішення «що показувати» винесено в чисту функцію `mapRights(role, isStaff, embed)` у `src/lib/mapFilters.ts` з тестом у `src/lib/mapFilters.test.ts`: при `embed` і ролі `admin` немає жодного інструмента правки
 
 **Checkpoint**: сторінку мапи можна показати в будь-якому вікні з `file://` і лише для перегляду
 
@@ -54,18 +54,18 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Тест `desktop/src/mapwin.test.cjs`: `place({ work, bar, hist })` — під плашкою з відступом 12 px, праворуч від історії (якщо видима) або від `work.x + 12`, до правого й нижнього краю − 12 px; без плашки — ≈80 % робочої області по центру; 1366×768 — ширина й висота не менші за 640×420 (FR-001, edge case)
+- [X] T010 [P] [US1] Тест `desktop/src/mapwin.test.cjs`: `place({ work, bar, hist })` — під плашкою з відступом 12 px, праворуч від історії (якщо видима) або від `work.x + 12`, до правого й нижнього краю − 12 px; без плашки — ≈80 % робочої області по центру; 1366×768 — ширина й висота не менші за 640×420 (FR-001, edge case)
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Реалізувати `desktop/src/mapwin.cjs` → `place()` (чиста функція, тести T010)
-- [ ] T012 [US1] Вікно мапи в `desktop/src/main.cjs`: `createMap()` як `createHist()` (`frame: false`, `transparent`, `skipTaskbar`, `alwaysOnTop('screen-saver')`, `resizable: false`, preload, sandbox, `will-navigate` заборонено), `loadFile('ui/map.html')`; створюється при першому показі, далі лише `hide()` (FR-016, SC-002)
-- [ ] T013 [US1] Показ/приховування в `desktop/src/main.cjs`: `toggleMap(from: 'bar'|'key')` — межі з `mapwin.place`, `map-shown` у вікно; з клавіші — `show()` + `focus()` з тим самим захистом від RAGE MP, що `barSteals`; з плашки — `showInactive()`; `blur` у гру ховає, якщо плашку не закріплено; `hideUnlessOurs()` і `bar.on('hide')` знають про вікно мапи (FR-001, FR-001a, FR-004)
-- [ ] T014 [US1] Клавіша мапи в `desktop/src/main.cjs`: `BAR_DEFAULTS.mapKey = 'Alt+M'`, `registerMapKey()` як `registerHotkey`, не вдалось — повідомлення в треї; `barPrefs({ mapKey })` перевіряє конфлікт з `hotkey`, `pinKey`, `SHOT_KEY` і повертає `error: 'Клавіша вже зайнята: …'` (FR-002)
-- [ ] T015 [US1] IPC за contracts/ipc-map.md у `desktop/src/main.cjs` і `desktop/src/preload.cjs`: `mapHide`, `mapKey`, `mapToggle`; `fromMap(e)`; події `map-shown`; відповідні типи в `src/desktop/Bar.tsx` (інтерфейс `api`)
-- [ ] T016 [P] [US1] Вікно `src/desktop/mapMain.tsx`: `MemoryRouter` + `AuthProvider` + `<MapPage embed />`, шапка як у «Історії» (назва «Мапа», підказка клавіші, хрестик → `mapHide`), Esc → `mapHide`; посилання `data-nav` на сторінки сайту — `qhub.site(path)` (відкрити в браузері); стилі — `src/desktop/bar.css` (клас `.mapwin`)
-- [ ] T017 [US1] Кнопка «Мапа» в рядку плашки поряд з кнопкою історії в `src/desktop/Bar.tsx` (`aria-pressed`, підказка з клавішею) → `mapToggle()`
-- [ ] T018 [US1] Клавіша мапи в Налаштуваннях → Клавіші в `src/desktop/Settings.tsx`: `KeyRec` + «скинути» до Alt+M, рядок «Мапа» в списку клавіш, показ `error` з `barPrefs`; `Prefs.mapKey` у `src/desktop/Bar.tsx`
+- [X] T011 [US1] Реалізувати `desktop/src/mapwin.cjs` → `place()` (чиста функція, тести T010)
+- [X] T012 [US1] Вікно мапи в `desktop/src/main.cjs`: `createMap()` як `createHist()` (`frame: false`, `transparent`, `skipTaskbar`, `alwaysOnTop('screen-saver')`, `resizable: false`, preload, sandbox, `will-navigate` заборонено), `loadFile('ui/map.html')`; створюється при першому показі, далі лише `hide()` (FR-016, SC-002)
+- [X] T013 [US1] Показ/приховування в `desktop/src/main.cjs`: `toggleMap(from: 'bar'|'key')` — межі з `mapwin.place`, `map-shown` у вікно; з клавіші — `show()` + `focus()` з тим самим захистом від RAGE MP, що `barSteals`; з плашки — `showInactive()`; `blur` у гру ховає, якщо плашку не закріплено; `hideUnlessOurs()` і `bar.on('hide')` знають про вікно мапи (FR-001, FR-001a, FR-004)
+- [X] T014 [US1] Клавіша мапи в `desktop/src/main.cjs`: `BAR_DEFAULTS.mapKey = 'Alt+M'`, `registerMapKey()` як `registerHotkey`, не вдалось — повідомлення в треї; `barPrefs({ mapKey })` перевіряє конфлікт з `hotkey`, `pinKey`, `SHOT_KEY` і повертає `error: 'Клавіша вже зайнята: …'` (FR-002)
+- [X] T015 [US1] IPC за contracts/ipc-map.md у `desktop/src/main.cjs` і `desktop/src/preload.cjs`: `mapHide`, `mapKey`, `mapToggle`; `fromMap(e)`; події `map-shown`; відповідні типи в `src/desktop/Bar.tsx` (інтерфейс `api`)
+- [X] T016 [P] [US1] Вікно `src/desktop/mapMain.tsx`: `MemoryRouter` + `AuthProvider` + `<MapPage embed />`, шапка як у «Історії» (назва «Мапа», підказка клавіші, хрестик → `mapHide`), Esc → `mapHide`; посилання `data-nav` на сторінки сайту — `qhub.site(path)` (відкрити в браузері); стилі — `src/desktop/bar.css` (клас `.mapwin`)
+- [X] T017 [US1] Кнопка «Мапа» в рядку плашки поряд з кнопкою історії в `src/desktop/Bar.tsx` (`aria-pressed`, підказка з клавішею) → `mapToggle()`
+- [X] T018 [US1] Клавіша мапи в Налаштуваннях → Клавіші в `src/desktop/Settings.tsx`: `KeyRec` + «скинути» до Alt+M, рядок «Мапа» в списку клавіш, показ `error` з `barPrefs`; `Prefs.mapKey` у `src/desktop/Bar.tsx`
 
 **Checkpoint**: MVP — мапа відкривається поверх гри й закривається, ті самі мітки, що на сайті
 

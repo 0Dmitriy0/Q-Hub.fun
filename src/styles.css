@@ -464,6 +464,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mapbox, .mini-map { background: var(--ocean); }
 .mapbox { position: absolute; inset: 0; overflow: hidden; }
 .mapel { position: absolute; inset: 0; background: transparent; font: inherit; }
+.mapel.leaflet-container { background: transparent; }   /* leaflet.css (сіре #ddd) може стати в збірці після цього файлу — тло дає .mapbox */
 .mpin-wrap { background: none; border: 0; }
 /* мітка: напівпрозорий розмитий фон, кругла обводка кольору категорії (колір і кільце — inline з MapPage) */
 .mpin { display: grid; place-items: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: rgba(16, 20, 26, .38); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(255, 106, 31, .22), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .12s; }

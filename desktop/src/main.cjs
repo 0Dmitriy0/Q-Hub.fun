@@ -1,5 +1,5 @@
 /* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа, кабінет, швидкий запис по Alt+Q. Далі — баланс з екрана. */
-const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, Notification, screen, desktopCapturer, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, Notification, screen, desktopCapturer, nativeImage, protocol } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
@@ -15,9 +15,13 @@ const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
+const { createQmap } = require('./qmap.cjs');
+const mapwin = require('./mapwin.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
 const SHOT_KEY = 'Alt+S';
+/* файли мапи для вікна мапи (qmap.cjs): схему треба оголосити до готовності програми */
+protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 /* плашка Alt+Q — уся програма: ширина згорнутої (лише рядок), найбільша ширина й висота розгорнутої */
 const BAR_W = 820, BAR_MAX_W = 1120, BAR_MAX_H = 860;
@@ -127,11 +131,12 @@ function createBar() {
   bar.webContents.on('before-input-event', touch);
   bar.on('hide', hideStrip);
   bar.on('hide', () => hist?.hide());   // історія живе разом з плашкою
+  bar.on('hide', () => { if (mapFrom === 'bar') mapw?.hide(); });   // і мапа, відкрита з плашки
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
-/* фокус пішов з плашки чи історії: перейшов в іншу з них — лишаються обидві, у гру — ховаються (якщо не закріплено) */
+/* фокус пішов з плашки, історії чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
 function hideUnlessOurs() {
-  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== hist) bar.hide(); }, 80);
+  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== hist && f !== mapw) bar.hide(); }, 80);
 }
 
 /* ---------- історія: окрема плашка ліворуч (history.html). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
@@ -166,7 +171,64 @@ function toggleHist() {
   hist.setBounds({ x: a.x + 12, y: b.y, width: HIST_W, height: Math.min(640, a.y + a.height - b.y - 12) });
   hist.webContents.send('hist-changed');
   hist.showInactive(); hist.moveTop();
+  if (mapw?.isVisible() && mapFrom === 'bar') placeMap();
   return true;
+}
+
+/* ---------- мапа Q-Hub поверх гри (map.html, specs/014): окрема плашка, як «Історія»; лише перегляд ----------
+   Відкрита кнопкою з плашки — живе разом з плашкою; клавішею (Alt+M) — сама: бере фокус, Esc чи клавіша ховають,
+   повернувся в гру — ховається. Вікно створюється при першому відкритті, далі лише ховається: швидко й без навантаження */
+let mapw = null, mapFrom = 'key', mapShownAt = 0, mapSteals = 0, mapKeyReg = null;
+function createMap() {
+  mapw = new BrowserWindow({
+    width: 1200, height: 800, show: false, frame: false, transparent: true, resizable: false, movable: false, hasShadow: false,
+    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, title: 'Q-Hub · мапа',
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  mapw.setAlwaysOnTop(true, 'screen-saver');
+  guardPage(mapw);   // без масштабу браузера й F5; посилання — у браузер
+  mapw.on('blur', () => {
+    if (mapFrom === 'bar') { hideUnlessOurs(); return; }
+    if (prefs().pinned) return;
+    /* RAGE MP забирає фокус ~1 с після показу — як з плашкою (raiseBar), двічі беремо його назад */
+    if (Date.now() - mapShownAt < 1500) {
+      if (mapSteals++ < 2) setTimeout(() => { if (mapw.isVisible()) { mapw.moveTop(); mapw.focus(); } }, 60);
+      return;
+    }
+    setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (f !== mapw && f !== bar && f !== hist) mapw.hide(); }, 80);
+  });
+  mapw.loadFile(path.join(__dirname, 'ui', 'map.html'));
+}
+/* під плашкою праворуч від історії (mapwin.place); без плашки — по центру екрана з курсором (там гра) */
+function placeMap() {
+  const b = mapFrom === 'bar' && bar.isVisible() ? bar.getBounds() : null;
+  const h = b && hist?.isVisible() ? hist.getBounds() : null;
+  const d = b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  mapw.setBounds(mapwin.place({ work: d.workArea, bar: b, hist: h }));
+}
+function showMap(from) {
+  if (!mapw) createMap();
+  mapFrom = from;
+  placeMap();
+  mapw.webContents.send('map-shown', { from });
+  if (from === 'bar') { mapw.showInactive(); mapw.moveTop(); return; }
+  mapShownAt = Date.now(); mapSteals = 0;
+  mapw.show(); mapw.moveTop(); mapw.focus();
+}
+function hideMap() {
+  if (!mapw?.isVisible()) return;
+  mapw.hide();
+  if (mapFrom === 'bar' && bar.isVisible()) bar.focus();   // з плашки — назад у плашку; клавішею — фокус сам повертається в гру
+}
+function toggleMap(from) {
+  if (mapw?.isVisible()) { hideMap(); return false; }
+  showMap(from); return true;
+}
+function registerMapKey(key) {
+  if (mapKeyReg) { globalShortcut.unregister(mapKeyReg); mapKeyReg = null; }
+  const ok = globalShortcut.register(key, () => toggleMap('key'));
+  if (ok) mapKeyReg = key;
+  return ok;
 }
 
 /* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
@@ -481,7 +543,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
@@ -791,7 +853,16 @@ function barPrefs(p) {
     if (!setAutostart(p.autostart)) return { error: AUTOSTART_ERR, prefs: { ...cur, autostart: autostart() } };
     trayMenu();
   }
+  if (typeof p?.mapKey === 'string' && p.mapKey !== cur.mapKey) {
+    const bad = mapwin.mapKeyConflict(p.mapKey, { hotkey: cur.hotkey, pinKey: cur.pinKey, shotKey: SHOT_KEY });
+    if (bad) return { error: bad, prefs: cur };
+    let ok = false;
+    try { ok = registerMapKey(p.mapKey); } catch { ok = false; }
+    if (!ok) { registerMapKey(cur.mapKey); return { error: `${p.mapKey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
+    next.mapKey = p.mapKey;
+  }
   if (typeof p?.pinKey === 'string' && p.pinKey !== cur.pinKey) {
+    if (p.pinKey.toLowerCase() === String(cur.mapKey).toLowerCase()) return { error: `${p.pinKey} уже відкриває мапу — оберіть іншу клавішу.`, prefs: cur };
     const bad = pinKeyConflict(p.pinKey, cur.hotkey, SHOT_KEY);
     if (bad) return { error: bad, prefs: cur };
     let ok = false;
@@ -801,6 +872,7 @@ function barPrefs(p) {
   }
   if (typeof p?.hotkey === 'string' && p.hotkey !== cur.hotkey) {
     if (p.hotkey.toLowerCase() === String(cur.pinKey).toLowerCase()) return { error: `${p.hotkey} уже ставить мітку — оберіть іншу клавішу.`, prefs: cur };
+    if (p.hotkey.toLowerCase() === String(cur.mapKey).toLowerCase()) return { error: `${p.hotkey} уже відкриває мапу — оберіть іншу клавішу.`, prefs: cur };
     let ok = false;
     try { ok = registerHotkey(p.hotkey); } catch { ok = false; }
     if (!ok) { registerHotkey(cur.hotkey); return { error: `${p.hotkey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
@@ -947,6 +1019,9 @@ app.whenReady().then(() => {
   const enc = s => (safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s) : Buffer.from(s));
   const dec = b => (safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : b.toString());
   sb = makeClient(cfg, fileStorage(path.join(dir(), 'session.bin'), enc, dec));
+  /* файли мапи сайту для вікна мапи — з кешем на диску, без інтернету — з кешу (qmap.cjs) */
+  const qmap = createQmap({ site: cfg.site, dir: path.join(dir(), 'map', 'site') });
+  protocol.handle('qmap', req => qmap.handle(req));
 
   /* оновлені токени — одразу в кабінет плашки, інакше він за годину лишиться з простроченим ключем */
   sb.auth.onAuthStateChange((ev) => {
@@ -1008,6 +1083,11 @@ app.whenReady().then(() => {
   ipcMain.handle('hist-del', (e, id) => { if (fromHist(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
   ipcMain.handle('hist-clear', e => { if (fromHist(e)) { histItems = []; histSave(); } });
   ipcMain.handle('hist-hide', e => { if (fromHist(e)) { hist.hide(); bar.focus(); } });
+  /* мапа (specs/014, contracts/ipc-map.md): плашка відкриває, вікно мапи ховається й питає клавішу */
+  const fromMap = e => mapw && e.sender === mapw.webContents;
+  ipcMain.handle('map-toggle', e => (fromBar(e) ? toggleMap('bar') : null));
+  ipcMain.handle('map-hide', e => { if (fromMap(e)) hideMap(); });
+  ipcMain.handle('map-key', e => (fromMap(e) ? prefs().mapKey : null));
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));
@@ -1053,6 +1133,8 @@ app.whenReady().then(() => {
   later(startVision);
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
+  if (!registerMapKey(prefs().mapKey))
+    tray?.displayBalloon?.({ title: 'Q-Hub', content: `${prefs().mapKey} зайнята іншою програмою — мапу відкривай кнопкою «Мапа» в плашці або зміни клавішу в налаштуваннях.` });
   if (!registerHotkey(prefs().hotkey))
     dialog.showErrorBox('Q-Hub', `${prefs().hotkey} уже зайнята іншою програмою — швидкий запис відкривай з іконки в треї або зміни клавішу в налаштуваннях плашки.`);
 }).catch(fail);
