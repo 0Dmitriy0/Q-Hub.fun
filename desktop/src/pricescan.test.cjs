@@ -206,3 +206,31 @@ test('вирізка назви: світлу картинку товару лі
   assert.strictEqual(textLeft(...img(true)), 40);
   assert.strictEqual(textLeft(...img(false)), 0);
 });
+
+test('товар без меж: стрибок більш ніж удвічі від ціни на сайті — не йде й потрапляє в журнал; без попередньої ціни — йде (specs/004)', () => {
+  const pick = pricePicker(600e3);
+  const r = (price, last) => ({ buyer_id: 'fish', item_id: 7, price, score: 0.95, min: 0, max: 0, last });
+  /* зайва цифра спереду: 51 986 при останній 1 285 — двічі однаково, однаково не йде */
+  assert.deepStrictEqual(pick('fish', [r(51986, 1285)], 0), []);
+  assert.deepStrictEqual(pick('fish', [r(51986, 1285)], 1e3), []);
+  assert.deepStrictEqual(pick.rejected, [{ item_id: 7, price: 51986, last: 1285, why: 'стрибок від останньої ціни' }]);
+  /* пропущена цифра: 128 при 1 285 — теж ні */
+  assert.deepStrictEqual(pick('fish', [r(128, 1285)], 2e3), []);
+  /* 1 400 — звичайна зміна ціни: після двох кадрів іде */
+  pick('fish', [r(1400, 1285)], 3e3);
+  assert.deepStrictEqual(pick('fish', [r(1400, 1285)], 4e3), [{ buyer_id: 'fish', item_id: 7, price: 1400 }]);
+  assert.deepStrictEqual(pick.rejected, []);
+  /* без жодної попередньої ціни порівнювати нема з чим — як і раніше */
+  const fresh = pricePicker(600e3);
+  fresh('fish', [r(51986, 0)], 0);
+  assert.deepStrictEqual(fresh('fish', [r(51986, 0)], 1e3), [{ buyer_id: 'fish', item_id: 7, price: 51986 }]);
+});
+
+test('ціна поза межами — у журнал відкинутих, інші ціни того ж кадру йдуть (specs/004 FR-003, FR-004)', () => {
+  const pick = pricePicker(600e3);
+  /* 91 986 — зайва цифра (не «5» замість «$», яку програма виправляє) */
+  const rows = [{ buyer_id: 'hide', item_id: 1, price: 91986, score: 0.95, min: 1000, max: 2000 },
+    { buyer_id: 'hide', item_id: 2, price: 1500, score: 0.95, min: 1000, max: 2000 }];
+  assert.deepStrictEqual(pick('hide', rows, 0), [{ buyer_id: 'hide', item_id: 2, price: 1500 }]);
+  assert.deepStrictEqual(pick.rejected, [{ item_id: 1, price: 91986, min: 1000, max: 2000, why: 'далеко поза межами' }]);
+});

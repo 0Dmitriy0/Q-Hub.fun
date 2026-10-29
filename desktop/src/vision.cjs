@@ -155,12 +155,14 @@ function vision(deps) {
     const all = items.filter(i => i.buyer_id === buyer);
     const rows = shot.parseShot(ls, all)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
-      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0 }));
+      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
     rows.push(...await rereadNames(img, ls, all, buyer, rows, now));
     await scanChange(img, buyer, now);
     const fresh = pickPrices(buyer, rows, now);
     /* та сама ціна поза межами, впевнено прочитана тричі: межі на сайті, мабуть, хибні — адміну «перевір межі» (T031) */
     if (pickPrices.outside.length) log(`limits ${buyer}: ${JSON.stringify(pickPrices.outside)}`);
+    /* відкинуті ціни — у журнал, не частіше разу на хвилину на товар (specs/004 FR-004) */
+    for (const r of pickPrices.rejected) { const q = `x:${buyer}:${r.item_id}`; if (now - (quietAt.get(q) || 0) < 60e3) continue; quietAt.set(q, now); log(`reject ${buyer}: ${JSON.stringify(r)}`); }
     for (const o of pickPrices.outside) await deps.onLimits?.(buyer, o.item_id, o.price);
     const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now);
     deps.onCoverage?.(cov);

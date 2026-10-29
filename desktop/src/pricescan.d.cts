@@ -1,10 +1,11 @@
 /* типи pricescan.cjs для тестів сайту (src/lib/priceFixtures.test.ts) — програма їх не використовує */
-export interface PickRow { buyer_id: string; item_id: number; price: number; score?: number; min: number; max: number }
+export interface PickRow { buyer_id: string; item_id: number; price: number; score?: number; min: number; max: number; last?: number }
 export interface Sent { buyer_id: string; item_id: number; price: number }
 export interface Picker {
   (buyer: string, rows: PickRow[], now: number): Sent[];
   confirmed: Set<number>;
   outside: { item_id: number; price: number; min: number; max: number }[];
+  rejected: { item_id: number; price: number; min?: number; max?: number; last?: number; why: string }[];
 }
 export interface Cover { buyer: string; read: number; total: number; pending: number; shown: boolean }
 export const OPEN_GAP: number;

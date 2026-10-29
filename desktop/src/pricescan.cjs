@@ -13,6 +13,8 @@ const SURE = 0.9;
 /* та сама ціна поза межами, впевнено прочитана стільки разів за відкриття, — межі на сайті хибні: адміну «перевір межі» (T031) */
 const ODD_SURE = 0.95, ODD_TIMES = 3;
 const inLimits = r => r.min > 0 && r.max > r.min && r.price >= r.min && r.price <= r.max;
+/* товар без меж: ціна, що більш ніж удвічі відрізняється від останньої на сайті, — зайва чи пропущена цифра (specs/004 FR-002) */
+const jump = r => r.last > 0 && (r.price > r.last * 2 || r.price * 2 < r.last);
 /* одне відкриття вікна скупника: кадри з ним ідуть без паузи довшої за OPEN_GAP (specs/024, research R2).
    Кадр вікна скупника читається довго: на живій грі 2026-10-29 — медіана 10 с, p90 22 с між кадрами; 10 с рвали відкриття */
 const OPEN_GAP = 30e3;
@@ -23,10 +25,11 @@ function pricePicker(every = PRICES_EVERY) {
   const pick = (buyer, rows, now) => {
     if (now - last.at >= OPEN_GAP) { seen.clear(); last.opened = now; }
     last.at = now;
-    const out = [], ok = new Set(), odd = [];
+    const out = [], ok = new Set(), odd = [], rejected = [];   // rejected — відкинуті ціни для журналу програми (FR-004)
     for (let r of rows) {
       const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k), lim = r.min > 0 && r.max > r.min;
       let repaired = false;
+      if (!lim && jump(r)) { rejected.push({ item_id: r.item_id, price: r.price, last: r.last, why: 'стрибок від останньої ціни' }); seen.delete(k); continue; }
       /* межі є, а ціна поза ними (жива гра 2026-10-29): */
       if (lim && !inLimits(r)) {
         const fixed = /^5\d{2,}$/.test(String(r.price)) ? Number(String(r.price).slice(1)) : 0;
@@ -41,8 +44,9 @@ function pricePicker(every = PRICES_EVERY) {
           const sure = (r.score ?? 0) >= ODD_SURE, odds = sure ? (s?.odd === r.price ? (s.odds || 0) + 1 : 1) : 0;
           seen.set(k, { ...(s || { plain: [] }), odd: sure ? r.price : s?.odd, odds: sure ? odds : s?.odds });
           if (odds === ODD_TIMES) odd.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max });
+          rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'поза межами' });
           continue;
-        } else { seen.delete(k); continue; }   // «51050» без виправлення — не ціна
+        } else { rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'далеко поза межами' }); seen.delete(k); continue; }   // «51050» без виправлення — не ціна
       }
       /* уже надіслану в цьому відкритті ціну міняє лише друга однакова зчитка, а не один кадр */
       const changing = done && done.at >= last.opened && done.price !== r.price;
@@ -63,9 +67,10 @@ function pricePicker(every = PRICES_EVERY) {
     }
     pick.confirmed = ok;
     pick.outside = odd;   // ціни поза межами, впевнено прочитані ODD_TIMES разів — адміну «перевір межі» (T031)
+    pick.rejected = rejected;
     return out;
   };
-  pick.confirmed = new Set(); pick.outside = [];
+  pick.confirmed = new Set(); pick.outside = []; pick.rejected = [];
   return pick;
 }
 
