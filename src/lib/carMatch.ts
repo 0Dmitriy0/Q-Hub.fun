@@ -2,6 +2,13 @@
    Гравці пишуть як заманеться: «Zeekr 001», «zeekr-001», «BMW M5 F90» при каталожному «M5 F90» з маркою BMW */
 export interface Vehicle { id: number; name: string; brand: string; price: number; image_url: string }
 
+/* фото з маркетплейсу гри лежать на самому сайті (public/vehicles/map.json); фото, завантажене адміном, важливіше.
+   Самі фото браузер кешує на тиждень, тому оновлене фото отримує в map.json нову ?v=, а map.json читається без кешу */
+export async function withSitePhotos<T extends { name: string; image_url: string | null }>(list: T[]): Promise<T[]> {
+  const pics: Record<string, string> = await fetch('/vehicles/map.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+  return list.map(x => (x.image_url || !pics[x.name] ? x : { ...x, image_url: pics[x.name] }));
+}
+
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\d]+/gu, ' ').trim();
 
 export function matchVehicle(name: string, vehicles: Vehicle[]): Vehicle | null {
