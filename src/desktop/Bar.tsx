@@ -172,11 +172,12 @@ export default function Bar() {
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
-  /* «без ШІ» підказка під рядком: що запишеться по Enter (з питанням «?» — пошук у правилах) */
+  /* «Пошук» — лише правила й закони, нічого не записує; записи в облік (угода, дохід, витрата, переказ) — у «Цінах».
+     Підказка під рядком: що запишеться по Enter */
   useEffect(() => {
-    if ((mode !== 'ai' && !dealish) || !q.trim()) { setRule(null); return; }
-    let live = true; api.quickParse(q, mode === 'prices' ? buyer : null).then(r => live && setRule(r)); return () => { live = false; };
-  }, [q, mode, dealish, buyer]);
+    if (mode !== 'prices' || !q.trim()) { setRule(null); return; }
+    let live = true; api.quickParse(q, buyer).then(r => live && setRule(r)); return () => { live = false; };
+  }, [q, mode, buyer]);
 
   const latest = asks[0];
   async function ask() {
@@ -196,11 +197,10 @@ export default function Bar() {
     if (r.error) { setNote({ text: r.error, bad: true }); return; }
     setAsks(a => [{ ...a[0], done: true }, ...a.slice(1)]); setNote({ text: `Записано · ${r.character}` }); setQ(''); load();
   }
-  /* Enter без ШІ: план помічника чекає — записати; є сума — запис за правилами; інакше — пошук у правилах сервера */
+  /* Enter без ШІ: план помічника чекає — записати; інакше — пошук у правилах і законах (сума тут не записується — це в «Цінах») */
   function plain() {
     const text = q.trim(); if (!text || busy) return;
     if (pending(text)) { runPlan(); return; }
-    if (rule && !text.includes('?')) { quickRule(); return; }
     /* «що продати?» — відповідь зі складу й цін скупників, без ШІ */
     if (d && isSellQuestion(text)) {
       setAsks(a => [{ q: text, reply: '', actions: [], done: true, sells: sellAdvice(d.prices, d.stock) }, ...a].slice(0, 30));
@@ -211,7 +211,7 @@ export default function Bar() {
   }
   async function quickRule() {
     if (!rule) { setNote({ text: 'Без ШІ потрібна сума — наприклад, 450к', bad: true }); return; }
-    setBusy(true); const r = await api.quickAdd(q, mode === 'prices' ? buyer : null); setBusy(false);
+    setBusy(true); const r = await api.quickAdd(q, buyer); setBusy(false);
     setNote(r.error ? { text: r.error, bad: true } : { text: `Записано · ${r.character}` }); if (!r.error) { setQ(''); load(); }
   }
   /* історія — окрема плашка ліворуч (src/desktop/History.tsx) */
@@ -237,7 +237,8 @@ export default function Bar() {
   useLayoutEffect(() => { width.current = expanded ? BAR_WIDE : BAR_NARROW; fit(); }, [expanded, fit]);
   const ch = d?.characters.find(c => c.id === d.character);
   const aiNext = mode === 'ai' && shift;
-  const saves = (mode === 'ai' && !aiNext && !!rule && !q.includes('?')) || (dealish && rule?.kind === 'deal');   // Enter запише, а не шукатиме
+  /* Enter запише — лише в «Цінах»: угода — коли рядок починається з «продав / купив / нафармив…», дохід, витрата чи переказ — коли є сума */
+  const saves = mode === 'prices' && !!rule && (rule.kind !== 'deal' || dealish);
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
@@ -253,7 +254,7 @@ export default function Bar() {
           {/* що зробить Enter: пошук, ШІ (з Shift) чи ціни */}
           <span className={'blead' + (aiNext ? ' ai' : saves ? ' save' : '')} aria-hidden="true"><Icon name={mode === 'prices' ? 'tag' : aiNext ? 'spark' : saves ? 'coin' : 'search'} size={18} /></span>
           <input ref={input} value={q} autoFocus spellCheck={false} onChange={e => { setQ(e.target.value); setSel(0); setNote(null); }}
-            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, сума для обліку або питання') : 'Скупник: шкури, риба, гриби… або «продав 20 …»'} aria-label="Запит" />
+            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, закон штату або питання') : 'Скупник: шкури, риба… · «продав 20 …» · «450к зарплата»'} aria-label="Запит" />
           {q && <button className="bico" title="Очистити" onClick={() => { setQ(''); input.current?.focus(); }}><Icon name="x" size={15} /></button>}
           <div className="bseg" role="group" aria-label="Режим">
             <button aria-pressed={mode === 'ai'} onClick={() => switchMode('ai')}><Icon name="search" size={14} />Пошук</button>
@@ -288,7 +289,7 @@ export default function Bar() {
 
         <div className="bhint">
           {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника')}</span>}
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника · «450к зарплата» — в облік')}</span>}
           <span className="bkeys">{mode === 'ai'
             ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
             : <span className="on"><kbd>↑</kbd><kbd>↓</kbd>вибір</span>}
