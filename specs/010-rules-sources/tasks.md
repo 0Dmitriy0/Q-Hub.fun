@@ -11,7 +11,7 @@ description: "Задачі: усі правила й закони QuantRP у п�
 
 ## Phase 1: Setup
 
-- [ ] T001 Створити `supabase/functions/rules-sync/` (index.ts, parse.ts, merge.ts) за зразком `supabase/functions/assistant/`
+- [x] T001 Створити `supabase/functions/rules-sync/` за зразком `supabase/functions/assistant/` — є `parse.ts` + `parse.test.ts`; `merge.ts` і `index.ts` — у T014 і T015
 
 ## Phase 2: Foundational
 
@@ -37,25 +37,25 @@ description: "Задачі: усі правила й закони QuantRP у п�
 
 ## Phase 5: User Story 3 — Адмін керує джерелами (P2)
 
-- [ ] T011 [P] [US3] SQL-тест `supabase/tests/rule_sources_test.sql` (+ рядок у `supabase/tests/run.sh`): anon і `user` не читають і не змінюють; `admin` додає, вимикає, видаляє; адреса поза `https://forum.quant5.com.ua/index.php?/(forum|topic)/` — відмова (check); два джерела за замовчуванням є
-- [ ] T012 [US3] Міграція `supabase/migrations/0037_rule_sources.sql`: таблиця за data-model.md (`url` — check «лише forum.quant5.com.ua …/forum/ або /topic/», `kind in ('rules','law','order')`), RLS лише `admin`, 2 джерела за замовчуванням, публічний бакет `rules` (читання всім, запис — лише service-ключ)
+- [ ] T011 [P] [US3] SQL-тест `supabase/tests/rule_sources_test.sql` (+ рядок наприкінці `supabase/tests/run.sh`; тестові id користувачів — вільні, перевірити `grep` по `supabase/tests/`, бо `…d1` уже зайнятий у `map_drafts_test`): anon і `user` не читають і не змінюють `rule_sources`; `admin` додає, вимикає, видаляє; адреса поза `https://forum.quant5.com.ua/index.php?/(forum|topic)/` — відмова (check); `kind` поза `rules/law/order` — відмова; два джерела за замовчуванням є; anon читає об'єкт бакета `rules`, але не пише. Локально без psql — прогін у PGlite 0.2.17 (див. specs/025 quickstart.md)
+- [ ] T012 [US3] Міграція `supabase/migrations/0039_rule_sources.sql` (0038 уже застосована на робочій базі — номер після неї): таблиця за data-model.md (`url` — `check (url ~ '^https://forum\.quant5\.com\.ua/index\.php\?/(forum|topic)/')`, `unique`; `kind text not null check (kind in ('rules','law','order'))`; `enabled boolean not null default true`; `items int not null default 0`; `created_by uuid references profiles default auth.uid()`), RLS — `for all using (public.is_admin()) with check (public.is_admin())`, 2 джерела за замовчуванням (`on conflict (url) do nothing`), публічний бакет `rules` (читання всім, запис — лише service-ключ); ідемпотентно (`if not exists`, `drop policy if exists`). Регулярку з «» — лише через Edit/Write
 - [ ] T013 [P] [US3] Тест `supabase/functions/rules-sync/merge.test.ts`: джерело з помилкою чи 0 пунктів — теми з попереднього знімка; різниця `added / changed / removed` за ключем `url + n`; тема, вимкнена окремим джерелом, не береться; тема і з розділу, і окремо — один раз, тип від окремого
 - [ ] T014 [US3] `supabase/functions/rules-sync/merge.ts` (тести T013)
-- [ ] T015 [US3] `supabase/functions/rules-sync/index.ts` за contracts/rules-sync.md: доступ — admin-сесія або `x-sync-secret`; обхід послідовно; знімок у бакет `rules`; результат у `rule_sources`; лише хост форуму (FR-011)
-- [ ] T016 [US3] Сторінка `src/pages/RulesAdmin.tsx` + маршрут `admin/pravyla` у `src/App.tsx` (не-адміну — «Сторінка лише для адміністратора»): список джерел (адреса, тип, увімкнено, оновлено, пунктів, помилка, різниця), додати посилання з типом (перевірка адреси — українською), увімкнути/вимкнути, видалити, «Оновити зараз» → `rules-sync` і результат
+- [ ] T015 [US3] `supabase/functions/rules-sync/index.ts` (Deno, за зразком `supabase/functions/assistant/index.ts`) за contracts/rules-sync.md: доступ — admin-сесія (`profiles.role = 'admin'` через клієнт з заголовком `Authorization`) або `x-sync-secret` = `Deno.env.get('RULES_SYNC_SECRET')`; дані — клієнтом із `SUPABASE_SERVICE_ROLE_KEY`; обхід через `forumTopics`/`readTopic` з `parse.ts` послідовно з паузою 250 мс; знімок — `storage.from('rules').upload('rules.json', …, { upsert: true, cacheControl: '300' })`; результат у `rule_sources`; лише хост форуму (FR-011); CORS як у `assistant`
+- [ ] T016 [US3] Сторінка `src/pages/RulesAdmin.tsx` + маршрут `admin/pravyla` у `src/App.tsx` (поруч із `kabinet/*`; роль — `useAuth().role === 'admin'`, не-адміну — «Сторінка лише для адміністратора»; помилки бази з кодом `P0001` — як є): список джерел (адреса, тип, увімкнено, оновлено, пунктів, помилка, різниця), додати посилання з типом (перевірка адреси — українською), увімкнути/вимкнути, видалити, «Оновити зараз» → `rules-sync` і результат
 
 ## Phase 6: User Story 4 — Без нової версії програми (P2)
 
 - [ ] T017 [P] [US4] Тест `desktop/src/rules.test.cjs`: свіжий знімок — у кеш; `304` — кеш; без мережі — кеш; без кешу й мережі — вбудована копія; битий JSON — не затирає кеш
-- [ ] T018 [US4] `desktop/src/rules.cjs` (тести T017), у `desktop/src/main.cjs` — завантаження при старті й кожні 6 год, IPC `rules-data`, подія `rules-changed`; `desktop/src/preload.cjs`
+- [ ] T018 [US4] `desktop/src/rules.cjs` (тести T017; мережа — через переданий `fetch`, щоб тест не ходив в інтернет): `<url з config.json>/storage/v1/object/public/rules/rules.json`, `If-None-Match` з `rules.json.etag` у `app.getPath('userData')`; у `desktop/src/main.cjs` — завантаження при старті й кожні 6 год, IPC `rules-data` (лише з плашки — `fromBar`), подія `rules-changed`; `desktop/src/preload.cjs` — `rulesData`, `onRulesChanged`
 - [ ] T019 [US4] `src/desktop/Bar.tsx`: `TOPICS` — з моста (вбудована — поки не прийшло), «Правила станом на …» в результатах пошуку правил (FR-017)
 - [ ] T020 [US4] `.github/workflows/rules-sync.yml`: щодня `cron: '0 1 * * *'` + `workflow_dispatch`, `curl -X POST` з `x-sync-secret: ${{ secrets.RULES_SYNC_SECRET }}`; немає секрету — крок пропускається з поясненням
 
 ## Phase 7: Polish
 
-- [ ] T021 Запис у `src/data/changelog.json` (той самий день — доповнити наявний запис)
-- [ ] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
-- [ ] T023 Власнику — кроки з quickstart.md «Один раз» (міграція, деплой функції, секрети)
+- [ ] T021 Запис у `src/data/changelog.json`: новий запис з id дати релізу; якщо запис того дня вже в `main` (вийшов до гравців) — `РРРР-ММ-ДД.N` (CLAUDE.md)
+- [ ] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test`, SQL-тести (PGlite локально, `run.sh` у CI) — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
+- [ ] T023 Власнику — кроки з quickstart.md «Один раз», оновити під те, як це реально робиться: міграція — вміст файлу в буфер → Supabase SQL Editor (**до** злиття в `main`); функція — у PowerShell `npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api` (вхід `npx.cmd supabase login` — у звичайному терміналі, не через `!`); секрет — `npx.cmd supabase secrets set RULES_SYNC_SECRET=…` і той самий у GitHub → Settings → Secrets → `RULES_SYNC_SECRET`; секрет у чат не вставляти
 
 ## Dependencies & Execution Order
 
