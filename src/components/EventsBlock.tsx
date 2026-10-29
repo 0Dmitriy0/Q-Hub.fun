@@ -42,7 +42,7 @@ export default function EventsBlock() {
   const live = (rows: { ph: Phase }[]) => rows.filter(r => r.ph.kind === 'now').length;
 
   return (
-    <div className="card evblock">
+    <div className="card evblock" id="iventy">
       <div className="evhead">
         <h2 className="ih"><Icon name="clock" />Найближчі івенти</h2>
         <div className="seg sm" role="tablist" aria-label="Що показати">
