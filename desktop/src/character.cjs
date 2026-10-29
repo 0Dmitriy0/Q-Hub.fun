@@ -8,7 +8,8 @@ const digits = v => String(v ?? '').replace(/\D/g, '');
 
 /* { name, stat, start } або { error } — текст для гравця */
 function parseCharacter(p) {
-  const name = typeof p?.name === 'string' ? p.name.trim() : '';
+  /* «Jacson _Core», «Jacson Core» → «Jacson_Core»: пробіли довкола «_» і замість нього — типова помилка, не відмова */
+  const name = typeof p?.name === 'string' ? p.name.trim().replace(/\s*_\s*/g, '_').replace(/\s+/g, '_') : '';
   if (!CHAR_NAME.test(name)) return { error: "Ім'я й прізвище персонажа — латиницею через «_», як у грі: Dmitriy_Core" };
   const s = digits(p?.static);
   const stat = Number(s);
