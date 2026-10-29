@@ -10,6 +10,10 @@ const LAYER_COUNT = { names: LABELS.length, zones: ZONES.length };
 /* це адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію чи шар сховано */
 const PRESET = new Set(['names', 'zones', 'treasure-fields', 'hunting-fields', 'graffiti', 'ufo-land', 'oil']);
 
+/* ці групи вже є на мапі самої гри (значки проєкту) — у карту для гри їх не додаємо, щоб не було двох значків на одному місці */
+export const IN_GAME_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги', 'Заробіток']);
+const inGame = (c: MapCategory) => IN_GAME_GROUPS.has(c.grp);
+
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур) */
 export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
   groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; areas: MapArea[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean;
@@ -17,15 +21,15 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
   /* поки галочку не чіпали — як у фільтрі мапи (категорії з бази приходять уже після відкриття сторінки) */
   const [sel, setSel] = useState<Record<string, boolean>>({});
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
-  const list = groups;
+  const list = groups.filter(g => !IN_GAME_GROUPS.has(g.grp));
   const [iconM, setIconM] = useState(20);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const [done, setDone] = useState(false);   // архів завантажено — показати, як поставити (specs/023)
   const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
-  const picked = marks.filter(m => catById[m.category] && on(catById[m.category]));
+  const picked = marks.filter(m => catById[m.category] && !inGame(catById[m.category]) && on(catById[m.category]));
   /* зони з бази (поля скарбів): відтінок на текстурах і пунктирна межа у векторі мінікарти */
-  const pickedAreas = areas.filter(a => catById[a.category] && on(catById[a.category]));
+  const pickedAreas = areas.filter(a => catById[a.category] && !inGame(catById[a.category]) && on(catById[a.category]));
   const set = (ids: string[], v: boolean) => setSel(s => { const n = { ...s }; for (const id of ids) n[id] = v; return n; });
 
   async function go() {
@@ -47,6 +51,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       <summary>Карта для гри</summary>
       <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV. Галочками вибери, що потрібно: назви місць, зелені зони, поля скарбів і мітки — вони стануть частиною мапи.</p>
       <Link className="h-more" to="/mapa/v-gru">Як поставити в гру →</Link>
+      <p className="muted">Магазинів, структур, транспорту, розваг і заробітку тут немає — їхні значки вже є на мапі самої гри.</p>
       <div className="mseg" role="group" aria-label="Усі мітки">
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
         <button type="button" onClick={() => set(all.map(c => c.id), false)}>Жодної</button>
