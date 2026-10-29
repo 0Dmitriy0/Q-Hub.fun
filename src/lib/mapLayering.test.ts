@@ -1,13 +1,13 @@
 /* specs/016: мапа не вилазить поверх закріпленої шапки. Leaflet ставить свої панелі на z-index 400–1000,
    тож контейнер кожної мапи мусить бути окремим шаром нижче за шапку */
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import css from '../styles.css?raw';
 
-const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+/* тіло правила, що починає рядок: «.top { … }» */
 const rule = (sel: string) => {
-  const m = new RegExp(`^${sel.replace(/[.]/g, '\.')} \{([^}]*)\}`, 'm').exec(css);
-  if (!m) throw new Error(`немає правила ${sel}`);
-  return m[1];
+  const at = css.indexOf(`\n${sel} {`);
+  if (at < 0) throw new Error(`немає правила ${sel}`);
+  return css.slice(at, css.indexOf('}', at));
 };
 const z = (sel: string) => Number(/z-index:\s*(\d+)/.exec(rule(sel))?.[1] ?? NaN);
 
