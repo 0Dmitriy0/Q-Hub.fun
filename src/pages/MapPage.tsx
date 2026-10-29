@@ -390,7 +390,7 @@ export default function MapPage() {
         {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
-        <span className="mbrand"><img src="/brand/q-hub-logo.svg" alt="" width="22" height="22" />Q-Hub</span>
+        <span className="mbrand"><img src="/brand/q-hub-logo.svg?v=2" alt="" width="22" height="22" />Q-Hub</span>
         {/* HUD за макетом Stitch (design/stitch/mapa.html): координати й пошук зліва, шари, масштаб і мапа для гри справа */}
         <div className="mhud">
           {wide && <div className="mhud-l">

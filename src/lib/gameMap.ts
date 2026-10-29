@@ -400,7 +400,7 @@ async function brand(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.fillStyle = 'rgba(10, 14, 17, .82)'; ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 28 * u); ctx.fill();
   ctx.restore();
   ctx.strokeStyle = 'rgba(255, 106, 31, .55)'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 28 * u); ctx.stroke();
-  const im = await loadImg('/brand/q-hub-logo.svg');
+  const im = await loadImg('/brand/q-hub-logo.svg?v=2');
   if (im) ctx.drawImage(im, x + pad, y + pad, logo, logo);
   const tx = x + pad + logo + gap;
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
