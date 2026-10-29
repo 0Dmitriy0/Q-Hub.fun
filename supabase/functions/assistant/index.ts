@@ -1,5 +1,5 @@
 /* ШІ-помічник програми Q-Hub (Alt+Q). Програма шле { text, character_id, rules } з сесією гравця
-   (rules — пункти правил сервера, знайдені під питання в src/data/rules.json);
+   (rules — пункти правил сервера й законів штату, знайдені під питання у знімку rules-sync чи вбудованій src/data/rules.json, specs/010);
    функція читає його дані тими самими правами (RLS), питає Claude і повертає { reply, actions }.
    Нічого не записує — записує програма після Enter гравця. Ключ Anthropic — лише в секретах Supabase. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
