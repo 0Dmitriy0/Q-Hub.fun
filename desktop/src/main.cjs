@@ -817,9 +817,10 @@ const visionLog = () => path.join(dir(), 'vision.log');
 let catalogAt = 0, catalogCache = [];
 async function visionCatalog() {
   if (Date.now() - catalogAt < 30 * 60e3 && catalogCache.length) return catalogCache;
-  /* min/max — межі скупника: з ними ціну з прокручуваного списку можна взяти з одного кадру (pricescan.cjs) */
-  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,items(name)');
-  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0 })); catalogAt = Date.now(); }
+  /* min/max — межі скупника: з ними ціну з прокручуваного списку можна взяти з одного кадру (pricescan.cjs);
+     last — ціна на сайті: товар без меж не отримає зчитку, що відрізняється від неї більш ніж удвічі (specs/004) */
+  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,items(name)');
+  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, last: Number(r.price) || 0 })); catalogAt = Date.now(); }
   return catalogCache;
 }
 /* кадр екрана гри (основний монітор) у повному розмірі */
