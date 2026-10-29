@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-29
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Добавити на головну сторінку наш промокод на проекті QuantRP (промокод — QHUB) — це промокод від сайту, його мають бачити всі одразу же"
 

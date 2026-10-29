@@ -868,6 +868,18 @@ fieldset .static-form .btn { align-self: end; }
 .h-hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.15; letter-spacing: -.03em; }
 .h-pill { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); color: var(--muted); font: 600 12px var(--mono); }
 .h-lead { color: var(--muted); font-size: 16px; line-height: 26px; max-width: 62ch; }
+/* промокод Q-Hub на першому екрані (specs/022): окремий блок в акценті, код — найбільший шрифт блоку */
+.qpromo { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; width: 100%; padding: 14px 18px; border-radius: 16px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1.5px solid var(--accent); box-shadow: 0 12px 32px -18px rgba(255, 107, 0, .7); }
+.qpromo.off { border-style: dashed; opacity: .75; }
+.qpromo-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qpromo-tag { color: var(--muted); font: 700 11px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.qpromo-code { color: var(--accent-hi); font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: .04em; user-select: all; }
+.qpromo-reward { color: var(--fg); font: 700 17px/1.35 var(--sans); }
+.qpromo-note, .qpromo-how { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.qpromo-how code { font: 600 12.5px var(--mono); color: var(--fg); }
+.qpromo-act { display: flex; flex-wrap: wrap; gap: 8px; }
+.qpromo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; }
+@media (max-width: 640px) { .qpromo { padding: 12px 14px; } .qpromo-code { font-size: 30px; } .qpromo-act { width: 100%; } .qpromo-act .btn { flex: 1; justify-content: center; } }
 /* плитка-банер: картинка на всю плитку, текст і кнопка — справжній текст поверх темного переходу.
    Кольори тексту сталі (світлі) в обох темах: під ним завжди темна картинка */
 .h-promo { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 300px; background: #0b0e14; border-radius: 16px; overflow: hidden; text-decoration: none; color: #fff; border: 1px solid rgba(255, 107, 0, .35); box-shadow: 0 20px 50px -20px rgba(255, 107, 0, .45); transition: transform .15s ease, box-shadow .15s ease; }

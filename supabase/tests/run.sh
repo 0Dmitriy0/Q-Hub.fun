@@ -62,3 +62,4 @@ echo 'Поля полювання ok'
 $P -f supabase/tests/app_online_test.sql
 $P -f supabase/tests/buyer_unknown_items_test.sql
 $P -f supabase/tests/buyer_limit_reports_test.sql
+$P -f supabase/tests/site_promo_test.sql
