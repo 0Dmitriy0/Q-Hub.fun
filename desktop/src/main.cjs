@@ -27,7 +27,7 @@ const SHOT_KEY = 'Alt+S';
 protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 /* плашка Alt+Q — уся програма: ширина згорнутої (лише рядок), найбільша ширина й висота розгорнутої */
-const BAR_W = 820, BAR_MAX_W = 1120, BAR_MAX_H = 860;
+const BAR_W = 1120, BAR_MAX_W = 1120, BAR_MAX_H = 860;   // ширина плашки стала — як у розгорнутої (Bar.tsx BAR_WIDE)
 /* ширина вікна плашки входу: сама плашка + прозоре поле під тінь */
 const GATE_W = 520;
 
