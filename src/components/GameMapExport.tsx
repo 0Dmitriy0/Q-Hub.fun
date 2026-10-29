@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { GameTheme } from '../lib/gameTheme';
+
+/* тема мапи для гри запам'ятовується окремо від теми сайту (specs/021 FR-002) */
+const THEME_KEY = 'qhub:gamemap:theme';
+const readTheme = (): GameTheme => { try { return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
 import { Link } from 'react-router-dom';
 import type { MapArea, MapCategory, MapMark } from '../lib/mapData';
 import LABELS from '../data/mapLabels.json';
@@ -23,6 +28,16 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
   const list = groups.filter(g => !IN_GAME_GROUPS.has(g.grp));
   const [iconM, setIconM] = useState(20);
+  const [theme, setThemeState] = useState<GameTheme>(readTheme);
+  const setTheme = (t: GameTheme) => { setThemeState(t); try { localStorage.setItem(THEME_KEY, t); } catch { /* приватний режим */ } };
+  /* попередній перегляд вибраної теми (FR-005) — уся мапа маленькою картинкою */
+  const [preview, setPreview] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (preview[theme]) return;
+    let alive = true;
+    import('../lib/gameMap').then(m => m.previewMap(theme)).then(url => { if (alive) setPreview(p => ({ ...p, [theme]: url })); }).catch(() => { /* без перегляду — не страшно */ });
+    return () => { alive = false; };
+  }, [theme]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const [done, setDone] = useState(false);   // архів завантажено — показати, як поставити (specs/023)
   const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
@@ -38,7 +53,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       const { buildGamePack } = await import('../lib/gameMap');
       const pins = picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color }; });
       const layers = (['names', 'zones'] as const).filter(id => catById[id] && on(catById[id]));
-      const blob = await buildGamePack(pins, { iconM, layers, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
+      const blob = await buildGamePack(pins, { iconM, layers, theme, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
       setDone(true);
@@ -51,6 +66,14 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       <summary>Карта для гри</summary>
       <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV. Галочками вибери, що потрібно: назви місць, зелені зони, поля скарбів і мітки — вони стануть частиною мапи.</p>
       <Link className="h-more" to="/mapa/v-gru">Як поставити в гру →</Link>
+      <div className="mgame-theme">
+        <div className="mseg" role="radiogroup" aria-label="Тема мапи для гри">
+          <button type="button" role="radio" aria-checked={theme === 'dark'} onClick={() => setTheme('dark')}>Темна</button>
+          <button type="button" role="radio" aria-checked={theme === 'light'} onClick={() => setTheme('light')}>Світла</button>
+        </div>
+        {preview[theme] ? <img src={preview[theme]} alt={`Мапа для гри — ${theme === 'light' ? 'світла' : 'темна'} тема`} width={96} height={144} /> : <span className="mgame-prev" aria-hidden="true" />}
+      </div>
+      {theme === 'light' && <p className="muted">Світлу мінікарту ще не перевірено в грі: білі позначки гри (стрілка, маршрут GPS) на світлому тлі можуть бути менш помітні.</p>}
       <p className="muted">Магазинів, структур, транспорту, розваг і заробітку тут немає — їхні значки вже є на мапі самої гри.</p>
       <div className="mseg" role="group" aria-label="Усі мітки">
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
