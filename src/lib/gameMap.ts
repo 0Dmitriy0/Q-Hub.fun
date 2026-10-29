@@ -1,5 +1,6 @@
 import { OCEAN, mapUrl } from './mapGeo';
 import { triPath } from './mapChunk';
+import { recolorMesh, themed, type GameTheme } from './gameTheme';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>.png, 2x3 тайли),
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -176,8 +177,10 @@ async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: strin
 }
 
 /* мапа одним полотном 2x3 тайли по size px: (море з рівнями глибини,) суша, потім шари й мітки (якщо передані) */
-async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], sea = false): Promise<HTMLCanvasElement> {
-  const meta = await fetch(mapUrl('/map/game/export.json')).then(r => r.json());
+async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], sea = false, theme: GameTheme = 'dark'): Promise<HTMLCanvasElement> {
+  const raw = await fetch(mapUrl('/map/game/export.json')).then(r => r.json());
+  /* тема (specs/021): світла — та сама мапа зі світлою палітрою */
+  const meta = { ...raw, palette: themed(raw.palette, theme), seaPalette: raw.seaPalette && themed(raw.seaPalette, theme), namesPalette: raw.namesPalette && themed(raw.namesPalette, theme) };
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
@@ -252,9 +255,9 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promi
    minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
 const TEX = 512, SEA = 1024, LOD = 128;
 const SEA_SHORE = 1, SEA_DEEP = 0;
-async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[]): Promise<ZipEntry[]> {
-  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true), TEX, 'minimap_');
-  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true);
+async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], theme: GameTheme = 'dark'): Promise<ZipEntry[]> {
+  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true, theme), TEX, 'minimap_');
+  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true, theme);
   files.push(...await tiles(sea, SEA, 'minimap_sea_'));
   const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
@@ -350,12 +353,12 @@ async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntr
 }
 
 /* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
-export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[] }, step?: (s: string) => void): Promise<Blob> {
-  const areas = opt.areas ?? [];
+export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[]; theme?: GameTheme }, step?: (s: string) => void): Promise<Blob> {
+  const areas = opt.areas ?? [], theme = opt.theme ?? 'dark';
   step?.('Завантажую мапу…');
-  const base = await zipAt('/map/game/base.zip');
+  const base = await themeZip(await zipAt('/map/game/base.zip'), theme);
   const raw: ZipEntry[] = [];
-  for (const l of opt.layers) raw.push(...await zipAt(GAME_LAYERS[l]));
+  for (const l of opt.layers) raw.push(...await themeZip(await zipAt(GAME_LAYERS[l]), theme));
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
@@ -373,7 +376,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   }
   const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
-  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas);
+  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas, theme);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...tex]) as BlobPart], { type: 'application/zip' });
 }
@@ -447,4 +450,23 @@ export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: Gam
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><title>Мапа штату · q-hub.fun</title>`
     + `<defs>${defs.join('')}</defs><image href="${bg}" width="${W}" height="${H}"/><g>${marks}</g></svg>`;
   return { png: new Blob([full as BlobPart], { type: 'image/png' }), svg: new Blob([svg], { type: 'image/svg+xml' }), w: W, h: H };
+}
+
+/* світла тема «чистої мапи» й шарів (specs/021): кольори вершин у .mesh — за палітрою gameTheme; темна — файли як є */
+async function themeZip(entries: ZipEntry[], theme: GameTheme): Promise<ZipEntry[]> {
+  if (theme === 'dark') return entries;
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  return Promise.all(entries.map(async e => {
+    if (!e.name.endsWith('.mesh')) return e;
+    const raw = enc.encode(recolorMesh(dec.decode(await inflate(e)), theme)), z = await deflate(raw);
+    return { ...e, data: z.data, method: z.method, crc: crc32(raw), size: raw.length };
+  }));
+}
+
+/* попередній перегляд теми у вікні «Карта для гри» (specs/021 FR-005): уся мапа маленькою картинкою */
+export async function previewMap(theme: GameTheme, size = 96): Promise<string> {
+  const cv = await drawMap(size, [], 0, new Map(), ['names'], [], true, theme);
+  const out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+  const ctx = out.getContext('2d')!; ctx.fillStyle = theme === 'light' ? '#8fb3cc' : OCEAN; ctx.fillRect(0, 0, out.width, out.height); ctx.drawImage(cv, 0, 0);
+  return out.toDataURL('image/png');
 }

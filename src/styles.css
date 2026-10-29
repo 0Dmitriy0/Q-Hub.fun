@@ -1338,3 +1338,9 @@ fieldset .static-form .btn { align-self: end; }
 .guide-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
 .guide-steps li p { margin: 0; white-space: pre-line; line-height: 1.6; }
 .guide-steps img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: 10px; border: 1px solid var(--line); }
+
+/* «Карта для гри»: тема й попередній перегляд (specs/021) */
+.mgame-theme { display: flex; align-items: center; gap: 12px; }
+.mgame-theme .mseg { flex: 1; margin: 0; }
+.mgame-theme img, .mgame-prev { width: 64px; height: 96px; border-radius: 8px; border: 1px solid var(--line); object-fit: cover; flex: none; }
+.mgame-prev { display: block; background: var(--bg); }
