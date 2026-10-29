@@ -7,7 +7,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { FORUM, forumTopics, heading, readTopic } from './parse.ts';
 import { merge, plan, type SnapTopic, type SourceRow } from './merge.ts';
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+/* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const fail = (status: number, error: string) => json({ error }, status);
 const URL_ = Deno.env.get('SUPABASE_URL')!, SECRET = Deno.env.get('RULES_SYNC_SECRET');
