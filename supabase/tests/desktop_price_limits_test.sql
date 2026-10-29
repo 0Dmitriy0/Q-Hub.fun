@@ -57,5 +57,5 @@ end $$;
 delete from public.price_reports where reporter in ('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000f6');
 update public.buyer_items set min_price = :'old_min', max_price = :'old_max', price = :'old_price', price_at = nullif(:'old_at', '')::timestamptz
   where buyer_id = 'hide' and item_id = current_setting('test.it')::bigint;
-\drop function public.test_out_of_limits(bigint, text);
-echo 'Межі цін з програми ok'
+drop function public.test_out_of_limits(bigint, text);
+\echo 'Межі цін з програми ok'
