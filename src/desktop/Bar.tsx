@@ -31,7 +31,8 @@ interface DelAct { kind: 'delete'; id: string; rec: Rec }
 type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
 const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
 /* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
-const BAR_NARROW = 820, BAR_WIDE = 1120;
+/* плашка завжди однієї ширини — і порожня, і з результатами: не «стрибає», коли з'являються результати */
+const BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
@@ -155,7 +156,7 @@ export default function Bar() {
     return () => { window.removeEventListener('keydown', k); window.removeEventListener('keyup', k); window.removeEventListener('blur', off); };
   }, []);
   /* вікно точно під вміст: згорнута плашка — вузька й низька (лише рядок), розгорнута — широка, висота під вміст */
-  const width = useRef(BAR_NARROW);
+  const width = useRef(BAR_WIDE);
   const fit = useCallback(() => { const el = root.current; if (el) api.quickSize(Math.ceil(el.getBoundingClientRect().height) + 28, width.current); }, []);
   useLayoutEffect(() => {
     const el = root.current; if (!el) return;
@@ -242,7 +243,7 @@ export default function Bar() {
   }
 
   const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy)));
-  useLayoutEffect(() => { width.current = expanded ? BAR_WIDE : BAR_NARROW; fit(); }, [expanded, fit]);
+  useLayoutEffect(() => { fit(); }, [expanded, fit]);
   const ch = d?.characters.find(c => c.id === d.character);
   const aiNext = mode === 'ai' && shift;
   /* Enter запише — лише в «Цінах»: угода — коли рядок починається з «продав / купив / нафармив…», дохід, витрата чи переказ — коли є сума */
