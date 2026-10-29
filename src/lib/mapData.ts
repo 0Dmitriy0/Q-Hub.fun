@@ -5,7 +5,7 @@ export interface MapMark { id: string; dbId?: number; category: string; name: st
 /* «Нік #статік» власника; ніка може не бути, якщо гравець не зареєстрований на сайті */
 export const ownerLabel = (st: number, names: Record<number, string>) => (names[st] ? `${names[st]} #${st}` : `#${st}`);
 
-export const GROUP_ORDER = ['Шари мапи', 'Магазини', 'Структури', 'Транспорт', 'Розваги', 'Заробіток', 'Вендингові апарати', 'Міні-ігри, квести й контракти'];
+export const GROUP_ORDER = ['Шари мапи', 'Івенти', 'Магазини', 'Структури', 'Транспорт', 'Розваги', 'Заробіток', 'Вендингові апарати', 'Міні-ігри, квести й контракти'];
 
 /* групи в порядку QuantFun; нові групи адміна — після них, за найменшим sort їхніх категорій */
 export function groupCategories(cats: MapCategory[]): { grp: string; cats: MapCategory[] }[] {

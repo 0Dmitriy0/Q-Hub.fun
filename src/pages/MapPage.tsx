@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '../lib/mapGeo';
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
@@ -19,6 +21,7 @@ import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
 
 const ON_KEY = 'qhub:map:on';
+const CLUSTER_MIN = 200;   // від скількох міток категорії групувати їх на віддаленні
 const OPEN_KEY = 'qhub:map:open';
 function readOpen(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}'); } catch { return {}; } }
 function readOn(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(ON_KEY) || '{}'); } catch { return {}; } }
@@ -138,6 +141,8 @@ export default function MapPage() {
     return marks.filter(m => (m.name + ' ' + (catById[m.category]?.name || '')).toLowerCase().includes(ql)).slice(0, 10);
   }, [q, marks, catById]);
 
+  /* dataV — перечитати мітки з бази (після публікації чи відкату партії) */
+  const [dataV, setDataV] = useState(0);
   useEffect(() => {
     if (!supabase) return;
     loadMapData().then(d => {
@@ -147,7 +152,7 @@ export default function MapPage() {
       setCats(d.cats); setMarks(d.marks);
       setOnly(o => (o && d.marks.some(mk => mk.category === o) ? o : null));
     });
-  }, []);
+  }, [dataV]);
 
   useEffect(() => {
     const el = box.current; if (!el) return;
@@ -184,7 +189,11 @@ export default function MapPage() {
     const m = map.current; if (!m) return;
     for (const g of Object.values(layers.current)) g.remove();
     layers.current = {}; markers.current = {};
-    for (const c of cats) layers.current[c.id] = L.layerGroup();
+    /* велика категорія (specs/017: 700+ гарбузів) — близькі мітки на віддаленні збираються в один значок з числом */
+    const per: Record<string, number> = {}; for (const mk of marks) per[mk.category] = (per[mk.category] || 0) + 1;
+    for (const c of cats) layers.current[c.id] = (per[c.id] || 0) > CLUSTER_MIN
+      ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, disableClusteringAtZoom: ZMAX - 1, iconCreateFunction: g => L.divIcon({ className: 'mclu-wrap', iconSize: [34, 34], html: `<span class="mclu" style="--c:${c.color}"><img src="${esc(c.icon)}" alt="">${g.getChildCount()}</span>` }) })
+      : L.layerGroup();
     for (const mk of marks) {
       const c = catById[mk.category]; if (!c) continue;
       const icon = pinIcon(c, mk.icon);
@@ -476,7 +485,7 @@ export default function MapPage() {
               : <><CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
                 <MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
                   onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />
-                <MapAdmin cats={cats} picked={picked} picking={picking} onPick={pick}
+                <MapAdmin cats={cats} marks={marks} picked={picked} picking={picking} onPick={pick} onReload={() => setDataV(v => v + 1)}
                   onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} /></>}
           </>}
         </aside>}

@@ -63,6 +63,9 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       </div>
       <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток${pickedAreas.length ? ` · ${pickedAreas.length} зон` : ''}`}</button>
       {picked.length > 1500 && !busy && <p className="muted">Багато міток — значки на мінікарті злипатимуться, а архів буде великим.</p>}
+      {/* specs/017 FR-014: велика категорія (напр. 700+ гарбузів) закриє на мінікарті все інше */}
+      {(() => { const big = all.filter(c => on(c) && (count[c.id] || 0) > 200 && !LAYER_COUNT[c.id as keyof typeof LAYER_COUNT]);
+        return big.length > 0 && !busy && <p className="muted">Велика категорія: {big.map(c => `${c.name} (${count[c.id]})`).join(', ')} — на мінікарті вона закриє інші мітки. Радимо значок 7 м або 12 м.</p>; })()}
       {err && <p className="mmsg" role="alert">{err}</p>}
     </details>
   );
