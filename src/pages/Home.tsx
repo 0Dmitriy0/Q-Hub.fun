@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
 import MiniMap from '../components/MiniMap';
+import SitePromo from '../components/SitePromo';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
 import { JOBS } from '../data/jobs';
@@ -38,6 +39,7 @@ export default function Home() {
         <div className="h-hero-txt">
           <span className="h-pill"><span className="mdot" aria-hidden="true" />Головний хаб гравців Quant RP</span>
           <h1>Ціни, угоди й гроші персонажа — <span className="h-acc">в одному місці</span></h1>
+          <SitePromo />
           <p className="h-lead">Мапа штату з мітками, яку можна поставити прямо в гру. Програма поверх GTA V: облік з екрана і пошук ціни за <kbd>Alt+Q</kbd>. Ціни скупників, які перевіряють самі гравці, і особистий облік, склад та гараж.</p>
           <div className="row">
             <Link className="btn acc" to="/mapa"><Icon name="map" />Відкрити мапу</Link>
