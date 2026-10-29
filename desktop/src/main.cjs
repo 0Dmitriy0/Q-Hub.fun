@@ -879,6 +879,20 @@ function registerHotkey(key) {
   barKey = ok ? key : null;
   return ok;
 }
+/* поле запису клавіші в Налаштуваннях: поки воно чекає, наші глобальні клавіші вимкнено — інакше Alt+Q сховав би
+   плашку, а не записався (і не дійшов до перевірки «клавіша вже зайнята»). Поле не відпустило за 20 с — вмикаємо самі */
+let keysPaused = null;
+function pauseKeys(on) {
+  clearTimeout(keysPaused); keysPaused = null;
+  if (on) {
+    for (const k of [barKey, mapKeyReg, pinKeyReg, SHOT_KEY]) if (k) globalShortcut.unregister(k);
+    keysPaused = setTimeout(() => pauseKeys(false), 20e3);
+    return;
+  }
+  const p = prefs();
+  registerHotkey(p.hotkey); registerMapKey(p.mapKey); registerPinKey(p.pinKey);
+  if (!globalShortcut.isRegistered(SHOT_KEY)) globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {}));
+}
 function barPrefs(p) {
   const cur = prefs(), next = { ...cur };
   if (typeof p?.pinned === 'boolean') next.pinned = p.pinned;
@@ -1176,6 +1190,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('shots-stats', e => { if (!fromBar(e)) return null; shotStore ??= shots.store(path.join(dir(), 'shots')); return { stats: shotStore.stats(), labels: shots.LABELS, key: SHOT_KEY }; });
   ipcMain.handle('vision-log-open', e => { if (fromBar(e)) shell.openPath(visionLog()); });
+  ipcMain.handle('keys-pause', (e, on) => { if (fromBar(e)) pauseKeys(!!on); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) hideBarToGame(); });
   /* F9: форма категорії — «надіслати» чи «не надсилати» */

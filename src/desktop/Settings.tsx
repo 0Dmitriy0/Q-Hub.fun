@@ -8,7 +8,7 @@ import LOG from '../data/changelog.json';
    праворуч картки з рядками «назва — перемикач». Зберігає головний процес (barPrefs у desktop/src/main.cjs). */
 
 interface SetApi {
-  shotsStats(): Promise<{ stats: Record<string, number>; key: string }>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
+  shotsStats(): Promise<{ stats: Record<string, number>; key: string }>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>; keysPause(on: boolean): Promise<void>;
   aiLeft(): Promise<number | null>;
 }
 const api = (window as unknown as { qhub: SetApi }).qhub;
@@ -55,9 +55,11 @@ function Row({ t, d, children }: { t: string; d?: ReactNode; children?: ReactNod
   return <div className="srow"><div><b>{t}</b>{d && <small>{d}</small>}</div>{children}</div>;
 }
 const Keys = ({ k }: { k: string }) => <span className="skeys">{k.split('+').map(x => <kbd key={x}>{x}</kbd>)}</span>;
-/* поле-запис комбінації: клік — «натисни клавіші», Esc — скасувати */
+/* поле-запис комбінації: клік — «натисни клавіші», Esc — скасувати. Поки записує — глобальні клавіші програми вимкнено,
+   щоб і зайнята (Alt+Q) дійшла сюди й отримала «вже зайнята», а не сховала плашку */
 function KeyRec({ value, set }: { value: string; set: (k: string) => void }) {
   const [rec, setRec] = useState(false);
+  useEffect(() => { if (!rec) return; api.keysPause(true); return () => { api.keysPause(false); }; }, [rec]);
   return <button className={'skrec' + (rec ? ' on' : '')} onClick={() => setRec(true)} onBlur={() => setRec(false)}
     onKeyDown={e => { if (!rec) return; e.preventDefault(); e.stopPropagation(); if (e.key === 'Escape') { setRec(false); return; } const a = toAccelerator(e); if (a) { setRec(false); set(a); } }}>
     {rec ? 'Натисни комбінацію…' : <Keys k={value} />}</button>;
