@@ -1,0 +1,33 @@
+# Щоденне оновлення правил сервера й законів штату з форуму QuantRP (specs/010 US4): кличе функцію rules-sync,
+# вона кладе новий знімок у бакет rules — програма підхоплює його сама (кожні 6 год і при запуску).
+# 01:00 UTC — 03:00 за Києвом взимку (04:00 влітку): форум тоді найменше навантажений.
+# Секрет RULES_SYNC_SECRET — той самий, що в секретах функції (npx supabase secrets set RULES_SYNC_SECRET=…).
+name: Rules sync
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Оновити правила
+        env:
+          SECRET: ${{ secrets.RULES_SYNC_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "::warning::Немає секрету RULES_SYNC_SECRET (GitHub → Settings → Secrets → Actions) — правила не оновлено. Кроки: specs/010-rules-sources/quickstart.md"
+            exit 0
+          fi
+          URL=$(node -p "require('./desktop/src/config.json').url")
+          code=$(curl -sS -o out.json -w '%{http_code}' -X POST "$URL/functions/v1/rules-sync" \
+            -H "x-sync-secret: $SECRET" -H 'Content-Type: application/json' -d '{}' --max-time 600)
+          echo "HTTP $code"
+          node -e "const r=require('./out.json'); console.log(r.error || ('тем ' + r.topics + ', пунктів ' + r.items)); for (const s of r.sources || []) console.log((s.error ? '✗ ' : '✓ ') + (s.title || s.id) + ': ' + (s.error || s.items + ' пунктів'))" || cat out.json
+          [ "$code" = 200 ]

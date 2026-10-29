@@ -46,16 +46,16 @@ description: "Задачі: усі правила й закони QuantRP у п�
 
 ## Phase 6: User Story 4 — Без нової версії програми (P2)
 
-- [ ] T017 [P] [US4] Тест `desktop/src/rules.test.cjs`: свіжий знімок — у кеш; `304` — кеш; без мережі — кеш; без кешу й мережі — вбудована копія; битий JSON — не затирає кеш
-- [ ] T018 [US4] `desktop/src/rules.cjs` (тести T017; мережа — через переданий `fetch`, щоб тест не ходив в інтернет): `<url з config.json>/storage/v1/object/public/rules/rules.json`, `If-None-Match` з `rules.json.etag` у `app.getPath('userData')`; у `desktop/src/main.cjs` — завантаження при старті й кожні 6 год, IPC `rules-data` (лише з плашки — `fromBar`), подія `rules-changed`; `desktop/src/preload.cjs` — `rulesData`, `onRulesChanged`
-- [ ] T019 [US4] `src/desktop/Bar.tsx`: `TOPICS` — з моста (вбудована — поки не прийшло), «Правила станом на …» в результатах пошуку правил (FR-017)
-- [ ] T020 [US4] `.github/workflows/rules-sync.yml`: щодня `cron: '0 1 * * *'` + `workflow_dispatch`, `curl -X POST` з `x-sync-secret: ${{ secrets.RULES_SYNC_SECRET }}`; немає секрету — крок пропускається з поясненням
+- [x] T017 [P] [US4] Тест `desktop/src/rules.test.cjs`: свіжий знімок — у кеш; `304` — кеш; без мережі — кеш; без кешу й мережі — вбудована копія; битий JSON — не затирає кеш
+- [x] T018 [US4] `desktop/src/rules.cjs` (тести T017; мережа — через переданий `fetch`, щоб тест не ходив в інтернет): `<url з config.json>/storage/v1/object/public/rules/rules.json`, `If-None-Match` з `rules.json.etag` у `app.getPath('userData')`; у `desktop/src/main.cjs` — завантаження при старті й кожні 6 год, IPC `rules-data` (лише з плашки — `fromBar`), подія `rules-changed`; `desktop/src/preload.cjs` — `rulesData`, `onRulesChanged`
+- [x] T019 [US4] `src/desktop/Bar.tsx`: `TOPICS` — з моста (вбудована — поки не прийшло), «Правила станом на …» в результатах пошуку правил (FR-017)
+- [x] T020 [US4] `.github/workflows/rules-sync.yml`: щодня `cron: '0 1 * * *'` + `workflow_dispatch`, `curl -X POST` з `x-sync-secret: ${{ secrets.RULES_SYNC_SECRET }}`; немає секрету — крок пропускається з поясненням
 
 ## Phase 7: Polish
 
-- [ ] T021 Запис у `src/data/changelog.json`: новий запис з id дати релізу; якщо запис того дня вже в `main` (вийшов до гравців) — `РРРР-ММ-ДД.N` (CLAUDE.md)
+- [x] T021 Запис у `src/data/changelog.json`: новий запис з id дати релізу; якщо запис того дня вже в `main` (вийшов до гравців) — `РРРР-ММ-ДД.N` (CLAUDE.md)
 - [ ] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test`, SQL-тести (PGlite локально, `run.sh` у CI) — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
-- [ ] T023 Власнику — кроки з quickstart.md «Один раз», оновити під те, як це реально робиться: міграція — вміст файлу в буфер → Supabase SQL Editor (**до** злиття в `main`); функція — у PowerShell `npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api` (вхід `npx.cmd supabase login` — у звичайному терміналі, не через `!`); секрет — `npx.cmd supabase secrets set RULES_SYNC_SECRET=…` і той самий у GitHub → Settings → Secrets → `RULES_SYNC_SECRET`; секрет у чат не вставляти
+- [x] T023 Власнику — кроки з quickstart.md «Один раз», оновити під те, як це реально робиться: міграція — вміст файлу в буфер → Supabase SQL Editor (**до** злиття в `main`); функція — у PowerShell `npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api` (вхід `npx.cmd supabase login` — у звичайному терміналі, не через `!`); секрет — `npx.cmd supabase secrets set RULES_SYNC_SECRET=…` і той самий у GitHub → Settings → Secrets → `RULES_SYNC_SECRET`; секрет у чат не вставляти
 
 ## Dependencies & Execution Order
 

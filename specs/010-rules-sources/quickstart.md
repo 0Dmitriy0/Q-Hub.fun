@@ -2,10 +2,22 @@
 
 ## Один раз (власник)
 
-1. Supabase → SQL Editor: `supabase/migrations/0037_rule_sources.sql`.
-2. Функція: `supabase functions deploy rules-sync` і `supabase secrets set RULES_SYNC_SECRET=<випадковий рядок>`.
-3. GitHub → Settings → Secrets: `RULES_SYNC_SECRET` (той самий), `SUPABASE_URL` уже є як `VITE_SUPABASE_URL` у `.env.production`.
-4. Сайт → `/admin/pravyla` → «Оновити зараз» — перший знімок.
+Порядок — **до** злиття в `main` (нова програма читає знімок, а сторінка адміна — таблицю `rule_sources`):
+
+1. **Міграція.** Вміст `supabase/migrations/0039_rule_sources.sql` → Supabase → SQL Editor → Run. Запускати можна повторно.
+2. **Функція.** У звичайному PowerShell (не через `!` у Claude Code — там немає термінала для входу), у корені репозиторію:
+   ```
+   npx.cmd supabase login
+   npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api --no-verify-jwt
+   ```
+   `--no-verify-jwt` — бо публічний ключ проєкту новий (`sb_publishable_…`, не JWT), а щоденний запуск приходить лише із
+   секретом. Доступ функція перевіряє сама: секрет або сесія `admin` (contracts/rules-sync.md).
+3. **Секрет.** Придумай довгий випадковий рядок (напр. `[guid]::NewGuid()` у PowerShell, двічі підряд) і:
+   - `npx.cmd supabase secrets set RULES_SYNC_SECRET=<рядок> --project-ref mcuolznwwvptffcueswm`;
+   - GitHub → Settings → Secrets and variables → Actions → New secret `RULES_SYNC_SECRET` — той самий рядок.
+   Секрет нікуди не вставляти (ні в чат, ні в код).
+4. **Перший знімок.** Сайт → `/admin/pravyla` → «Оновити зараз» (хвилина-дві). Очікування: ~55 тем, ~2950 пунктів.
+5. **Щоденний запуск.** GitHub → Actions → «Rules sync» → Run workflow — має бути «✓ Правила серверу: … пунктів».
 
 ## Сценарії
 
