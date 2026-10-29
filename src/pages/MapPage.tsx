@@ -6,7 +6,7 @@ import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
-import { DEFAULT_GROUPS, isVisible, toggled } from '../lib/mapFilters';
+import { isVisible, toggled } from '../lib/mapFilters';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
@@ -311,7 +311,6 @@ export default function MapPage() {
     addEventListener('keydown', f); return () => removeEventListener('keydown', f);
   }, []);
 
-  function resetOn() { setOnly(null); setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
   /* перше перемикання після ?show= береться від того, що гравець бачить зараз, і зберігається як звичайно */
   function setMany(ids: string[], v: boolean) {
     if (only) setOnly(null);
@@ -422,7 +421,6 @@ export default function MapPage() {
           <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
               <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Усі</button>
-              <button type="button" onClick={resetOn}>Як спочатку</button>
               <button type="button" onClick={() => setMany(allIds, false)} aria-pressed={visibleCats.length > 0 && !visibleCats.some(isOn)}>Жодної</button>
             </div>
             {groups.map(({ grp, cats: gc }) => {
