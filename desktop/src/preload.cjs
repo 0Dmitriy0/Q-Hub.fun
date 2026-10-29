@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('qhub', {
   quickSize: (h, w) => ipcRenderer.invoke('quick-size', h, w),
   quickHide: () => ipcRenderer.invoke('quick-hide'),
   barData: () => ipcRenderer.invoke('bar-data'),
+  rulesData: () => ipcRenderer.invoke('rules-data'),
+  onRulesChanged: cb => { ipcRenderer.on('rules-changed', () => cb()); },
   /* історія — окрема плашка: плашка пише й відкриває її, вікно історії читає й повертає вибране */
   histAdd: it => ipcRenderer.invoke('hist-add', it),
   histToggle: () => ipcRenderer.invoke('hist-toggle'),

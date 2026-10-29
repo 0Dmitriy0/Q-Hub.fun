@@ -17,6 +17,7 @@ const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
+const { createRules } = require('./rules.cjs');
 const { createQmap } = require('./qmap.cjs');
 const mapwin = require('./mapwin.cjs');
 const { Worker } = require('node:worker_threads');
@@ -33,6 +34,9 @@ const GATE_W = 520;
 let sb, gate, bar, tray, quitting = false, settings = {};
 const dir = () => app.getPath('userData');
 const settingsFile = () => path.join(dir(), 'settings.json');
+/* знімок правил з публічного бакета rules (функція rules-sync); dir() доступний лише після app ready — тож лінивий */
+let rulesStore = null;
+const rulesSnap = () => (rulesStore ??= createRules({ dir: dir(), url: cfg.url + '/storage/v1/object/public/rules/rules.json' }));
 const saveSettings = () => fs.writeFileSync(settingsFile(), JSON.stringify(settings, null, 2));
 
 /* лише адреси сайту й Discord відкриваються в браузері; все інше — ні */
@@ -1157,6 +1161,8 @@ app.whenReady().then(() => {
     bar.setBounds({ x: Math.round(b.x + (b.width - w) / 2), y: prefs().position === 'bottom' ? b.y + b.height - h : b.y, width: w, height: h });
   });
   ipcMain.handle('bar-data', e => (fromBar(e) ? barData() : null));
+  /* правила для пошуку плашки: знімок rules-sync з кешу; null — плашка бере вбудовану копію (specs/010 US4) */
+  ipcMain.handle('rules-data', e => (fromBar(e) ? rulesSnap().current() : null));
   /* історія: плашка пише пошуки й відповіді ШІ, вікно історії читає їх разом із записами й повертає вибране в плашку */
   const fromHist = e => hist && e.sender === hist.webContents;
   ipcMain.handle('hist-add', (e, it) => { if (fromBar(e)) histAdd(it); });
@@ -1206,6 +1212,9 @@ app.whenReady().then(() => {
   /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */
   const later = f => (autostarted ? setTimeout(f, 30e3) : f());
   later(startUpdates);
+  /* свіжі правила й закони — при запуску й кожні 6 год; змінились — плашка перечитає (specs/010 FR-017) */
+  const pullRules = () => rulesSnap().refresh().then(ch => { if (ch) bar?.webContents.send('rules-changed'); }).catch(() => {});
+  later(pullRules); setInterval(pullRules, 6 * 3600e3);
   if (autostarted) sb.auth.getSession().then(({ data }) => {
     if (!data.session || !settings.character) tray?.displayBalloon?.({ title: 'Q-Hub', content: `Увійди в Q-Hub — клікни іконку в треї або натисни ${prefs().hotkey}.` });
   }).catch(() => {});

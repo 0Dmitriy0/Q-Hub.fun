@@ -71,3 +71,4 @@ $P -c "do \$\$ begin assert (select count(*) from public.map_points where catego
 echo 'Гарбузи ok'
 $P -f supabase/tests/guides_test.sql
 $P -f supabase/tests/account_nick_test.sql
+$P -f supabase/tests/rule_sources_test.sql

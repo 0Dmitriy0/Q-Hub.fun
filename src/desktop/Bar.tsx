@@ -40,6 +40,7 @@ interface Ask { q: string; reply: string; actions: Action[]; done: boolean; erro
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
+  rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
   histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; histToggle(): Promise<boolean>; mapToggle(): Promise<boolean>;
   onHistPick(cb: (it: { kind: 'ai' | 'search' | 'tx'; q?: string; reply?: string }) => void): void;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
@@ -57,7 +58,11 @@ interface PinAskT { reason: string; preview: string; cats: { id: string; name: s
 interface PinHint { category: string; note: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
-const TOPICS = (RULES as { topics: RuleTopic[] }).topics;
+/* правила й закони для пошуку: знімок rules-sync з програми (specs/010 US4), поки не прийшов — вбудована копія */
+const BUILT = RULES as { fetched: string; topics: RuleTopic[] };
+let TOPICS = BUILT.topics, RULES_AT = BUILT.fetched;
+/* «станом на 29 жовтня» — коли зібрано правила, щоб гравець бачив, наскільки вони свіжі (FR-017) */
+const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' : RULES_AT).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
 const OPS: Record<Op, string> = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 /* рядок починається з угоди («продав …», «нафармив …») — як DEAL_OPS у desktop/src/quick.cjs */
@@ -99,6 +104,7 @@ export default function Bar() {
   const [shot, setShot] = useState<Shot | null>(null);
   const [sel, setSel] = useState(0);
   const [asks, setAsks] = useState<Ask[]>([]);
+  const [, setRulesAt] = useState(RULES_AT);   // прийшов новий знімок правил — перемалювати «станом на …»
   const [rule, setRule] = useState<Rule>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
@@ -140,6 +146,8 @@ export default function Bar() {
       setTimeout(() => input.current?.focus(), 0);
     });
     loadPlaces();
+    const pullRules = () => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
+    pullRules(); api.onRulesChanged?.(pullRules);
   }, [load]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const k = (e: KeyboardEvent) => setShift(e.shiftKey), off = () => setShift(false);
@@ -347,7 +355,7 @@ function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; set
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
             <img src={asset(h.icon)} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></button></li>)}</ul>
         </>}
-        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''}</div>}
+        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
