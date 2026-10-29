@@ -142,21 +142,20 @@ function createBar() {
   bar.on('show', touch);
   bar.webContents.on('before-input-event', touch);
   bar.on('hide', hideStrip);
-  bar.on('hide', () => hist?.hide());   // історія живе разом з плашкою
   bar.on('hide', () => { if (mapFrom === 'bar') mapw?.hide(); });   // і мапа, відкрита з плашки
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
-/* фокус пішов з плашки, історії чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
+/* фокус пішов з плашки чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
 function hideUnlessOurs() {
-  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== hist && f !== mapw) bar.hide(); }, 80);
+  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== mapw) bar.hide(); }, 80);
 }
 
-/* ---------- історія: окрема плашка ліворуч (history.html). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
-const HIST_W = 420, HIST_MAX = 300;
-let hist = null, histItems = null;
+/* ---------- історія: ліва колонка плашки (Історія в Bar.tsx). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
+const HIST_MAX = 300;
+let histItems = null;
 const histFile = () => path.join(dir(), 'history.json');
 const histLoad = () => { if (!histItems) { try { histItems = JSON.parse(fs.readFileSync(histFile(), 'utf8')); } catch { histItems = []; } } return histItems; };
-const histSave = () => { try { fs.writeFileSync(histFile(), JSON.stringify(histItems)); } catch { /* історія не обов'язкова */ } hist?.webContents.send('hist-changed'); };
+const histSave = () => { try { fs.writeFileSync(histFile(), JSON.stringify(histItems)); } catch { /* історія не обов'язкова */ } bar?.webContents.send('hist-changed'); };
 function histAdd(it) {
   if (!it || !['ai', 'search'].includes(it.kind) || typeof it.q !== 'string' || !it.q.trim()) return;
   const items = histLoad();
@@ -165,28 +164,6 @@ function histAdd(it) {
   items.length = Math.min(items.length, HIST_MAX);
   histSave();
 }
-function createHist() {
-  hist = new BrowserWindow({
-    width: HIST_W, height: 560, show: false, frame: false, transparent: true, resizable: false, movable: false, hasShadow: false,
-    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, title: 'Q-Hub · історія',
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
-  });
-  hist.setAlwaysOnTop(true, 'screen-saver');
-  hist.webContents.on('will-navigate', e => e.preventDefault());
-  hist.on('blur', hideUnlessOurs);
-  hist.loadFile(path.join(__dirname, 'ui', 'history.html'));
-}
-/* ліворуч на тому ж екрані, що й плашка, від її верху */
-function toggleHist() {
-  if (hist.isVisible()) { hist.hide(); return false; }
-  const b = bar.getBounds(), { workArea: a } = screen.getDisplayMatching(b);
-  hist.setBounds({ x: a.x + 12, y: b.y, width: HIST_W, height: Math.min(640, a.y + a.height - b.y - 12) });
-  hist.webContents.send('hist-changed');
-  hist.showInactive(); hist.moveTop();
-  if (mapw?.isVisible() && mapFrom === 'bar') placeMap();
-  return true;
-}
-
 /* ---------- мапа Q-Hub поверх гри (map.html, specs/014): окрема плашка, як «Історія»; лише перегляд ----------
    Відкрита кнопкою з плашки — живе разом з плашкою; клавішею (Alt+M) — сама: бере фокус, Esc чи клавіша ховають,
    повернувся в гру — ховається. Вікно створюється при першому відкритті, далі лише ховається: швидко й без навантаження */
@@ -207,16 +184,15 @@ function createMap() {
       if (mapSteals++ < 2) setTimeout(() => { if (mapw.isVisible()) { mapw.moveTop(); mapw.focus(); } }, 60);
       return;
     }
-    setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (f !== mapw && f !== bar && f !== hist) mapw.hide(); }, 80);
+    setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (f !== mapw && f !== bar) mapw.hide(); }, 80);
   });
   mapw.loadFile(path.join(__dirname, 'ui', 'map.html'));
 }
-/* під плашкою праворуч від історії (mapwin.place); без плашки — по центру екрана з курсором (там гра) */
+/* під плашкою (mapwin.place); без плашки — по центру екрана з курсором (там гра) */
 function placeMap() {
   const b = mapFrom === 'bar' && bar.isVisible() ? bar.getBounds() : null;
-  const h = b && hist?.isVisible() ? hist.getBounds() : null;
   const d = b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  mapw.setBounds(mapwin.place({ work: d.workArea, bar: b, hist: h }));
+  mapw.setBounds(mapwin.place({ work: d.workArea, bar: b, hist: null }));
 }
 function showMap(from) {
   if (!mapw) createMap();
@@ -402,7 +378,7 @@ const autoUpdate = () => prefs().autoUpdate !== false;
 /* простій — коли востаннє гравець відкривав плашку, кабінет чи щось у них вводив */
 let lastActive = Date.now();
 const touch = () => { lastActive = Date.now(); };
-const programBusy = () => [bar, gate, hist].some(w => w && !w.isDestroyed() && w.isVisible());
+const programBusy = () => [bar, gate].some(w => w && !w.isDestroyed() && w.isVisible());
 const installMark = () => path.join(dir(), 'installing.json');   // «ставиться оновлення» — див. installPending в updater.cjs
 function startUpdates() {
   if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
@@ -665,7 +641,7 @@ async function grabScreen() {
 }
 /* «Де я?» (specs/014 FR-008a): вікна програми на мить стають прозорими — у кадр не потрапляють, але не ховаються й фокус лишається */
 async function grabClean() {
-  const ws = [bar, hist, mapw, strip].filter(w => w?.isVisible());
+  const ws = [bar, mapw, strip].filter(w => w?.isVisible());
   for (const w of ws) w.setOpacity(0);
   if (ws.length) await new Promise(r => setTimeout(r, 150));
   try { return await captureScreen(); } finally { for (const w of ws) w.setOpacity(1); }
@@ -1164,14 +1140,11 @@ app.whenReady().then(() => {
   /* правила для пошуку плашки: знімок rules-sync з кешу; null — плашка бере вбудовану копію (specs/010 US4) */
   ipcMain.handle('rules-data', e => (fromBar(e) ? rulesSnap().current() : null));
   /* історія: плашка пише пошуки й відповіді ШІ, вікно історії читає їх разом із записами й повертає вибране в плашку */
-  const fromHist = e => hist && e.sender === hist.webContents;
+  /* історія — у самій плашці (ліва колонка): читає й чистить її лише плашка */
   ipcMain.handle('hist-add', (e, it) => { if (fromBar(e)) histAdd(it); });
-  ipcMain.handle('hist-toggle', e => (fromBar(e) ? toggleHist() : null));
-  ipcMain.handle('hist-data', async e => (fromHist(e) ? { items: histLoad(), tx: await barHistory().catch(() => []) } : null));
-  ipcMain.handle('hist-pick', (e, it) => { if (fromHist(e) && it && typeof it === 'object') { bar.webContents.send('hist-pick', it); bar.focus(); } });
-  ipcMain.handle('hist-del', (e, id) => { if (fromHist(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
-  ipcMain.handle('hist-clear', e => { if (fromHist(e)) { histItems = []; histSave(); } });
-  ipcMain.handle('hist-hide', e => { if (fromHist(e)) { hist.hide(); bar.focus(); } });
+  ipcMain.handle('hist-data', async e => (fromBar(e) ? { items: histLoad(), tx: await barHistory().catch(() => []) } : null));
+  ipcMain.handle('hist-del', (e, id) => { if (fromBar(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
+  ipcMain.handle('hist-clear', e => { if (fromBar(e)) { histItems = []; histSave(); } });
   /* мапа (specs/014, contracts/ipc-map.md): плашка відкриває, вікно мапи ховається й питає клавішу */
   const fromMap = e => mapw && e.sender === mapw.webContents;
   ipcMain.handle('map-toggle', e => (fromBar(e) ? toggleMap('bar') : null));
@@ -1206,7 +1179,6 @@ app.whenReady().then(() => {
   /* запустила Windows — без вікон: лише трей; вхід — кліком по іконці чи Alt+Q (specs/009 FR-001, FR-002) */
   if (!autostarted) showLogin();
   createBar();
-  createHist();
   createStrip();
   createTray();
   /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */

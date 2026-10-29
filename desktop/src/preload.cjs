@@ -26,13 +26,9 @@ contextBridge.exposeInMainWorld('qhub', {
   onRulesChanged: cb => { ipcRenderer.on('rules-changed', () => cb()); },
   /* історія — окрема плашка: плашка пише й відкриває її, вікно історії читає й повертає вибране */
   histAdd: it => ipcRenderer.invoke('hist-add', it),
-  histToggle: () => ipcRenderer.invoke('hist-toggle'),
-  onHistPick: cb => { ipcRenderer.on('hist-pick', (_e, it) => cb(it)); },
   histData: () => ipcRenderer.invoke('hist-data'),
-  histPick: it => ipcRenderer.invoke('hist-pick', it),
   histDel: id => ipcRenderer.invoke('hist-del', id),
   histClear: () => ipcRenderer.invoke('hist-clear'),
-  histHide: () => ipcRenderer.invoke('hist-hide'),
   onHistChanged: cb => { ipcRenderer.on('hist-changed', () => cb()); },
   /* мапа Q-Hub поверх гри (specs/014): плашка відкриває, вікно мапи ховається */
   mapToggle: () => ipcRenderer.invoke('map-toggle'),
