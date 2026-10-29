@@ -102,9 +102,9 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
 }
 
 /* інструменти адміна на мапі: нова мітка (координати вписати або взяти кліком), багато міток рядками, нова категорія */
-export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat }: {
-  cats: MapCategory[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;
-  onMarks: (m: MapMark[]) => void; onCat: (c: MapCategory) => void;
+export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks, onCat, onReload }: {
+  cats: MapCategory[]; marks: MapMark[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;
+  onMarks: (m: MapMark[]) => void; onCat: (c: MapCategory) => void; onReload: () => void;
 }) {
   const own = cats.filter(c => !c.builtin);
   const [cat, setCat] = useState(own[0]?.id || '');
@@ -114,8 +114,9 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [mIcon, setMIcon] = useState<string | null>(null); const [mLabel, setMLabel] = useState(true);
   const [bulk, setBulk] = useState('');
-  /* звідки координати: з гри (як у нас) чи пікселі з мапи QuantFun — тоді переводимо самі */
-  const [src, setSrc] = useState<'game' | 'qf'>('game');
+  /* звідки координати: з гри (як у нас), пікселі з мапи QuantFun — тоді переводимо самі, чи Open Hydra Map (specs/017) —
+     там координати гри як є, але мітки йдуть партією: видно гравцям лише після «Опублікувати», відкат — одною дією */
+  const [src, setSrc] = useState<'game' | 'qf' | 'ohm'>('game');
   const conv = src === 'qf' ? fromQuantFun : undefined;
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const [cName, setCName] = useState(''); const [cGrp, setCGrp] = useState('Міні-ігри, квести й контракти');
@@ -145,12 +146,22 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
     if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
     if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }) }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
   }
+  /* попередній перегляд набору: рядки, помилки (зокрема поза мапою) і дублі — ближче 10 м до наявної мітки категорії */
+  const pre = parseBulk(bulk, conv);
+  const dups = pre.ok.filter(p => marks.some(m => m.category === cat && (m.x - p.x) ** 2 + (m.y - p.y) ** 2 < 100)).length;
   async function addBulk() {
     if (!cat) return setMsg('Вибери категорію.');
-    const r = parseBulk(bulk, conv);
-    if (r.bad.length) return setMsg(`Не зрозумів рядки: ${r.bad.join(', ')}. Формат: X, Y, назва (назву можна не писати).`);
+    const r = pre;
+    if (r.bad.length && src !== 'ohm') return setMsg(`Не зрозумів рядки: ${r.bad.join(', ')}. Формат: X, Y, назва (назву можна не писати).`);
     if (!r.ok.length) return setMsg('Немає жодного рядка з координатами.');
-    if (await insert(r.ok.map(p => ({ category_id: cat, name: p.name, note: '', x: p.x, y: p.y })))) setBulk('');
+    if (src !== 'ohm') { if (await insert(r.ok.map(p => ({ category_id: cat, name: p.name, note: '', x: p.x, y: p.y })))) setBulk(''); return; }
+    setBusy(true); setMsg('');
+    const { data, error } = await supabase!.rpc('import_map_batch', { p_category: cat, p_source: 'ohm', p_points: r.ok });
+    setBusy(false);
+    if (error) return setMsg(/import_map_batch/.test(error.message) ? 'Партій ще немає: запусти supabase/migrations/0033_map_batches_events.sql у Supabase → SQL Editor.' : dbErr(error.message));
+    const d = data as { added: number; skipped: number; outside: number };
+    setBulk(''); setMsg(`Партію завантажено: ${d.added} міток, пропущено дублів ${d.skipped}, поза мапою ${d.outside}. Гравці побачать її після «Опублікувати» нижче.`);
+    onReload();
   }
   async function addCat() {
     const n = cName.trim(); if (!n) return setMsg('Впиши назву категорії.');
@@ -178,7 +189,9 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
         <div className="mseg" role="radiogroup" aria-label="Звідки координати">
           <button type="button" role="radio" aria-checked={src === 'game'} onClick={() => setSrc('game')}>З гри / Q-Hub</button>
           <button type="button" role="radio" aria-checked={src === 'qf'} onClick={() => setSrc('qf')}>Пікселі QuantFun</button>
+          <button type="button" role="radio" aria-checked={src === 'ohm'} onClick={() => setSrc('ohm')}>Open Hydra Map</button>
         </div>
+        {src === 'ohm' && <p className="muted">Координати Open Hydra Map — це координати гри: X і Y з «Панелі трансформації» як є. Лише «Багато міток одразу», партією. Згода авторів — specs/012-halloween-banner.</p>}
         {src === 'qf' && <p className="muted">Впиши числа з мапи QuantFun як є — переведу в координати гри сам (похибка ~3 м). Для «Взяти з мапи» перемкни назад на «З гри».</p>}
         <div className="mrow">
           <input className="min mono" inputMode="decimal" placeholder="X" value={x} onChange={e => setX(e.target.value)} aria-label="X" />
@@ -191,10 +204,12 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
       </section>
       <section>
         <h4>Багато міток одразу</h4>
-        <p className="muted">У вибрану вище категорію{src === 'qf' ? ', пікселі QuantFun' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        <p className="muted">У вибрану вище категорію{src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
-        <button type="button" className="btn sm acc" disabled={busy || !bulk.trim()} onClick={addBulk}>Додати {parseBulk(bulk, conv).ok.length || ''} міток</button>
+        {bulk.trim() && <p className="muted" role="status">Рядків з координатами: {pre.ok.length}{pre.bad.length > 0 && <> · не зрозумів або поза мапою: {pre.bad.length} (рядки {pre.bad.slice(0, 8).join(', ')}{pre.bad.length > 8 ? '…' : ''})</>}{dups > 0 && <> · дублів (ближче 10 м): {dups} — їх пропущу</>}</p>}
+        <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
       </section>
+      <Batches cats={cats} onReload={onReload} setMsg={setMsg} />
       <section>
         <h4>Нова категорія</h4>
         <input className="min" placeholder="Назва, напр. Сміттєві баки" value={cName} onChange={e => setCName(e.target.value)} aria-label="Назва категорії" />
@@ -209,5 +224,42 @@ export default function MapAdmin({ cats, picked, picking, onPick, onMarks, onCat
       </section>
       {msg && <p className="mmsg" role="status">{msg}</p>}
     </details>
+  );
+}
+
+/* партії імпорту (specs/017): гравці бачать партію лише після «Опублікувати»; «Відкотити» прибирає всі її мітки (друге натискання — підтвердження) */
+type Batch = { id: number; category_id: string; source: string; count: number; published: boolean; created_at: string };
+const SRC_NAME: Record<string, string> = { ohm: 'Open Hydra Map', quantfun: 'QuantFun', game: 'з гри' };
+function Batches({ cats, onReload, setMsg }: { cats: MapCategory[]; onReload: () => void; setMsg: (m: string) => void }) {
+  const [list, setList] = useState<Batch[] | null>(null);
+  const [sure, setSure] = useState<number | null>(null);
+  const load = () => { supabase?.from('map_batches').select('id,category_id,source,count,published,created_at').order('created_at', { ascending: false }).then(({ data, error }) => setList(error ? null : (data as Batch[]))); };
+  useEffect(load, []);
+  async function act(b: Batch, kind: 'publish' | 'undo') {
+    if (kind === 'undo' && sure !== b.id) { setSure(b.id); setTimeout(() => setSure(s => (s === b.id ? null : s)), 3000); return; }
+    const { error } = kind === 'publish'
+      ? await supabase!.from('map_batches').update({ published: !b.published }).eq('id', b.id)
+      : await supabase!.from('map_batches').delete().eq('id', b.id);
+    if (error) return setMsg(dbErr(error.message));
+    setMsg(kind === 'undo' ? `Партію відкочено: прибрано ${b.count} міток.` : b.published ? 'Партію сховано від гравців.' : 'Партію опубліковано — гравці її бачать.');
+    setSure(null); load(); onReload();
+  }
+  if (!list?.length) return null;
+  const name = (id: string) => cats.find(c => c.id === id)?.name || id;
+  return (
+    <section>
+      <h4>Партії міток</h4>
+      <ul className="mbatches">
+        {list.map(b => (
+          <li key={b.id}>
+            <span><b>{name(b.category_id)}</b> · {b.count} міток · {SRC_NAME[b.source] || b.source}<small className="muted"> · {new Date(b.created_at).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })} · {b.published ? 'опубліковано' : 'бачить лише адмін'}</small></span>
+            <span className="mrow">
+              <button type="button" className={'btn sm ' + (b.published ? 'ghost' : 'acc')} onClick={() => act(b, 'publish')}>{b.published ? 'Сховати' : 'Опублікувати'}</button>
+              <button type="button" className="btn sm ghost" onClick={() => act(b, 'undo')}>{sure === b.id ? 'Так, відкотити' : 'Відкотити'}</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -465,6 +465,10 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 /* мітка: напівпрозорий розмитий фон, кругла обводка кольору категорії (колір і кільце — inline з MapPage) */
 .mpin { display: grid; place-items: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: rgba(16, 20, 26, .38); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(255, 106, 31, .22), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .12s; }
 .mpin-wrap:hover .mpin, .mpin-wrap:focus .mpin { transform: scale(1.12); }
+.mclu-wrap { background: none; border: 0; }
+/* група близьких міток великої категорії (specs/017): іконка категорії й кількість */
+.mclu { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 10px 0 4px; border-radius: 999px; background: rgba(16, 20, 26, .78); border: 2px solid var(--c); color: #fff; font: 700 12.5px var(--mono); white-space: nowrap; transform: translateX(-25%); }
+.mclu img { width: 24px; height: 24px; }
 /* картка точки (попап Leaflet) у стилі HUD-картки з макета */
 .mapel .leaflet-popup-content-wrapper { background: color-mix(in srgb, var(--surface) 95%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--fg); border: 1px solid rgba(255, 107, 0, .4); border-radius: 16px; box-shadow: 0 16px 40px -8px rgba(0, 0, 0, .8), 0 0 24px rgba(255, 107, 0, .2); }
 .mapel .leaflet-popup-tip { background: var(--surface); box-shadow: none; }
@@ -556,6 +560,8 @@ textarea.min { resize: vertical; }
 .micons button { display: grid; place-items: center; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2); cursor: pointer; }
 .micons button.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 .mmsg { font-size: 13px; color: var(--accent-hi); margin: 6px 0 0; }
+.mbatches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.mbatches li { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); }
 .mpop .mxy { font-size: 11.5px; }
 .mdel { margin-top: 6px; border: 1px solid #ef4444; color: #ef4444; background: none; border-radius: 8px; padding: 5px 8px; font: 600 12.5px var(--sans); cursor: pointer; }
 .mapbox.picking .mapel { cursor: crosshair; }
