@@ -18,5 +18,7 @@ describe('тема мапи для гри', () => {
     expect(recolor('#0a0e11', 'light')).toBe('#8fb3cc');
     expect(recolor('#ff6a1f', 'light')).toBe('#ff6a1f');
     expect(recolor('#0d0d0d', 'light')).toBe('#f3f4f6');   // обводка назв
+    expect(recolor('#fc71fe', 'light')).toBe('#3f1c40');   // рожевий текст — темно-фіолетовий,
+    expect(recolor('#3f1c40', 'light')).toBe('#f3f4f6');   // а його фіолетова обводка — світла, інакше зливаються
   });
 });
