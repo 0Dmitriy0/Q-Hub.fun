@@ -106,8 +106,8 @@
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: у кожного свій облік, склад і гараж.</p>
     <form class="addf" id="addf" hidden>
-      <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="31" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required pattern="[A-Z][a-zA-Z]{1,14}_[A-Z][a-zA-Z]{1,14}" title="Латиницею через «_», з великих літер: Dmitriy_Core"></label>
-      <label>Статік<input id="cstatic" inputmode="numeric" maxlength="9" placeholder="162183" autocomplete="off" required pattern="d{1,9}" title="Число з гри"></label>
+      <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="40" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required></label>
+      <label>Статік<input id="cstatic" inputmode="numeric" maxlength="12" placeholder="162183" autocomplete="off" required></label>
       <label>Баланс у грі зараз, $<input id="cstart" inputmode="numeric" placeholder="6 900 661" autocomplete="off"></label>
       <button id="cadd">Додати персонажа</button>
     </form>
