@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('qhub', {
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   character: id => ipcRenderer.invoke('character', id),
+  charAdd: p => ipcRenderer.invoke('char-add', p),
   site: path => ipcRenderer.invoke('site', path),
   cabinet: () => ipcRenderer.invoke('cabinet'),
   /* плашка входу: висота під вміст і хрестик у трей */
