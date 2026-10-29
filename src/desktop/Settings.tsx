@@ -19,13 +19,13 @@ const PIN_KEYS = ['Alt+F9', 'Alt+M', 'Ctrl+F9', 'Alt+X'];
 export type SetSec = 'main' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
 const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
 
-/* журнал оновлень (src/data/changelog.json): найновіший — першим; id — дата релізу */
+/* журнал оновлень (src/data/changelog.json): найновіший — першим; id — дата релізу, другий реліз того самого дня — «2026-10-29.2» */
 interface Entry { id: string; version?: string; title: string; added?: string[]; changed?: string[]; fixed?: string[] }
 export const CHANGES = (LOG as { entries: Entry[] }).entries;
 /* скільки записів журналу гравець ще не бачив: seen — id останнього побаченого (null — ще жодного) */
 export const unseenCount = (seen: string | null) => { const i = CHANGES.findIndex(e => e.id === seen); return i < 0 ? CHANGES.length : i; };
 const GROUPS: ['added' | 'changed' | 'fixed', string, string][] = [['added', 'Додано', 'good'], ['changed', 'Змінено', 'warn'], ['fixed', 'Виправлено', 'acc']];
-const dayOf = (id: string) => new Date(id + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+const dayOf = (id: string) => new Date(id.slice(0, 10) + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /* часті питання: [група, [питання, відповідь][]] */
 const FAQ: [string, [string, string][]][] = [
@@ -42,7 +42,7 @@ const FAQ: [string, [string, string][]][] = [
   ['ШІ й програма', [
     ['Скільки питань можна поставити ШІ', `${AI_DAY} на день, лічильник оновлюється о 00:00 за Києвом. Пошук у правилах (звичайний Enter) і записи сум — без ліміту.`],
     ['Як оновити програму', 'Коли вийде нова версія, на головній плашки й у меню іконки в треї з’явиться «Оновити». Програма перезапуститься сама.'],
-    ['Персонажа немає у списку', 'Створи його в кабінеті на сайті q-hub.fun («Налаштування → Персонажі») — після перезапуску програми він з’явиться тут.'],
+    ['Як додати персонажа', 'Тут, у програмі: меню персонажа → «Персонажі й профіль…», а якщо персонажа ще немає — одразу після входу через Discord. На сайті кабінет лише для перегляду.'],
   ]],
 ];
 
