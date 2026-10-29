@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useCharacterPick } from '../components/CharacterPick';
 import { money, parseMoney, when } from '../lib/format';
 import { GOOD, STALE, priceRange, rangePos, series, type Pt } from '../lib/pricestats';
 import { dur } from '../lib/events';
@@ -14,7 +15,7 @@ import { groupUpdates, who, type Update } from '../lib/updates';
 import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
-interface NextChange { buyer_id: string; next_change_at: string | null; game_name: string | null; static_id: number | null }
+interface NextChange { buyer_id: string; next_change_at: string | null; nick: string | null }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
 interface Unknown { id: number; buyer_id: string; text: string; seen_count: number; last_seen: string }
@@ -40,6 +41,7 @@ function Pic({ url, alt, size = 40 }: { url: string; alt: string; size?: number 
 
 export default function Prices() {
   const { isStaff, role, session, signIn } = useAuth();
+  const { pick: pickCharacter, dialog: pickDialog } = useCharacterPick();
   const isAdmin = role === 'admin';
   /* останні ціни з цього браузера видно одразу, без очікування бази */
   const [cached] = useState(() => readCache<Data>());
@@ -144,7 +146,7 @@ export default function Prices() {
         /* автор поточної ціни — останнє внесення гравця, якщо воно і є цією ціною; інакше ціна з імпорту */
         const u = ups.find(x => x.buyer_id === r.buyer_id && x.item_id === r.item_id);
         const mine = u && Math.abs(ms(u.created_at) - ms(r.price_at)) < 2000;
-        return { ...r, shown: r.price, at: r.price_at, by: mine ? who(u!) + (u!.reporter_static ? ' #' + u!.reporter_static : '') : r.price_at ? 'редактор' : '' };
+        return { ...r, shown: r.price, at: r.price_at, by: mine ? who(u!) : r.price_at ? 'редактор' : '' };
       })
       .sort((a, b) => {
         const byName = a.items!.name.localeCompare(b.items!.name, 'uk');
@@ -179,10 +181,15 @@ export default function Prices() {
   async function savePrice(r: Row) {
     const key = r.buyer_id + ':' + r.item_id, v = parseMoney(edit[key] ?? '');
     if (!(v > 0)) { setMsg(m => ({ ...m, [key]: 'Впиши ціну числом, наприклад 450 або 1,5к.' })); return; }
+    /* з якого персонажа (specs/025): 2–3 — питаємо, 1 — сам; скасував — нічого не записано */
+    const c = await pickCharacter();
+    if (!c) return;
+    if ('error' in c) { setMsg(m => ({ ...m, [key]: c.error })); return; }
     setSaving(key);
-    const { error } = await supabase!.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: v });
+    const { error } = await supabase!.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: v, character_id: c.id });
     setSaving('');
-    if (error) { setMsg(m => ({ ...m, [key]: error.message.startsWith('Ціна') || error.message.startsWith('Забагато') || error.message.startsWith('У цього') ? error.message : 'Не вдалося зберегти ціну. Спробуй ще раз.' })); return; }
+    /* відмови бази (межі, ліміт, нік, персонаж) написані для гравця — показуємо як є */
+    if (error) { setMsg(m => ({ ...m, [key]: error.code === 'P0001' ? error.message : 'Не вдалося зберегти ціну. Спробуй ще раз.' })); return; }
     setEdit(e => { const n = { ...e }; delete n[key]; return n; });
     setMsg(m => { const n = { ...m }; delete n[key]; return n; });
     reload(r.buyer_id);
@@ -224,6 +231,7 @@ export default function Prices() {
 
   return (
     <div className="bp">
+      {pickDialog}
       {/* смужка стану ринку — лише справжні числа з бази */}
       {buyers.length > 0 && <div className="bp-status">
         <span><span className="mdot good" aria-hidden="true" />Скупників: <b className="mono">{buyers.length}</b></span>
@@ -319,7 +327,7 @@ export default function Prices() {
                         <button type="button" className="btn sm ghost" onClick={() => { setNextEdit(null); setNextErr(''); }}>Скасувати</button>
                       </form>
                     : <b className="mono">{nxState === 'soon' ? `${when(nxAt).slice(-5)} · через ${dur(nxAt - tick)}` : nxState === 'passed' ? `була о ${when(nxAt).slice(-5)} — онови ціни` : 'невідомо'}</b>}
-                  {nextEdit === null && nxState !== 'none' && nx?.game_name && <small className="muted">вписав {nx.game_name}{nx.static_id ? ' #' + nx.static_id : ''}</small>}
+                  {nextEdit === null && nxState !== 'none' && nx?.nick && <small className="muted">вписав {nx.nick}</small>}
                   {nextErr && <small className="err" role="alert">{nextErr}</small>}
                   {nextEdit === null && session && <button type="button" className="btn sm ghost" onClick={() => setNextEdit({ h: '', m: '' })}>{nxState === 'soon' ? 'Оновити' : 'Вписати, через скільки'}</button>}
                 </div>
@@ -429,7 +437,7 @@ export default function Prices() {
                   const buyerLink = <a href={'#' + g.buyer_id} onClick={e => { e.preventDefault(); pick(g.buyer_id); }}>{buyerName(g.buyer_id)}</a>;
                   const one = g.items.length === 1, all = !one && g.items.length >= buyerSize(g.buyer_id);
                   return <li key={g.key}>
-                    <div className="ug-head"><b>{g.who}</b>{g.stat ? <span className="mono stat">#{g.stat}</span> : null}
+                    <div className="ug-head"><b>{g.who}</b>
                       <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
                       <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
                     <div className="ug-items">{one

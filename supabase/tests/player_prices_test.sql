@@ -16,33 +16,44 @@ end $$;
 -- гравець B (звичайний, не редактор) вносить ціну Окуня (межі 35–267)
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
--- без статіка ціну не прийме
+-- без ніка акаунта ціну не прийме (0038, specs/025)
 do $$ begin
   begin
     insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 150 from public.items where name = 'Окунь';
-    raise exception 'ціну прийнято без статіка';
+    raise exception 'ціну прийнято без ніка';
   exception when raise_exception then
-    if sqlerrm <> 'Спершу вкажи нік персонажа і статік у профілі.' then raise; end if;
+    if sqlerrm <> 'Спершу вибери нік акаунта.' then raise; end if;
   end;
 end $$;
--- статік вписує сам гравець; чужий (уже зайнятий) не візьме, роль собі не підніме
-update public.profiles set static_id = 12345, game_name = 'Ivan_Petrov' where id = auth.uid();
+-- нік і персонажа зі статіком гравець вписує сам; роль собі не підніме
+update public.profiles set nick = 'Ivan_P' where id = auth.uid();
 do $$ begin
-  assert (select static_id from public.profiles where id = auth.uid()) = 12345, 'статік не зберігся';
+  begin
+    insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 150 from public.items where name = 'Окунь';
+    raise exception 'ціну прийнято без персонажа';
+  exception when raise_exception then
+    if sqlerrm <> 'Спершу додай персонажа.' then raise; end if;
+  end;
+end $$;
+insert into public.characters (name, static_id) values ('Ivan_Petrov', 12345);
+do $$ begin
+  assert (select static_id from public.characters where owner = auth.uid()) = 12345, 'статік не зберігся';
   begin
     update public.profiles set role = 'admin' where id = auth.uid();
     raise exception 'гравець підняв собі роль';
   exception when insufficient_privilege then null;
   end;
 end $$;
+-- статік 777 — у персонажа гравця A (Dmitriy_Core з rls_test); чужий статік гравець не візьме
 reset role;
-update public.profiles set static_id = 777 where id = '00000000-0000-0000-0000-00000000000a';
+update public.characters set static_id = 777 where owner = '00000000-0000-0000-0000-00000000000a';
 set role authenticated;
 do $$ begin
   begin
-    update public.profiles set static_id = 777 where id = auth.uid();
+    update public.characters set static_id = 777 where owner = auth.uid();
     raise exception 'взяв чужий статік';
-  exception when unique_violation then null;
+  exception when raise_exception then
+    if sqlerrm <> 'Статік 777 уже має інший персонаж.' then raise; end if;
   end;
 end $$;
 insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 150 from public.items where name = 'Окунь';
@@ -65,7 +76,7 @@ do $$ declare r record; begin
   assert exists (select 1 from public.price_history where price = 160 and by = '00000000-0000-0000-0000-00000000000b'), 'в історії немає автора';
 end $$;
 -- інший гравець ту саму свіжу ціну не «підтвердить» заради бала
-update public.profiles set game_name = 'Dmitriy_Core' where id = '00000000-0000-0000-0000-00000000000a';
+update public.profiles set nick = 'Dmitriy_A' where id = '00000000-0000-0000-0000-00000000000a';
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
 do $$ begin
@@ -78,17 +89,17 @@ do $$ begin
 end $$;
 reset role;
 
--- гість бачить «хто оновив» і рейтинг, але лише ім'я
+-- гість бачить «хто оновив» (нік акаунта й Ім'я_Прізвище персонажа, без статіку) і рейтинг
 set role anon;
 do $$ begin
-  assert (select reporter_game || ' #' || reporter_static from public.price_updates order by created_at desc limit 1) = 'Ivan_Petrov #12345', 'немає ніка персонажа і статіка в оновленнях';
+  assert (select reporter_name || ' · ' || reporter_character from public.price_updates order by created_at desc limit 1) = 'Ivan_P · Ivan_Petrov', 'немає ніка й персонажа в оновленнях';
   assert (select total from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 1, 'рейтинг рахує не так';
   assert (select week + month + year from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 3, 'рейтинг за періоди рахує не так';
 end $$;
 reset role;
-\echo 'Ціни гравців ok: гість не вносить; межі ±10%; виправлення за 10 хв замінює, ту саму свіжу ціну не приймає; без ніка й статіка не приймає, статік унікальний; видно нік персонажа і статік; автор у ціні, історії й рейтингу'
+\echo 'Ціни гравців ok: гість не вносить; межі ±10%; виправлення за 10 хв замінює, ту саму свіжу ціну не приймає; без ніка й персонажа не приймає, статік унікальний; видно нік і персонажа; автор у ціні, історії й рейтингу'
 
--- час наступної зміни цін: гравець із ніком і статіком вписує, гість — ні, минулий час не приймається
+-- час наступної зміни цін: акаунт з ніком і персонажем зі статіком вписує, гість — ні, минулий час не приймається
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
 select public.set_next_change('fish', now() + interval '40 minutes');
@@ -98,7 +109,7 @@ do $$ begin
 end $$;
 set role anon;
 do $$ begin
-  assert (select game_name || ' #' || static_id from public.buyer_next_change where buyer_id = 'fish') = 'Ivan_Petrov #12345', 'не видно, хто вписав час';
+  assert (select nick from public.buyer_next_change where buyer_id = 'fish') = 'Ivan_P', 'не видно, хто вписав час';
   assert (select next_change_at from public.buyer_next_change where buyer_id = 'fish') > now() + interval '39 minutes', 'час не збережено';
   begin perform public.set_next_change('fish', now() + interval '1 hour'); raise exception 'гість вписав час';
   exception when insufficient_privilege then null; end;

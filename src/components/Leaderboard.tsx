@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { when } from '../lib/format';
 import Icon from './Icon';
 
-export interface Contributor { id: string; name: string; avatar_url: string | null; week: number; month?: number; year?: number; total: number; last_at: string; game_name?: string | null; static_id?: number | null }
+export interface Contributor { id: string; name: string; avatar_url: string | null; week: number; month?: number; year?: number; total: number; last_at: string }
 type Period = 'week' | 'month' | 'year' | 'total';
 const PERIODS: [Period, string][] = [['week', '7 днів'], ['month', 'Місяць'], ['year', 'Рік'], ['total', 'Весь час']];
 
+/* рейтинг на акаунт: name — нік у Q-Hub (зведення contributors, 0038), без статіку (specs/025) */
 /* рейтинг у вікні: кнопка в блоці оновлень, перемикач періоду, Esc або клік повз вікно закриває */
 export default function Leaderboard({ list }: { list: Contributor[] }) {
   const dlg = useRef<HTMLDialogElement>(null);
@@ -32,7 +33,7 @@ export default function Leaderboard({ list }: { list: Contributor[] }) {
           {rows.length
             ? <div className="scroll"><table className="t"><thead><tr><th>#</th><th>Гравець</th><th className="n">Оновлень</th><th>Останнє</th></tr></thead>
                 <tbody>{rows.map(({ c, n }, i) => <tr key={c.id} className={i < 3 ? 'podium' : ''}><td className="mono">{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</td>
-                  <td><span className="row who-cell">{c.avatar_url && <img src={c.avatar_url} alt="" width={22} height={22} className="ava" />}<b>{(c.game_name || '').trim() || c.name || 'гравець'}</b>{c.static_id ? <span className="muted mono">#{c.static_id}</span> : null}</span></td>
+                  <td><span className="row who-cell">{c.avatar_url && <img src={c.avatar_url} alt="" width={22} height={22} className="ava" />}<b>{c.name || 'гравець'}</b></span></td>
                   <td className="n">{n}</td><td>{when(c.last_at)}</td></tr>)}</tbody></table></div>
             : <div className="empty">{list.length ? 'За цей період ще ніхто не оновлював ціни.' : 'Рейтинг поки порожній. Перше оновлення ціни — і ти на першому місці.'}</div>}
         </div>

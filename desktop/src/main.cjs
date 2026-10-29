@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const cfg = require('./config.json');
 const { makeClient, login } = require('./auth.cjs');
 const { parseCharacter } = require('./character.cjs');
+const { parseNick } = require('./nick.cjs');
 const { fileStorage } = require('./store.cjs');
 const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
@@ -64,23 +65,29 @@ function openHub() {
   if (gate) { const g = gate; gate = null; g.destroy(); }
   return showBar();
 }
+/* чи вибрано нік акаунта (specs/025): null — ще не знаємо; без ніка плашка не відкривається, ціни база не приймає */
+let hasNick = null;
 async function state() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { user: null };
   const meta = session.user.user_metadata || {};
+  /* нік — акаунта (вибирає гравець), статік — у кожного персонажа свій (specs/025) */
   const [{ data: profile }, { data: chars, error }] = await Promise.all([
-    sb.from('profiles').select('game_name,static_id').eq('id', session.user.id).maybeSingle(),
-    sb.from('characters').select('id,name').order('created_at'),
+    sb.from('profiles').select('nick,nick_changed_at').eq('id', session.user.id).maybeSingle(),
+    sb.from('characters').select('id,name,static_id').order('created_at'),
   ]);
   if (error) return { user: null, error: 'Не вдалося завантажити персонажів. Перевір інтернет і спробуй ще раз.' };
-  const characters = chars || [];
+  hasNick = !!profile?.nick;
+  const characters = (chars || []).map(c => ({ id: c.id, name: c.name, static: c.static_id ?? null }));
   if (!characters.some(c => c.id === settings.character)) { settings.character = characters[0]?.id || null; saveSettings(); }
   return {
     user: { name: meta.custom_claims?.global_name || meta.full_name || meta.name || 'Гравець', avatar: meta.avatar_url || null,
-      gameName: profile?.game_name || '', staticId: profile?.static_id || null },
+      nick: profile?.nick || '', nickChangedAt: profile?.nick_changed_at || null },
     characters, character: settings.character,
   };
 }
+/* відмова бази з тригера (raise exception, код P0001) написана для гравця — показуємо як є; решта — загальний текст */
+const dbMsg = (error, fallback) => (error?.code === 'P0001' && error.message ? error.message : fallback);
 
 /* наші сторінки не переходять нікуди: посилання назовні — у браузер; як програма, а не сторінка — без масштабу й F5 */
 function guardPage(w) {
@@ -354,7 +361,8 @@ async function toggleBar() {
 }
 async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session || !settings.character) { showLogin(); return; }   // спершу вхід і персонаж
+  if (session && hasNick === null) await state().catch(() => {});   // після запуску ще не знаємо, чи вибрано нік
+  if (!session || !settings.character || hasNick === false) { showLogin(); return; }   // спершу вхід, нік і персонаж
   placeBar();
   raiseBar();
   bar.webContents.send('quick-show');
@@ -980,8 +988,16 @@ async function autoNextChange(buyer, at) {
 }
 async function autoPrices(rows) {
   let ok = 0;
-  for (const r of rows) if (!(await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop' })).error) ok++;
-  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}\n`); } catch { /* журнал не обов'язковий */ }
+  /* від персонажа, під яким зайшли в програму (specs/025 FR-014): ціни щойно зчитані, тож це той самий персонаж, що й у момент зчитування */
+  const character_id = settings.character;
+  let why = '';
+  for (const r of rows) {
+    const { error } = await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop', character_id });
+    if (!error) ok++; else if (error.code === 'P0001') why = error.message;
+  }
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}${why ? ' — ' + why : ''}\n`); } catch { /* журнал не обов'язковий */ }
+  /* без ніка база не приймає жодної ціни — один раз попросити вибрати нік (не на кожне сканування поверх гри) */
+  if (!ok && why === 'Спершу вибери нік акаунта.' && hasNick !== false) { hasNick = false; showLogin(); }
   if (ok) pricesAt = 0;   // плашка Alt+Q одразу покаже нові ціни
 }
 /* назва товару, якого немає в Q-Hub, — пропозиція адміну (specs/024, FR-010); без зв'язку — пропускаємо, це не критично */
@@ -1070,7 +1086,7 @@ app.whenReady().then(() => {
     if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(() => refreshRole().catch(() => {}), 0);   // F9 — лише для редакторів
     if (!bar) return;
     if (ev === 'TOKEN_REFRESHED' || ev === 'SIGNED_IN') tokens().then(t => bar?.webContents.send('session', t));
-    if (ev === 'SIGNED_OUT') { bar.webContents.send('session', null); bar.hide(); showLogin(); }
+    if (ev === 'SIGNED_OUT') { hasNick = null; bar.webContents.send('session', null); bar.hide(); showLogin(); }
   });
 
   ipcMain.handle('state', () => state());
@@ -1104,14 +1120,22 @@ app.whenReady().then(() => {
     const c = parseCharacter(p);
     if (c.error) return fail(c.error);
     const { name, stat, start } = c;
-    /* нік і статік — у профілі (з ними подаються ціни, specs 0007–0008); статік унікальний */
+    /* статік — у персонажа (specs/025): база перевіряє, що він вільний, а персонажів не більше трьох */
+    const { data, error } = await sb.from('characters').insert({ name, static_id: stat, start_balance: start }).select('id').single();
+    if (error) return fail(dbMsg(error, 'Не вдалося створити персонажа. Перевір інтернет і спробуй ще раз.'));
+    settings.character = data.id; saveSettings();
+    return state();
+  });
+  /* нік акаунта — з плашки входу й з налаштувань плашки; формат перевіряє і програма, і база */
+  ipcMain.handle('nick-set', async (e, s) => {
+    if (!fromGate(e) && !fromBar(e)) return null;
+    const fail = async error => ({ ...(await state()), error });
+    const n = parseNick(s);
+    if (n.error) return fail(n.error);
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return fail('Сесія закінчилась — увійди ще раз.');
-    const { error: pe } = await sb.from('profiles').update({ game_name: name, static_id: stat }).eq('id', session.user.id);
-    if (pe) return fail(pe.code === '23505' ? 'Цей статік уже прив’язаний до іншого акаунта. Перевір число або напиши адміну.' : 'Не вдалося зберегти статік. Перевір інтернет і спробуй ще раз.');
-    const { data, error } = await sb.from('characters').insert({ name, start_balance: start }).select('id').single();
-    if (error) return fail('Не вдалося створити персонажа. Перевір інтернет і спробуй ще раз.');
-    settings.character = data.id; saveSettings();
+    const { error } = await sb.from('profiles').update({ nick: n.nick }).eq('id', session.user.id);
+    if (error) return fail(dbMsg(error, 'Не вдалося зберегти нік. Перевір інтернет і спробуй ще раз.'));
     return state();
   });
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));

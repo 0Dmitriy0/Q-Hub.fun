@@ -62,6 +62,7 @@
     background: linear-gradient(150deg, #ff7a2e, #d9480f); box-shadow: 0 10px 22px -10px rgba(255, 106, 31, .8); }
   .tile .nm { max-width: 100%; font: 700 13.5px Manrope, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile.last { border-color: rgba(255, 107, 0, .7); box-shadow: 0 0 0 1px rgba(255, 107, 0, .35) inset; }
+  .tile .st { font: 600 11.5px 'JetBrains Mono', monospace; color: var(--muted); margin-top: -4px; }
   .tile .tag { position: absolute; top: 8px; right: 8px; font: 700 10px Manrope, sans-serif; color: var(--acc); background: rgba(255, 107, 0, .14); padding: 2px 7px; border-radius: 999px; }
   .tile.add { border-style: dashed; background: transparent; color: var(--muted); }
   .tile.add .ava { background: var(--surface); color: var(--muted); box-shadow: none; font: 600 28px Manrope, sans-serif; }
@@ -102,15 +103,27 @@
       <div><b id="name"></b><span class="muted" id="game"></span></div>
       <button class="out" id="logout">Вийти</button>
     </div>
-    <h2>Обери персонажа</h2>
-    <div class="tiles" id="tiles"></div>
-    <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: у кожного свій облік, склад і гараж.</p>
-    <form class="addf" id="addf" hidden>
-      <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="40" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required></label>
-      <label>Статік<input id="cstatic" inputmode="numeric" maxlength="12" placeholder="162183" autocomplete="off" required></label>
-      <label>Баланс у грі зараз, $<input id="cstart" inputmode="numeric" placeholder="6 900 661" autocomplete="off"></label>
-      <button id="cadd">Додати персонажа</button>
-    </form>
+    <!-- крок 1: нік акаунта — гравець вибирає сам; його бачать на сайті (specs/025) -->
+    <div id="nickstep" hidden>
+      <h2>Вибери нік у Q-Hub</h2>
+      <p class="muted" style="font-size:13px">Під цим ніком тебе бачать на сайті: у рейтингу й біля цін. Персонажі з Ім'ям_Прізвищем і статіком — далі.</p>
+      <form class="addf" id="nickf">
+        <label>Нік<input id="nick" maxlength="20" placeholder="D_VYRX" autocomplete="off" spellcheck="false" required></label>
+        <button id="nickgo">Далі</button>
+      </form>
+    </div>
+    <!-- крок 2: персонажі -->
+    <div id="chars" hidden>
+      <h2>Обери персонажа</h2>
+      <div class="tiles" id="tiles"></div>
+      <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: у кожного свій облік, склад і гараж.</p>
+      <form class="addf" id="addf" hidden>
+        <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="40" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required></label>
+        <label>Статік<input id="cstatic" inputmode="numeric" maxlength="12" placeholder="162183" autocomplete="off" required></label>
+        <label>Баланс у грі зараз, $<input id="cstart" inputmode="numeric" placeholder="6 900 661" autocomplete="off"></label>
+        <button id="cadd">Додати персонажа</button>
+      </form>
+    </div>
   </section>
 
   <p class="err" id="err" role="alert" hidden></p>

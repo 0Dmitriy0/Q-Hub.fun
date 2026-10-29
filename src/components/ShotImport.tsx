@@ -4,6 +4,7 @@ import { money, parseMoney } from '../lib/format';
 import { detectBuyer, mergeFrames, parseShot, type CatalogItem, type OcrLine } from '../lib/shotParse';
 import Icon from './Icon';
 import Select from './Select';
+import { useCharacterPick } from './CharacterPick';
 
 export interface ShotCatalog extends CatalogItem { min: number; max: number; price: number }
 interface Draft { key: string; item_id: number | ''; price: string; read: string; on: boolean; status?: 'ok' | string }
@@ -78,6 +79,7 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
   catalog: ShotCatalog[]; buyerName: (id: string) => string; onBuyer: (id: string) => void; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { pick, dialog: pickDialog } = useCharacterPick();
   const [busy, setBusy] = useState('');
   const [buyer, setBuyer] = useState('');
   const [rows, setRows] = useState<Draft[]>([]);
@@ -118,10 +120,14 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
   const chosen = rows.filter(r => r.on && r.item_id && parseMoney(r.price) > 0);
 
   async function submit() {
+    /* персонаж — один на весь скрін чи відео (specs/025): 2–3 — питаємо, скасував — нічого не внесено */
+    const c = await pick();
+    if (!c) return;
+    if ('error' in c) { setMsg(c.error); return; }
     setBusy('Вношу ціни…'); let ok = 0;
     for (const r of chosen) {
-      const { error } = await supabase!.from('price_reports').insert({ kind: 'buyer', buyer_id: buyer, item_id: r.item_id, price: parseMoney(r.price) });
-      const st = error ? (/^(Ціна|Ця ціна|Спершу|Забагато|У цього)/.test(error.message) ? error.message : 'не вдалося зберегти') : 'ok';
+      const { error } = await supabase!.from('price_reports').insert({ kind: 'buyer', buyer_id: buyer, item_id: r.item_id, price: parseMoney(r.price), character_id: c.id });
+      const st = error ? (error.code === 'P0001' ? error.message : 'не вдалося зберегти') : 'ok';
       if (!error) ok++;
       setRows(rs => rs.map(x => (x.key === r.key ? { ...x, status: st, on: !!error } : x)));
     }
@@ -132,6 +138,7 @@ export default function ShotImport({ catalog, buyerName, onBuyer, onDone }: {
   if (!open) return <button type="button" className="btn sm" onClick={() => setOpen(true)}><Icon name="camera" />Внести скріном або відео</button>;
   return (
     <section className="card shot" ref={box} aria-label="Внесення цін скріном або відео">
+      {pickDialog}
       <div className="row between"><h2 className="ih"><Icon name="camera" />Ціни зі скріна або відео</h2>
         <button type="button" className="btn sm ghost" onClick={() => { setOpen(false); setRows([]); setMsg(''); }}>Закрити</button></div>
       <label className="drop" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /^(image|video)\//.test(f.type)) handle(f); }}>

@@ -43,7 +43,8 @@ const FAQ: [string, [string, string][]][] = [
     ['Скільки питань можна поставити ШІ', `${AI_DAY} на день, лічильник оновлюється о 00:00 за Києвом. Пошук у правилах (звичайний Enter) і записи сум — без ліміту.`],
     ['Як оновити програму', 'Коли вийде нова версія, на головній плашки й у меню іконки в треї з’явиться «Оновити». Програма перезапуститься сама.'],
     ['Як видалити персонажа', 'Обери його, потім меню персонажа → «Персонажі й профіль…» → «Скинути дані» → «Видалити персонажа» і введи слово підтвердження. Його облік, склад і гараж зникнуть, ціни для скупників лишаться.'],
-    ['Як додати персонажа', 'Тут, у програмі: меню персонажа → «Персонажі й профіль…», а якщо персонажа ще немає — одразу після входу через Discord. На сайті кабінет лише для перегляду.'],
+    ['Як додати персонажа', 'Тут, у програмі: меню персонажа → «Персонажі й профіль…», а якщо персонажа ще немає — одразу після входу через Discord. У кожного персонажа свої Ім’я_Прізвище й статік, до трьох на акаунт. На сайті кабінет лише для перегляду.'],
+    ['Як змінити нік', 'Меню персонажа → «Персонажі й профіль…» → «Нік у Q-Hub». Нік — один на акаунт, його бачать на сайті; змінювати можна раз на 30 днів.'],
   ]],
 ];
 
@@ -64,7 +65,7 @@ function KeyRec({ value, set }: { value: string; set: (k: string) => void }) {
 
 export default function Settings({ prefs, save, staff, user, version, start = 'main', unseen, onSeen }: {
   prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; start?: SetSec; unseen: number; onSeen: () => void;
-  user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null;
+  user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null;
 }) {
   const [sec, setSec] = useState<SetSec>(start);
   const [fresh] = useState(unseen);   // «нове» лишається на записах, поки розділ відкритий, хоч їх уже позначено побаченими
@@ -77,8 +78,8 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
   return (
     <div className="sset">
       <aside className="snav">
-        {user && <div className="sme">{user.avatar ? <img src={user.avatar} alt="" /> : <span className="bava">{user.name[0]}</span>}
-          <div><b>{user.name}</b><small>{user.gameName ? `${user.gameName}${user.staticId ? ' #' + user.staticId : ''}` : 'нік — у кабінеті'}</small></div></div>}
+        {user && <div className="sme">{user.avatar ? <img src={user.avatar} alt="" /> : <span className="bava">{(user.nick || user.name)[0]}</span>}
+          <div><b>{user.nick || user.name}</b><small>Discord: {user.name}</small></div></div>}
         <nav>{NAV.map(([k, l, ico]) => <button key={k} aria-current={sec === k ? 'page' : undefined} onClick={() => setSec(k)}><Icon name={ico} size={16} />{l}{k === 'changes' && unseen > 0 && <span className="sdot" aria-label={`нових: ${unseen}`}>{unseen}</span>}</button>)}</nav>
         {version && <small className="sver">Q-Hub v{version}</small>}
       </aside>

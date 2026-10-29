@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Cabinet from '../pages/cabinet/Cabinet';
-import StaticGate from '../components/StaticGate';
+import NickGate from '../components/NickGate';
 import UpdateBanner from './UpdateBanner';
 
 /* головна плашки Alt+Q: кабінет (дашборд і розділи) під рядком пошуку.
@@ -13,7 +13,7 @@ export default function Hub() {
         <Route path="/kabinet/*" element={<Cabinet />} />
         <Route path="*" element={<Navigate to="/kabinet" replace />} />
       </Routes>
-      <StaticGate />
+      <NickGate />
       <UpdateBanner />
     </div>
   );

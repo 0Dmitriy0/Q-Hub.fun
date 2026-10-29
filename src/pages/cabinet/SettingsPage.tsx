@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { StaticForm } from '../../components/StaticGate';
+import { NickForm } from '../../components/NickGate';
 import Characters from './Characters';
 import type { Character } from './types';
 
@@ -50,9 +50,9 @@ export default function SettingsPage({ c }: { c: Character }) {
   return (
     <>
       <section className="card">
-        <h2>Профіль гравця</h2>
-        <p className="muted">Нік персонажа в грі і статік — за ними тебе бачать інші гравці на мапі й у цінах.</p>
-        <StaticForm onDone={() => setSaved(true)} />
+        <h2>Нік у Q-Hub</h2>
+        <p className="muted">Під ним тебе бачать на сайті: у рейтингу й біля цін. Змінювати — раз на 30 днів. Ім'я_Прізвище й статік — у кожного персонажа свої, нижче.</p>
+        <NickForm onDone={() => setSaved(true)} />
         {saved && <p className="good" role="status">Збережено.</p>}
       </section>
 

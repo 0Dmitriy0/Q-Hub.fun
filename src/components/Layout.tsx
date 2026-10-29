@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import ThemeToggle from './ThemeToggle';
-import StaticGate from './StaticGate';
+import NickGate from './NickGate';
 import Icon from './Icon';
 import Backdrop from './Backdrop';
 import AppOnline from './AppOnline';
@@ -52,7 +52,7 @@ export default function Layout() {
         </div>
       </header>
       <main><Outlet /></main>
-      <StaticGate />
+      <NickGate />
       <footer className="foot">
         <div className="foot-in">
           <div className="foot-top">

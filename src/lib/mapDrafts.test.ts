@@ -23,8 +23,8 @@ describe('чернетки міток', () => {
   });
 
   it('автор: нік у грі, інакше ім\'я, інакше «редактор»', () => {
-    expect(authorName({ who: { game_name: 'Dmitriy_Core', name: 'dima' } })).toBe('Dmitriy_Core');
-    expect(authorName({ who: { game_name: ' ', name: 'dima' } })).toBe('dima');
+    expect(authorName({ who: { nick: 'D_VYRX', name: 'dima' } })).toBe('D_VYRX');
+    expect(authorName({ who: { nick: ' ', name: 'dima' } })).toBe('dima');
     expect(authorName({ who: null })).toBe('редактор');
   });
 
@@ -44,7 +44,7 @@ describe('чернетки міток', () => {
     const points = [m('edge', 'bins', 30, 0), m('far', 'bins', 30.1, 0), m('other', 'atm', 1, 0), m('close', 'bins', 0, 10)];
     const drafts = [
       d({ id: 'self', x: 0, y: 0 }),
-      d({ id: 'twin', x: 0, y: -5, category_id: 'atm', who: { game_name: 'Vova', name: null } }),
+      d({ id: 'twin', x: 0, y: -5, category_id: 'atm', who: { nick: 'Vova', name: null } }),
       d({ id: 'done', x: 1, y: 1, status: 'published' }),
       d({ id: 'blind', x: null, y: null }),
       d({ id: 'away', x: 0, y: 30.1 }),

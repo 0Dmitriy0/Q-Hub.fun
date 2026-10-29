@@ -35,7 +35,7 @@ const BAR_NARROW = 820, BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; gameName: string; staticId: number | null } | null; characters: { id: string; name: string }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean; version?: string }
+interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean; version?: string }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[]; places?: PlaceHit[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
@@ -262,11 +262,12 @@ export default function Bar() {
           </div>
           <div className="bchar">
             <button className="bpill" onClick={() => setChars(c => !c)} aria-expanded={chars}>
-              {d?.user?.avatar ? <img src={d.user.avatar} alt="" /> : <span className="bava">{(ch?.name || 'Q')[0]}</span>}
-              <span>{ch?.name || 'Персонаж'}</span><Icon name="chev" size={14} />
+              {d?.user?.avatar ? <img src={d.user.avatar} alt="" /> : <span className="bava">{(d?.user?.nick || ch?.name || 'Q')[0]}</span>}
+              {/* зверху нік акаунта, під ним — вибраний персонаж зі статіком (specs/025): «D_VYRX» / «Dmitriy_Core #171028» */}
+              <span className="bwho"><b>{d?.user?.nick || d?.user?.name || 'Q-Hub'}</b><small>{ch ? ch.name + (ch.static ? ' #' + ch.static : '') : 'Персонаж'}</small></span><Icon name="chev" size={14} />
             </button>
             {chars && d && <div className="bmenu" role="menu">{d.characters.map(c => (
-              <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}</button>))}
+              <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}{c.static ? <small className="mono"> #{c.static}</small> : null}</button>))}
               <button onClick={() => go('/kabinet/nalashtuvannya')}>Персонажі й профіль…</button>
               <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}
           </div>
