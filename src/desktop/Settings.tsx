@@ -94,7 +94,7 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
             <Row t="Прозорість"><span className="row"><input type="range" min={60} max={100} value={Math.round(prefs.opacity * 100)} onChange={e => save({ opacity: Number(e.target.value) / 100 })} aria-label="Прозорість" /><b className="mono">{Math.round(prefs.opacity * 100)}%</b></span></Row>
           </div>
           <div className="scard">
-            <Row t="Запускати разом з Windows" d="Програма стартує у треї — плашка одразу під рукою"><Toggle on={!!prefs.autostart} set={v => save({ autostart: v })} label="Запускати разом з Windows" /></Row>
+            <Row t="Запускати разом з Windows" d="Q-Hub стартує тихо в треї, коли вмикаєш комп'ютер, — Alt+Q одразу під рукою"><Toggle on={!!prefs.autostart} set={v => save({ autostart: v })} label="Запускати разом з Windows" /></Row>
             <Row t="Оновлювати автоматично" d="Нова версія завантажується у фоні й ставиться, коли програмою 10 хв не користуються, або при виході"><Toggle on={prefs.autoUpdate !== false} set={v => save({ autoUpdate: v })} label="Оновлювати автоматично" /></Row>
             <Row t="Не ховати, коли повертаюсь у гру" d="Те саме, що шпилька в рядку"><Toggle on={prefs.pinned} set={v => save({ pinned: v })} label="Не ховати" /></Row>
             <Row t="Вкладка з найближчим івентом" d="Над рядком плашки"><Toggle on={prefs.tab} set={v => save({ tab: v })} label="Вкладка з івентом" /></Row>
