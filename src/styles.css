@@ -930,7 +930,7 @@ fieldset .static-form .btn { align-self: end; }
 .h-q-r { display: flex; flex-direction: column; align-items: flex-end; }
 .h-q-r b { color: var(--good); font-size: 14px; white-space: nowrap; }
 .h-q-r b small { color: var(--faint); font-weight: 500; }
-.h-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.h-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }   /* 6 карток — два рівні ряди */
 .start-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
 @media (max-width: 1000px) {
   .h-hero, .h-split { grid-template-columns: 1fr; }

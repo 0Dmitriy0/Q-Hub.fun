@@ -45,14 +45,14 @@ export default function Home() {
       {/* 1. перший екран */}
       <section className="h-hero">
         <div className="h-hero-txt">
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />Головний хаб гравців Quant RP</span>
-          <h1>Ціни, угоди й гроші персонажа — <span className="h-acc">в одному місці</span></h1>
+          <span className="h-pill"><span className="mdot" aria-hidden="true" />Хаб гравців Quant RP</span>
+          <h1>Усе для Quant RP — <span className="h-acc">прямо поверх гри</span></h1>
           <SitePromo />
-          <p className="h-lead">Мапа штату з мітками, яку можна поставити прямо в гру. Програма поверх GTA V: облік з екрана і пошук ціни за <kbd>Alt+Q</kbd>. Ціни скупників, які перевіряють самі гравці, і особистий облік, склад та гараж.</p>
+          <p className="h-lead">Мапа штату й ціни скупників від гравців — просто на сайті, а мапу можна поставити й у саму гру. Програма відкриває все це за <kbd>Alt+Q</kbd>, не виходячи з GTA V.</p>
           <div className="row">
             <Link className="btn acc" to="/mapa"><Icon name="map" />Відкрити мапу</Link>
-            <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>
-            <Link className="btn ghost" to="/tsiny"><Icon name="buyer" />Ціни скупників</Link>
+            <Link className="btn ghost" to="/programa"><Icon name="download" />Завантажити програму</Link>
+            <Link className="btn ghost" to="/tsiny"><Icon name="buyer" />Дізнатися ціни</Link>
           </div>
         </div>
         <Link className="h-promo" to="/mapa?show=pryvydy">
@@ -73,14 +73,14 @@ export default function Home() {
       <section className="h-sec" id="mapa">
         <div className="h-head">
           <span className="h-kicker"><Icon name="pin" size={16} />Мапа штату</span>
-          <h2>Інтерактивна мапа штату — і та сама мапа прямо в GTA V</h2>
-          <p className="muted">Шукай магазини, банди, роботи, графіті й НЛО на сайті або збери свою мінікарту для гри — без перемикання в браузер.</p>
+          <h2>Знайди будь-яку точку штату — на сайті чи просто в грі</h2>
+          <p className="muted">Магазини, роботи, скупники, поля полювання й скарбів, зелені зони — з пошуком і фільтрами. А потрібні мітки збери в мінікарту для GTA V.</p>
         </div>
         <div className="h-split">
           <MiniMap />
           <div className="h-side">
-            <div className="h-feat"><span className="ibub"><Icon name="map" /></span><div><h3>Мітки з пошуком</h3><p className="muted">Почни писати назву — мітки з'являться на мапі. Або вибери групу над мапою. Повна мапа — з фільтрами й зонами.</p></div></div>
-            <div className="h-feat"><span className="ibub"><Icon name="layers" /></span><div><h3>Мітки прямо в грі</h3><p className="muted">Галочками вибираєш назви, зелені зони й мітки — сайт збирає файли мінікарти для заміни через OpenIV.</p></div></div>
+            <div className="h-feat"><span className="ibub"><Icon name="map" /></span><div><h3>Почни писати — і мітка вже на мапі</h3><p className="muted">Набери «24/7» чи «риболовля» — мапа покаже всі збіги. Повна мапа — з фільтрами груп, полями й зонами.</p></div></div>
+            <div className="h-feat"><span className="ibub"><Icon name="layers" /></span><div><h3>Ті самі мітки — на мінікарті в грі</h3><p className="muted">Галочками вибираєш назви, зони й мітки — сайт збирає файли мінікарти, а ти ставиш їх через OpenIV.</p></div></div>
             <div className="h-dl">
               <span className="h-lbl"><span className="mdot good" aria-hidden="true" />Збирається на сайті · .zip</span>
               <h3>Мапа для Quant RP</h3>
@@ -99,19 +99,20 @@ export default function Home() {
         <div className="h-head row between">
           <div>
             <span className="h-kicker"><Icon name="bolt" size={16} />Програма для Windows</span>
-            <h2>Q-Hub поверх гри</h2>
-            <p className="muted">Легка програма, яка відкривається поверх GTA V за <kbd>Alt+Q</kbd> і веде облік за тебе.</p>
+            <h2>Уся програма — в одній плашці Alt+Q</h2>
+            <p className="muted">Кабінет, склад, гараж, облік і угоди відкриваються поверх GTA V — гру згортати не треба.</p>
           </div>
           <div className="h-hotkey"><img src="/brand/q-hub-logo.svg" alt="" width={40} height={40} /><span className="h-lbl">Виклик у грі</span><span><kbd>Alt</kbd> + <kbd>Q</kbd></span></div>
         </div>
         <div className="h-pillars">
-          <div className="card h-pillar"><span className="ibub"><Icon name="chart" /></span><span className="h-lbl">Облік</span><h3>Гроші з екрана — одразу в облік</h3><p className="muted">Програма бачить готівку й картку в HUD гри і пропонує записати зміну разом з місцем.</p><div className="h-ex mono"><span>Приклад запису</span><b>−1000 $ · Магазин 24/7</b></div></div>
-          <div className="card h-pillar"><span className="ibub"><Icon name="camera" /></span><span className="h-lbl">Ціни скупників</span><h3>Відкрив вікно скупника — ціни на сайті</h3><p className="muted">Ціни з вікна скупника йдуть у спільну базу від твого імені, з тими самими перевірками, що й ручне внесення.</p><div className="h-ex mono"><span>Хто вносить ціни</span><b>Гравці, а не адміни</b></div></div>
-          <div className="card h-pillar"><span className="ibub"><Icon name="spark" /></span><span className="h-lbl">Помічник</span><h3>Пиши своїми словами</h3><p className="muted">«Продав 10 гливи», «що вигідно здати?», «видали останній запис» — помічник показує, що запише, і пише лише після Enter.</p><div className="h-ex mono"><span>Alt+Q</span><b>«що вигідно здати?»</b></div></div>
+          <div className="card h-pillar"><span className="ibub"><Icon name="chart" /></span><span className="h-lbl">Облік</span><h3>Угода — одним рядком</h3><p className="muted">Напиши, що зробив, — програма покаже запис і збереже його лише після Enter. Готівку й картку вона бачить у HUD гри сама.</p><div className="h-ex mono"><span>Alt+Q</span><b>«продав 5 руди за 9к»</b></div></div>
+          <div className="card h-pillar"><span className="ibub"><Icon name="camera" /></span><span className="h-lbl">Ціни скупників</span><h3>Відкрив скупника — ціна вже на сайті</h3><p className="muted">Ціни з вікна скупника йдуть у спільну базу від твого імені, з тими самими перевірками, що й ручне внесення.</p><div className="h-ex mono"><span>Хто вносить ціни</span><b>Гравці, а не адміни</b></div></div>
+          {/* 50 — як AI_DAY у src/desktop/Settings.tsx і 0027_assistant_limit_50.sql */}
+          <div className="card h-pillar"><span className="ibub"><Icon name="spark" /></span><span className="h-lbl">Правила й помічник</span><h3>Правила сервера — під рукою</h3><p className="muted">Enter шукає в правилах сервера, Shift+Enter питає ШІ-помічника. 50 питань на день, ліміт оновлюється опівночі за Києвом.</p><div className="h-ex mono"><span>Alt+Q</span><b>«зелена зона»</b></div></div>
         </div>
         <div className="h-strip">
           <img src="/brand/q-hub-logo.svg" alt="" width={44} height={44} />
-          <div><h3>Тестова версія для Windows 10/11</h3><p className="muted">Не читає пам'ять гри й нічого в ній не натискає — лише знімки екрана, як OBS.</p></div>
+          <div><h3>Безкоштовно · Windows 10/11 · оновлюється сама</h3><p className="muted">Не читає пам'ять гри й нічого в ній не натискає — лише знімки екрана, як OBS.</p></div>
           <Link className="btn acc" to="/programa"><Icon name="download" />Завантажити програму</Link>
         </div>
       </section>
@@ -120,7 +121,7 @@ export default function Home() {
       <section className="grid two">
         <EventsBlock />
         <div className="card">
-          <div className="row between"><h2 className="ih"><Icon name="buyer" />Свіжі ціни скупників</h2><Link className="h-more" to="/tsiny">Вся таблиця →</Link></div>
+          <div className="row between"><h2 className="ih"><Icon name="buyer" />Знай ціну до того, як прийдеш до скупника</h2><Link className="h-more" to="/tsiny">Відкрити всі ціни →</Link></div>
           <div className="list">
             {!snap && <p className="empty">Завантажуємо ціни…</p>}
             {fresh.map(r => (
@@ -136,12 +137,14 @@ export default function Home() {
 
       {/* 5. що вміє */}
       <section className="h-sec">
-        <div className="h-head"><h2 className="ih"><Icon name="star" />Що вміє Q-Hub</h2></div>
+        <div className="h-head"><h2 className="ih"><Icon name="star" />Що ще вміє Q-Hub</h2></div>
         <div className="h-cards">
-          <div className="card"><span className="ibub"><Icon name="tag" /></span><h3>Скільки дати гравцю</h3><p className="muted">Пишеш товар — бачиш, за скільки його брати і кому продати дорожче.</p></div>
-          <div className="card"><span className="ibub"><Icon name="box" /></span><h3>Облік і склад</h3><p className="muted">Купив, продав, нафармив — Q-Hub рахує собівартість, прибуток і баланс.</p></div>
-          <div className="card"><span className="ibub"><Icon name="car" /></span><h3>Гараж і транспорт</h3><p className="muted">Авто, тюнінг, державна й ринкова вартість кожної машини штату.</p></div>
-          <div className="card"><span className="ibub"><Icon name="jobs" /></span><h3>Довідник робіт</h3><p className="muted">Усі роботи з рівнем, оплатою і точкою на мапі — <Link to="/wiki/roboty">дивитися</Link>.</p></div>
+          <div className="card"><span className="ibub"><Icon name="tag" /></span><h3>Кому продати дорожче</h3><p className="muted">Набери «руда» — побачиш ціну в кожного скупника й де здати вигідніше. <Link to="/tsiny">Дізнатися ціни</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="box" /></span><h3>Облік, що рахує сам</h3><p className="muted">Купив, продав, нафармив — Q-Hub рахує собівартість, прибуток і що лежить на складі. <Link to="/kabinet">Відкрити кабінет</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="car" /></span><h3>Скільки коштує машина</h3><p className="muted">Державна й ринкова вартість кожного авто й човна штату — з фото з гри. <Link to="/wiki/transport">Переглянути транспорт</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="jobs" /></span><h3>Де заробити</h3><p className="muted">Усі роботи з рівнем, оплатою й точкою на мапі. <Link to="/wiki/roboty">Переглянути роботи</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="shield" /></span><h3>Правила сервера в Alt+Q</h3><p className="muted">Набери «зелена зона» — програма знайде пункт правил, не виходячи з гри. <Link to="/programa">Завантажити програму</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="clock" /></span><h3>Івенти й промокоди</h3><p className="muted">Сезонні івенти й діючі промокоди сервера — з датами, просто на головній. <a href="#iventy">Переглянути івенти</a></p></div>
         </div>
       </section>
 
