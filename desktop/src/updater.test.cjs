@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT, updateDirs } = require('./updater.cjs');
+const { IDLE, reduce, createUpdater, installPending, INSTALL_WAIT, updateDirs, installDue, IDLE_BEFORE_INSTALL, RETRY_AFTER_FAIL } = require('./updater.cjs');
 
 const run = (...evs) => evs.reduce(reduce, IDLE);
 
@@ -83,4 +83,63 @@ test('файли оновлення — поруч з текою програм�
   assert.deepEqual(updateDirs(String.raw`D:\Q-HUB\Q-Hub.exe`), { root: String.raw`D:\Q-HUB-update`, cache: String.raw`D:\Q-HUB-update\cache`, temp: String.raw`D:\Q-HUB-update\temp` });
   const d = updateDirs(String.raw`C:\Users\U\AppData\Local\Programs\Q-Hub\Q-Hub.exe`);
   assert.equal(d.root, String.raw`C:\Users\U\AppData\Local\Programs\Q-Hub-update`);   // не всередині теки програми: її очищає інсталятор
+});
+
+/* specs/006: автооновлення */
+test('автооновлення: нова версія завантажується сама, але не ставиться, поки не скажуть', () => {
+  const u = fake(), seen = [];
+  const up = createUpdater({ autoUpdater: u, onChange: s => seen.push(s.status), beforeInstall: () => {}, auto: () => true });
+  u.emit('update-available', { version: '0.4.1' });
+  u.emit('update-downloaded', { version: '0.4.1' });
+  assert.deepEqual(u.calls, ['download']);
+  assert.equal(up.state().status, 'ready');
+  assert.equal(up.installNow(), true);
+  assert.deepEqual(u.calls, ['download', 'install false true']);   // після простою — з вікном і перезапуском
+});
+
+test('автооновлення при виході — з вікном, без перезапуску; без завантаженого — нічого', () => {
+  const u = fake();
+  const up = createUpdater({ autoUpdater: u, onChange: () => {}, beforeInstall: () => {}, auto: () => true });
+  assert.equal(up.installNow({ restart: false }), false);
+  u.emit('update-available', { version: '0.4.1' });
+  u.emit('update-downloaded', { version: '0.4.1' });
+  assert.equal(up.installNow({ restart: false }), true);
+  assert.deepEqual(u.calls, ['download', 'install false false']);
+});
+
+test('фонове завантаження впало — тихо, без тексту помилки; наступна перевірка завантажить знову', () => {
+  const u = fake();
+  const up = createUpdater({ autoUpdater: u, onChange: () => {}, beforeInstall: () => {}, auto: () => true });
+  u.emit('update-available', { version: '0.4.1' });
+  u.emit('error', new Error('net'));
+  assert.equal(up.state().status, 'available'); assert.equal(up.state().error, null);
+  up.check(); u.emit('update-available', { version: '0.4.1' });
+  assert.deepEqual(u.calls, ['download', 'check', 'download']);
+});
+
+test('кнопка під час фонового завантаження — друге не стартує, ставиться одразу після', () => {
+  const u = fake();
+  const up = createUpdater({ autoUpdater: u, onChange: () => {}, beforeInstall: () => {}, auto: () => true });
+  u.emit('update-available', { version: '0.4.1' });
+  up.install();
+  u.emit('update-downloaded', { version: '0.4.1' });
+  assert.deepEqual(u.calls, ['download', 'install false true']);
+});
+
+test('вимкнене автооновлення — як раніше, лише кнопка', () => {
+  const u = fake();
+  createUpdater({ autoUpdater: u, onChange: () => {}, beforeInstall: () => {}, auto: () => false });
+  u.emit('update-available', { version: '0.4.1' });
+  assert.deepEqual(u.calls, []);
+});
+
+test('коли ставити саме: 10 хв простою, програма не відкрита, не частіше раз на 3 год після невдачі', () => {
+  const now = 10_000_000, ok = { status: 'ready', auto: true, idleMs: IDLE_BEFORE_INSTALL, busy: false, failAt: undefined, now };
+  assert.equal(installDue(ok), true);
+  assert.equal(installDue({ ...ok, idleMs: IDLE_BEFORE_INSTALL - 1 }), false);
+  assert.equal(installDue({ ...ok, busy: true }), false);
+  assert.equal(installDue({ ...ok, auto: false }), false);
+  assert.equal(installDue({ ...ok, status: 'downloading' }), false);
+  assert.equal(installDue({ ...ok, failAt: now - 60e3 }), false);
+  assert.equal(installDue({ ...ok, failAt: now - RETRY_AFTER_FAIL }), true);
 });

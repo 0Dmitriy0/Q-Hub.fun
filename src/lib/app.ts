@@ -16,7 +16,7 @@ interface Bridge {
   onUpdate?: (cb: (s: UpdateState) => void) => () => void;
 }
 /* оновлення програми (desktop/src/updater.cjs); current — встановлена версія */
-export interface UpdateState { status: 'idle' | 'available' | 'downloading' | 'ready'; version: string | null; percent: number; error: string | null; current?: string }
+export interface UpdateState { status: 'idle' | 'available' | 'downloading' | 'ready'; version: string | null; percent: number; error: string | null; current?: string; auto?: boolean }
 
 export const desktop: Bridge | undefined = typeof window !== 'undefined'
   ? (window as unknown as { qhub?: Bridge }).qhub
