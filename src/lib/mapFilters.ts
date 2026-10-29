@@ -27,3 +27,8 @@ export function toggled(cats: Cat[], f: Filters, ids: string[], v: boolean): Rec
   for (const id of ids) n[id] = v;
   return n;
 }
+
+/* хто що може на мапі: у вікні програми (embed, specs/014 FR-014) — лише перегляд, навіть для admin; права однаково в RLS */
+export function mapRights(role: string | null | undefined, isStaff: boolean, embed: boolean): { isAdmin: boolean; isStaff: boolean } {
+  return { isAdmin: role === 'admin' && !embed, isStaff: isStaff && !embed };
+}

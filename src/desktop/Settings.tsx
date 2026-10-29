@@ -88,6 +88,9 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
             <Row t="Гаряча клавіша" d="Показати чи сховати плашку">
               <span className="row">{prefs.hotkey !== 'Alt+Q' && <button className="slink" onClick={() => save({ hotkey: 'Alt+Q' })}>скинути</button>}<KeyRec value={prefs.hotkey} set={k => save({ hotkey: k })} /></span>
             </Row>
+            <Row t="Мапа Q-Hub" d="Показати чи сховати мапу поверх гри">
+              <span className="row">{(prefs.mapKey || 'Alt+M') !== 'Alt+M' && <button className="slink" onClick={() => save({ mapKey: 'Alt+M' })}>скинути</button>}<KeyRec value={prefs.mapKey || 'Alt+M'} set={k => save({ mapKey: k })} /></span>
+            </Row>
             <Row t="Де з’являється">
               <div className="bseg sm">{([['top', 'Зверху'], ['center', 'По центру'], ['bottom', 'Знизу']] as const).map(([k, l]) => <button key={k} aria-pressed={prefs.position === k} onClick={() => save({ position: k })}>{l}</button>)}</div>
             </Row>
@@ -130,7 +133,7 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
         </>}
         {sec === 'keys' && <div className="scard">
           {([['Показати чи сховати плашку', prefs.hotkey], ['Пошук у правилах або записати суму', 'Enter'], ['Спитати ШІ', 'Shift+Enter'], ['Пошук ↔ Ціни', 'Tab'],
-            ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'],
+            ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'], ['Мапа Q-Hub поверх гри', prefs.mapKey || 'Alt+M'], ['«Де я?» — з відкритою великою картою гри', prefs.mapKey || 'Alt+M'],
             ...(staff ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
         </div>}
         {sec === 'changes' && <>
