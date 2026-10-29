@@ -9,7 +9,7 @@ import { buyers, places, pos, type BarPrice, type BuyerHit, type PlaceHit } from
 import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import { matchCats } from './catMatch';
-import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isSellQuestion, sellAdvice, type Sell } from './sellAdvice';
@@ -64,7 +64,7 @@ const OPS: Record<Op, string> = { buy: 'Купив', farm: 'Нафармив', s
 const DEAL = /^\s*((на)?фарм|зібра|накопа|налов|добу|нарубав|нарубала|назбира|купи|скупи|прикупи|прода|зда|збув)/i;
 /* пошук у правилах сервера без ШІ — і для Enter, і для повтору з історії */
 /* пошук без ШІ: правила сервера й місця на мапі (specs/014) */
-const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах сервера й на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits, places: pl }; };
+const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits, places: pl }; };
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
 const sum = (type: 'in' | 'out', n: number) => <b className={type === 'in' ? 'good' : 'bad'}>{type === 'in' ? '+' : '−'}{money(n)}</b>;
@@ -288,7 +288,7 @@ export default function Bar() {
 
         <div className="bhint">
           {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника')}</span>}
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника')}</span>}
           <span className="bkeys">{mode === 'ai'
             ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
             : <span className="on"><kbd>↑</kbd><kbd>↓</kbd>вибір</span>}
@@ -313,7 +313,9 @@ function RuleCard({ h }: { h: RuleHit }) {
   const long = body.length > 260 || body.split('\n').length > 4;
   return <li className="brule">
     <div className="brule-top">
-      {h.n && <span className="bpunkt">п. {h.n}</span>}
+      {/* правила сервера карає адміністрація, закони штату — гра: гравцю важливо бачити, що саме порушує (specs/010 FR-005) */}
+      <span className={'bkindtag ' + h.kind}>{KIND[h.kind]}</span>
+      {h.n && <span className="bpunkt">{numLabel(h.kind, h.n)}</span>}
       <a href={h.url} target="_blank" rel="noreferrer" title="Відкрити тему на форумі">{h.topic}</a>
     </div>
     <p className={long && !open ? 'clamp' : ''}>{body}</p>
@@ -322,8 +324,8 @@ function RuleCard({ h }: { h: RuleHit }) {
     {more && <p className="bextra">{more}</p>}
   </li>;
 }
-/* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)» — помітні, щоб було видно, звідки відповідь */
-const cites = (t: string) => t.split(/(\([^()]*п\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
+/* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)», «(Кримінальний кодекс, ст. 6.5)» — помітні, щоб було видно, звідки відповідь */
+const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
 
 function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string }) {
   const a = asks[sel];
@@ -343,7 +345,7 @@ function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; set
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
             <img src={asset(h.icon)} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></button></li>)}</ul>
         </>}
-        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила сервера{a.hits.length ? ` · ${a.hits.length} збігів` : ''}</div>}
+        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
