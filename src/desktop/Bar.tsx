@@ -8,6 +8,7 @@ import { money, when } from '../lib/format';
 import { buyers, places, pos, type BarPrice, type BuyerHit, type PlaceHit } from './barSearch';
 import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
+import History, { type HistPick } from './History';
 import { matchCats } from './catMatch';
 import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
@@ -42,8 +43,7 @@ type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
-  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; histToggle(): Promise<boolean>; mapToggle(): Promise<boolean>;
-  onHistPick(cb: (it: { kind: 'ai' | 'search' | 'tx'; q?: string; reply?: string }) => void): void;
+  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; mapToggle(): Promise<boolean>;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
   quickParse(t: string, buyer?: string | null): Promise<Rule>;
   quickAdd(t: string, buyer?: string | null): Promise<Res>; quickAsk(t: string, rules: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
@@ -137,15 +137,6 @@ export default function Bar() {
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
-    /* вибрали рядок в історії: пошук і відповідь ШІ — показати знову без нового запиту, запис — облік */
-    api.onHistPick(it => {
-      setChars(false); setNote(null); setSel(0);
-      if (it.kind === 'tx' || !it.q) { nav('/kabinet/oblik'); setQ(''); setView('hub'); return; }
-      const text = it.q;
-      setQ(text); setMode('ai'); setView('main');
-      setAsks(a => [it.kind === 'ai' ? { q: text, reply: it.reply || '', actions: [], done: true } : askRules(text), ...a].slice(0, 30));
-      setTimeout(() => input.current?.focus(), 0);
-    });
     loadPlaces();
     const pullRules = () => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
     pullRules(); api.onRulesChanged?.(pullRules);
@@ -224,7 +215,16 @@ export default function Bar() {
     setNote(r.error ? { text: r.error, bad: true } : { text: `Записано · ${r.character}` }); if (!r.error) { setQ(''); load(); }
   }
   /* історія — окрема плашка ліворуч (src/desktop/History.tsx) */
-  async function toggleHistory() { setHistOn(await api.histToggle()); }
+  /* історія — ліва колонка плашки, поки її не закрили (specs: «показуй тут завжди історію») */
+  function toggleHistory() { setHistOn(h => !h); setMode('ai'); setView('main'); setChars(false); }
+  /* вибрали рядок в історії: пошук і відповідь ШІ — праворуч без нового запиту (ліміт ШІ не витрачається), запис — облік */
+  function pickHist(it: HistPick) {
+    setChars(false); setNote(null); setSel(0);
+    if (it.kind === 'tx' || !it.q) { setHistOn(false); nav('/kabinet/oblik'); setQ(''); setView('hub'); return; }
+    const text = it.q;
+    setQ(text); setView('main');
+    setAsks(a => [it.kind === 'ai' ? { q: text, reply: it.reply || '', actions: [], done: true } : askRules(text), ...a].slice(0, 30));
+  }
   /* мапа Q-Hub — окрема плашка під цією, праворуч від історії (map.html, specs/014) */
   async function toggleMap() { setMapOn(await api.mapToggle()); }
 
@@ -242,7 +242,7 @@ export default function Bar() {
     }
   }
 
-  const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy)));
+  const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy || histOn)));
   useLayoutEffect(() => { fit(); }, [expanded, fit]);
   const ch = d?.characters.find(c => c.id === d.character);
   const aiNext = mode === 'ai' && shift;
@@ -294,7 +294,7 @@ export default function Bar() {
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q}
              pick={t => { setQ(t); setTimeout(() => input.current?.focus(), 0); }} /> :
-           <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} run={ask} q={q} />}
+           <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} run={ask} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 
         <div className="bhint">
@@ -338,17 +338,18 @@ function RuleCard({ h }: { h: RuleHit }) {
 /* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)», «(Кримінальний кодекс, ст. 6.5)» — помітні, щоб було видно, звідки відповідь */
 const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
 
-function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string }) {
+/* left — історія замість списку запитів цієї сесії, коли натиснуто «Історія» */
+function Ai({ asks, sel, setSel, busy, run, q, left }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string; left?: React.ReactNode }) {
   const a = asks[sel];
   const kind = (x: Ask) => (x.error ? 'err' : x.sells ? 'sell' : x.hits ? 'rules' : x.actions.length ? 'plan' : 'ai');
   const meta = (x: Ask) => x.error ? 'помилка' : x.sells ? (x.sells.length ? `склад · ${x.sells.length}` : 'на складі нічого продати') : x.hits ? (x.hits.length || x.places?.length ? [x.places?.length && `місця · ${x.places.length}`, x.hits.length && `правила · ${x.hits.length}`].filter(Boolean).join(' · ') : 'нічого не знайдено') : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь ШІ';
   const ICO = { rules: 'search', ai: 'spark', plan: 'coin', err: 'x', sell: 'tag' } as const;
   return <>
-    <div className="bleft">
+    <div className="bleft">{left ?? <>
       {busy && <div className="brow item on"><span className="bkico ai"><Icon name="spark" size={15} /></span><span><b>{q.trim()}</b><small>ШІ думає…</small></span></div>}
       {asks.map((x, i) => <button key={i} className={'brow item' + (!busy && i === sel ? ' on' : '')} onClick={() => setSel(i)}>
         <span className={'bkico ' + kind(x)}><Icon name={ICO[kind(x)]} size={15} /></span><span><b>{x.q}</b><small>{meta(x)}</small></span></button>)}
-    </div>
+    </>}</div>
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
       {a.sells ? <SellList sells={a.sells} /> : a.hits ? <>
         {a.places && a.places.length > 0 && <>
@@ -368,7 +369,7 @@ function Ai({ asks, sel, setSel, busy, run, q }: { asks: Ask[]; sel: number; set
         {a.done && a.actions.length > 0 && <p className="good">Записано в облік.</p>}
         {!a.error && !a.actions.length && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
-    </> : null}</div>
+    </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>
   </>;
 }
 

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../components/Icon';
 import { money } from '../lib/format';
 
-/* Історія — окрема плашка ліворуч від плашки Alt+Q, як у помічників для RP-серверів.
-   Пошуки в правилах і питання до ШІ програма зберігає в себе (history.json), записи обліку — з бази.
-   Клік по рядку повертає його в плашку: пошук і відповідь ШІ — без нового запиту (ліміт ШІ не витрачається), запис — облік. */
+/* Історія — ліва колонка плашки Alt+Q (кнопка «Історія»): пошуки в правилах і питання до ШІ програма зберігає в себе
+   (history.json), записи обліку — з бази. Клік по рядку показує його праворуч: пошук і відповідь ШІ — без нового запиту
+   (ліміт ШІ не витрачається), запис — облік. Колонка лишається історією, поки її не закрили. */
 
 type Kind = 'ai' | 'search' | 'tx';
 interface Item { id: string; kind: 'ai' | 'search'; q: string; reply: string; ts: string }
@@ -12,10 +12,18 @@ interface Tx { id: string; type: 'in' | 'out'; amount: number; category: string;
 /* tone — колір суми запису: прибуток зелений, витрата червона */
 type Row = { id: string; kind: Kind; title: string; sub: string; ts: string; item: unknown; tone?: 'good' | 'bad' };
 interface HistApi {
-  histData(): Promise<{ items: Item[]; tx: Tx[] } | null>; histPick(it: unknown): Promise<void>;
-  histDel(id: string): Promise<void>; histClear(): Promise<void>; histHide(): Promise<void>; onHistChanged(cb: () => void): void;
+  histData(): Promise<{ items: Item[]; tx: Tx[] } | null>;
+  histDel(id: string): Promise<void>; histClear(): Promise<void>; onHistChanged(cb: () => void): void;
 }
 const api = (window as unknown as { qhub: HistApi }).qhub;
+export type HistPick = { kind: 'ai' | 'search'; q: string; reply: string } | { kind: 'tx' };
+/* слухач ipc — один на всю плашку: колонку відкривають і закривають багато разів, а ipcRenderer.on лише додає слухачів */
+const subs = new Set<() => void>();
+let hooked = false;
+function onChanged(cb: () => void) {
+  if (!hooked) { api.onHistChanged(() => subs.forEach(f => f())); hooked = true; }
+  subs.add(cb); return () => { subs.delete(cb); };
+}
 
 const TABS: [Kind | 'all', string][] = [['all', 'Усе'], ['ai', 'ШІ'], ['search', 'Пошук'], ['tx', 'Записи']];
 const ICO: Record<Kind, string> = { ai: 'spark', search: 'search', tx: 'coin' };
@@ -28,14 +36,14 @@ function day(ts: string) {
   return n === 0 ? 'Сьогодні' : n === 1 ? 'Вчора' : d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 }
 
-export default function History() {
+export default function History({ onPick, onClose }: { onPick: (it: HistPick) => void; onClose: () => void }) {
   const [data, setData] = useState<{ items: Item[]; tx: Tx[] }>({ items: [], tx: [] });
   const [tab, setTab] = useState<Kind | 'all'>('all');
   const [q, setQ] = useState('');
   const find = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const load = () => api.histData().then(d => d && setData(d));
-    load(); api.onHistChanged(() => { load(); find.current?.focus(); });
+    load(); return onChanged(load);
   }, []);
 
   const rows = useMemo(() => {
@@ -53,11 +61,11 @@ export default function History() {
   }, [rows]);
 
   return (
-    <div className="hwrap" onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); if (q) setQ(''); else api.histHide(); } }}>
+    <div className="hwrap hin" onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (q) setQ(''); else onClose(); } }}>
       <div className="hbox">
         <header className="hhead">
           <b>Історія</b>
-          <button className="bico" title="Сховати · Esc" aria-label="Сховати" onClick={() => api.histHide()}><Icon name="x" size={16} /></button>
+          <button className="bico" title="Закрити історію · Esc" aria-label="Закрити історію" onClick={onClose}><Icon name="x" size={16} /></button>
         </header>
         <div className="hfind"><Icon name="search" size={16} /><input ref={find} value={q} onChange={e => setQ(e.target.value)} placeholder="Знайти в історії" aria-label="Знайти в історії" autoFocus /></div>
         <div className="bseg sm hseg" role="group" aria-label="Що показати">{TABS.map(([k, l]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}</div>
@@ -67,7 +75,7 @@ export default function History() {
               <h4>{g}</h4>
               {list.map(r => (
                 <div key={r.id} className="hrow">
-                  <button className="hpick" onClick={() => api.histPick(r.item)}>
+                  <button className="hpick" onClick={() => onPick(r.item as HistPick)}>
                     <span className={'bkico ' + (r.kind === 'ai' ? 'ai' : r.kind === 'tx' ? 'plan' : 'rules')}><Icon name={ICO[r.kind]} size={15} /></span>
                     <span><b className={r.tone}>{r.title}</b><small>{hm(r.ts)} · {KIND[r.kind]}{r.sub ? ` · ${r.sub}` : ''}</small></span>
                   </button>

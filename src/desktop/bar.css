@@ -222,6 +222,10 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 
 /* ---------- історія: окрема плашка ліворуч від плашки (History.tsx) ---------- */
 .hwrap { height: 100vh; padding: 0 0 4px; }
+/* історія в лівій колонці плашки: без своєї рамки, прокручується список, а не колонка */
+.hin { height: 100%; padding: 0; }
+.hin .hbox { padding: 0; background: none; border: 0; border-radius: 0; }
+.bleft:has(.hin) { overflow: hidden; }
 .hbox { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; overflow: hidden; }
 .hhead { display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 0 6px; }
 .hhead b { font-size: 15px; }
