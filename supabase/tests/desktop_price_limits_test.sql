@@ -7,8 +7,11 @@ insert into auth.users (id, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000f5', '{"full_name":"AppUser"}'),
   ('00000000-0000-0000-0000-0000000000f6', '{"full_name":"AppAdmin"}')
   on conflict (id) do nothing;
-update public.profiles set role = 'user', static_id = 50005, game_name = 'App_User' where id = '00000000-0000-0000-0000-0000000000f5';
-update public.profiles set role = 'admin', static_id = 50006, game_name = 'App_Admin' where id = '00000000-0000-0000-0000-0000000000f6';
+-- нік акаунта й персонаж зі статіком — умова подачі ціни (0038)
+update public.profiles set role = 'user', nick = 'App_User' where id = '00000000-0000-0000-0000-0000000000f5';
+update public.profiles set role = 'admin', nick = 'App_Admin' where id = '00000000-0000-0000-0000-0000000000f6';
+insert into public.characters (owner, name, static_id) values
+  ('00000000-0000-0000-0000-0000000000f5', 'App_User', 50005), ('00000000-0000-0000-0000-0000000000f6', 'App_Admin', 50006);
 
 -- товар із межами 1000–2000 (з допуском: 900–2200)
 select set_config('test.it', (select item_id from public.buyer_items where buyer_id = 'hide' order by item_id offset 2 limit 1)::text, false) as it \gset
