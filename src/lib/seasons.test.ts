@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { days, kyivDay, phase, range, upcoming } from './seasons';
+import { days, kyivDay, period, phase, range, upcoming } from './seasons';
 
 describe('сезонні івенти й промокоди', () => {
   it('день за Києвом, а не за UTC', () => {
@@ -28,5 +28,18 @@ describe('сезонні івенти й промокоди', () => {
       { id: 4, starts_on: '2026-10-01', ends_on: '2026-10-02' },
     ], '2026-10-27');
     expect(r.map(x => x.id)).toEqual([2, 1, 3]);
+  });
+  it('без дати кінця (specs/018): триває, доки не приберуть; «з 27.10»; у списку — після тих, що закінчуються', () => {
+    expect(phase('2026-10-25', null, '2027-03-01')).toEqual({ kind: 'now', left: null });
+    expect(phase('2026-10-30', null, '2026-10-27')).toEqual({ kind: 'soon', in: 3 });
+    expect(range('2026-10-27', null, '2026-10-27')).toBe('з 27.10');
+    const r = upcoming([{ id: 1, starts_on: '2026-10-20', ends_on: null }, { id: 2, starts_on: '2026-10-20', ends_on: '2026-11-30' }, { id: 3, starts_on: '2026-11-01', ends_on: null }], '2026-10-27');
+    expect(r.map(x => x.id)).toEqual([2, 1, 3]);
+  });
+  it('період категорії мапи', () => {
+    expect(period('2026-10-23', '2026-11-12', '2026-10-27')).toBe('з 23.10 до 12.11');
+    expect(period('2026-10-23', null, '2026-10-27')).toBe('з 23.10');
+    expect(period(null, '2026-11-12', '2026-10-27')).toBe('до 12.11');
+    expect(period(null, null, '2026-10-27')).toBe('');
   });
 });

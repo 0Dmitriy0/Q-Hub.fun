@@ -537,6 +537,9 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mchip.on .mchip-b { color: var(--fg); border-color: color-mix(in srgb, var(--c, var(--accent)) 70%, transparent); background: color-mix(in srgb, var(--c, var(--accent)) 14%, var(--surface)); box-shadow: inset 3px 0 0 var(--c, var(--accent)); }
 .mchip.on .mchip-b img { filter: none; opacity: 1; }
 .mcat-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* категорія-івент (specs/018): під назвою — дати й короткий опис */
+.mcat-n:has(.mcat-sub) { display: flex; flex-direction: column; gap: 1px; }
+.mcat-sub { color: var(--muted); font-size: 11.5px; line-height: 1.3; font-weight: 500; }
 .mchip .cnt { flex: none; font: 700 11px var(--mono); color: var(--faint); padding: 1px 6px; border-radius: 999px; background: var(--bg); }
 .mchip.on .cnt { color: var(--fg); }
 .mcat-del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line2); background: var(--surface); color: var(--faint); cursor: pointer; padding: 0; font-size: 11px; opacity: 0; transition: opacity .15s; }

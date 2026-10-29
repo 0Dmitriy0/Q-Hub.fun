@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
 import { MAP_ICONS } from '../data/mapIcons';
-import { fromQuantFun } from '../lib/mapGeo';
+import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 
@@ -67,21 +67,26 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
   const own = cats.filter(c => !c.builtin);
   const [id, setId] = useState(pick && own.some(c => c.id === pick) ? pick : own[0]?.id || '');
   const cur = own.find(c => c.id === id);
-  const [f, setF] = useState(() => cur ? { name: cur.name, grp: cur.grp, color: cur.color, icon: cur.icon } : null);
+  const form = (c: MapCategory) => ({ name: c.name, grp: c.grp, color: c.color, icon: c.icon, description: c.description || '', starts_on: c.starts_on || '', ends_on: c.ends_on || '' });
+  const [f, setF] = useState(() => cur ? form(cur) : null);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const groups = [...new Set(cats.map(c => c.grp))];
   /* інша категорія у списку (або категорії підвантажились пізніше) — форма бере її значення */
-  useEffect(() => { const c = own.find(x => x.id === id) || own[0]; if (c) { setId(c.id); setF({ name: c.name, grp: c.grp, color: c.color, icon: c.icon }); } setMsg(''); }, [id, own.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const c = own.find(x => x.id === id) || own[0]; if (c) { setId(c.id); setF(form(c)); } setMsg(''); }, [id, own.length]);   // eslint-disable-line react-hooks/exhaustive-deps
   if (!own.length || !f || !cur) return null;
   async function save() {
     const name = f!.name.trim(), grp = f!.grp.trim() || 'Інше';
     if (!name) return setMsg('Впиши назву категорії.');
     if (!/^#[0-9a-f]{6}$/i.test(f!.color)) return setMsg('Колір — у форматі #ff6a1f.');
+    /* дати івенту (specs/018): кінець можна не вказувати */
+    const starts_on = f!.starts_on || null, ends_on = f!.ends_on || null;
+    if (starts_on && ends_on && ends_on < starts_on) return setMsg('Кінець івенту не може бути раніше за початок.');
+    const v = { name, grp, color: f!.color, icon: f!.icon, description: f!.description.trim(), starts_on, ends_on };
     setBusy(true); setMsg('');
-    const { error } = await supabase!.from('map_categories').update({ name, grp, color: f!.color, icon: f!.icon }).eq('id', id);
+    const { error } = await supabase!.from('map_categories').update(v).eq('id', id);
     setBusy(false);
-    if (error) return setMsg(dbErr(error.message));
-    onSaved({ ...cur!, name, grp, color: f!.color, icon: f!.icon }); setMsg(`Категорію «${name}» збережено — мітки на мапі вже оновились.`);
+    if (error) return setMsg(/description|starts_on|ends_on/.test(error.message) ? 'Дат івентів ще немає: запусти supabase/migrations/0034_event_dates.sql у Supabase → SQL Editor.' : dbErr(error.message));
+    onSaved({ ...cur!, ...v }); setMsg(`Категорію «${name}» збережено — мітки на мапі вже оновились.`);
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити категорію">
@@ -91,6 +96,11 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
       <input className="min" placeholder="Назва категорії" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} aria-label="Назва категорії" maxLength={80} />
       <input className="min" list="map-groups-edit" placeholder="Група" value={f.grp} onChange={e => setF({ ...f, grp: e.target.value })} aria-label="Група" />
       <datalist id="map-groups-edit">{groups.map(g => <option key={g} value={g} />)}</datalist>
+      <input className="min" placeholder="Короткий опис (необов'язково), напр. Хелловін на QuantRP" value={f.description} onChange={e => setF({ ...f, description: e.target.value })} aria-label="Короткий опис категорії" maxLength={300} />
+      <div className="mrow">
+        <label className="fld">Початок івенту<input className="min" type="date" value={f.starts_on} onChange={e => setF({ ...f, starts_on: e.target.value })} /></label>
+        <label className="fld">Кінець (необов'язково)<input className="min" type="date" value={f.ends_on} onChange={e => setF({ ...f, ends_on: e.target.value })} /></label>
+      </div>
       <label className="mrow mcolor">Колір обводки <input type="color" value={f.color} onChange={e => setF({ ...f, color: e.target.value })} /></label>
       <IconGrid value={f.icon} onChange={v => v && setF({ ...f, icon: v })} label="Іконка категорії" />
       <div className="mrow"><span className="muted">або своя:</span>
@@ -114,10 +124,19 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [mIcon, setMIcon] = useState<string | null>(null); const [mLabel, setMLabel] = useState(true);
   const [bulk, setBulk] = useState('');
-  /* звідки координати: з гри (як у нас), пікселі з мапи QuantFun — тоді переводимо самі, чи Open Hydra Map (specs/017) —
-     там координати гри як є, але мітки йдуть партією: видно гравцям лише після «Опублікувати», відкат — одною дією */
+  /* звідки координати: з гри (як у нас), пікселі з мапи QuantFun чи координати редактора Open Hydra Map (specs/017) —
+     тоді переводимо самі; з Open Hydra Map мітки йдуть партією: видно гравцям лише після «Опублікувати», відкат — одною дією */
   const [src, setSrc] = useState<'game' | 'qf' | 'ohm'>('game');
-  const conv = src === 'qf' ? fromQuantFun : undefined;
+  const conv = src === 'qf' ? fromQuantFun : src === 'ohm' ? fromOpenHydra : undefined;
+  /* файл експорту Open Hydra Map (.json: objects[].position) — у поле рядками «X, Y» */
+  async function ohmFile(file: File) {
+    try {
+      const objs = (JSON.parse(await file.text()) as { objects?: { position?: { x: number; y: number } }[] }).objects || [];
+      const rows = objs.filter(o => Number.isFinite(o.position?.x) && Number.isFinite(o.position?.y)).map(o => `${o.position!.x}, ${o.position!.y}`);
+      if (!rows.length) return setMsg('У файлі немає об\'єктів з координатами — це точно експорт Open Hydra Map?');
+      setBulk(rows.join('\n')); setMsg(`З файлу взято ${rows.length} точок — перевір попередній перегляд нижче.`);
+    } catch { setMsg('Не вдалося прочитати файл — потрібен .json з Open Hydra Map.'); }
+  }
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const [cName, setCName] = useState(''); const [cGrp, setCGrp] = useState('Міні-ігри, квести й контракти');
   const [cColor, setCColor] = useState('#ff6a1f'); const [cIcon, setCIcon] = useState(MAP_ICONS[0]);
@@ -191,7 +210,7 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
           <button type="button" role="radio" aria-checked={src === 'qf'} onClick={() => setSrc('qf')}>Пікселі QuantFun</button>
           <button type="button" role="radio" aria-checked={src === 'ohm'} onClick={() => setSrc('ohm')}>Open Hydra Map</button>
         </div>
-        {src === 'ohm' && <p className="muted">Координати Open Hydra Map — це координати гри: X і Y з «Панелі трансформації» як є. Лише «Багато міток одразу», партією. Згода авторів — specs/012-halloween-banner.</p>}
+        {src === 'ohm' && <p className="muted">Координати редактора Open Hydra Map (X і Y з «Панелі трансформації») — переведу в координати гри сам (похибка ~1–3 м). Найпростіше — файл експорту в «Багато міток одразу». Згода авторів — specs/012-halloween-banner.</p>}
         {src === 'qf' && <p className="muted">Впиши числа з мапи QuantFun як є — переведу в координати гри сам (похибка ~3 м). Для «Взяти з мапи» перемкни назад на «З гри».</p>}
         <div className="mrow">
           <input className="min mono" inputMode="decimal" placeholder="X" value={x} onChange={e => setX(e.target.value)} aria-label="X" />
@@ -205,6 +224,7 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
       <section>
         <h4>Багато міток одразу</h4>
         <p className="muted">У вибрану вище категорію{src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        {src === 'ohm' && <label className="mrow"><span className="muted">Файл з Open Hydra Map (.json):</span><input type="file" accept=".json,application/json" onChange={e => { const fl = e.target.files?.[0]; if (fl) ohmFile(fl); e.target.value = ''; }} /></label>}
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
         {bulk.trim() && <p className="muted" role="status">Рядків з координатами: {pre.ok.length}{pre.bad.length > 0 && <> · не зрозумів або поза мапою: {pre.bad.length} (рядки {pre.bad.slice(0, 8).join(', ')}{pre.bad.length > 8 ? '…' : ''})</>}{dups > 0 && <> · дублів (ближче 10 м): {dups} — їх пропущу</>}</p>}
         <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>

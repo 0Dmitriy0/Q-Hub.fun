@@ -69,3 +69,14 @@ delete from public.map_points where category_id = 'harbuzy';
 \i supabase/migrations/0033_map_batches_events.sql
 do $$ begin assert (select count(*) from public.map_categories where id = 'harbuzy') = 1, 'повторний запуск дублює категорію'; end $$;
 \echo 'Партії міток ok'
+
+-- дати й опис івентів (0034, specs/018): кінець необов'язковий, але не раніше за початок
+do $$ begin
+  update public.map_categories set description = 'Хелловін на QuantRP', starts_on = '2026-10-23', ends_on = null where id = 'harbuzy';
+  begin update public.map_categories set ends_on = '2026-10-01' where id = 'harbuzy'; raise exception 'кінець раніше за початок пройшов';
+  exception when check_violation then null; end;
+  insert into public.season_events (title, starts_on, ends_on) values ('Без кінця', '2026-10-23', null);
+  delete from public.season_events where title = 'Без кінця';
+end $$;
+\i supabase/migrations/0034_event_dates.sql
+\echo 'Дати івентів ok'

@@ -9,6 +9,7 @@ import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
 import { isVisible, toggled } from '../lib/mapFilters';
+import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
@@ -132,6 +133,7 @@ export default function MapPage() {
   const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
   const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
   const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas]);
+  const today = kyivDay(Date.now());   // для «з 23.10 до 12.11» під назвою категорії-івенту
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
   const groups = useMemo(() => groupCategories(visibleCats), [visibleCats]);
@@ -450,7 +452,7 @@ export default function MapPage() {
                       return (
                         <span key={c.id} className={'mchip' + (v ? ' on' : '')} style={{ '--c': c.color } as CSSProperties}>
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
-                            <img src={c.icon} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}</span><span className="cnt">{count[c.id] || 0}</span>
+                            <img src={c.icon} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.description || c.starts_on || c.ends_on) && <small className="mcat-sub">{[period(c.starts_on, c.ends_on, today), c.description].filter(Boolean).join(' · ')}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
                           {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
