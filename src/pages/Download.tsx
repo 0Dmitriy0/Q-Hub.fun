@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
+import { supabase } from '../lib/supabase';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
    і викладає в реліз «desktop-latest» — посилання завжди веде на останню збірку з main.
@@ -7,6 +8,8 @@ import Icon from '../components/Icon';
 const SETUP = 'https://github.com/0Dmitriy0/Q-Hub.fun/releases/download/desktop-latest/Q-Hub-Setup.exe';
 const RELEASE = 'https://github.com/0Dmitriy0/Q-Hub.fun/releases/tag/desktop-latest';
 const ISSUES = 'https://github.com/0Dmitriy0/Q-Hub.fun/issues';
+/* лічильник «Завантажень програми» на головній (specs/011, 0032): +1 за клік; сторінка лишається відкритою, тож запит встигає */
+const countDownload = () => { supabase?.rpc('count_download').then(() => { /* без бази — просто не рахуємо */ }); };
 
 /* демо рядка Alt+Q: що помічник показав би перед записом (приклади, не справжні дані) */
 const DEMO = [
@@ -48,7 +51,7 @@ export default function Download() {
           <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться. Записи, які програма робить сама (з позначкою «Авто ·»), перевіряй у кабінеті.</span></div>
         </div>
         <div className="row">
-          <a className="btn acc" href={SETUP}><Icon name="download" />Завантажити для Windows</a>
+          <a className="btn acc" href={SETUP} onClick={countDownload}><Icon name="download" />Завантажити для Windows</a>
           <a className="btn ghost" href={RELEASE} target="_blank" rel="noreferrer"><Icon name="history" />Що нового в збірці<span className="vh"> (відкриється в новій вкладці)</span></a>
         </div>
         <small className="p-sign"><Icon name="shield" size={16} />Інсталятор ще не підписаний сертифікатом: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».</small>

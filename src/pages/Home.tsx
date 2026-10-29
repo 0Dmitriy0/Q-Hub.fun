@@ -4,12 +4,14 @@ import EventsBlock from '../components/EventsBlock';
 import MiniMap from '../components/MiniMap';
 import SitePromo from '../components/SitePromo';
 import { useAuth } from '../lib/auth';
-import { money } from '../lib/format';
-import { JOBS } from '../data/jobs';
+import { fmt, money } from '../lib/format';
+import { supabase } from '../lib/supabase';
+import { useAppOnline } from '../lib/useAppOnline';
 import Icon from '../components/Icon';
 
 /* головна за макетом Stitch (design/stitch/home.html). Усі цифри справжні: зі знімка цін (public/snapshot) і даних сайту.
    Вигадані блоки макета (кількість гравців, «радар-мод», ШІ-рекомендації з відсотками) не перенесено */
+type SiteStats = { players: number; pins: number; downloads: number | null };
 type Snap = { buyers: { id: string; name: string }[]; rows: { buyer_id: string; item_id: number; price: number | null; price_at: string | null; items: { name: string; unit: string; image_url: string | null } }[]; ups: unknown[] };
 
 function ago(iso: string) {
@@ -25,12 +27,18 @@ export default function Home() {
   useEffect(() => { fetch('/snapshot/prices.json').then(r => (r.ok ? r.json() : null)).then(setSnap).catch(() => { /* без знімка — блоки з цінами просто порожні */ }); }, []);
   const buyerName = (id: string) => snap?.buyers.find(b => b.id === id)?.name || id;
   const fresh = (snap?.rows || []).filter(r => r.price && r.price_at).sort((a, b) => Date.parse(b.price_at!) - Date.parse(a.price_at!)).slice(0, 5);
+  const online = useAppOnline();
+  const [site, setSite] = useState<SiteStats | null>(null);
+  useEffect(() => { supabase?.rpc('site_stats').then(({ data, error }) => { if (!error && data) setSite(data as SiteStats); }); }, []);
+  const n = (v: number | null | undefined) => (v == null ? '—' : fmt(v));
+  /* плитки про сам Q-Hub, а не про гру (specs/011); поки число не відоме — «—» */
   const stats: [string, string, string][] = [
-    ['Скупників', snap ? String(snap.buyers.length) : '—', 'з цінами, які вносять гравці'],
-    ['Товарів', snap ? String(snap.rows.length) : '—', 'з актуальною ціною скупника'],
-    ['Оновлень цін', snap ? (snap.ups.length >= 500 ? '500+' : String(snap.ups.length)) : '—', 'від гравців за останній час'],
-    ['Робіт', String(JOBS.length), 'у довіднику з описом і точкою на мапі']
+    ['Гравців у Q-Hub', n(site?.players), 'увійшли на сайт через Discord'],
+    ['Зараз у програмі', n(online), online === 0 ? 'будь першим — Alt+Q' : 'гравців із запущеним Q-Hub'],
+    ['Завантажень програми', n(site?.downloads), 'Q-Hub Desktop із сайту'],
+    ['Міток на мапі', n(site?.pins), 'на мапі Q-Hub з пошуком і фільтрами']
   ];
+
 
   return (
     <div className="home">
