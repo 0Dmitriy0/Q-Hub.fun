@@ -11,6 +11,7 @@ const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
+const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
@@ -281,6 +282,10 @@ function trayMenu() {
     { label: 'Швидкий запис', click: () => toggleBar() },
     { label: 'Відкрити Q-Hub', click: showMain },
     { type: 'separator' },
+    ...(app.isPackaged ? [{ label: 'Запускати разом з Windows', type: 'checkbox', checked: autostart(), click: mi => {
+      if (!setAutostart(mi.checked)) tray?.displayBalloon?.({ title: 'Q-Hub', content: AUTOSTART_ERR });
+      trayMenu();
+    } }, { type: 'separator' }] : []),
     /* з автооновленням завантажена версія ставиться при виході (без перезапуску) */
     { label: 'Вийти з програми', click: () => { quitting = true; if (!(autoUpdate() && updates?.installNow({ restart: false }))) app.quit(); } },
   ]));
@@ -479,7 +484,20 @@ const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(
 const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
-const autostart = () => app.isPackaged && app.getLoginItemSettings().openAtLogin;
+/* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
+   Windows, і вона стартує тихо, лише іконкою в треї. Ім'я фіксоване, щоб інсталятор прибрав запис при видаленні (build/installer.nsh) */
+const LOGIN = { name: 'Q-Hub', args: ['--autostart'] };
+const autostarted = process.argv.includes('--autostart');
+const autostart = () => app.isPackaged && app.getLoginItemSettings(LOGIN).openAtLogin;
+/* увімкнути чи вимкнути; false — Windows не дала змінити. Старий запис 0.3.x (ім'я за замовчуванням, без аргументу) прибираємо завжди */
+function setAutostart(on) {
+  try {
+    app.setLoginItemSettings({ ...LOGIN, openAtLogin: on, path: process.execPath });
+    app.setLoginItemSettings({ openAtLogin: false });
+  } catch { /* перевірка нижче скаже, що не вийшло */ }
+  return autostart() === on;
+}
+const AUTOSTART_ERR = 'Windows не дала змінити автозапуск. Перевір «Диспетчер завдань → Автозавантаження»: там Q-Hub можна ввімкнути чи вимкнути вручну.';
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
 let pricesAt = 0, pricesCache = [];
@@ -770,7 +788,8 @@ function barPrefs(p) {
   if (typeof p?.autoUpdate === 'boolean') next.autoUpdate = p.autoUpdate;
   if (typeof p?.autostart === 'boolean') {
     if (!app.isPackaged) return { error: 'Автозапуск вмикається лише у встановленій програмі', prefs: { ...cur, autostart: false } };
-    app.setLoginItemSettings({ openAtLogin: p.autostart });
+    if (!setAutostart(p.autostart)) return { error: AUTOSTART_ERR, prefs: { ...cur, autostart: autostart() } };
+    trayMenu();
   }
   if (typeof p?.pinKey === 'string' && p.pinKey !== cur.pinKey) {
     const bad = pinKeyConflict(p.pinKey, cur.hotkey, SHOT_KEY);
@@ -909,7 +928,15 @@ app.whenReady().then(() => {
   }
   if (mark) try { fs.unlinkSync(installMark()); } catch { /* не страшно: застаріла позначка нічого не блокує */ }
   Menu.setApplicationMenu(null);   // без меню «File / Edit / View» і його гарячих клавіш — це програма, не браузер
+  const hadSettings = fs.existsSync(settingsFile());
   try { settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { settings = {}; }
+  /* автозапуск (specs/009): новий гравець — увімкнено; хто вже має Q-Hub — як було (запис 0.3.x переносимо на новий);
+     далі щоразу оновлюємо шлях — після перевстановлення в іншу теку запис веде туди (FR-011–FR-013) */
+  if (app.isPackaged) {
+    const want = autostartOnStart({ init: !!settings.autostartInit, hadSettings, oldOn: app.getLoginItemSettings().openAtLogin, on: autostart() });
+    if (want !== null) setAutostart(want);
+    if (!settings.autostartInit) { settings.autostartInit = true; saveSettings(); }
+  }
   /* після спроби оновлення: та сама версія — інсталятор не впорався, наступна автоспроба не раніше ніж за 3 год;
      нова — один раз сказати, що оновлено (у плашці — «Програму оновлено — що нового») */
   if (mark?.from && mark.from === app.getVersion()) { settings.updateFailAt = mark.at; saveSettings(); }
@@ -1004,20 +1031,26 @@ app.whenReady().then(() => {
   ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion(), auto: autoUpdate() } : null));
   ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });
 
-  showLogin();
+  /* запустила Windows — без вікон: лише трей; вхід — кліком по іконці чи Alt+Q (specs/009 FR-001, FR-002) */
+  if (!autostarted) showLogin();
   createBar();
   createHist();
   createStrip();
   createTray();
-  startUpdates();
+  /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */
+  const later = f => (autostarted ? setTimeout(f, 30e3) : f());
+  later(startUpdates);
+  if (autostarted) sb.auth.getSession().then(({ data }) => {
+    if (!data.session || !settings.character) tray?.displayBalloon?.({ title: 'Q-Hub', content: `Увійди в Q-Hub — клікни іконку в треї або натисни ${prefs().hotkey}.` });
+  }).catch(() => {});
   if (updatedFrom && Notification.isSupported()) {
     const n = new Notification({ title: `Q-Hub оновлено до ${app.getVersion()}`, body: 'Що нового — у плашці Alt+Q: «Програму оновлено — що нового».', icon: path.join(__dirname, 'icon.png') });
     n.on('click', () => showBar()); n.show();
   }
-  startDrafts();
+  later(startDrafts);
   startOnline();
   startSessionTimer();
-  startVision();
+  later(startVision);
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
   if (!registerHotkey(prefs().hotkey))
