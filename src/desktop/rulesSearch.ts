@@ -24,6 +24,18 @@ const ALIAS: Record<string, string[]> = {
   /* розмовні назви кодексів (FR-008): шукають і в назві документа */
   кк: ['кримінальн'], ак: ['адміністративн'], пдр: ['дорожн'], дк: ['дорожн'], пк: ['процесуальн'], тк: ['tk', 'трудов'],
 };
+/* сленг гравців — за початком слова, у будь-якому відмінку («капті», «машиною», «мстити») */
+const SLANG: [string, string[]][] = [
+  ['капт', ['захоплен']], ['мст', ['помст', 'revenge', 'rk']], ['помст', ['revenge', 'rk']],
+  ['машин', ['транспорт', 'т/с', 'автомоб']], ['тачк', ['транспорт', 'т/с', 'автомоб']], ['авто', ['транспорт', 'т/с']],
+  ['нацгвард', ['ng', 'national', 'національн']], ['поновл', ['відновл']], ['бізвар', ['бізнес']],
+];
+const PREFIX = ['по', 'за', 'роз', 'ви', 'пере', 'від', 'при', 'на', 'у', 'в'];
+const slang = (w: string) => SLANG.filter(([p]) => w.startsWith(p)).flatMap(([, v]) => v);
+/* «покарання за вбивство»: у законах пишуть «Карається…» — слово не шукаємо, а закони піднімаємо */
+const PENALTY = /^(покаран|покарат|караєт|карают)/;
+/* «скільки», «коли», «о котрій» — відповідь з числом: пункти з цифрами трохи вище */
+const NUMQ = /(^|\s)(скільки|коли|котрій|кількість|термін)(\s|$)/u, QTY = /кількіст|мінімальн|максимальн|не більше|не менше|щонайменше/;
 
 interface Doc { topic: RuleTopic; item: RuleItem; low: string; words: string[]; lead: string[]; head: string[] }
 let cache: { src: RuleTopic[]; docs: Doc[] } | null = null;
@@ -39,10 +51,13 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
   const nums = new Set(q.match(/\d+(?:\.\d+)+/g) ?? []);
   /* слово запиту — група варіантів: основа й відповідники з ALIAS */
   const seen = new Set<string>();
-  const terms = words(q.replace(/\d+(?:\.\d+)+/g, ' ')).filter(w => !STOP.has(w) && !seen.has(w) && seen.add(w)).map(w => [stem(w), ...(ALIAS[w] ?? [])]);
+  const all = words(q.replace(/\d+(?:\.\d+)+/g, ' '));
+  const penalty = all.some(w => PENALTY.test(w)), numq = NUMQ.test(norm(q));
+  const terms = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w)).map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);
   if (!terms.length && !nums.size) return [];
   const docs = index(topics);
-  const has = (ws: string[], t: string[]) => ws.some(w => t.some(x => w.startsWith(x)));
+  /* «грабувати» — і «пограбування», «почати» — і «розпочати»: основа після префікса (від 4 літер — інакше шуму забагато) */
+  const has = (ws: string[], t: string[]) => ws.some(w => t.some(x => w.startsWith(x) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x)))));
   const idf = terms.map(t => Math.log(1 + docs.length / (1 + docs.filter(d => has(d.words, t)).length)));
   const defs = terms.map(t => new RegExp(`(^|[^\\p{L}])(${t.join('|')})\\p{L}* \\(`, 'u'));
   const hits: RuleHit[] = [];
@@ -59,6 +74,8 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
     if (num && got === terms.length) score += terms.every(t => has(d.head, t)) ? 10 : 4;
     else if (!got || !terms.some((t, i) => has(d.words, t) && idf[i] > 0)) continue;
     else score *= got / terms.length * (d.item.n ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів
+    if (penalty && d.topic.kind === 'law') score *= 1.5;
+    if (numq && /\d/.test(d.item.s)) score *= QTY.test(d.low) ? 1.6 : 1.3;
     hits.push({ topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score });
   }
   return hits.sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);

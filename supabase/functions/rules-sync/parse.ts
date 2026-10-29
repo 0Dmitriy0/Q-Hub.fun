@@ -30,17 +30,20 @@ export function postText(h: string): string[] {
 
 /* пункти: «1.4 Заборонено…», «6.5 [Р] Викрадення…» — окремо, рядки під ними («Покарання: штраф $20 000») — у пункт;
    заголовок («2. Основні поняття», «Стаття 6. Злочини проти власності», «РОЗДІЛ 2. …», «Розділ I. …») — у h;
+   стаття з текстом («Стаття 5. Агенти USSS мають право…», «Стаття 1.1 Мета…») — пункт з номером 5 / 1.1;
    решта абзаців — шматками до ~700 символів */
 const PUNKT = /^(\d+(?:\.\d+)+)\.?\s+/, HEAD = /^\d+\.\s+\S.{0,80}$/;
 const LAW_HEAD = /^(Стаття|СТАТТЯ|Розділ|РОЗДІЛ|Глава|ГЛАВА|Частина|ЧАСТИНА)\s+[\dIVXLC]+\.?(\s+\S.{0,110})?$/;
+const ARTICLE = /^(?:Стаття|СТАТТЯ)\s+(\d+(?:\.\d+)*)\.?\s+(?=\S)/;
 export function chunks(lines: string[]): Item[] {
-  const out: Item[] = []; let head = '', cur: Item | null = null;
+  const out: Item[] = []; let head = '', cur: Item | null = null, art = false;
   const flush = () => { if (cur && cur.s.trim()) out.push({ ...cur, s: cur.s.trim() }); cur = null; };
   for (const l of lines) {
-    const m = l.match(PUNKT);
-    if (m) { flush(); cur = { n: m[1], h: head, s: l.slice(m[0].length) }; continue; }
-    if (LAW_HEAD.test(l)) { flush(); head = l.replace(/:$/, ''); continue; }
-    if (HEAD.test(l)) { flush(); head = l.replace(/^\d+\.\s+/, '').replace(/:$/, ''); continue; }
+    const p = l.match(PUNKT), m = p ?? (LAW_HEAD.test(l) ? null : l.match(ARTICLE));
+    if (m) { flush(); cur = { n: m[1], h: head, s: l.slice(m[0].length) }; art = !p; continue; }
+    if (LAW_HEAD.test(l)) { flush(); head = l.replace(/:$/, ''); art = false; continue; }
+    /* «1. Захист прав працівника» усередині статті — її частина, а не новий заголовок */
+    if (HEAD.test(l) && !art) { flush(); head = l.replace(/^\d+\.\s+/, '').replace(/:$/, ''); continue; }
     if (!cur || (!cur.n && cur.s.length > 700)) { flush(); cur = { n: '', h: head, s: '' }; }
     cur.s += (cur.s ? '\n' : '') + l;
   }

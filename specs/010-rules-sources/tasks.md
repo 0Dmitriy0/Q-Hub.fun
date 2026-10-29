@@ -54,7 +54,7 @@ description: "Задачі: усі правила й закони QuantRP у п�
 ## Phase 7: Polish
 
 - [x] T021 Запис у `src/data/changelog.json`: новий запис з id дати релізу; якщо запис того дня вже в `main` (вийшов до гравців) — `РРРР-ММ-ДД.N` (CLAUDE.md)
-- [ ] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test`, SQL-тести (PGlite локально, `run.sh` у CI) — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
+- [X] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test`, SQL-тести (PGlite локально, `run.sh` у CI) — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
 - [x] T023 Власнику — кроки з quickstart.md «Один раз», оновити під те, як це реально робиться: міграція — вміст файлу в буфер → Supabase SQL Editor (**до** злиття в `main`); функція — у PowerShell `npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api` (вхід `npx.cmd supabase login` — у звичайному терміналі, не через `!`); секрет — `npx.cmd supabase secrets set RULES_SYNC_SECRET=…` і той самий у GitHub → Settings → Secrets → `RULES_SYNC_SECRET`; секрет у чат не вставляти
 
 ## Dependencies & Execution Order
