@@ -17,7 +17,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
   const [sel, setSel] = useState<Record<string, boolean>>({});
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
   const list = groups;
-  const [iconM, setIconM] = useState(7);
+  const [iconM, setIconM] = useState(20);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
@@ -59,7 +59,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
         </fieldset>
       ))}
       <div className="mrow">
-        <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[5, 7, 12, 20].map(v => <option key={v} value={v}>{v}{v === 7 ? ' (рекомендовано)' : ''}</option>)}</select></label>
+        <label className="mcheck">Значок, м <select className="min" value={iconM} onChange={e => setIconM(+e.target.value)}>{[5, 7, 12, 20].map(v => <option key={v} value={v}>{v}{v === 20 ? ' (рекомендовано)' : ''}</option>)}</select></label>
       </div>
       <button type="button" className="btn sm acc" disabled={!!busy} onClick={go}>{busy || `Скачати карту для гри · ${picked.length} міток${pickedAreas.length ? ` · ${pickedAreas.length} зон` : ''}`}</button>
       {picked.length > 1500 && !busy && <p className="muted">Багато міток — значки на мінікарті злипатимуться, а архів буде великим.</p>}

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-29
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Переробити на сайті щоб рекомендована установка розміру міток на карті було 20, а не 7"
 
