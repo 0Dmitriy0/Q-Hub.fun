@@ -1,0 +1,4 @@
+- [PowerShell ламає UTF-8](powershell-utf8-mojibake.md) — не переписувати файли через Get-Content/Set-Content у PS 5.1
+- [Дев-сервер без бази](dev-server-needs-production-mode.md) — `npm run dev` без Supabase; запускати `npx.cmd vite --mode production`
+- [Скрипт губить «\» у регулярках](node-heredoc-backslash.md) — код з \d/\D вставляти через Edit/Write, не node-шаблонним рядком
+- [1.0.0 — реліз, 0.x — тест](app-version-1-0-is-release.md) — версії 0.x тестові; 1.0.0 ставити лише за рішенням власника

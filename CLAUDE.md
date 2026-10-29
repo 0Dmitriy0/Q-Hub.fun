@@ -15,3 +15,9 @@
 - Програма (Electron): `cd desktop && npm.cmd start`.
 - Деплой сайту — GitHub Actions, `.github/workflows/deploy.yml`.
 - Ніколи не комітити паролі й ключі — лише GitHub Secrets. Публічний (publishable/anon) ключ Supabase у `desktop/src/config.json` — виняток, він і так у бандлі сайту.
+
+## Пам'ять
+- Пам'ять Claude про проєкт — у `.claude/memory/` (у git, щоб працювала з будь-якого акаунта й комп'ютера). Нові спогади пиши туди ж: файл + рядок у `.claude/memory/MEMORY.md`, і комітиш разом з роботою. Паролів і ключів там не тримати.
+- На цьому ПК локальна папка пам'яті Claude Code — junction на `.claude/memory/`; на новому ПК: `mklink /J "%USERPROFILE%\.claude\projects\C--Users-User-Q-Hub-fun\memory" "<репо>\.claude\memory"`.
+
+@.claude/memory/MEMORY.md
