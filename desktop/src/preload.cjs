@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('qhub', {
   shotLabel: (name, label, note, share) => ipcRenderer.invoke('shot-label', name, label, note, share),
   shotsStats: () => ipcRenderer.invoke('shots-stats'),
   shotsOpen: () => ipcRenderer.invoke('shots-open'),
+  keysPause: on => ipcRenderer.invoke('keys-pause', on),
   visionLogOpen: () => ipcRenderer.invoke('vision-log-open'),
   onQuickShow: cb => { ipcRenderer.on('quick-show', () => cb()); },
   /* для кабінету сайту: токени сесії програми і їх оновлення */

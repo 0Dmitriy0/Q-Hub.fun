@@ -20,6 +20,7 @@ const { loadMapRef } = require('./mapref.cjs');
 const { createRules } = require('./rules.cjs');
 const { createQmap } = require('./qmap.cjs');
 const mapwin = require('./mapwin.cjs');
+const { gameFocus, hwndOf } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
 const SHOT_KEY = 'Alt+S';
@@ -205,8 +206,11 @@ function showMap(from) {
 }
 function hideMap() {
   if (!mapw?.isVisible()) return;
+  /* з плашки — назад у плашку; клавішею — фокус назад у гру (gamefocus.cjs): сам hide() лишає гру без керування до кліку */
+  if (mapFrom === 'bar' && bar.isVisible()) { mapw.hide(); bar.focus(); return; }
+  const had = mapw.isFocused();
   mapw.hide();
-  if (mapFrom === 'bar' && bar.isVisible()) bar.focus();   // з плашки — назад у плашку; клавішею — фокус сам повертається в гру
+  if (had) game.giveBack();
 }
 /* місце з пошуку плашки (FR-007): показати мапу й центрувати на ньому. Щойно створене вікно ще вантажиться —
    тоді воно саме забере точку (map-focus-take), подія до нього не дійде */
@@ -234,6 +238,7 @@ async function whereFrom(img) {
    мапа одразу з «Ти тут» (FR-008a). Немає великої карти — просто мапа */
 async function mapKeyPressed() {
   if (mapw?.isVisible()) { hideMap(); return; }
+  game.remember();
   const img = await grabClean().catch(() => null);
   const big = !!img && !!mapmatch.scaleBar({ width: img.getSize().width, height: img.getSize().height, data: img.toBitmap() });
   showMap('key');
@@ -335,8 +340,15 @@ function raiseBar() {
   barShownAt = Date.now(); barSteals = 0;
   bar.show(); bar.moveTop(); bar.focus();
 }
+/* гравець сам ховає плашку (Esc, клавіша) — фокус назад у гру; пішов в інше вікно сам — не чіпаємо */
+const game = gameFocus({ ours: () => BrowserWindow.getAllWindows().map(w => hwndOf(w.getNativeWindowHandle())) });
+function hideBarToGame() {
+  const had = bar.isFocused() || !!mapw?.isFocused();
+  bar.hide();
+  if (had) game.giveBack();
+}
 async function toggleBar() {
-  if (bar.isVisible()) { bar.hide(); return; }
+  if (bar.isVisible()) { hideBarToGame(); return; }
   await showBar();
 }
 async function showBar() {
@@ -863,9 +875,23 @@ async function shareShot(name, label, note) {
 let barKey = null;
 function registerHotkey(key) {
   if (barKey) globalShortcut.unregister(barKey);
-  const ok = globalShortcut.register(key, () => toggleBar());
+  const ok = globalShortcut.register(key, () => { if (!bar.isVisible()) game.remember(); toggleBar(); });
   barKey = ok ? key : null;
   return ok;
+}
+/* поле запису клавіші в Налаштуваннях: поки воно чекає, наші глобальні клавіші вимкнено — інакше Alt+Q сховав би
+   плашку, а не записався (і не дійшов до перевірки «клавіша вже зайнята»). Поле не відпустило за 20 с — вмикаємо самі */
+let keysPaused = null;
+function pauseKeys(on) {
+  clearTimeout(keysPaused); keysPaused = null;
+  if (on) {
+    for (const k of [barKey, mapKeyReg, pinKeyReg, SHOT_KEY]) if (k) globalShortcut.unregister(k);
+    keysPaused = setTimeout(() => pauseKeys(false), 20e3);
+    return;
+  }
+  const p = prefs();
+  registerHotkey(p.hotkey); registerMapKey(p.mapKey); registerPinKey(p.pinKey);
+  if (!globalShortcut.isRegistered(SHOT_KEY)) globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {}));
 }
 function barPrefs(p) {
   const cur = prefs(), next = { ...cur };
@@ -1164,8 +1190,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('shots-stats', e => { if (!fromBar(e)) return null; shotStore ??= shots.store(path.join(dir(), 'shots')); return { stats: shotStore.stats(), labels: shots.LABELS, key: SHOT_KEY }; });
   ipcMain.handle('vision-log-open', e => { if (fromBar(e)) shell.openPath(visionLog()); });
+  ipcMain.handle('keys-pause', (e, on) => { if (fromBar(e)) pauseKeys(!!on); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
-  ipcMain.handle('quick-hide', e => { if (fromBar(e)) bar.hide(); });
+  ipcMain.handle('quick-hide', e => { if (fromBar(e)) hideBarToGame(); });
   /* F9: форма категорії — «надіслати» чи «не надсилати» */
   ipcMain.handle('pin-decide', (e, send, hint) => {
     if (!fromBar(e) || !pinAsk) return;

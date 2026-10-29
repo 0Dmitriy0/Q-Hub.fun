@@ -36,6 +36,14 @@ test('шкала: довжина й число', () => {
   assert.equal(mm.scaleMeters('—'), null);
 });
 
+/* палітра з сірими дорогами: довга товста дорога біля шкали не шкала (2026-10-30 бралась дорога на y≈909 і ≈984) */
+test('шкала поверх і поруч сірих доріг — та сама 210 пікс', () => {
+  for (const f of ['mirror-park-spawn-390.png', 'vinewood-hills-bar-108.png']) {
+    const bar = mm.scaleBar(decodePng(fs.readFileSync(path.join(__dirname, 'fixtures', 'map', f))), false);
+    assert.ok(bar && Math.abs(bar.px - 210) <= 2 && Math.abs(bar.y - 943) <= 1, `${f}: ${JSON.stringify(bar && { px: bar.px, y: bar.y })}`);
+  }
+});
+
 test('шкала в імперських одиницях гри: фути й милі → метри', () => {
   assert.equal(mm.scaleMeters('820ft'), 249.94);
   assert.equal(mm.scaleMeters('1,000ft'), 304.8);
@@ -88,20 +96,24 @@ test('шум зі шкалою — не точка', () => {
 
 /* справжні кадри великої карти з fixtures/map: <назва>.png + <назва>.json { x, y, scale_m }.
    Головне — жодної хибної точки: краще «не впевнений», ніж мітка не там (конституція, принцип IV).
-   Частка знайдених — сторож від погіршення; ціль SC-002 (90%) порогами не досягається, потрібна краща обробка */
+   SC-002 — у робочому масштабі 100–1000 м щонайменше 90% у межах 30 м; на всіх кадрах — сторож від погіршення */
 const FIX = path.join(__dirname, 'fixtures', 'map');
-const MIN_FOUND = 0.65;   // 30 кадрів 2026-10-26: 21 знайдено (70%), решта — «не впевнений»
-test('справжні кадри: жодної точки далі 30 м, знайдено щонайменше ' + MIN_FOUND * 100 + '%', () => {
+const MIN_FOUND = 0.8, MIN_WORK = 0.9;   // 39 кадрів 2026-10-30: 34 знайдено (87%), 100–1000 м — 28/29
+test('справжні кадри: жодної точки далі 30 м, 100–1000 м — щонайменше ' + MIN_WORK * 100 + '%, усього — ' + MIN_FOUND * 100 + '%', () => {
   const files = fs.readdirSync(FIX).filter(f => f.endsWith('.png'));
-  let found = 0;
+  let found = 0, work = 0, workFound = 0;
   for (const f of files) {
     const meta = JSON.parse(fs.readFileSync(path.join(FIX, f.replace(/\.png$/, '.json')), 'utf8'));
     const r = mm.locate(decodePng(fs.readFileSync(path.join(FIX, f))), ref, meta.scale_m, { bgra: false, cache });
+    const inWork = meta.scale_m >= 100 && meta.scale_m <= 1000;
+    if (inWork) work++;
     if (r.kind !== 'point') { console.log(`  ${f}: ${r.kind}, бал ${r.match?.score}, відрив ${r.match?.ratio}`); continue; }
     const err = Math.hypot(r.x - meta.x, r.y - meta.y);
     console.log(`  ${f}: похибка ${err.toFixed(1)} м, бал ${r.match.score}, відрив ${r.match.ratio}`);
     assert.ok(err <= 30, `${f}: похибка ${err.toFixed(1)} м`);
     found++;
+    if (inWork) workFound++;
   }
+  assert.ok(workFound >= MIN_WORK * work, `100–1000 м: знайдено ${workFound} з ${work}`);
   assert.ok(found >= MIN_FOUND * files.length, `знайдено ${found} з ${files.length}`);
 });
