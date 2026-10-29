@@ -29,12 +29,41 @@ describe('пошук по правилах', () => {
   it('нічого схожого — порожньо', () => expect(searchRules(topics, 'гелікоптер')).toEqual([]));
   it('уривок для помічника: тема й пункт, не довше межі', () => {
     const hits = searchRules(topics, 'вбивство');
-    expect(rulesExcerpt(hits)).toContain('[Правила Зелених Зон, п. 1.1]');
+    expect(rulesExcerpt(hits)).toContain('[Правила сервера · Правила Зелених Зон, п. 1.1]');
     expect(rulesExcerpt(hits, 120).length).toBeLessThanOrEqual(120);
   });
   it('справжні правила з форуму: DM знаходиться', () => {
     const t = (RULES as { topics: RuleTopic[] }).topics;
     expect(t.length).toBeGreaterThan(20);
     expect(searchRules(t, 'дм')[0].s).toMatch(/DM \(DeathMatch\)/);
+  });
+});
+
+describe('закони штату в пошуку (specs/010)', () => {
+  const t = (RULES as { topics: RuleTopic[] }).topics;
+  const top = (q: string, n = 3) => searchRules(t, q).slice(0, n);
+  it('у вбудованій копії — і правила сервера, і закони штату', () => {
+    expect(t.filter(x => x.kind === 'law').length).toBeGreaterThanOrEqual(25);
+    expect(t.filter(x => (x.kind ?? 'rules') === 'rules').length).toBeGreaterThanOrEqual(28);
+  });
+  it('«скільки дають за викрадення авто» — стаття 6.5 Кримінального кодексу серед перших 3, з типом', () => {
+    const h = top('скільки дають за викрадення авто').find(x => /Кримінальний/.test(x.topic) && x.n === '6.5');
+    expect(h).toMatchObject({ kind: 'law' });
+  });
+  it('«штраф за перевищення швидкості» — закон штату серед перших 3', () => {
+    expect(top('штраф за перевищення швидкості').some(x => x.kind === 'law' && /Адміністративний|Дорожній/.test(x.topic))).toBe(true);
+  });
+  it('розмовні назви кодексів і номер статті: «КК 6.5», «ак штраф», «пдр обгін»', () => {
+    expect(top('КК 6.5', 1)[0]).toMatchObject({ n: '6.5', kind: 'law' });
+    expect(top('КК 6.5', 1)[0].topic).toMatch(/Кримінальний/);
+    expect(top('ак штраф').some(x => /Адміністративний/.test(x.topic))).toBe(true);
+    expect(top('пдр обгін').some(x => /Дорожній/.test(x.topic))).toBe(true);
+  });
+  it('уривок для помічника: тип джерела й «ст.» у законах', () => {
+    const hits = searchRules(t, 'КК 6.5', 1);
+    expect(rulesExcerpt(hits)).toMatch(/^\[Закон штату · Кримінальний кодекс штату Quant, ст\. 6\.5\]/);
+  });
+  it('стара копія без kind — правила сервера', () => {
+    expect(searchRules([{ title: 'Т', section: 'С', url: 'u', items: [{ n: '1.1', h: '', s: 'Заборонено DM.' }] }], 'дм')[0].kind).toBe('rules');
   });
 });

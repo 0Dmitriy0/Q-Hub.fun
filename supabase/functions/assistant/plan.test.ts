@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clean, context, holdings, rulesBlock, type Ctx, type TxRec } from './plan.ts';
+import { SYSTEM, clean, context, holdings, rulesBlock, type Ctx, type TxRec } from './plan.ts';
 
 const c: Ctx = {
   character: 'Dmitriy_Core', balance: 6903606,
@@ -93,7 +93,20 @@ describe('помічник Alt+Q', () => {
 
 describe('пункти правил для помічника', () => {
   it('є пункти — окремий блок перед текстом гравця', () => {
-    expect(rulesBlock('[Правила Зелених Зон, п. 1.1] Заборонено вбивство')).toBe('Пункти правил сервера QuantRP, що можуть стосуватися питання:\n[Правила Зелених Зон, п. 1.1] Заборонено вбивство\n\n');
+    const r = '[Правила сервера · Правила Зелених Зон, п. 1.1] Заборонено вбивство\n[Закон штату · Кримінальний кодекс штату Quant, ст. 6.5] Викрадення авто';
+    expect(rulesBlock(r)).toBe(`Пункти правил сервера й законів штату QuantRP, що можуть стосуватися питання:\n${r}\n\n`);
+  });
+  /* specs/010: правила сервера й закони штату — різне, номер — з документом, без пунктів — не вигадувати */
+  it('підказка: розрізняти правила сервера й закони штату', () => {
+    expect(SYSTEM).toContain('«Правила сервера» — порушення карає адміністрація');
+    expect(SYSTEM).toContain('«Закон штату» — кара в самій грі');
+    expect(SYSTEM).toContain('скажи окремо, що порушено з правил сервера і що з законів штату');
+  });
+  it('підказка: документ і номер, нічого не вигадувати', () => {
+    expect(SYSTEM).toContain('з документом і номером у дужках');
+    expect(SYSTEM).toContain('(Кримінальний кодекс, ст. 6.5)');
+    expect(SYSTEM).toContain('прямо скажи, що в правилах і законах цього не знайшов');
+    expect(SYSTEM).toContain("з пам'яті не вигадуй");
   });
   it('порожньо чи не рядок — нічого', () => {
     expect(rulesBlock('  ')).toBe('');
