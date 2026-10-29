@@ -60,3 +60,5 @@ $P -f supabase/seed/map_hunting_fields.sql; $P -f supabase/seed/map_hunting_fiel
 $P -c "do \$\$ begin assert (select count(*) from public.map_areas where category_id = 'hunting-fields') = 6, 'поля полювання дублюються або не всі'; assert (select shown = false and grp = 'Шари мапи' from public.map_categories where id = 'hunting-fields'), 'поля полювання не в шарах мапи'; end \$\$;"
 echo 'Поля полювання ok'
 $P -f supabase/tests/app_online_test.sql
+$P -f supabase/tests/buyer_unknown_items_test.sql
+$P -f supabase/tests/buyer_limit_reports_test.sql

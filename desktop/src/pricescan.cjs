@@ -10,22 +10,102 @@ const PRICES_EVERY = 10 * 60e3; // ту саму ціну того самого 
    Тоді вистачає одного кадру, якщо назву впізнано впевнено (score ≥ SURE) і ціна в межах скупника (min…max з бази).
    Криве число в межах меж виправить наступний кадр з іншою ціною — вона теж піде на сайт */
 const SURE = 0.9;
+/* та сама ціна поза межами, впевнено прочитана стільки разів за відкриття, — межі на сайті хибні: адміну «перевір межі» (T031) */
+const ODD_SURE = 0.95, ODD_TIMES = 3;
 const inLimits = r => r.min > 0 && r.max > r.min && r.price >= r.min && r.price <= r.max;
+/* одне відкриття вікна скупника: кадри з ним ідуть без паузи довшої за OPEN_GAP (specs/024, research R2).
+   Кадр вікна скупника читається довго: на живій грі 2026-10-29 — медіана 10 с, p90 22 с між кадрами; 10 с рвали відкриття */
+const OPEN_GAP = 30e3;
+/* «бачене» живе лише в межах відкриття вікна: друга зчитка з тим самим числом має бути зараз, а не вчора (R4).
+   pick.confirmed — товари, ціну яких підтверджено в останньому виклику, навіть якщо на сайт вона не пішла (для покриття) */
 function pricePicker(every = PRICES_EVERY) {
-  const seen = new Map(), sent = new Map();
-  return (buyer, rows, now) => {
-    const out = [];
-    for (const r of rows) {
-      const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k);
-      const confirmed = (s && s.price === r.price) || ((r.score ?? 0) >= SURE && inLimits(r));
-      seen.set(k, { price: r.price });
+  const seen = new Map(), sent = new Map(), last = { at: -Infinity, opened: -Infinity };   // останній кадр будь-якого скупника: вікно те саме, навіть якщо кадр упізнано хибно
+  const pick = (buyer, rows, now) => {
+    if (now - last.at >= OPEN_GAP) { seen.clear(); last.opened = now; }
+    last.at = now;
+    const out = [], ok = new Set(), odd = [];
+    for (let r of rows) {
+      const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k), lim = r.min > 0 && r.max > r.min;
+      let repaired = false;
+      /* межі є, а ціна поза ними (жива гра 2026-10-29): */
+      if (lim && !inLimits(r)) {
+        const fixed = /^5\d{2,}$/.test(String(r.price)) ? Number(String(r.price).slice(1)) : 0;
+        if (fixed && inLimits({ ...r, price: fixed })) {
+          /* «$» прочитано як «5» («Продати $1 050» → 51050). Але «5495» — це 549 із зайвою цифрою, а не $495: виправлене число
+             саме нічого не підтверджує, лише разом зі звичайною зчиткою того самого числа */
+          r = { ...r, price: fixed }; repaired = true;
+        } else if (r.price >= r.min * 0.5 && r.price <= r.max * 1.5) {
+          /* близько до меж — або крива зчитка, або межі на сайті застарілі («Молоток» 64 при 76–498, «Дубова колода» 260 при
+             295–449). На сайт не йде ніколи (сервер однаково відхиляє ціну за межами ±10 %), але та сама впевнена зчитка
+             ODD_TIMES разів за відкриття — адміну «перевір межі», один раз */
+          const sure = (r.score ?? 0) >= ODD_SURE, odds = sure ? (s?.odd === r.price ? (s.odds || 0) + 1 : 1) : 0;
+          seen.set(k, { ...(s || { plain: [] }), odd: sure ? r.price : s?.odd, odds: sure ? odds : s?.odds });
+          if (odds === ODD_TIMES) odd.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max });
+          continue;
+        } else { seen.delete(k); continue; }   // «51050» без виправлення — не ціна
+      }
+      /* уже надіслану в цьому відкритті ціну міняє лише друга однакова зчитка, а не один кадр */
+      const changing = done && done.at >= last.opened && done.price !== r.price;
+      /* звичайні (не виправлені) зчитки товару за відкриття: виправлене число, якому вони суперечать, — хибне («5495» поруч із 549) */
+      const plain = new Set(s?.plain || []); if (!repaired) plain.add(r.price);
+      const reps = repaired && s?.price === r.price ? (s.reps || 0) + 1 : repaired ? 1 : 0;
+      const twice = s && s.price === r.price && (!(s.repaired && repaired)
+        /* лише виправлені, зате однакові ≥ 3 рази й без суперечних звичайних: «$» завжди читається як «5» («51 281» → $1 281) */
+        || (reps >= 3 && ![...plain].some(p => p !== r.price)));
+      const once = !repaired && !changing && (r.score ?? 0) >= SURE && inLimits(r);
+      const confirmed = twice || once;
+      seen.set(k, { price: r.price, repaired, reps, plain: [...plain], odd: s?.odd, odds: s?.odds });
       if (!confirmed) continue;
+      ok.add(r.item_id);
       if (done && done.price === r.price && now - done.at < every) continue;
       sent.set(k, { price: r.price, at: now });
       out.push({ buyer_id: r.buyer_id, item_id: r.item_id, price: r.price });
     }
+    pick.confirmed = ok;
+    pick.outside = odd;   // ціни поза межами, впевнено прочитані ODD_TIMES разів — адміну «перевір межі» (T031)
     return out;
   };
+  pick.confirmed = new Set(); pick.outside = [];
+  return pick;
+}
+
+/* «прочитано N з M» за поточне відкриття вікна скупника (specs/024, data-model «Покриття вікна»).
+   frame() — кадр із цим скупником: total — товарів у Q-Hub, seen — розпізнані з ціною, confirmed — з підтвердженою ціною.
+   view() — стан останнього скупника або null, якщо вікно закрите (довше OPEN_GAP без кадрів); shown — відкрите довше showAfter.
+   Стан — окремо на кожного скупника: один кадр, хибно впізнаний як інший скупник («М'ясо» посеред «Шкур» на живій грі),
+   не обнуляє лік. showAfter за замовчуванням 0: перший кадр і так читається кілька секунд після відкриття вікна */
+function coverage(gap = OPEN_GAP, showAfter = 0) {
+  const states = new Map();
+  let st = null, lastAny = -Infinity;
+  const view = now => {
+    if (!st || now - lastAny >= gap) return null;
+    const pending = [...st.seen].filter(id => !st.read.has(id)).length;
+    return { buyer: st.buyer, read: Math.min(st.read.size, st.total), total: st.total, pending, shown: now - st.openedAt >= showAfter };
+  };
+  return {
+    frame(buyer, total, seen, confirmed, now) {
+      if (now - lastAny >= gap) states.clear();   // нове відкриття вікна — старі ліки не воскресають
+      st = states.get(buyer);
+      if (!st) { st = { buyer, openedAt: now, total, read: new Set(), seen: new Set(), lastAt: now }; states.set(buyer, st); }
+      st.total = total; st.lastAt = now; lastAny = now;
+      for (const id of seen) st.seen.add(id);
+      for (const id of confirmed) st.read.add(id);
+      return view(now);
+    },
+    view,
+  };
+}
+
+/* де в вирізці картки починається текст: ліворуч від назви — картинка товару, і OCR тоді читає сміття («Фугу» з рибою зліва →
+   «Be vr», без неї — «Фугу» 1.00; жива гра 2026-10-29). Картинка — суцільно світлі стовпці від лівого краю, текст — світлий
+   лише частково. px — 4 байти на піксель (BGRA чи RGBA — для яскравості байдуже); повертає x, з якого брати, або 0 */
+function textLeft(px, width, height) {
+  const lit = x => { let n = 0; for (let y = 0; y < height; y++) { const i = (y * width + x) * 4; if (px[i] + px[i + 1] + px[i + 2] > 210) n++; } return n / height; };
+  let x = 0;
+  while (x < width && lit(x) < 0.6 && x < width * 0.2) x++;   // темний відступ перед картинкою
+  if (x >= width * 0.2 || lit(x) < 0.6) return 0;            // картинки біля лівого краю немає
+  while (x < width && lit(x) >= 0.3) x++;                     // сама картинка (світлі стовпці)
+  return x < width * 0.8 ? x : 0;
 }
 
 /* блок «Зміна цін на товари через 2 год. 55 хв.» ліворуч унизу вікна скупника (виміряно на 1920×1080) */
@@ -76,4 +156,4 @@ function headerBuyer(lines, box = {}) {
   return null;
 }
 
-module.exports = { headerBuyer, SURE, pricePicker, parseChange, changePicker, changeRegion, PRICES_EVERY };
+module.exports = { headerBuyer, textLeft, SURE, OPEN_GAP, pricePicker, coverage, parseChange, changePicker, changeRegion, PRICES_EVERY };

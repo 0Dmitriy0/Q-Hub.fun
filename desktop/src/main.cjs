@@ -202,13 +202,43 @@ async function showStrip() {
   const { bounds: b } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   strip.setBounds({ x: b.x + 16, y: b.y + b.height - STRIP_H - STRIP_GAP, width: b.width - 32, height: STRIP_H });
   if (strip.webContents.isLoading()) await new Promise(r => strip.webContents.once('did-finish-load', r));
-  const push = async () => { try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(await stripData())})`); } catch { /* мережа — наступна спроба за хвилину */ } };
+  const push = async () => { if (covOn) return; try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(await stripData())})`); } catch { /* мережа — наступна спроба за хвилину */ } };
   await push();
   if (!bar.isVisible()) return;   // плашку вже сховали, поки рахували
   strip.showInactive(); strip.moveTop();
   clearInterval(stripTimer); stripTimer = setInterval(push, 60e3);
 }
-function hideStrip() { clearInterval(stripTimer); stripTimer = null; strip?.hide(); }
+function hideStrip() { clearInterval(stripTimer); stripTimer = null; if (!covOn) strip?.hide(); }
+
+/* смужка в режимі «скупник» (specs/024, contracts/strip-buyer.md): поки відкрите вікно скупника — «Шкури: прочитано 9 з 32»,
+   навіть коли плашка Alt+Q закрита. Програма лише підказує прокрутити — сама нічого в грі не гортає (конституція, I) */
+let covOn = false, covTimer = null, buyerNames = null;
+async function buyerName(id) {
+  if (!buyerNames) { const { data } = await sb.from('buyers').select('id,name'); if (data) buyerNames = new Map(data.map(b => [b.id, b.name])); }
+  return buyerNames?.get(id) || id;
+}
+function endCoverage() {
+  clearTimeout(covTimer); covTimer = null;
+  if (!covOn) return;
+  covOn = false;
+  if (bar?.isVisible()) showStrip(); else strip?.hide();
+}
+async function onCoverage(c) {
+  if (!c) return endCoverage();
+  if (!c.shown || !strip || prefs().strip === false || prefs().autoPrices === false) return;
+  const data = { mode: 'buyer', buyer: await buyerName(c.buyer).catch(() => c.buyer), read: c.read, total: c.total, pending: c.pending };
+  if (strip.webContents.isLoading()) await new Promise(r => strip.webContents.once('did-finish-load', r));
+  try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(data)})`); } catch { return; }
+  if (!covOn) {
+    const { bounds: b } = screen.getPrimaryDisplay();   // вікно гри — на основному моніторі (його й знімає captureFrame)
+    strip.setBounds({ x: b.x + 16, y: b.y + b.height - STRIP_H - STRIP_GAP, width: b.width - 32, height: STRIP_H });
+  }
+  covOn = true;
+  if (!strip.isVisible()) strip.showInactive();
+  strip.moveTop();
+  /* кадрів зі скупником немає — вікно закрите; кадр читається до ~25 с, тож чекаємо трохи довше за OPEN_GAP (pricescan.cjs) */
+  clearTimeout(covTimer); covTimer = setTimeout(endCoverage, 35e3);
+}
 
 /* де з'являється плашка: зверху, по центру чи внизу екрана, на якому зараз курсор (унизу — над смужкою сесії) */
 function placeBar() {
@@ -792,6 +822,16 @@ async function autoPrices(rows) {
   try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}\n`); } catch { /* журнал не обов'язковий */ }
   if (ok) pricesAt = 0;   // плашка Alt+Q одразу покаже нові ціни
 }
+/* назва товару, якого немає в Q-Hub, — пропозиція адміну (specs/024, FR-010); без зв'язку — пропускаємо, це не критично */
+async function autoUnknown(buyer, text) {
+  const { error } = await sb.rpc('report_unknown_item', { p_buyer: buyer, p_text: text });
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} unknown sent ${buyer}: ${error ? 'ні — ' + error.message : 'так'}\n`); } catch { /* журнал не обов'язковий */ }
+}
+/* ціна поза межами скупника, впевнено прочитана тричі, — адміну «перевір межі» (specs/024, T031); на сайт вона не йде */
+async function autoLimits(buyer, item, price) {
+  const { error } = await sb.rpc('report_limit_mismatch', { p_buyer: buyer, p_item: item, p_price: price });
+  try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} limits sent ${buyer}/${item} ${price}: ${error ? 'ні — ' + error.message : 'так'}\n`); } catch { /* журнал не обов'язковий */ }
+}
 function startVision() {
   try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
   const eye = vision({
@@ -801,6 +841,7 @@ function startVision() {
     ledger: () => prefs().autoLedger !== false,
     prices: () => prefs().autoPrices !== false,
     onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
+    onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
   });
   setInterval(() => eye.tick(), 2000);
 }
