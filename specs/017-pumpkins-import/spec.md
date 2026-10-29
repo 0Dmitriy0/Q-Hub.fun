@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-29
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Добавити 790 нових міток гарбузів з сайту (https://gtav.fanwiki.top/) по можливості автоматично або зробити ще один конвектор кординат з Open Hydra map для адмінів"
 

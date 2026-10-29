@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isVisible, toggled, type Filters } from './mapFilters';
+import { isVisible, onlyIds, toggled, type Filters } from './mapFilters';
 
 const cats = [
   { id: 'shop-247', grp: 'Магазини' },
   { id: 'skupnyk', grp: 'Заробіток' },
   { id: 'gangs', grp: 'Банди' },
-  { id: 'pryvydy', grp: 'Міні-ігри, квести й контракти' },
+  { id: 'pryvydy', grp: 'Івенти' },
+  { id: 'harbuzy', grp: 'Івенти' },
   { id: 'names', grp: 'Шари мапи' },
   { id: 'zones', grp: 'Шари мапи' },
 ];
@@ -28,12 +29,12 @@ describe('фільтри мапи', () => {
 
   it('перше перемикання після ?show= зберігає видиме зараз + перемкнуте, без старого збереженого', () => {
     const x = f({ only: 'pryvydy', saved: { 'shop-247': true, gangs: true } });
-    expect(toggled(cats, x, ['gangs'], true)).toEqual({ 'shop-247': false, skupnyk: false, gangs: true, pryvydy: true, names: true, zones: false });
+    expect(toggled(cats, x, ['gangs'], true)).toEqual({ 'shop-247': false, skupnyk: false, gangs: true, pryvydy: true, harbuzy: false, names: true, zones: false });
   });
 
   it('звичайне перемикання зберігає все видиме зараз + перемкнуте', () => {
     const x = f({ saved: { gangs: true }, on: { zones: true } });
-    expect(toggled(cats, x, ['shop-247', 'pryvydy'], false)).toEqual({ 'shop-247': false, skupnyk: false, gangs: true, pryvydy: false, names: false, zones: true });
+    expect(toggled(cats, x, ['shop-247', 'pryvydy'], false)).toEqual({ 'shop-247': false, skupnyk: false, gangs: true, pryvydy: false, harbuzy: false, names: false, zones: true });
   });
 
   it('збережене до specs/020 — «Заробіток» сам не вмикається', () => {
@@ -48,5 +49,10 @@ describe('фільтри мапи', () => {
   it('категорія, якої вже немає в списку, зі збереженого не губиться', () => {
     const x = f({ only: 'pryvydy', saved: { old: true } });
     expect(toggled(cats, x, [], true).old).toBe(true);
+  });
+
+  it('?show= з кількома категоріями через кому (банер Хелловіну) — лише вони й назви', () => {
+    expect(onlyIds(' pryvydy, harbuzy ,')).toEqual(['pryvydy', 'harbuzy']);
+    expect(shown(f({ only: 'pryvydy,harbuzy', saved: { 'shop-247': true } }))).toEqual(['pryvydy', 'harbuzy', 'names']);
   });
 });
