@@ -210,17 +210,27 @@ function gray(img, bgra = true) {
 }
 
 /* шкала масштабу внизу ліворуч: найдовша світло-сіра горизонтальна лінія (у грі вона 1–2 пікс завтовшки, яскравість ~150–190).
-   Повертає її довжину в пікселях і ділянку з числом під нею */
+   Тонка: у палітрі з сірими дорогами дорога теж світло-сіра й довга, але товста — над чи під нею біле майже по всій довжині
+   (2026-10-30: дорога на y≈909 і ≈984 бралась за шкалу, масштаб хибив у 1,15–1,5 раза). Тож дивимось на 3 пікс над і під
+   лінією окремо: у шкали хоча б з одного боку біле не більше ніж на чверті довжини (під нею гра малює темну тінь, а
+   поверх дороги біле лише зверху), у товстої дороги — з обох боків (і навскісної теж). Повертає її довжину в пікселях
+   і ділянку з числом під нею */
 function scaleBar(img, bgra = true) {
   const { width: w, height: h, data } = img, k = h / 1080, [r, b] = bgra ? [2, 0] : [0, 2];
+  const white = (x, y) => { const i = (y * w + x) * 4, R = data[i + r], G = data[i + 1], B = data[i + b]; return R > 135 && Math.abs(R - G) < 14 && Math.abs(G - B) < 14; };
+  const off = Math.max(3, Math.round(3 * k));
+  const thin = (x0, x1, y) => {
+    let up = 0, down = 0;
+    for (let x = x0; x <= x1; x++) { if (white(x, y - off)) up++; if (white(x, y + off)) down++; }
+    return Math.min(up, down) <= (x1 - x0 + 1) / 4;
+  };
   let best = null;
   for (let y = Math.round(880 * k); y < Math.round(990 * k); y++) {
     let run = 0, start = 0;
-    for (let x = 0; x < Math.round(320 * k); x++) {
-      const i = (y * w + x) * 4, R = data[i + r], G = data[i + 1], B = data[i + b];
-      const white = R > 135 && Math.abs(R - G) < 14 && Math.abs(G - B) < 14;
-      if (white) { if (!run) start = x; run++; } else run = 0;
-      if (run > 80 * k && (!best || run > best.px)) best = { px: run, x0: start, x1: x, y };
+    for (let x = 0; x <= Math.round(320 * k); x++) {
+      if (x < Math.round(320 * k) && white(x, y)) { if (!run) start = x; run++; continue; }
+      if (run > 80 * k && (!best || run > best.px) && thin(start, x - 1, y)) best = { px: run, x0: start, x1: x - 1, y };
+      run = 0;
     }
   }
   if (!best) return null;

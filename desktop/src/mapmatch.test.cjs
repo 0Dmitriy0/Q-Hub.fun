@@ -36,6 +36,14 @@ test('шкала: довжина й число', () => {
   assert.equal(mm.scaleMeters('—'), null);
 });
 
+/* палітра з сірими дорогами: довга товста дорога біля шкали не шкала (2026-10-30 бралась дорога на y≈909 і ≈984) */
+test('шкала поверх і поруч сірих доріг — та сама 210 пікс', () => {
+  for (const f of ['mirror-park-spawn-390.png', 'vinewood-hills-bar-108.png']) {
+    const bar = mm.scaleBar(decodePng(fs.readFileSync(path.join(__dirname, 'fixtures', 'map', f))), false);
+    assert.ok(bar && Math.abs(bar.px - 210) <= 2 && Math.abs(bar.y - 943) <= 1, `${f}: ${JSON.stringify(bar && { px: bar.px, y: bar.y })}`);
+  }
+});
+
 test('шкала в імперських одиницях гри: фути й милі → метри', () => {
   assert.equal(mm.scaleMeters('820ft'), 249.94);
   assert.equal(mm.scaleMeters('1,000ft'), 304.8);
@@ -90,7 +98,7 @@ test('шум зі шкалою — не точка', () => {
    Головне — жодної хибної точки: краще «не впевнений», ніж мітка не там (конституція, принцип IV).
    SC-002 — у робочому масштабі 100–1000 м щонайменше 90% у межах 30 м; на всіх кадрах — сторож від погіршення */
 const FIX = path.join(__dirname, 'fixtures', 'map');
-const MIN_FOUND = 0.8, MIN_WORK = 0.9;   // 30 кадрів 2026-10-30: 26 знайдено (87%), 100–1000 м — 20/20
+const MIN_FOUND = 0.8, MIN_WORK = 0.9;   // 39 кадрів 2026-10-30: 34 знайдено (87%), 100–1000 м — 28/29
 test('справжні кадри: жодної точки далі 30 м, 100–1000 м — щонайменше ' + MIN_WORK * 100 + '%, усього — ' + MIN_FOUND * 100 + '%', () => {
   const files = fs.readdirSync(FIX).filter(f => f.endsWith('.png'));
   let found = 0, work = 0, workFound = 0;
