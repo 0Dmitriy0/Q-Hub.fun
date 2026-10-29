@@ -1,7 +1,7 @@
 {
   "name": "q-hub-desktop",
   "productName": "Q-Hub",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Q-Hub Desktop — програма поверх гри для гравців QuantRP",
   "main": "src/main.cjs",
   "private": true,

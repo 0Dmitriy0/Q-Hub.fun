@@ -39,9 +39,9 @@ description: "Задачі: нік акаунта й персонажі зі с�
 **Мета**: другий персонаж не перезаписує статік першого.
 **Independent Test**: два персонажі з різними статіками → у кожного свій статік, облік і склад; статік першого не змінився.
 
-- [ ] T008 [P] [US1] `desktop/src/main.cjs`: `char-add` пише `static_id` у `characters` (`insert({ name, static_id: stat, start_balance: start })`), профіль не чіпає; відмови бази («уже має інший персонаж», «вже 3 персонажі») — гравцю як є; `state()` віддає `characters: [{ id, name, static: static_id }]`
-- [ ] T009 [P] [US1] `desktop/src/renderer.js`, `desktop/src/index.html`: плитка — Ім'я_Прізвище і «#статік»; «+ Новий» ховається, коли персонажів 3; підстановку статіку з профілю (`s.user.staticId`) прибрати
-- [ ] T010 [P] [US1] `src/lib/auth.tsx`: персонажі з `static_id`; `src/pages/cabinet/Characters.tsx`: поле «Статік» (лише цифри, `#` і пробіли допустимі), список зі статіком (бачить лише власник), повідомлення при 3 персонажах; формат імені — як у `desktop/src/character.cjs`
+- [X] T008 [P] [US1] `desktop/src/main.cjs`: `char-add` пише `static_id` у `characters` (`insert({ name, static_id: stat, start_balance: start })`), профіль не чіпає; відмови бази («уже має інший персонаж», «вже 3 персонажі») — гравцю як є; `state()` віддає `characters: [{ id, name, static: static_id }]`
+- [X] T009 [P] [US1] `desktop/src/renderer.js`, `desktop/src/index.html`: плитка — Ім'я_Прізвище і «#статік»; «+ Новий» ховається, коли персонажів 3; підстановку статіку з профілю (`s.user.staticId`) прибрати
+- [X] T010 [P] [US1] `src/lib/auth.tsx`: персонажі з `static_id`; `src/pages/cabinet/Characters.tsx`: поле «Статік» (лише цифри, `#` і пробіли допустимі), список зі статіком (бачить лише власник), повідомлення при 3 персонажах; формат імені — як у `desktop/src/character.cjs`
 
 **Checkpoint**: quickstart рядки 2–4.
 
@@ -52,13 +52,13 @@ description: "Задачі: нік акаунта й персонажі зі с�
 **Мета**: людина в Q-Hub — це нік, який вона вибрала сама; на сайті скрізь лише він.
 **Independent Test**: новий акаунт → вибирає нік → шапка програми й рейтинг сайту показують нік, без статіку.
 
-- [ ] T011 [P] [US2] `desktop/src/nick.cjs` + `desktop/src/nick.test.cjs`: `parseNick(s)` — trim, `^[A-Za-z0-9_]{3,20}$`, `{ nick }` або `{ error }` українською; тести: «D_VYRX», «ab» (закоротко), «d vyrx», кирилиця, 21 символ
-- [ ] T012 [P] [US2] `src/lib/nick.ts` + `src/lib/nick.test.ts`: та сама перевірка для сайту (той самий вираз, коментар-посилання на `desktop/src/nick.cjs`)
-- [ ] T013 [US2] `desktop/src/main.cjs` + `desktop/src/preload.cjs`: IPC `nick-set` (лише з вікна входу й плашки) → `update profiles set nick`; `state()` і `bar-data` — `user.nick`, `user.nickChangedAt`, без `gameName`/`staticId` (contracts/desktop-ipc.md)
-- [ ] T014 [US2] `desktop/src/index.html`, `desktop/src/renderer.js`: крок «Нік у Q-Hub» перед персонажами, коли `nick` null; помилка бази («зайнятий», «можна знову з …») — під полем
-- [ ] T015 [US2] `src/desktop/Bar.tsx`: шапка — аватар, нік, під ним «Ім'я_Прізвище #статік» вибраного персонажа; меню персонажів — Ім'я_Прізвище і статік; `src/desktop/Settings.tsx` — FAQ «Як змінити нік» (раз на 30 днів)
-- [ ] T016 [US2] `src/lib/auth.tsx`: `nick`, `nickChangedAt`, `saveNick`; прибрати `gameName`, `staticId`, `saveProfile`; `src/components/StaticGate.tsx` → `src/components/NickGate.tsx` (ворота — нік, форма з «можна знову з …»), оновити імпорти в `src/components/Layout.tsx`, `src/desktop/Hub.tsx`, `src/pages/cabinet/SettingsPage.tsx`
-- [ ] T017 [P] [US2] Нік замість Discord-імені й профільного ніка: `src/components/Leaderboard.tsx`, шапка `src/pages/cabinet/Cabinet.tsx`, автор чернетки `src/lib/mapDrafts.ts` (`who:profiles!author(nick,name)`, `authorName`) + `src/lib/mapDrafts.test.ts`
+- [X] T011 [P] [US2] `desktop/src/nick.cjs` + `desktop/src/nick.test.cjs`: `parseNick(s)` — trim, `^[A-Za-z0-9_]{3,20}$`, `{ nick }` або `{ error }` українською; тести: «D_VYRX», «ab» (закоротко), «d vyrx», кирилиця, 21 символ
+- [X] T012 [P] [US2] `src/lib/nick.ts` + `src/lib/nick.test.ts`: та сама перевірка для сайту (той самий вираз, коментар-посилання на `desktop/src/nick.cjs`)
+- [X] T013 [US2] `desktop/src/main.cjs` + `desktop/src/preload.cjs`: IPC `nick-set` (лише з вікна входу й плашки) → `update profiles set nick`; `state()` і `bar-data` — `user.nick`, `user.nickChangedAt`, без `gameName`/`staticId` (contracts/desktop-ipc.md)
+- [X] T014 [US2] `desktop/src/index.html`, `desktop/src/renderer.js`: крок «Нік у Q-Hub» перед персонажами, коли `nick` null; помилка бази («зайнятий», «можна знову з …») — під полем
+- [X] T015 [US2] `src/desktop/Bar.tsx`: шапка — аватар, нік, під ним «Ім'я_Прізвище #статік» вибраного персонажа; меню персонажів — Ім'я_Прізвище і статік; `src/desktop/Settings.tsx` — FAQ «Як змінити нік» (раз на 30 днів)
+- [X] T016 [US2] `src/lib/auth.tsx`: `nick`, `nickChangedAt`, `saveNick`; прибрати `gameName`, `staticId`, `saveProfile`; `src/components/StaticGate.tsx` → `src/components/NickGate.tsx` (ворота — нік, форма з «можна знову з …»), оновити імпорти в `src/components/Layout.tsx`, `src/desktop/Hub.tsx`, `src/pages/cabinet/SettingsPage.tsx`
+- [X] T017 [P] [US2] Нік замість Discord-імені й профільного ніка: `src/components/Leaderboard.tsx`, шапка `src/pages/cabinet/Cabinet.tsx`, автор чернетки `src/lib/mapDrafts.ts` (`who:profiles!author(nick,name)`, `authorName`) + `src/lib/mapDrafts.test.ts`
 
 **Checkpoint**: quickstart рядки 1, 5, 8.
 
@@ -69,10 +69,10 @@ description: "Задачі: нік акаунта й персонажі зі с�
 **Мета**: у кожній ціні — нік і персонаж; ручна ціна при 2–3 персонажах питає персонажа.
 **Independent Test**: акаунт з двома персонажами — «зір» пише від вибраного; ручна ціна — діалог вибору; у «Останніх оновленнях» «нік · Ім'я_Прізвище».
 
-- [ ] T018 [P] [US3] `src/lib/updates.ts` + `src/lib/updates.test.ts`: тип `Update` — `reporter_id`, `reporter_name`, `reporter_character`; групування за `reporter_id`; `who()` → «нік · Ім'я_Прізвище»; без `reporter_static`/`reporter_game`
-- [ ] T019 [P] [US3] `src/components/CharacterPick.tsx` + чиста функція вибору в `src/lib/characterPick.ts` з `src/lib/characterPick.test.ts`: 0 персонажів — «Спершу додай персонажа»; 1 — без питання; 2–3 — діалог, підказка — поточний; «Скасувати» — нічого не записано
-- [ ] T020 [US3] `src/pages/Prices.tsx` і `src/components/ShotImport.tsx`: `character_id` з `CharacterPick` у кожній ручній ціні (імпорт знімка — один вибір на весь знімок); біля автора прибрати « #статік» (`Prices.tsx:147`)
-- [ ] T021 [US3] `desktop/src/main.cjs`: `autoPrices`, `autoNextChange`, `autoUnknown` — `character_id: settings.character` у момент зчитування (`desktop/src/vision.cjs` → `onPrices`); відмова «Спершу вибери нік» — показати вікно входу
+- [X] T018 [P] [US3] `src/lib/updates.ts` + `src/lib/updates.test.ts`: тип `Update` — `reporter_id`, `reporter_name`, `reporter_character`; групування за `reporter_id`; `who()` → «нік · Ім'я_Прізвище»; без `reporter_static`/`reporter_game`
+- [X] T019 [P] [US3] `src/components/CharacterPick.tsx` + чиста функція вибору в `src/lib/characterPick.ts` з `src/lib/characterPick.test.ts`: 0 персонажів — «Спершу додай персонажа»; 1 — без питання; 2–3 — діалог, підказка — поточний; «Скасувати» — нічого не записано
+- [X] T020 [US3] `src/pages/Prices.tsx` і `src/components/ShotImport.tsx`: `character_id` з `CharacterPick` у кожній ручній ціні (імпорт знімка — один вибір на весь знімок); біля автора прибрати « #статік» (`Prices.tsx:147`)
+- [X] T021 [US3] `desktop/src/main.cjs`: `autoPrices`, `autoNextChange`, `autoUnknown` — `character_id: settings.character` у момент зчитування (`desktop/src/vision.cjs` → `onPrices`); відмова «Спершу вибери нік» — показати вікно входу
 
 **Checkpoint**: quickstart рядки 6–7, 9.
 
@@ -83,16 +83,16 @@ description: "Задачі: нік акаунта й персонажі зі с�
 **Мета**: наявні статіки й ціни переходять на персонажів.
 **Independent Test**: після міграції акаунт з профільним статіком має його в персонажа; старі ціни на місці.
 
-- [ ] T022 [P] [US4] `src/lib/mapMarks.ts`, `src/pages/MapPage.tsx`: власник мітки — з нового `map_owners` (Ім'я_Прізвище персонажа за статіком), без змін формату даних
-- [ ] T023 [US4] `specs/025-account-nick-characters/quickstart.md` — розділ «Перенесення»: SQL-запити перевірки після міграції (персонажі без статіку, ціни без `character_id`, акаунти без ніка) для SC-004
+- [X] T022 [P] [US4] `src/lib/mapMarks.ts`, `src/pages/MapPage.tsx`: власник мітки — з нового `map_owners` (Ім'я_Прізвище персонажа за статіком), без змін формату даних
+- [X] T023 [US4] `specs/025-account-nick-characters/quickstart.md` — розділ «Перенесення»: SQL-запити перевірки після міграції (персонажі без статіку, ціни без `character_id`, акаунти без ніка) для SC-004
 
 ---
 
 ## Phase 7: Polish
 
-- [ ] T024 Запис у `src/data/changelog.json`: новий запис з id дати релізу (якщо запис того дня вже в `main` — `РРРР-ММ-ДД.N`), групи added/changed — мовою гравця
+- [X] T024 Запис у `src/data/changelog.json`: новий запис з id дати релізу (якщо запис того дня вже в `main` — `РРРР-ММ-ДД.N`), групи added/changed — мовою гравця
 - [ ] T025 Конституція `.specify/memory/constitution.md` — принцип V (PATCH, лише за згодою власника): «записи обліку, цін і чернеток програма лише додає; профіль і персонажів — керує власник» (plan.md, Complexity Tracking)
-- [ ] T026 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — зелене; SQL-тест — у CI; ручні перевірки quickstart.md 1–9
+- [X] T026 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — зелене; SQL-тест — у CI; ручні перевірки quickstart.md 1–9
 - [ ] T027 Власнику: міграцію 0038 застосувати разом із випуском нової версії програми (до вибору ніка ціни не подаються — research R7)
 
 ## Dependencies & Execution Order

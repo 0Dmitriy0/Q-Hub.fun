@@ -28,7 +28,7 @@ const TABS: [string, string, string, string][] = [
 ];
 
 export default function Cabinet() {
-  const { ready, session, signIn, signOut, characters, current, setCurrent, name, avatar, staticId, gameName } = useAuth();
+  const { ready, session, signIn, signOut, characters, current, setCurrent, name, avatar, nick } = useAuth();
   const { pathname } = useLocation();
   if (!supabase) return <div className="card empty">Кабінет запрацює після підключення Supabase (див. README).</div>;
   if (!ready) return <div className="card empty">Завантаження…</div>;
@@ -48,7 +48,8 @@ export default function Cabinet() {
 
   const seg = pathname.split('/')[2] || '';
   const tab = TABS.find(t => t[0] === seg) ?? TABS[0];
-  const who = <>{name}{staticId ? <> · <b>{gameName}</b> <b className="mono">#{staticId}</b></> : null}</>;
+  /* на сайті людину видно лише за ніком акаунта (specs/025 FR-011); поки ніка немає — ім'я Discord */
+  const who = nick ? <b>{nick}</b> : <>{name}</>;
   const pick = characters.length > 1 && (
     <label className="fld" style={{ minWidth: 200 }}><span>Персонаж</span>
       <Select value={current?.id || ''} onChange={setCurrent} options={characters.map(c => ({ value: c.id, label: c.name, icon: 'user' }))} />
@@ -83,7 +84,7 @@ export default function Cabinet() {
       </div>
       <section className="wiki-hero cab-hero">
         <div>
-          <span className="h-pill"><span className="mdot good" aria-hidden="true" />{who}{staticId ? <> · <Link to="/kabinet/nalashtuvannya">змінити</Link></> : null}</span>
+          <span className="h-pill"><span className="mdot good" aria-hidden="true" />{who}{nick ? <> · <Link to="/kabinet/nalashtuvannya">змінити</Link></> : null}</span>
           <h1>{current ? current.name : 'Кабінет'}</h1>
           <p className="muted">{tab[2]}</p>
         </div>

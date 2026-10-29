@@ -4,8 +4,9 @@ const initial = s => (s.trim()[0] || '?').toUpperCase();
 function tile(c, last) {
   const b = document.createElement('button');
   b.className = 'tile' + (last ? ' last' : ''); b.title = c.name;
-  b.innerHTML = '<span class="ava"></span><span class="nm"></span>' + (last ? '<span class="tag">востаннє</span>' : '');
+  b.innerHTML = '<span class="ava"></span><span class="nm"></span><span class="st"></span>' + (last ? '<span class="tag">востаннє</span>' : '');
   b.querySelector('.ava').textContent = initial(c.name); b.querySelector('.nm').textContent = c.name;
+  b.querySelector('.st').textContent = c.static ? '#' + c.static : 'без статіку';
   b.onclick = async () => { await window.qhub.character(c.id); window.qhub.cabinet(); };
   return b;
 }
@@ -29,6 +30,15 @@ $('addf').onsubmit = async e => {
   if (!s.error) { $('cname').value = ''; $('cstatic').value = ''; $('cstart').value = ''; }
   show(s);
 };
+/* нік акаунта: перевірка формату — і тут, і в базі (зайнятий, раз на 30 днів) */
+$('nickf').onsubmit = async e => {
+  e.preventDefault();
+  $('nickgo').disabled = true;
+  const s = await window.qhub.nickSet($('nick').value);
+  $('nickgo').disabled = false;
+  show(s);
+};
+const MAX_CHARS = 3;
 function waiting(on) {
   $('login').disabled = on;
   $('loginText').textContent = on ? 'Чекаю підтвердження в браузері…' : 'Увійти через Discord';
@@ -40,14 +50,17 @@ function show(s) {
   $('err').hidden = !s.error; $('err').textContent = s.error || '';
   $('out').hidden = !!s.user; $('in').hidden = !s.user; waiting(false);
   if (!s.user) return;
-  $('name').textContent = s.user.name;
-  $('game').textContent = s.user.gameName ? `${s.user.gameName}${s.user.staticId ? ' #' + s.user.staticId : ''}` : 'Нік і статік — у кабінеті';
+  /* зверху нік акаунта, під ним — з якого Discord зайшов; без ніка — спершу вибрати нік */
+  $('name').textContent = s.user.nick || s.user.name;
+  $('game').textContent = s.user.nick ? 'Discord: ' + s.user.name : 'Нік у Q-Hub ще не вибрано';
   $('avatar').hidden = !s.user.avatar; if (s.user.avatar) $('avatar').src = s.user.avatar;
-  $('ph').hidden = !!s.user.avatar; $('ph').textContent = initial(s.user.name);
-  $('tiles').replaceChildren(...s.characters.map(c => tile(c, s.characters.length > 1 && c.id === s.character)), addTile());
+  $('ph').hidden = !!s.user.avatar; $('ph').textContent = initial(s.user.nick || s.user.name);
+  $('nickstep').hidden = !!s.user.nick; $('chars').hidden = !s.user.nick;
+  if (!s.user.nick) { $('nick').focus(); return; }
+  const full = s.characters.length >= MAX_CHARS;
+  $('tiles').replaceChildren(...s.characters.map(c => tile(c, s.characters.length > 1 && c.id === s.character)), ...(full ? [] : [addTile()]));
   $('nochar').hidden = !!s.characters.length;
-  if (!$('cstatic').value && s.user.staticId) $('cstatic').value = s.user.staticId;
-  addForm(!s.characters.length || !!s.error && !$('addf').hidden);
+  addForm(!full && (!s.characters.length || !!s.error && !$('addf').hidden));
 }
 $('login').onclick = async () => { waiting(true); show(await window.qhub.login()); };
 $('logout').onclick = async () => show(await window.qhub.logout());

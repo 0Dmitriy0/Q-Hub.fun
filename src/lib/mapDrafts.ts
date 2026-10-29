@@ -9,7 +9,7 @@ export interface MapDraft {
   x: number | null; y: number | null; status: DraftStatus;
   reviewed_at: string | null; point_id: number | null; shot_deleted_at: string | null;
   category_id?: string | null; note?: string;   // підказка редактора з програми (0020), коли точку не знайдено
-  who?: { game_name: string | null; name: string | null } | null;
+  who?: { nick: string | null; name: string | null } | null;
 }
 
 export const statusLabel = (s: DraftStatus) => ({ new: 'Нова', published: 'Опубліковано', rejected: 'Відхилено' }[s]);
@@ -25,7 +25,8 @@ export function rpcError(message: string): string {
 }
 
 /* хто подав: нік у грі, інакше ім'я з Discord */
-export const authorName = (d: Pick<MapDraft, 'who'>) => d.who?.game_name?.trim() || d.who?.name?.trim() || 'редактор';
+/* автор — нік акаунта в Q-Hub (specs/025), поки його немає — ім'я Discord */
+export const authorName = (d: Pick<MapDraft, 'who'>) => d.who?.nick?.trim() || d.who?.name?.trim() || 'редактор';
 
 /* знімки, які пора видалити: чернетку оброблено понад 30 днів тому, а знімок ще лежить */
 export const SHOT_DAYS = 30;
@@ -52,7 +53,7 @@ export function nearby(p: [number, number], category: string, points: Pick<MapMa
 const BUCKET = 'map-drafts';
 
 export async function loadDrafts(): Promise<{ data: MapDraft[]; error: string | null }> {
-  const cols = 'id,author,taken_at,created_at,shot,x,y,status,reviewed_at,point_id,shot_deleted_at,who:profiles!author(game_name,name)';
+  const cols = 'id,author,taken_at,created_at,shot,x,y,status,reviewed_at,point_id,shot_deleted_at,who:profiles!author(nick,name)';
   const q = (c: string) => supabase!.from('map_drafts').select(c).order('created_at', { ascending: false }).limit(500);
   let { data, error } = await q(cols + ',category_id,note');
   if (error && /category_id|note/.test(error.message)) ({ data, error } = await q(cols));   // міграцію 0020 ще не застосовано

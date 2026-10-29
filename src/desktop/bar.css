@@ -29,6 +29,12 @@ body.in-bar input { user-select: text; }
 .bchar { position: relative; flex: none; }
 .bpill { display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px 3px 3px; border: 1px solid rgba(255, 106, 31, .45); border-radius: 10px; background: rgba(255, 106, 31, .1); color: var(--fg); font: 700 13px var(--sans); cursor: pointer; max-width: 190px; }
 .bpill span:not(.bava) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* нік акаунта й під ним персонаж зі статіком (specs/025) */
+.bpill { max-width: 220px; }
+.bpill .bwho { display: flex; flex-direction: column; line-height: 1.15; text-align: left; min-width: 0; }
+.bpill .bwho b, .bpill .bwho small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bpill .bwho small { font: 600 11px var(--mono); color: var(--muted); }
+.bmenu button small { color: var(--muted); font-weight: 600; }
 .bpill img, .bava { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; flex: none; }
 .bava { display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); font: 800 13px var(--sans); }
 .bmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 200px; display: flex; flex-direction: column; padding: 5px; background: #1a2330; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }

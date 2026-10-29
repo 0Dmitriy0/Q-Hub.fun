@@ -33,3 +33,22 @@ bash supabase/tests/run.sh                 # account_nick_test.sql — у CI (Li
 
 - акаунт зі статіком у профілі й персонажем з тим самим ім'ям → статік у персонажа (SC-004);
 - старі ціни — у рейтингу під ніком, щойно гравець його вибере.
+
+Перевірка після міграції — у Supabase → SQL Editor (усі три мають дати 0 рядків, крім пояснених):
+
+```sql
+-- 1. профільний статік, який не перейшов жодному персонажу (акаунт без персонажів — пояснено: перейде, коли гравець
+--    створить персонажа з цим самим статіком)
+select p.id, p.name, p.static_id, (select count(*) from public.characters c where c.owner = p.id) as chars
+from public.profiles p
+where p.static_id is not null and not exists (select 1 from public.characters c where c.static_id = p.static_id);
+
+-- 2. ціни гравців без персонажа (лише акаунти без жодного персонажа — пояснено)
+select r.reporter, count(*) from public.price_reports r where r.character_id is null group by r.reporter;
+
+-- 3. скільки акаунтів ще не вибрали нік (не помилка: виберуть при наступному вході)
+select count(*) as без_ніка from public.profiles where nick is null;
+```
+
+Локально (Windows, без psql і Docker) SQL-тести проганялись у PGlite 0.2.17 — копія `supabase/tests/run.sh` на Node;
+відома відмінність від справжнього Postgres: перевірка сиду міток QuantFun (2149 шт.) там дає 0 рядків, у CI — ні.
