@@ -53,3 +53,26 @@ export function search(prices: BarPrice[], q: string, stock: Record<string, numb
   return [...by.values()].map(f => [f, score(f)] as const).filter(([, s]) => s >= 0)
     .sort((a, b) => b[1] - a[1] || a[0].item.localeCompare(b[0].item, 'uk')).map(([f]) => f).slice(0, limit);
 }
+
+/* місця на мапі для рядка Alt+Q (specs/014 FR-007): «заправка», «24/7», «де лікарня» — мітки за назвою мітки чи категорії.
+   Клік по місцю відкриває мапу Q-Hub з цією міткою в центрі */
+export interface PlaceMark { id: string; name: string; category: string; x: number; y: number; icon?: string }
+export interface PlaceCat { id: string; name: string; icon: string }
+export interface PlaceHit { id: string; name: string; cat: string; icon: string; x: number; y: number }
+/* слова запиту, що не є назвою місця */
+const PLACE_FILLER = /^(де|где|знайти|знайди|покажи|показати|мапа|мапі|карта|карті|на|найближча|найближчий|найближче)$/;
+
+export function places(q: string, marks: PlaceMark[], cats: PlaceCat[], limit = 6): PlaceHit[] {
+  const words = norm(q).split(/\s+/).filter(w => w && !PLACE_FILLER.test(w)).map(stem);
+  if (!words.length) return [];
+  const cat = new Map(cats.map(c => [c.id, c]));
+  const has = (s: string) => words.every(w => norm(s).includes(w));
+  /* збіг назви мітки — вище за збіг лише категорії («Заправка №3» перед будь-якою заправкою) */
+  const out: (PlaceHit & { s: number })[] = [];
+  for (const m of marks) {
+    const c = cat.get(m.category); if (!c) continue;
+    const s = has(m.name) ? 2 : has(m.name + ' ' + c.name) ? 1 : 0;
+    if (s) out.push({ id: m.id, name: m.name || c.name, cat: c.name, icon: m.icon || c.icon, x: m.x, y: m.y, s });
+  }
+  return out.sort((a, b) => b.s - a.s || a.name.localeCompare(b.name, 'uk')).slice(0, limit).map(({ s: _s, ...h }) => h);
+}

@@ -133,7 +133,7 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
         </>}
         {sec === 'keys' && <div className="scard">
           {([['Показати чи сховати плашку', prefs.hotkey], ['Пошук у правилах або записати суму', 'Enter'], ['Спитати ШІ', 'Shift+Enter'], ['Пошук ↔ Ціни', 'Tab'],
-            ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'], ['Мапа Q-Hub поверх гри', prefs.mapKey || 'Alt+M'],
+            ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'], ['Мапа Q-Hub поверх гри', prefs.mapKey || 'Alt+M'], ['«Де я?» — з відкритою великою картою гри', prefs.mapKey || 'Alt+M'],
             ...(staff ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
         </div>}
         {sec === 'changes' && <>

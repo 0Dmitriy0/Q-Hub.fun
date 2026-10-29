@@ -79,16 +79,16 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Тест `src/desktop/barSearch.test.ts`: `places(q, marks, cats, limit)` — збіг за назвою мітки й назвою категорії, та сама нормалізація, що `barSearch` («24/7», «заправка», «заправки»); порожній запит — нічого; не більше `limit`
-- [ ] T020 [P] [US2] Тест кадру в `src/lib/mapGeo.test.ts`: `readView/saveView` (`qhub:map:view` = `{ x, y, z }`) — биті дані й порожньо → `null`
+- [X] T019 [P] [US2] Тест `src/desktop/barSearch.test.ts`: `places(q, marks, cats, limit)` — збіг за назвою мітки й назвою категорії, та сама нормалізація, що `barSearch` («24/7», «заправка», «заправки»); порожній запит — нічого; не більше `limit`
+- [X] T020 [P] [US2] Тест кадру в `src/lib/mapGeo.test.ts`: `readView/saveView` (`qhub:map:view` = `{ x, y, z }`) — биті дані й порожньо → `null`
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Кадр при `embed` у `src/pages/MapPage.tsx`: замість адреси `#x,y,z` — `qhub:map:view` у `localStorage` (зчитати при створенні мапи, писати на `moveend`); фільтри — ті самі ключі `qhub:map:on`, `qhub:map:open` (FR-006)
-- [ ] T022 [US2] Реалізувати `places()` у `src/desktop/barSearch.ts` (тести T019)
-- [ ] T023 [US2] Результати-місця в рядку плашки в `src/desktop/Bar.tsx`: мітки — `loadMapData()` з кешем 10 хв; блок «Місця» (іконка категорії, назва, категорія); клік → `qhub.mapOpen({ id, x, y })` (FR-007)
-- [ ] T024 [US2] `mapOpen` у `desktop/src/main.cjs` і `desktop/src/preload.cjs`: показати мапу (`from: 'bar'`) і надіслати `map-focus`; у `src/pages/MapPage.tsx` при `embed` — подія `map-focus` центрує мапу на точці (зум 6) і відкриває картку мітки з цим `id`
-- [ ] T025 [US2] Перевірити згортання панелі фільтрів на 1366×768 у вікні мапи (`src/desktop/bar.css`, `.mapwin`) — edge case
+- [X] T021 [US2] Кадр при `embed` у `src/pages/MapPage.tsx`: замість адреси `#x,y,z` — `qhub:map:view` у `localStorage` (зчитати при створенні мапи, писати на `moveend`); фільтри — ті самі ключі `qhub:map:on`, `qhub:map:open` (FR-006)
+- [X] T022 [US2] Реалізувати `places()` у `src/desktop/barSearch.ts` (тести T019)
+- [X] T023 [US2] Результати-місця в рядку плашки в `src/desktop/Bar.tsx`: мітки — `loadMapData()` з кешем 10 хв; блок «Місця» (іконка категорії, назва, категорія); клік → `qhub.mapOpen({ id, x, y })` (FR-007)
+- [X] T024 [US2] `mapOpen` у `desktop/src/main.cjs` і `desktop/src/preload.cjs`: показати мапу (`from: 'bar'`) і надіслати `map-focus`; у `src/pages/MapPage.tsx` при `embed` — подія `map-focus` центрує мапу на точці (зум 6) і відкриває картку мітки з цим `id`
+- [X] T025 [US2] Перевірити згортання панелі фільтрів на 1366×768 у вікні мапи (`src/desktop/bar.css`, `.mapwin`) — edge case
 
 **Checkpoint**: US1 + US2 — повноцінна довідка без «Де я?»
 
@@ -102,16 +102,16 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Тест `src/lib/mapNear.test.ts`: `nearest(marks, from, catIds, n = 5)` — евклідова відстань у метрах гри, округлення до 10 м, сортування, лише вибрані категорії, `n` найближчих, порожньо без міток
+- [X] T026 [P] [US3] Тест `src/lib/mapNear.test.ts`: `nearest(marks, from, catIds, n = 5)` — евклідова відстань у метрах гри, округлення до 10 м, сортування, лише вибрані категорії, `n` найближчих, порожньо без міток
 
 ### Implementation for User Story 3
 
-- [ ] T027 [P] [US3] Реалізувати `src/lib/mapNear.ts` → `nearest()` (тести T026)
-- [ ] T028 [US3] Локатор для всіх у `desktop/src/main.cjs`: `startLocator()` за першої потреби «Де я?» для будь-якої ролі (не лише `STAFF`); F9 лишається лише для редакторів (FR-009)
-- [ ] T029 [US3] «Де я?» клавішею в `desktop/src/main.cjs`: при натисканні клавіші мапи, поки мапа схована, — `grabScreen()` до показу; `mapmatch.scaleBar()` знайшла шкалу — показати мапу, `map-where { state: 'busy' }`, потім `locatePin()` → `map-where { ok, x, y }` або `{ ok: false, why: WHY[kind] }` (FR-008, FR-008a)
-- [ ] T030 [US3] «Де я?» кнопкою: `mapWhere()` у `desktop/src/main.cjs` і `desktop/src/preload.cjs` — сховати мапу, плашку й історію → 120 мс → `grabScreen()` → показати як були → `locatePin()`; знімок не пишеться на диск (без `pin-last.png`) і не надсилається; у `pin.log` — лише `where` з координатами чи причиною (FR-008a, FR-010)
-- [ ] T031 [US3] Компонент `src/desktop/MapWhere.tsx`: кнопка «Де я?», стан «Шукаю…», маркер «Ти тут» (окремий шар Leaflet), підказка при невдачі («Не вдалося визначити — відкрий велику карту гри й спробуй ще» + причина), список «Найближчі» з `nearest()` для увімкнених категорій із відстанню; клік у списку — центрувати мітку (FR-008, FR-009, FR-011)
-- [ ] T032 [US3] Вбудувати `MapWhere` у `src/pages/MapPage.tsx` лише при `embed` (слот у HUD поряд з кнопками масштабу), передати мапу Leaflet і видимі мітки
+- [X] T027 [P] [US3] Реалізувати `src/lib/mapNear.ts` → `nearest()` (тести T026)
+- [X] T028 [US3] Локатор для всіх у `desktop/src/main.cjs`: `startLocator()` за першої потреби «Де я?» для будь-якої ролі (не лише `STAFF`); F9 лишається лише для редакторів (FR-009)
+- [X] T029 [US3] «Де я?» клавішею в `desktop/src/main.cjs`: при натисканні клавіші мапи, поки мапа схована, — `grabScreen()` до показу; `mapmatch.scaleBar()` знайшла шкалу — показати мапу, `map-where { state: 'busy' }`, потім `locatePin()` → `map-where { ok, x, y }` або `{ ok: false, why: WHY[kind] }` (FR-008, FR-008a)
+- [X] T030 [US3] «Де я?» кнопкою: `mapWhere()` у `desktop/src/main.cjs` і `desktop/src/preload.cjs` — сховати мапу, плашку й історію → 120 мс → `grabScreen()` → показати як були → `locatePin()`; знімок не пишеться на диск (без `pin-last.png`) і не надсилається; у `pin.log` — лише `where` з координатами чи причиною (FR-008a, FR-010)
+- [X] T031 [US3] Компонент `src/desktop/MapWhere.tsx`: кнопка «Де я?», стан «Шукаю…», маркер «Ти тут» (окремий шар Leaflet), підказка при невдачі («Не вдалося визначити — відкрий велику карту гри й спробуй ще» + причина), список «Найближчі» з `nearest()` для увімкнених категорій із відстанню; клік у списку — центрувати мітку (FR-008, FR-009, FR-011)
+- [X] T032 [US3] Вбудувати `MapWhere` у `src/pages/MapPage.tsx` лише при `embed` (слот у HUD поряд з кнопками масштабу), передати мапу Leaflet і видимі мітки
 
 **Checkpoint**: «Де я?» працює для всіх гравців, без запису знімків
 
@@ -125,12 +125,12 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Тест `src/desktop/mapCache.test.ts`: `saveCopy/readCopy` (`qhub:map:copy` = `{ at, cats, marks, areas, owners }`), биті дані → `null`; `stale(at, now)` — `true` з 5 хв; `asOf(at)` — «станом на 29.10, 14:05» (київський час)
+- [X] T033 [P] [US4] Тест `src/desktop/mapCache.test.ts`: `saveCopy/readCopy` (`qhub:map:copy` = `{ at, cats, marks, areas, owners }`), биті дані → `null`; `stale(at, now)` — `true` з 5 хв; `asOf(at)` — «станом на 29.10, 14:05» (київський час)
 
 ### Implementation for User Story 4
 
-- [ ] T034 [P] [US4] Реалізувати `src/desktop/mapCache.ts` (тести T033)
-- [ ] T035 [US4] Дані при `embed` у `src/pages/MapPage.tsx`: при старті — копія з `mapCache` (одразу показати), потім `loadMapData()`; вдало — `saveCopy`; невдало й є копія — напис «Станом на … — немає зв'язку» в HUD; на подію `map-shown` — `loadMapData()`, якщо `stale()` (FR-012, FR-013)
+- [X] T034 [P] [US4] Реалізувати `src/desktop/mapCache.ts` (тести T033)
+- [X] T035 [US4] Дані при `embed` у `src/pages/MapPage.tsx`: при старті — копія з `mapCache` (одразу показати), потім `loadMapData()`; вдало — `saveCopy`; невдало й є копія — напис «Станом на … — немає зв'язку» в HUD; на подію `map-shown` — `loadMapData()`, якщо `stale()` (FR-012, FR-013)
 
 **Checkpoint**: усі історії працюють незалежно
 
@@ -138,10 +138,10 @@ description: "Задачі: мапа Q-Hub у програмі поверх гр
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T036 Версія `0.4.0` у `desktop/package.json` (велике оновлення, FR-017)
-- [ ] T037 Запис `2026-10-29` у `src/data/changelog.json` з `"version": "0.4.0"`: «added» — мапа Q-Hub поверх гри (Alt+M, кнопка «Мапа»), пошук і фільтри, місця в рядку Alt+Q, «Де я?» з найближчими мітками, мапа без інтернету; коротко, мовою гравця. Той самий день — доповнити наявний запис і підняти в ньому `version`
-- [ ] T038 [P] Опис клавіші й «Де я?» в `src/desktop/Settings.tsx` (список клавіш) і, якщо є, у підказках першого запуску плашки
-- [ ] T039 `npm.cmd run build:app`, `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — усе зелене
+- [X] T036 Версія `0.4.0` у `desktop/package.json` (велике оновлення, FR-017)
+- [X] T037 Запис `2026-10-29` у `src/data/changelog.json` з `"version": "0.4.0"`: «added» — мапа Q-Hub поверх гри (Alt+M, кнопка «Мапа»), пошук і фільтри, місця в рядку Alt+Q, «Де я?» з найближчими мітками, мапа без інтернету; коротко, мовою гравця. Той самий день — доповнити наявний запис і підняти в ньому `version`
+- [X] T038 [P] Опис клавіші й «Де я?» в `src/desktop/Settings.tsx` (список клавіш) і, якщо є, у підказках першого запуску плашки
+- [X] T039 `npm.cmd run build:app`, `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — усе зелене
 - [ ] T040 Пройти quickstart.md у грі (сценарії 1–15), заміряти FPS з відкритою й закритою мапою (SC-005), записати результат у spec.md → «Реалізація»; статус spec.md — Implemented
 
 ---

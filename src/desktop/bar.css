@@ -260,3 +260,19 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .mwin-k { font-size: 12px; color: var(--faint); }
 .mwin .mapfull { left: 12px; right: 12px; bottom: 12px; border-radius: 12px; overflow: hidden; }
 .mwin .mbrand { display: none; }
+/* місця на мапі в пошуку плашки (specs/014 FR-007) */
+.bplaces { margin: 0 0 12px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.bplaces .brow { width: 100%; }
+.bplaces img { flex: none; }
+/* «Де я?» і найближчі мітки (specs/014 US3) — у правому стовпці HUD над масштабом */
+.mwhere { display: flex; flex-direction: column; gap: 8px; padding: 8px; max-width: 300px; }
+.mwhere-b { display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font: 700 14px var(--sans); cursor: pointer; }
+.mwhere-b:disabled { opacity: .7; cursor: progress; }
+.mwhere-no { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.mwhere-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.mwhere-list button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font: 500 13px var(--sans); text-align: left; cursor: pointer; }
+.mwhere-list button:hover { background: var(--surface2); }
+.mwhere-list span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mwhere-list b { color: var(--muted); font-size: 12px; }
+.mwhere-you { display: block; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #fff 0 5px, var(--accent) 6px 9px, rgba(255, 106, 31, .25) 10px); box-shadow: 0 0 0 2px #fff; }
+.mwin .mhud-r { align-items: flex-start; }

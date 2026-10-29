@@ -178,7 +178,7 @@ function toggleHist() {
 /* ---------- мапа Q-Hub поверх гри (map.html, specs/014): окрема плашка, як «Історія»; лише перегляд ----------
    Відкрита кнопкою з плашки — живе разом з плашкою; клавішею (Alt+M) — сама: бере фокус, Esc чи клавіша ховають,
    повернувся в гру — ховається. Вікно створюється при першому відкритті, далі лише ховається: швидко й без навантаження */
-let mapw = null, mapFrom = 'key', mapShownAt = 0, mapSteals = 0, mapKeyReg = null;
+let mapw = null, mapFrom = 'key', mapShownAt = 0, mapSteals = 0, mapKeyReg = null, mapFocus = null;
 function createMap() {
   mapw = new BrowserWindow({
     width: 1200, height: 800, show: false, frame: false, transparent: true, resizable: false, movable: false, hasShadow: false,
@@ -220,13 +220,42 @@ function hideMap() {
   mapw.hide();
   if (mapFrom === 'bar' && bar.isVisible()) bar.focus();   // з плашки — назад у плашку; клавішею — фокус сам повертається в гру
 }
+/* місце з пошуку плашки (FR-007): показати мапу й центрувати на ньому. Щойно створене вікно ще вантажиться —
+   тоді воно саме забере точку (map-focus-take), подія до нього не дійде */
+function openMapAt(p) {
+  mapFocus = { id: typeof p.id === 'string' ? p.id.slice(0, 64) : undefined, x: p.x, y: p.y };
+  if (!mapw?.isVisible()) showMap('bar');
+  mapw.webContents.send('map-focus', mapFocus);
+}
 function toggleMap(from) {
   if (mapw?.isVisible()) { hideMap(); return false; }
   showMap(from); return true;
 }
+/* «Де я?» (specs/014 US3): місце гравця зі знімка великої карти гри — тим самим локатором, що F9. Знімок лише в пам'яті:
+   не пишеться на диск і не надсилається (FR-010); у pin.log — лише результат */
+async function whereFrom(img) {
+  if (!img) return { ok: false, why: 'не вдалося зняти екран' };
+  if (shots.isBlack(img.toBitmap())) return { ok: false, why: 'знімок чорний — перемкни гру в режим «вікно без рамки»' };
+  await locatorUp();
+  let loc;
+  try { loc = await locatePin(img); } catch (e) { pinLog('where ' + (e?.stack || e)); loc = { kind: 'error' }; }
+  pinLog('where ' + JSON.stringify({ kind: loc.kind, x: loc.x, y: loc.y }));
+  return loc.kind === 'point' ? { ok: true, x: loc.x, y: loc.y } : { ok: false, why: WHY[loc.kind] || loc.kind };
+}
+/* клавіша мапи, коли мапа схована: спершу знімок (поки на екрані гра), потім мапа; у кадрі велика карта гри —
+   мапа одразу з «Ти тут» (FR-008a). Немає великої карти — просто мапа */
+async function mapKeyPressed() {
+  if (mapw?.isVisible()) { hideMap(); return; }
+  const img = await grabClean().catch(() => null);
+  const big = !!img && !!mapmatch.scaleBar({ width: img.getSize().width, height: img.getSize().height, data: img.toBitmap() });
+  showMap('key');
+  if (!big) return;
+  mapw.webContents.send('map-where', { state: 'busy' });
+  mapw.webContents.send('map-where', await whereFrom(img));
+}
 function registerMapKey(key) {
   if (mapKeyReg) { globalShortcut.unregister(mapKeyReg); mapKeyReg = null; }
-  const ok = globalShortcut.register(key, () => toggleMap('key'));
+  const ok = globalShortcut.register(key, () => mapKeyPressed().catch(e => pinLog('where ' + (e?.stack || e))));
   if (ok) mapKeyReg = key;
   return ok;
 }
@@ -619,6 +648,16 @@ async function barCharacter(id) {
 /* знімок екрана, на якому зараз курсор (там гра), у повному розмірі; плашка не має потрапити в кадр */
 async function grabScreen() {
   if (bar.isVisible()) { bar.hide(); await new Promise(r => setTimeout(r, 200)); }
+  return captureScreen();
+}
+/* «Де я?» (specs/014 FR-008a): вікна програми на мить стають прозорими — у кадр не потрапляють, але не ховаються й фокус лишається */
+async function grabClean() {
+  const ws = [bar, hist, mapw, strip].filter(w => w?.isVisible());
+  for (const w of ws) w.setOpacity(0);
+  if (ws.length) await new Promise(r => setTimeout(r, 150));
+  try { return await captureScreen(); } finally { for (const w of ws) w.setOpacity(w === bar ? prefs().opacity : 1); }
+}
+async function captureScreen() {
   const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
   const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
@@ -640,13 +679,15 @@ async function refreshRole() {
     myRole = data?.role || 'user';
   }
   registerPinKey(prefs().pinKey);
-  if (STAFF.includes(myRole)) startLocator();
+  if (STAFF.includes(myRole)) locatorUp();
 }
 
 /* де гравець на великій карті: mapmatch.cjs в окремому потоці; еталон — з сайту (mapref.cjs). Кожна спроба — у pin.log */
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');   // потоки й tesseract читають з диска, не з архіву
 const pinLog = m => { try { fs.appendFileSync(path.join(dir(), 'pin.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
-let locator = null, locatorReady = false, scaleOcr = null, lid = 0;
+let locator = null, locatorReady = false, scaleOcr = null, lid = 0, locatorInit = null;
+/* локатор потрібен редакторам (F9) і будь-кому для «Де я?» на мапі (specs/014 FR-009) — запускається раз, за першої потреби */
+const locatorUp = () => (locatorInit ??= startLocator());
 const pending = new Map();
 function callLocator(msg, transfer = [], ms = 6000) {
   return new Promise(res => {
@@ -659,7 +700,7 @@ async function startLocator() {
   if (locator) return;
   locator = new Worker(unpacked(path.join(__dirname, 'mapmatch.worker.cjs')));
   locator.on('message', r => { const f = pending.get(r.id); if (f) { pending.delete(r.id); f(r); } });
-  locator.on('error', e => { pinLog('locator error ' + (e?.stack || e)); locator = null; locatorReady = false; });
+  locator.on('error', e => { pinLog('locator error ' + (e?.stack || e)); locator = null; locatorReady = false; locatorInit = null; });
   try {
     const { bin, meta } = await loadMapRef(cfg.site, path.join(dir(), 'map'));
     const ab = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.length);
@@ -1088,6 +1129,9 @@ app.whenReady().then(() => {
   ipcMain.handle('map-toggle', e => (fromBar(e) ? toggleMap('bar') : null));
   ipcMain.handle('map-hide', e => { if (fromMap(e)) hideMap(); });
   ipcMain.handle('map-key', e => (fromMap(e) ? prefs().mapKey : null));
+  ipcMain.handle('map-where', async e => (fromMap(e) ? whereFrom(await grabClean().catch(() => null)) : null));
+  ipcMain.handle('map-open', (e, p) => { if (fromBar(e) && p && Number.isFinite(p.x) && Number.isFinite(p.y)) openMapAt(p); });
+  ipcMain.handle('map-focus-take', e => { if (!fromMap(e)) return null; const f = mapFocus; mapFocus = null; return f; });
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));

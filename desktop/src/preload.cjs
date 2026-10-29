@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('qhub', {
   mapToggle: () => ipcRenderer.invoke('map-toggle'),
   mapHide: () => ipcRenderer.invoke('map-hide'),
   mapKey: () => ipcRenderer.invoke('map-key'),
+  mapOpen: p => ipcRenderer.invoke('map-open', p),
+  mapFocusTake: () => ipcRenderer.invoke('map-focus-take'),
+  /* «Де я?»: кнопкою — відповідь одразу; клавішею при відкритій великій карті — подіями (спершу «шукаю») */
+  mapWhere: () => ipcRenderer.invoke('map-where'),
+  onMapWhere: cb => { const f = (_e, r) => cb(r); ipcRenderer.on('map-where', f); return () => ipcRenderer.removeListener('map-where', f); },
+  onMapFocus: cb => { const f = (_e, p) => cb(p); ipcRenderer.on('map-focus', f); return () => ipcRenderer.removeListener('map-focus', f); },
   onMapShown: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('map-shown', f); return () => ipcRenderer.removeListener('map-shown', f); },
   aiLeft: () => ipcRenderer.invoke('ai-left'),
   barCharacter: id => ipcRenderer.invoke('bar-character', id),

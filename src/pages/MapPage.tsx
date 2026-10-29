@@ -21,6 +21,9 @@ import GameMapExport from '../components/GameMapExport';
 import MapShot from '../components/MapShot';
 import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
+import MapWhere, { type Where } from '../desktop/MapWhere';
+import { nearest } from '../lib/mapNear';
+import { asOf, readCopy, saveCopy, stale } from '../desktop/mapCache';
 
 const ON_KEY = 'qhub:map:on';
 const CLUSTER_MIN = 200;   // від скількох міток категорії групувати їх на віддаленні
@@ -39,7 +42,11 @@ const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names',
 
 /* embed — мапа у вікні програми (specs/014): лише перегляд — без інструментів адміна, «Скріну», «Мапи для гри» й чернеток;
    кадр — у localStorage (адреси немає), посилання на сторінки сайту — onLink (програма відкриває їх у браузері) */
-export default function MapPage({ embed = false, onLink }: { embed?: boolean; onLink?: (href: string) => void } = {}) {
+export default function MapPage({ embed = false, onLink, focus, where = null, onWhere, shown = 0 }: {
+  embed?: boolean; onLink?: (href: string) => void; focus?: { id?: string; x: number; y: number; n: number } | null;
+  where?: Where; onWhere?: () => void;   // «Де я?» — лише у вікні програми (specs/014 US3)
+  shown?: number;   // вікно програми знову показали — оновити мітки, якщо застаріли (FR-012)
+} = {}) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layers = useRef<Record<string, L.LayerGroup>>({});
@@ -149,13 +156,26 @@ export default function MapPage({ embed = false, onLink }: { embed?: boolean; on
 
   /* dataV — перечитати мітки з бази (після публікації чи відкату партії) */
   const [dataV, setDataV] = useState(0);
+  /* вікно програми (specs/014 US4): спершу остання копія — мапа одразу з мітками й без інтернету; не вдалось оновити — «станом на …» */
+  const [offline, setOffline] = useState<string | null>(null);
+  const loadedAt = useRef(0);
+  const apply = (d: { cats: MapCategory[]; marks: MapMark[]; areas: MapArea[] | null; owners: Record<number, string> | null }) => {
+    if (d.areas) setAreas(d.areas);
+    if (d.owners) setOwners(d.owners);
+    setCats(d.cats); setMarks(d.marks);
+  };
+  useEffect(() => {
+    if (!embed) return;
+    const c = readCopy(); if (c) apply(c);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (embed && shown && stale(loadedAt.current)) setDataV(v => v + 1); }, [shown]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!supabase) return;
     loadMapData().then(d => {
+      if (!d && embed) { const c = readCopy(); setOffline(c ? c.at : ''); return; }
       if (!d) { setDbMissing(true); setOnly(null); return; }
-      if (d.areas) setAreas(d.areas);
-      if (d.owners) setOwners(d.owners);
-      setCats(d.cats); setMarks(d.marks);
+      if (embed) { saveCopy(d); loadedAt.current = Date.now(); setOffline(null); }
+      apply(d);
       setOnly(o => (o && d.marks.some(mk => onlyIds(o).includes(mk.category)) ? o : null));
     });
   }, [dataV]);
@@ -328,6 +348,34 @@ export default function MapPage({ embed = false, onLink }: { embed?: boolean; on
     addEventListener('keydown', f); return () => removeEventListener('keydown', f);
   }, []);
 
+  /* вікно програми: місце з пошуку плашки — у центр, картка мітки відкрита (specs/014 FR-007). Мітки з бази можуть
+     прийти пізніше за точку — тоді спершу центруємо за координатами, а картку відкриваємо, щойно мітка з'явиться */
+  const focused = useRef(0);
+  useEffect(() => {
+    const m = map.current; if (!embed || !focus || !m) return;
+    const mk = focus.id ? marks.find(x => x.id === focus.id) : undefined;
+    if (focused.current === focus.n && !mk) return;
+    if (focused.current !== focus.n) m.setView(m.unproject(toPx(focus.x, focus.y), ZMAX), 6);
+    focused.current = focus.n;
+    if (!mk) return;
+    const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
+    setTimeout(() => markers.current[mk.id]?.openPopup(), 300);
+  }, [focus, marks]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* «Ти тут»: позначка на мапі й кадр на ній; найближчі — серед увімкнених категорій (FR-008, FR-011) */
+  const you = useRef<L.Marker | null>(null);
+  const here = where && 'ok' in where && where.ok ? where : null;
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    you.current?.remove(); you.current = null;
+    if (!here) return;
+    const ll = m.unproject(toPx(here.x, here.y), ZMAX);
+    you.current = L.marker(ll, { icon: L.divIcon({ className: 'mpin-wrap', iconSize: [30, 30], iconAnchor: [15, 15], html: '<span class="mwhere-you"></span>' }), title: 'Ти тут', zIndexOffset: 2000, keyboard: false })
+      .bindTooltip('Ти тут', { permanent: true, direction: 'top', offset: [0, -16], className: 'mlabel' }).addTo(m);
+    m.setView(ll, Math.max(m.getZoom(), 5));
+  }, [here?.x, here?.y]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const near = useMemo(() => (here ? nearest(marks, here, new Set(visibleCats.filter(isOn).map(c => c.id))) : []), [here?.x, here?.y, marks, visibleCats, on, only]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   /* перше перемикання після ?show= береться від того, що гравець бачить зараз, і зберігається як звичайно */
   function setMany(ids: string[], v: boolean) {
     if (only) setOnly(null);
@@ -393,6 +441,7 @@ export default function MapPage({ embed = false, onLink }: { embed?: boolean; on
           const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
+        {embed && offline !== null && <span className="mpick">{offline ? `Немає зв'язку — мітки ${asOf(offline)}` : `Немає зв'язку — мітки з'являться, щойно буде інтернет`}</span>}
         {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
@@ -412,6 +461,7 @@ export default function MapPage({ embed = false, onLink }: { embed?: boolean; on
               {QUICK.map(([id, label]) => { const c = catById[id]; if (!c) return null; const v = isOn(c);
                 return <button key={id} type="button" aria-pressed={v} onClick={() => setMany([id], !v)}><Icon name="layers" size={16} />{label}</button>; })}
             </div>}
+            {embed && onWhere && <MapWhere where={where} run={onWhere} near={near} catById={catById} pick={n => go(n.mark)} />}
             <div className="hud mzoom" role="group" aria-label="Масштаб">
               <button type="button" className="hud-b" onClick={() => map.current?.zoomIn()} aria-label="Збільшити" title="Збільшити"><Icon name="plus" size={18} /></button>
               <button type="button" className="hud-b mono" onClick={zoomHome} title="Повернути початковий вигляд">{Math.round(2 ** (zoom - HOME_Z) * 100)}%</button>
