@@ -68,3 +68,4 @@ $P -f supabase/tests/site_stats_test.sql
 $P -f supabase/tests/map_batches_test.sql
 $P -f supabase/tests/guides_test.sql
 $P -f supabase/tests/account_nick_test.sql
+$P -f supabase/tests/rule_sources_test.sql
