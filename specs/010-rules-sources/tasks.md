@@ -1,0 +1,68 @@
+---
+
+description: "Задачі: усі правила й закони QuantRP у програмі"
+---
+
+# Tasks: Усі правила й закони QuantRP у програмі
+
+**Input**: `/specs/010-rules-sources/` — plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
+
+**Tests**: обов'язкові за конституцією (VI): SQL-тест прав `rule_sources`, модульні тести розбору, злиття, пошуку, кешу.
+
+## Phase 1: Setup
+
+- [ ] T001 Створити `supabase/functions/rules-sync/` (index.ts, parse.ts, merge.ts) за зразком `supabase/functions/assistant/`
+
+## Phase 2: Foundational
+
+- [ ] T002 [P] Тест `supabase/functions/rules-sync/parse.test.ts` (vitest): `postText` — перший пост і продовження автора; `chunks` — пункти «1.4», «6.5 [Р] …» з рядком «Покарання: …» усередині пункту; заголовки «Стаття 6. …», «РОЗДІЛ 2. …», «Розділ I. …» йдуть у `h`, не в текст; абзаци без номера — шматками до 700 символів; `links()` — розділи й теми
+- [ ] T003 Перенести розбір з `scripts/fetch-rules.mjs` у `supabase/functions/rules-sync/parse.ts` (без залежностей Deno/Node) і додати заголовки статей і розділів (research R2); тести T002 зелені
+- [ ] T004 `scripts/fetch-rules.mjs` — обгортка над `parse.ts`: обидва розділи за замовчуванням (`rules`, `law`), `kind` у кожній темі; перезібрати вбудовану `src/data/rules.json`
+
+**Checkpoint**: вбудована копія вже містить закони штату — пошук у програмі знаходить їх навіть до функції й сторінки адміна
+
+---
+
+## Phase 3: User Story 1 — Відповідь із законів штату (P1) 🎯 MVP
+
+- [ ] T005 [P] [US1] Тести `src/desktop/rulesSearch.test.ts`: «штраф за швидкість» → стаття Дорожнього/Адміністративного кодексу серед перших 3; «викрадення авто» → КК 6.5; «КК 4.1», «ПДР обгін», «ак штраф» (FR-008); уривок — «[Закон штату · Кримінальний кодекс штату Quant, ст. 6.5]» і «[Правила сервера · …, п. 1.2]»
+- [ ] T006 [US1] `src/desktop/rulesSearch.ts`: `kind` у `RuleTopic`/`RuleHit` (нема — `rules`), аліаси кодексів (research R7, слово-аліас шукає і в назві документа), уривок з типом і «ст.» / «п.»
+- [ ] T007 [P] [US1] Тест `supabase/functions/assistant/plan.test.ts`: підказка вимагає розрізняти правила сервера й закони штату, називати документ і номер, без пунктів — прямо сказати й не вигадувати
+- [ ] T008 [US1] `supabase/functions/assistant/plan.ts`: SYSTEM і `rulesBlock` — «Пункти правил сервера й законів штату…», правила відповіді з T007; `index.ts` — коментар про джерело пунктів
+
+## Phase 4: User Story 2 — Видно, звідки відповідь (P1)
+
+- [ ] T009 [US2] `src/desktop/Bar.tsx` → `RuleCard`: позначка типу («Правила сервера» / «Закон штату» / «Наказ організації»), документ, «ст.»/«п.» і посилання на тему (FR-005); стилі позначки в `src/desktop/bar.css`
+- [ ] T010 [US2] Порожній результат: «У правилах і законах такого не знайшов» (FR-007)
+
+## Phase 5: User Story 3 — Адмін керує джерелами (P2)
+
+- [ ] T011 [P] [US3] SQL-тест `supabase/tests/rule_sources_test.sql` (+ рядок у `supabase/tests/run.sh`): anon і `user` не читають і не змінюють; `admin` додає, вимикає, видаляє; адреса поза `https://forum.quant5.com.ua/index.php?/(forum|topic)/` — відмова (check); два джерела за замовчуванням є
+- [ ] T012 [US3] Міграція `supabase/migrations/0037_rule_sources.sql`: таблиця за data-model.md (`url` — check «лише forum.quant5.com.ua …/forum/ або /topic/», `kind in ('rules','law','order')`), RLS лише `admin`, 2 джерела за замовчуванням, публічний бакет `rules` (читання всім, запис — лише service-ключ)
+- [ ] T013 [P] [US3] Тест `supabase/functions/rules-sync/merge.test.ts`: джерело з помилкою чи 0 пунктів — теми з попереднього знімка; різниця `added / changed / removed` за ключем `url + n`; тема, вимкнена окремим джерелом, не береться; тема і з розділу, і окремо — один раз, тип від окремого
+- [ ] T014 [US3] `supabase/functions/rules-sync/merge.ts` (тести T013)
+- [ ] T015 [US3] `supabase/functions/rules-sync/index.ts` за contracts/rules-sync.md: доступ — admin-сесія або `x-sync-secret`; обхід послідовно; знімок у бакет `rules`; результат у `rule_sources`; лише хост форуму (FR-011)
+- [ ] T016 [US3] Сторінка `src/pages/RulesAdmin.tsx` + маршрут `admin/pravyla` у `src/App.tsx` (не-адміну — «Сторінка лише для адміністратора»): список джерел (адреса, тип, увімкнено, оновлено, пунктів, помилка, різниця), додати посилання з типом (перевірка адреси — українською), увімкнути/вимкнути, видалити, «Оновити зараз» → `rules-sync` і результат
+
+## Phase 6: User Story 4 — Без нової версії програми (P2)
+
+- [ ] T017 [P] [US4] Тест `desktop/src/rules.test.cjs`: свіжий знімок — у кеш; `304` — кеш; без мережі — кеш; без кешу й мережі — вбудована копія; битий JSON — не затирає кеш
+- [ ] T018 [US4] `desktop/src/rules.cjs` (тести T017), у `desktop/src/main.cjs` — завантаження при старті й кожні 6 год, IPC `rules-data`, подія `rules-changed`; `desktop/src/preload.cjs`
+- [ ] T019 [US4] `src/desktop/Bar.tsx`: `TOPICS` — з моста (вбудована — поки не прийшло), «Правила станом на …» в результатах пошуку правил (FR-017)
+- [ ] T020 [US4] `.github/workflows/rules-sync.yml`: щодня `cron: '0 1 * * *'` + `workflow_dispatch`, `curl -X POST` з `x-sync-secret: ${{ secrets.RULES_SYNC_SECRET }}`; немає секрету — крок пропускається з поясненням
+
+## Phase 7: Polish
+
+- [ ] T021 Запис у `src/data/changelog.json` (той самий день — доповнити наявний запис)
+- [ ] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
+- [ ] T023 Власнику — кроки з quickstart.md «Один раз» (міграція, деплой функції, секрети)
+
+## Dependencies & Execution Order
+
+- Phase 2 → US1 (пошук по вбудованій копії) → US2 → US3 (база й функція) → US4 (програма бере знімок функції)
+- US1/US2 дають цінність без US3/US4: закони штату — у вбудованій копії з новою версією програми
+
+## Implementation Strategy
+
+MVP — Phase 2 + US1 + US2: закони штату в пошуку й помічнику з наступною версією програми. Далі US3–US4 — оновлення без
+нових версій і керування джерелами.
