@@ -6,6 +6,7 @@ import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { DEFAULT_GROUPS, isVisible, toggled } from '../lib/mapFilters';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
@@ -18,9 +19,6 @@ import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
 
 const ON_KEY = 'qhub:map:on';
-
-/* при першому відкритті мапи увімкнені лише ці групи; далі — як гравець сам налаштував */
-const DEFAULT_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги']);
 const OPEN_KEY = 'qhub:map:open';
 function readOpen(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}'); } catch { return {}; } }
 function readOn(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem(ON_KEY) || '{}'); } catch { return {}; } }
@@ -96,7 +94,7 @@ export default function MapPage() {
   /* ?show=pryvydy (банер на головній; значення — id категорії в базі): лише ця категорія й назви місць, збережені фільтри не чіпаємо,
      доки гравець сам щось не перемкне; немає такої категорії чи міток у ній — звичайна мапа */
   const [only, setOnly] = useState<string | null>(() => (supabase && new URLSearchParams(location.search).get('show')) || null);
-  const isOn = (c: MapCategory) => (only ? c.id === only || c.id === 'names' : on[c.id] ?? saved[c.id] ?? DEFAULT_GROUPS.has(c.grp));
+  const isOn = (c: MapCategory) => isVisible(c, { only, on, saved });
   /* панель: вкладки й згорнуті групи */
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
   const [tab, setTab] = useState<'admin' | 'drafts'>('admin');
@@ -316,9 +314,8 @@ export default function MapPage() {
   function resetOn() { setOnly(null); setOn(() => { const n: Record<string, boolean> = {}; for (const c of cats) n[c.id] = DEFAULT_GROUPS.has(c.grp); saveOn(n); return n; }); }
   /* перше перемикання після ?show= береться від того, що гравець бачить зараз, і зберігається як звичайно */
   function setMany(ids: string[], v: boolean) {
-    const seen = only ? Object.fromEntries(cats.map(c => [c.id, isOn(c)])) : {};
     if (only) setOnly(null);
-    setOn(o => { const n = { ...saved, ...o, ...seen }; for (const id of ids) n[id] = v; saveOn(n); return n; }); }
+    setOn(o => { const n = toggled(cats, { only, on: o, saved }, ids, v); saveOn(n); return n; }); }
   function pick(v: boolean, forDraft = false) { pickFor.current = forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;

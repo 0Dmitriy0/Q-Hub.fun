@@ -25,6 +25,12 @@
   .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #ff7a1a, #ffb066); }
   .goal .left { color: #8b9bb0; }
   .goal.done .bar i { background: #10b981; } .goal.done .left { color: #10b981; }
+  /* режим «скупник» (specs/024): одна плашка посередині замість сесії */
+  .buy[hidden] { display: none; }
+  body.buyer { justify-content: center; }
+  body.buyer > .pill:not(.buy) { display: none; }
+  .buy b { color: #ff7a1a; } .buy.done b { color: #10b981; }
+  .buy .hint { color: #8b9bb0; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -39,6 +45,7 @@
     <span class="gname" id="gname"></span><span id="gpct"></span><span class="bar"><i id="gbar"></i></span><span class="left" id="gleft"></span>
   </div>
   <div class="pill mode"><span id="mode">Гру не запущено</span><span id="dot" class="dot off"></span></div>
+  <div id="buy" class="pill buy" hidden><span class="t"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span id="btxt"></span></div>
 <script>
   let started = null;
   const pad = n => String(n).padStart(2, '0');
@@ -61,7 +68,25 @@
     document.getElementById('gleft').textContent = g.left === 0 ? 'досягнуто' : 'ще ' + short(g.left);
   }
   /* d: { started: ms|null, perHour: число|null, game: bool, goal: {name, pct, left}|null } — надсилає main.cjs */
+  /* d: { mode: 'buyer', buyer, read, total, pending } — вікно скупника відкрите (contracts/strip-buyer.md) */
+  function buyer(d) {
+    const el = document.getElementById('buy'), t = document.getElementById('btxt'), done = d.read >= d.total;
+    el.className = 'pill buy' + (done ? ' done' : '');
+    t.textContent = '';
+    const b = document.createElement('b');
+    b.textContent = done ? `${d.buyer}: ${d.total} з ${d.total} ✓` : `${d.buyer}: прочитано ${d.read} з ${d.total}`;
+    t.append(b);
+    if (!done) {
+      const h = document.createElement('span'); h.className = 'hint';
+      h.textContent = ' — прокрути список, щоб дочитати' + (d.pending > 0 ? ` · ${d.pending} треба побачити ще раз` : '');
+      t.append(h);
+    }
+  }
   window.render = d => {
+    const isBuyer = d.mode === 'buyer';
+    document.body.classList.toggle('buyer', isBuyer);
+    document.getElementById('buy').hidden = !isBuyer;
+    if (isBuyer) return buyer(d);
     started = d.started || null; tick();
     const p = document.getElementById('prof'), v = document.getElementById('pv');
     if (d.perHour === null || d.perHour === undefined) { p.className = 'p none'; v.textContent = d.game ? 'Прибуток: рахуємо…' : 'Прибуток: —'; }

@@ -59,3 +59,78 @@ describe('ціни з відео: зведення кадрів', () => {
     expect(mergeFrames([[r(b, null)]])[0].price).toBeNull();
   });
 });
+
+describe('обрізані краєм списку рядки (specs/024, US3)', () => {
+  const cat: CatalogItem[] = [{ id: 1, name: 'Шкура оленя', buyer_id: 'hide' }, { id: 2, name: 'Шкура кабана', buyer_id: 'hide' }];
+  const L = (text: string, y: number, h?: number): OcrLine => ({ text, y, col: 0, ...(h === undefined ? {} : { h }) });
+  const got = (ls: OcrLine[]) => Object.fromEntries(parseShot(ls, cat).filter(r => r.item && r.price).map(r => [r.item!.name, r.price]));
+
+  it('ціна, обрізана нижнім краєм, не дає ціни', () => {
+    expect(got([L('Шкура оленя', 0, 40), L('Продати $485', 60, 30), L('Шкура кабана', 200, 40), L('Продати $3', 260, 12)]))
+      .toEqual({ 'Шкура оленя': 485 });
+  });
+  it('назва, обрізана верхнім краєм, не дає ціни навіть із цілою ціною під нею', () => {
+    expect(got([L('Шкура оле', 0, 14), L('Продати $485', 60, 30), L('Шкура кабана', 200, 40), L('Продати $610', 260, 30)]))
+      .toEqual({ 'Шкура кабана': 610 });
+  });
+  it('рядки без висоти (сайт, старі виклики) не відкидаються', () => {
+    expect(got([L('Шкура оленя', 0), L('Продати $485', 60)])).toEqual({ 'Шкура оленя': 485 });
+  });
+});
+
+describe('обрізаний рядок не дає ціні прилипнути до чужої назви (жива гра 2026-10-29)', () => {
+  const cat: CatalogItem[] = [{ id: 95, name: 'Роздерта шкура койота', buyer_id: 'hide' }, { id: 111, name: 'Роздерта шкура корови', buyer_id: 'hide' }];
+  const L = (text: string, y: number, h: number): OcrLine => ({ text, y, col: 0, h });
+  it('ціна після обрізаної назви не дістається попередньому товару без ціни', () => {
+    const got = (ls: OcrLine[]) => Object.fromEntries(parseShot(ls, cat).filter(r => r.item && r.price).map(r => [r.item!.name, r.price]));
+    /* низька, але чітка назва — своя ціна; койот чужої не отримує */
+    expect(got([L('Роздерта шкура койота', 0, 40), L('Продати $4', 60, 10), L('Роздерта шкура корови', 200, 12), L('Продати $423', 260, 30), L('Ще рядок', 300, 30)]))
+      .toEqual({ 'Роздерта шкура корови': 423 });
+    /* справді обрізана назва (нечитка) — нікому */
+    expect(got([L('Роздерта шкура койота', 0, 40), L('Продати $4', 60, 10), L('Роздерта шкура ко', 200, 12), L('Продати $423', 260, 30), L('Ще рядок', 300, 30)]))
+      .toEqual({});
+  });
+  it('коротка чітка назва нижча за решту («Опеньок» h34 при медіані 54) — не обрізок', () => {
+    const mush: CatalogItem[] = [{ id: 1, name: 'Опеньок', buyer_id: 'mush' }, { id: 2, name: 'Лисичка', buyer_id: 'mush' }];
+    const ls = [L('е Опеньок', 0, 34), L('£ = І', 60, 62), L('Продати $125', 120, 44), L('но Лисичка', 200, 52), L('Продати $240', 260, 54), L('ще', 300, 60)];
+    expect(Object.fromEntries(parseShot(ls, mush).filter(r => r.item && r.price).map(r => [r.item!.name, r.price]))).toEqual({ 'Опеньок': 125, 'Лисичка': 240 });
+  });
+});
+
+describe('опис картки дрібним шрифтом не рве «назва → ціна» (жива гра 2026-10-29, «Риба»)', () => {
+  const cat: CatalogItem[] = [{ id: 71, name: 'Тріска', buyer_id: 'fish' }, { id: 72, name: 'Сібас', buyer_id: 'fish' }];
+  const L = (text: string, y: number, h: number): OcrLine => ({ text, y, col: 1, h });
+  it('Тріска: назва, опис h 18, ціна — ціна прочитана', () => {
+    const rows = parseShot([L('Tpicka', 1034, 44), L('JSF | тн', 1156, 18), L('Продати $207', 1226, 44), L('Cibac', 1458, 44), L('Продати $272', 1520, 44)], cat);
+    expect(Object.fromEntries(rows.filter(r => r.item && r.price).map(r => [r.item!.name, r.price]))).toEqual({ 'Тріска': 207, 'Сібас': 272 });
+  });
+});
+
+describe('назва-нічия двох товарів не забирає ціну (жива гра 2026-10-29)', () => {
+  const cat: CatalogItem[] = [{ id: 111, name: 'Роздерта шкура корови', buyer_id: 'hide' }, { id: 95, name: 'Роздерта шкура койота', buyer_id: 'hide' }, { id: 1, name: 'Роздерта шкура кабана', buyer_id: 'hide' }];
+  const L = (text: string, y: number): OcrLine => ({ text, y, col: 0, h: 44 });
+  it('«Роздерта шкура Kono?» — ні корова, ні койот', () => {
+    expect(parseShot([L('Роздерта шкура Kono?', 0), L('Продати $443', 60)], cat).filter(r => r.item && r.price)).toEqual([]);
+  });
+  it('«Роздерта шкура Kabat» з відривом — кабан', () => {
+    expect(parseShot([L('шкури . Роздерта шкура Kabat', 0), L('Продати $517', 60)], cat).filter(r => r.item && r.price).map(r => r.item!.id)).toEqual([1]);
+  });
+});
+
+describe('обрізане слово назви («кролі») — не нічия (жива гра 2026-10-29)', () => {
+  const cat: CatalogItem[] = ['кролика', 'корови', 'койота', 'кабана', 'оленя'].map((w, i) => ({ id: i + 1, name: 'Роздерта шкура ' + w, buyer_id: 'hide' }));
+  const L = (text: string, y: number): OcrLine => ({ text, y, col: 0, h: 44 });
+  const pick = (t: string) => parseShot([L(t, 0), L('Продати $300', 60)], cat).filter(r => r.item && r.price).map(r => r.item!.name);
+  it('«0 % Роздерта шкура кролі» → кролика', () => { expect(pick('0 % Роздерта шкура кролі')).toEqual(['Роздерта шкура кролика']); });
+  it('«Роздерта шкура Kono?» — досі нічия', () => { expect(pick('Роздерта шкура Kono?')).toEqual([]); });
+  it('«Роздерта шкура Koon» — досі нічия', () => { expect(pick('Роздерта шкура Koon')).toEqual([]); });
+});
+
+describe('ціна з чужої картки за панеллю «ЛІМІТ ПРОДАЖУ» (жива гра 2026-10-29, «Риба»)', () => {
+  const cat: CatalogItem[] = [{ id: 1, name: 'Тунець', buyer_id: 'fish' }, { id: 2, name: 'Горбуша', buyer_id: 'fish' }];
+  const L = (text: string, y: number, h: number): OcrLine => ({ text, y, col: 0, h });
+  it('Тунець не бере 153 за 622 px нижче', () => {
+    const ls = [L('Горбуша', 810, 44), L('Ж Продати $299', 1002, 44), L('й Re т. Тунець', 1216, 62), L('КУ й у Ще', 1298, 50), L('ЛІМІТ ПРОДАЖУ', 1370, 104), L('0', 1458, 46), L('ЗМІНА ЦІН НА', 1740, 58), L('Продати $1 53', 1838, 70)];
+    expect(Object.fromEntries(parseShot(ls, cat).filter(r => r.item && r.price).map(r => [r.item!.name, r.price]))).toEqual({ 'Горбуша': 299 });
+  });
+});

@@ -224,12 +224,15 @@ function scaleBar(img, bgra = true) {
   if (!best) return null;
   return { px: best.px, y: best.y, number: { x: Math.max(0, best.x1 - Math.round(120 * k)), y: best.y + Math.round(6 * k), width: Math.round(130 * k), height: Math.round(34 * k) } };
 }
-/* «551m», «1.2km» → метри. Береться лише число впритул до «m»: OCR іноді додає зайву цифру через пробіл («4 129m» → 129) */
+/* «551m», «1.2km», а з імперськими одиницями в налаштуваннях гри — «820ft», «0.5mi» → метри.
+   Береться лише число впритул до одиниці: OCR іноді додає зайву цифру через пробіл («4 129m» → 129).
+   «1,000ft» — кома між тисячами, «1,2km» — десяткова */
+const UNIT = { km: 1000, mi: 1609.344, ft: 0.3048, m: 1 };
 function scaleMeters(text) {
-  const t = String(text || '').replace(/,/g, '.').toLowerCase().trim();
-  const m = /(\d+(?:\.\d+)?)(km|m)\b/.exec(t) || /(\d+(?:\.\d+)?)$/.exec(t); if (!m) return null;
-  const v = parseFloat(m[1]) * (m[2] === 'km' ? 1000 : 1);
-  return v > 0 ? v : null;
+  const t = String(text || '').toLowerCase().trim().replace(/(\d),(\d{3})(?!\d)/g, '$1$2').replace(/,/g, '.');
+  const m = /(\d+(?:\.\d+)?)(km|mi|ft|m)\b/.exec(t) || /(\d+(?:\.\d+)?)$/.exec(t); if (!m) return null;
+  const v = parseFloat(m[1]) * (UNIT[m[2]] ?? 1);
+  return v > 0 ? Math.round(v * 100) / 100 : null;
 }
 
 /* точка мітки — хрестик великої карти: він завжди в центрі екрана, карта рухається під ним.

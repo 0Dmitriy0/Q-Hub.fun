@@ -6,6 +6,7 @@ import PicUpload from '../components/PicUpload';
 import VehicleDialog, { KIND_ICON, type VehicleFull } from '../components/VehicleDialog';
 import Select from '../components/Select';
 import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
+import { withSitePhotos } from '../lib/carMatch';
 
 type Kind = VehicleFull['kind'];
 type Vehicle = VehicleFull;
@@ -71,10 +72,7 @@ export default function Transport() {
     ]);
     setLoaded(true);
     if (v.error) { setErr('Не вдалося завантажити транспорт. Онови сторінку.'); return; }
-    /* фото з маркетплейсу гри лежать на самому сайті (public/vehicles/map.json); фото, завантажене адміном, важливіше.
-       Самі фото браузер кешує на тиждень, тому оновлене фото отримує в map.json нову ?v=, а map.json читається без кешу */
-    const pics: Record<string, string> = await fetch('/vehicles/map.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
-    setList((v.data as Vehicle[]).map(x => (x.image_url || !pics[x.name] ? x : { ...x, image_url: pics[x.name] })));
+    setList(await withSitePhotos(v.data as Vehicle[]));
     setScores(Object.fromEntries(((s.data || []) as Score[]).map(x => [x.vehicle_id, { ...x, avg: Number(x.avg), votes: Number(x.votes) }])));
   }
   useEffect(() => { load(); }, []);

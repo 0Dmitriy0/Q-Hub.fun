@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRows } from '../../lib/useRows';
 import { money, parseMoney, signed } from '../../lib/format';
-import { matchVehicle, type Vehicle } from '../../lib/carMatch';
+import { matchVehicle, withSitePhotos, type Vehicle } from '../../lib/carMatch';
 import Icon from '../../components/Icon';
 import type { Car, Character } from './types';
 
@@ -10,7 +10,7 @@ import type { Car, Character } from './types';
 export default function GaragePage({ c }: { c: Character }) {
   const { rows, error, reload } = useRows<Car>('cars', c.id, 'pos', true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  useEffect(() => { supabase?.from('vehicles').select('id,name,brand,price,image_url').then(({ data }) => setVehicles((data as Vehicle[]) || [])); }, []);
+  useEffect(() => { supabase?.from('vehicles').select('id,name,brand,price,image_url').limit(1000).then(async ({ data }) => setVehicles(await withSitePhotos((data as Vehicle[]) || []))); }, []);
   const [f, setF] = useState({ name: '', plate: '', gov: '', paid: '', tune: '' });
   const [adding, setAdding] = useState(false);
   const [sell, setSell] = useState<Record<string, string>>({});

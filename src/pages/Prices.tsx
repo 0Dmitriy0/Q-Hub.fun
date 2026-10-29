@@ -17,6 +17,11 @@ interface Buyer { id: string; name: string; updated_at: string | null; image_url
 interface NextChange { buyer_id: string; next_change_at: string | null; game_name: string | null; static_id: number | null }
 interface Item { id: number; name: string; unit: string; image_url: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
+interface Unknown { id: number; buyer_id: string; text: string; seen_count: number; last_seen: string }
+/* «перевір межі» (specs/024, T031): ціна поза межами, яку програма впевнено прочитала тричі; на сайт вона не пішла */
+interface LimitReport { buyer_id: string; item_id: number; price: number; seen_count: number; last_seen: string }
+/* «без меж» — як у програмі (desktop/src/pricescan.cjs, inLimits): без них ціна з одного кадру не приймається */
+const noLim = (r: Pick<Row, 'min_price' | 'max_price'>) => !(r.min_price > 0 && r.max_price > r.min_price);
 
 type Data = PriceData<Buyer, Row, Update, Contributor, NextChange>;
 
@@ -66,7 +71,30 @@ export default function Prices() {
   const [histFor, setHistFor] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState('');
   const [lim, setLim] = useState({ min: '', max: '' });
+  /* адмін (specs/024): товари без меж — програма бере їхню ціну лише з двох зчиток; невідомі назви з вікон скупників */
+  const [noLimOnly, setNoLimOnly] = useState(false);
+  const [unknown, setUnknown] = useState<Unknown[]>([]);
+  const [limRep, setLimRep] = useState<LimitReport[]>([]);
   const now = useMemo(() => Date.now(), [hist]);
+  async function loadUnknown() {
+    if (!supabase || !isAdmin) return;
+    const { data } = await supabase.from('buyer_unknown_items').select('id,buyer_id,text,seen_count,last_seen').order('last_seen', { ascending: false });
+    setUnknown((data as Unknown[]) || []);
+    const lr = await supabase.from('buyer_limit_reports').select('buyer_id,item_id,price,seen_count,last_seen').order('last_seen', { ascending: false });
+    setLimRep((lr.data as LimitReport[]) || []);
+  }
+  useEffect(() => { loadUnknown(); }, [isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
+  async function dropUnknown(id: number) {
+    const { error } = await supabase!.from('buyer_unknown_items').delete().eq('id', id);
+    if (!error) setUnknown(u => u.filter(x => x.id !== id));
+  }
+  async function dropLimRep(l: LimitReport) {
+    const { error } = await supabase!.from('buyer_limit_reports').delete().eq('buyer_id', l.buyer_id).eq('item_id', l.item_id);
+    if (!error) setLimRep(x => x.filter(y => y !== l));
+  }
+  /* підказка зникає сама, коли адмін виправив межі так, що прочитана ціна в них */
+  const limFor = (r: Pick<Row, 'buyer_id' | 'item_id' | 'min_price' | 'max_price'>) =>
+    limRep.find(l => l.buyer_id === r.buyer_id && l.item_id === r.item_id && !noLim(r) && (l.price < r.min_price || l.price > r.max_price));
 
   async function load() {
     if (!supabase) return;
@@ -111,7 +139,7 @@ export default function Prices() {
 
   const cur = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    return rows.filter(r => r.items && (ql ? r.items.name.toLowerCase().includes(ql) : r.buyer_id === tab))
+    return rows.filter(r => r.items && (ql ? r.items.name.toLowerCase().includes(ql) : r.buyer_id === tab) && (!noLimOnly || noLim(r)))
       .map(r => {
         /* автор поточної ціни — останнє внесення гравця, якщо воно і є цією ціною; інакше ціна з імпорту */
         const u = ups.find(x => x.buyer_id === r.buyer_id && x.item_id === r.item_id);
@@ -128,7 +156,7 @@ export default function Prices() {
         }
         return byName;
       });
-  }, [rows, ups, tab, q, sort, hist, now]);
+  }, [rows, ups, tab, q, sort, hist, now, noLimOnly]);
   const buyer = buyers.find(b => b.id === tab);
   useEffect(() => { loadHist([...new Set(cur.map(r => r.buyer_id))].filter(id => !histFor.has(id))); }, [cur]);
   const reload = (buyerId: string) => { load(); loadHist([buyerId]); };
@@ -255,6 +283,25 @@ export default function Prices() {
                 {isAdmin && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
                   const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
                 }} />}
+                {isAdmin && (() => {
+                  const nl = rows.filter(r => r.buyer_id === buyer.id && noLim(r)).length, un = unknown.filter(u => u.buyer_id === buyer.id);
+                  const lr = rows.filter(r => r.buyer_id === buyer.id && limFor(r)).map(r => ({ r, l: limFor(r)! }));
+                  return (
+                    <div className="bp-admin">
+                      <label className="mcheck"><input type="checkbox" checked={noLimOnly} onChange={e => setNoLimOnly(e.target.checked)} /> Лише без меж цін ({nl}) — програма бере їх лише з двох зчиток</label>
+                      {un.length > 0 && <details><summary>Невідомі товари у скупника: {un.length}</summary>
+                        <ul className="list">{un.map(u => (
+                          <li key={u.id} className="row between"><span>{u.text} <small className="muted">· {u.seen_count} раз · {when(u.last_seen)}</small></span>
+                            <button type="button" className="btn sm ghost" onClick={() => dropUnknown(u.id)}>Прибрати</button></li>))}</ul>
+                      </details>}
+                      {lr.length > 0 && <details><summary>Перевір межі: {lr.length}</summary>
+                        <ul className="list">{lr.map(({ r, l }) => (
+                          <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, межі {money(r.min_price)}–{money(r.max_price)} <small className="muted">· {l.seen_count} раз · {when(l.last_seen)}</small></span>
+                            <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)}>Прибрати</button></li>))}</ul>
+                      </details>}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             {!q && buyer && (
@@ -287,7 +334,7 @@ export default function Prices() {
                   <div className={'prow' + (isOpen ? ' open' : '')} key={key}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
                     <button type="button" className="pname" aria-expanded={isOpen} aria-controls={'pd-' + key} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
-                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}</small>
+                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{isAdmin && limFor(r) && <span className="warn"> · перевір межі: у грі {money(limFor(r)!.price)}</span>}</small>
                       <RangeBar pos={pos} range={range} /></button>
                     <Spark pts={pts} now={now} />
                     <div className="pval">

@@ -36,6 +36,14 @@ test('шкала: довжина й число', () => {
   assert.equal(mm.scaleMeters('—'), null);
 });
 
+test('шкала в імперських одиницях гри: фути й милі → метри', () => {
+  assert.equal(mm.scaleMeters('820ft'), 249.94);
+  assert.equal(mm.scaleMeters('1,000ft'), 304.8);
+  assert.equal(mm.scaleMeters('0.5mi'), 804.67);
+  assert.equal(mm.scaleMeters('1mi'), 1609.34);
+  assert.equal(mm.scaleMeters('551m'), 551);   // «m» не плутається з «mi»
+});
+
 test('без шкали — велика карта не відкрита', () => {
   assert.equal(mm.locate({ width: 1920, height: 1080, data: Buffer.alloc(1920 * 1080 * 4) }, ref, 500, { cache }).kind, 'no_map');
 });

@@ -2,7 +2,7 @@
    У грі кожна картка — «Назва» великим білим, опис дрібно, «Продати $ціна ЗА ШТ./КГ.».
    Розпізнавання часто читає кирилицю латиницею (Curapa = Сигара), тож порівнюємо назви після заміни схожих літер
    і з допуском на помилки. Ціна в колонці належить найближчій назві над нею. */
-export interface OcrLine { text: string; y: number; col: number }
+export interface OcrLine { text: string; y: number; col: number; h?: number }   // h — висота рядка (програма); без неї рядок не відкидається
 export interface CatalogItem { id: number; name: string; buyer_id: string }
 export interface ShotRow { item: CatalogItem | null; read: string; price: number | null; score: number }
 
@@ -23,19 +23,28 @@ function lev(a: string, b: string) {
 const sim = (a: string, b: string) => (a && b ? 1 - lev(a, b) / Math.max(a.length, b.length) : 0);
 
 /* найкраща назва з каталогу для рядка: пробуємо всі суцільні шматки слів рядка (сміття від картинок по краях відкидається) */
-export function bestItem(text: string, items: CatalogItem[]): { item: CatalogItem; score: number } | null {
+export function bestItem(text: string, items: CatalogItem[]): { item: CatalogItem; score: number; second: number } | null {
   const words = norm(text).split(' ').filter(Boolean); if (!words.length) return null;
-  let best: { item: CatalogItem; score: number } | null = null;
+  let best: { item: CatalogItem; score: number; second: number } | null = null;
   for (const it of items) {
     const target = norm(it.name), n = target.split(' ').length;
+    let own = 0;
+    const loose = (s: string) => s.replace(/[іїи]/g, 'и');   // OCR плутає і/и: «кролі» замість «крол-и-ка»
+    const last = loose(target.split(' ').pop()!);
     for (let len = Math.max(1, n - 1); len <= n + 1; len++)
       for (let i = 0; i + len <= words.length; i++) {
-        const sc = sim(words.slice(i, i + len).join(' '), target);
-        if (!best || sc > best.score) best = { item: it, score: sc };
+        /* обрізане кінцем рядка слово («кролі» з «кролика») — початок лише одного товару: невелика перевага, щоб це не була нічия */
+        const w = loose(words[i + len - 1]), cut = w.length >= 3 && w !== last && last.startsWith(w) ? 0.05 : 0;
+        own = Math.max(own, Math.min(1, sim(words.slice(i, i + len).join(' '), target) + cut));
       }
+    if (!best || own > best.score) best = { item: it, score: own, second: best ? Math.max(best.second, best.score) : 0 };
+    else best.second = Math.max(best.second, own);
   }
   return best;
 }
+/* назва однаково схожа на два товари («Роздерта шкура Kono?» — і «корови», і «койота», 0.857 / 0.857) — нічия:
+   рядок не належить жодному, щоб ціна не дісталась чужому товару (жива гра 2026-10-29) */
+export const AMBIGUOUS = 0.03;
 
 /* ціна в рядку: «$485», «$1 10», «Продати 140»; S і 5 на місці «$» теж трапляються */
 export function readPrice(text: string): number | null {
@@ -59,16 +68,35 @@ export function parseShot(lines: OcrLine[], items: CatalogItem[]): ShotRow[] {
   const rows: ShotRow[] = [];
   const cols = [...new Set(lines.map(l => l.col))].sort();
   for (const c of cols) {
-    let pending: ShotRow | null = null;
+    let pending: ShotRow | null = null, pendingY = 0;
+    /* рядок, обрізаний краєм прокручуваного списку, нижчий за решту — з нього беруться криві числа (specs/024) */
+    const hs = lines.filter(x => x.col === c && x.h).map(x => x.h!).sort((a, b) => a - b), med = hs[Math.floor(hs.length / 2)] || 0;
     for (const l of lines.filter(x => x.col === c).sort((a, b) => a.y - b.y)) {
+      /* низький рядок: опис картки дрібним шрифтом («OLIVER SNOW», «JSF | тн») — просто пропустити; обрізана краєм
+         ціна чи назва — ще й розірвати «назва → ціна», інакше ціна наступної картки прилипає до попередньої назви
+         (жива гра 2026-10-29: «Роздерта шкура койота» отримала 423 — ціну «Роздертої шкури корови»; а коли рвав і на описі,
+         «Окунь» і «Тріска» лишились без цін) */
+      if (med && l.h !== undefined && l.h < med * 0.7) {
+        /* але коротка назва без високих літер теж низька («Опеньок» — 34 при медіані 54, жива гра 2026-10-29):
+           прочитана впевнено й однозначно — це звичайна назва, а не обрізок */
+        const sure = bestItem(l.text, items);
+        if (!(sure && sure.score >= 0.9 && sure.score - sure.second >= AMBIGUOUS && readPrice(l.text) == null)) {
+          if (readPrice(l.text) != null || (sure?.score ?? 0) >= MIN_SCORE) pending = null;
+          continue;
+        }
+      }
       const price = readPrice(l.text);
       if (price != null) {
+        /* ціна далі ніж 6 висот рядка під назвою — уже чужа картка: свою ціну закрила панель «ЛІМІТ ПРОДАЖУ / ЗМІНА ЦІН»
+           (жива гра 2026-10-29: «Тунець» узяв 153 «Дорадо» за 622 px; у звичайній картці — ~190 px) */
+        if (pending && med && l.h !== undefined && l.y - pendingY > med * 6) pending = null;
         if (pending && pending.price == null) pending.price = price;
         else rows.push({ item: null, read: '', price, score: 0 });   // ціна без упізнаної назви — гравець вибере товар сам
         continue;
       }
       const b = bestItem(l.text, items);
-      if (b && b.score >= MIN_SCORE) { pending = { item: b.item, read: l.text.trim(), price: null, score: b.score }; rows.push(pending); }
+      if (b && b.score >= MIN_SCORE && b.score - b.second < AMBIGUOUS) { pending = null; continue; }   // нічия двох товарів
+      if (b && b.score >= MIN_SCORE) { pending = { item: b.item, read: l.text.trim(), price: null, score: b.score }; pendingY = l.y; rows.push(pending); }
     }
   }
   /* одна й та сама назва могла впізнатись двічі — лишаємо впевненіший варіант з ціною */
