@@ -91,7 +91,7 @@ description: "Задачі: нік акаунта й персонажі зі с�
 ## Phase 7: Polish
 
 - [X] T024 Запис у `src/data/changelog.json`: новий запис з id дати релізу (якщо запис того дня вже в `main` — `РРРР-ММ-ДД.N`), групи added/changed — мовою гравця
-- [ ] T025 Конституція `.specify/memory/constitution.md` — принцип V (PATCH, лише за згодою власника): «записи обліку, цін і чернеток програма лише додає; профіль і персонажів — керує власник» (plan.md, Complexity Tracking)
+- [X] T025 Конституція `.specify/memory/constitution.md` — принцип V (PATCH, лише за згодою власника): «записи обліку, цін і чернеток програма лише додає; профіль і персонажів — керує власник» (plan.md, Complexity Tracking)
 - [X] T026 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test` — зелене; SQL-тест — у CI; ручні перевірки quickstart.md 1–9
 - [X] T027 Власнику: міграцію 0038 застосувати разом із випуском нової версії програми (до вибору ніка ціни не подаються — research R7)
 
