@@ -102,7 +102,7 @@ export default function Home() {
             <h2>Уся програма — в одній плашці Alt+Q</h2>
             <p className="muted">Кабінет, склад, гараж, облік і угоди відкриваються поверх GTA V — гру згортати не треба.</p>
           </div>
-          <div className="h-hotkey"><img src="/brand/q-hub-logo.svg" alt="" width={40} height={40} /><span className="h-lbl">Виклик у грі</span><span><kbd>Alt</kbd> + <kbd>Q</kbd></span></div>
+          <div className="h-hotkey"><img src="/brand/q-hub-logo.svg?v=2" alt="" width={40} height={40} /><span className="h-lbl">Виклик у грі</span><span><kbd>Alt</kbd> + <kbd>Q</kbd></span></div>
         </div>
         <div className="h-pillars">
           <div className="card h-pillar"><span className="ibub"><Icon name="chart" /></span><span className="h-lbl">Облік</span><h3>Угода — одним рядком</h3><p className="muted">Напиши, що зробив, — програма покаже запис і збереже його лише після Enter. Готівку й картку вона бачить у HUD гри сама.</p><div className="h-ex mono"><span>Alt+Q</span><b>«продав 5 руди за 9к»</b></div></div>
@@ -111,7 +111,7 @@ export default function Home() {
           <div className="card h-pillar"><span className="ibub"><Icon name="spark" /></span><span className="h-lbl">Правила й помічник</span><h3>Правила сервера — під рукою</h3><p className="muted">Enter шукає в правилах сервера, Shift+Enter питає ШІ-помічника. 50 питань на день, ліміт оновлюється опівночі за Києвом.</p><div className="h-ex mono"><span>Alt+Q</span><b>«зелена зона»</b></div></div>
         </div>
         <div className="h-strip">
-          <img src="/brand/q-hub-logo.svg" alt="" width={44} height={44} />
+          <img src="/brand/q-hub-logo.svg?v=2" alt="" width={44} height={44} />
           <div><h3>Безкоштовно · Windows 10/11 · оновлюється сама</h3><p className="muted">Не читає пам'ять гри й нічого в ній не натискає — лише знімки екрана, як OBS.</p></div>
           <Link className="btn acc" to="/programa"><Icon name="download" />Завантажити програму</Link>
         </div>

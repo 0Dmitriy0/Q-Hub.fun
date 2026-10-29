@@ -20,6 +20,11 @@ export const QF_SCALE = 1.81992, QF_X0 = -4141.618, QF_YT = 8403.567;
 export const fromQuantFun = (px: number, py: number): [number, number] =>
   [Math.round((px / QF_SCALE + QF_X0) * 10) / 10, Math.round((QF_YT - py / QF_SCALE) * 10) / 10];
 
+/* координати редактора Open Hydra Map (gtav.fanwiki.top, specs/017) -> метри гри. Підібрано по 716 стікерах експорту
+   проти тих самих точок на тайлах мінікарти Hydra: медіана 0,7 м, 90% — до 2,7 м */
+export const fromOpenHydra = (x: number, y: number): [number, number] =>
+  [Math.round((1.00117 * x - 219.3) * 10) / 10, Math.round((1.00115 * y + 1694.6) * 10) / 10];
+
 /* версія даних мапи (тайли, шматки, назви, файли гри): міняти при кожній перебудові public/map — інакше браузер
    показує старі тайли зі свого кешу (адреси ті самі), і нових локацій не видно навіть після Ctrl+F5 */
 export const MAP_V = '2026-10-22c';

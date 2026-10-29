@@ -36,7 +36,7 @@ export default function Layout() {
     <div className="app">
       <Backdrop />
       <header className={'top' + (menu ? ' menu-open' : '')}>
-        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg" alt="" width={36} height={36} /><b>Q-Hub</b></NavLink>
+        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={36} height={36} /><b>Q-Hub</b></NavLink>
         <nav className="nav" id="site-nav" aria-label="Розділи">
           {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
         </nav>
@@ -57,7 +57,7 @@ export default function Layout() {
         <div className="foot-in">
           <div className="foot-top">
             <div className="foot-about">
-              <Link to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg" alt="" width={32} height={32} /><b>Q-Hub</b></Link>
+              <Link to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></Link>
               <p>Q-Hub — фан-проєкт гравців, не пов'язаний з адміністрацією QuantRP. Ціни вносять гравці й перевіряють одне одного. Усі торгові марки й назви належать їхнім правовласникам.</p>
             </div>
             <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>

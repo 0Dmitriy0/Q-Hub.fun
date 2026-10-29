@@ -11,7 +11,7 @@ type Tab = 'sched' | 'season' | 'promo';
 const TAB_KEY = 'qhub-events-tab';
 
 function PhasePill({ ph }: { ph: Phase }) {
-  if (ph.kind === 'now') return <span className="sv-ph now">{ph.left === 1 ? 'останній день' : `ще ${days(ph.left)}`}</span>;
+  if (ph.kind === 'now') return <span className="sv-ph now">{ph.left === null ? 'триває' : ph.left === 1 ? 'останній день' : `ще ${days(ph.left)}`}</span>;
   if (ph.kind === 'soon') return <span className="sv-ph soon">{ph.in === 1 ? 'завтра' : `через ${days(ph.in)}`}</span>;
   return null;
 }
@@ -123,9 +123,10 @@ function SeasonForm({ row, done }: { row: Partial<SeasonEvent>; done: () => void
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!f.title.trim()) return setMsg('Вкажи назву івенту.');
-    if (!dateOk(f.starts_on) || !dateOk(f.ends_on) || f.ends_on < f.starts_on) return setMsg('Перевір дати: кінець не раніше за початок.');
+    /* дата кінця необов'язкова (specs/018): без неї івент триває, доки його не приберуть */
+    if (!dateOk(f.starts_on) || (f.ends_on && (!dateOk(f.ends_on) || f.ends_on < f.starts_on))) return setMsg('Перевір дати: кінець не раніше за початок (або залиш кінець порожнім).');
     if (f.link.trim() && !/^https:\/\//.test(f.link.trim())) return setMsg('Посилання має починатися з https://');
-    const v = { title: f.title.trim(), description: f.description.trim(), starts_on: f.starts_on, ends_on: f.ends_on, link: f.link.trim() };
+    const v = { title: f.title.trim(), description: f.description.trim(), starts_on: f.starts_on, ends_on: f.ends_on || null, link: f.link.trim() };
     setBusy(true);
     const { error } = row.id ? await supabase!.from('season_events').update(v).eq('id', row.id) : await supabase!.from('season_events').insert(v);
     setBusy(false);
@@ -136,7 +137,7 @@ function SeasonForm({ row, done }: { row: Partial<SeasonEvent>; done: () => void
     <form className="form cols svform" onSubmit={save}>
       <label className="fld">Назва<input value={f.title} onChange={set('title')} maxLength={80} placeholder="Найттаун: Хелловін" autoFocus /></label>
       <label className="fld">З<input type="date" value={f.starts_on} onChange={set('starts_on')} /></label>
-      <label className="fld">По (включно)<input type="date" value={f.ends_on} onChange={set('ends_on')} /></label>
+      <label className="fld">По (включно, необов'язково)<input type="date" value={f.ends_on} onChange={set('ends_on')} /></label>
       <label className="fld">Посилання (необов'язково)<input value={f.link} onChange={set('link')} placeholder="https://forum.quant5.com.ua/…" /></label>
       <label className="fld wide">Опис<textarea value={f.description} onChange={set('description')} maxLength={600} rows={3} placeholder="Що відбувається, де шукати, які нагороди" /></label>
       <div className="row wide"><button className="btn acc" disabled={busy}>{row.id ? 'Зберегти' : 'Додати івент'}</button><button type="button" className="btn ghost" onClick={done}>Скасувати</button></div>
