@@ -10,7 +10,7 @@ const gameSession = require('./session.cjs');
 const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
 const { vision } = require('./vision.cjs');
-const { createUpdater, installPending, updateDirs } = require('./updater.cjs');
+const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
@@ -121,6 +121,9 @@ function createBar() {
   });
   /* нижня смужка сесії живе разом з плашкою */
   bar.on('show', () => { showStrip().catch(() => {}); });
+  /* відкрита плашка й набір у ній — програмою користуються, автооновлення почекає (specs/006) */
+  bar.on('show', touch);
+  bar.webContents.on('before-input-event', touch);
   bar.on('hide', hideStrip);
   bar.on('hide', () => hist?.hide());   // історія живе разом з плашкою
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
@@ -278,12 +281,19 @@ function trayMenu() {
     { label: 'Швидкий запис', click: () => toggleBar() },
     { label: 'Відкрити Q-Hub', click: showMain },
     { type: 'separator' },
-    { label: 'Вийти з програми', click: () => { quitting = true; app.quit(); } },
+    /* з автооновленням завантажена версія ставиться при виході (без перезапуску) */
+    { label: 'Вийти з програми', click: () => { quitting = true; if (!(autoUpdate() && updates?.installNow({ restart: false }))) app.quit(); } },
   ]));
 }
 
-/* ---------- оновлення програми (updater.cjs): перевірка раз на 3 год, ставиться лише після кнопки «Оновити» ---------- */
+/* ---------- оновлення програми (updater.cjs, specs/006): перевірка кожні 30 хв; з автооновленням — завантаження у фоні
+   й встановлення після 10 хв простою або при виході, без нього — після кнопки «Оновити» ---------- */
 let updates = null, notifiedVersion = null;
+const autoUpdate = () => prefs().autoUpdate !== false;
+/* простій — коли востаннє гравець відкривав плашку, кабінет чи щось у них вводив */
+let lastActive = Date.now();
+const touch = () => { lastActive = Date.now(); };
+const programBusy = () => [bar, gate, hist].some(w => w && !w.isDestroyed() && w.isVisible());
 const installMark = () => path.join(dir(), 'installing.json');   // «ставиться оновлення» — див. installPending в updater.cjs
 function startUpdates() {
   if (!app.isPackaged) return;   // з npm start оновлювати нічого: це не встановлена програма
@@ -307,11 +317,12 @@ function startUpdates() {
       if (ownDirs) process.env.TEMP = process.env.TMP = ud.temp;
     },
     log,
+    auto: autoUpdate,
     onChange: s => {
-      bar?.webContents.send('update', s);
+      bar?.webContents.send('update', { ...s, auto: autoUpdate() });
       trayMenu();
-      /* сповіщення Windows — один раз на кожну нову версію */
-      if (s.status === 'available' && s.version !== notifiedVersion && Notification.isSupported()) {
+      /* сповіщення Windows — один раз на кожну нову версію; з автооновленням не треба: поставиться само */
+      if (s.status === 'available' && !autoUpdate() && s.version !== notifiedVersion && Notification.isSupported()) {
         notifiedVersion = s.version;
         const n = new Notification({ title: 'Вийшла нова версія Q-Hub', body: `${s.version} — натисни «Оновити» в програмі або в меню іконки в треї.`, icon: path.join(__dirname, 'icon.png') });
         n.on('click', showMain); n.show();
@@ -320,6 +331,13 @@ function startUpdates() {
   });
   setTimeout(() => updates.check(), 15e3);
   setInterval(() => updates.check(), 30 * 60e3);   // нова версія доходить за пів години, а не за три
+  /* завантажене ставиться саме, коли програмою 10 хв не користуються */
+  setInterval(() => {
+    if (programBusy()) touch();
+    if (installDue({ status: updates.state().status, auto: autoUpdate(), idleMs: Date.now() - lastActive, busy: programBusy(), failAt: settings.updateFailAt, now: Date.now() })) {
+      log('auto install after idle'); updates.installNow();
+    }
+  }, 60e3);
 }
 
 const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
@@ -458,7 +476,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 const autostart = () => app.isPackaged && app.getLoginItemSettings().openAtLogin;
@@ -749,6 +767,7 @@ function barPrefs(p) {
   if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
+  if (typeof p?.autoUpdate === 'boolean') next.autoUpdate = p.autoUpdate;
   if (typeof p?.autostart === 'boolean') {
     if (!app.isPackaged) return { error: 'Автозапуск вмикається лише у встановленій програмі', prefs: { ...cur, autostart: false } };
     app.setLoginItemSettings({ openAtLogin: p.autostart });
@@ -891,6 +910,11 @@ app.whenReady().then(() => {
   if (mark) try { fs.unlinkSync(installMark()); } catch { /* не страшно: застаріла позначка нічого не блокує */ }
   Menu.setApplicationMenu(null);   // без меню «File / Edit / View» і його гарячих клавіш — це програма, не браузер
   try { settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { settings = {}; }
+  /* після спроби оновлення: та сама версія — інсталятор не впорався, наступна автоспроба не раніше ніж за 3 год;
+     нова — один раз сказати, що оновлено (у плашці — «Програму оновлено — що нового») */
+  if (mark?.from && mark.from === app.getVersion()) { settings.updateFailAt = mark.at; saveSettings(); }
+  const updatedFrom = mark?.from && mark.from !== app.getVersion() ? mark.from : null;
+  if (updatedFrom && settings.updateFailAt) { delete settings.updateFailAt; saveSettings(); }
   /* збережене раніше F9 гра забирає собі — один раз переводимо на Alt+F9 (стандартна з 0.3) */
   if (settings.bar?.pinKey === 'F9') { settings.bar.pinKey = 'Alt+F9'; saveSettings(); }
   const enc = s => (safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s) : Buffer.from(s));
@@ -977,7 +1001,7 @@ app.whenReady().then(() => {
     pinDecide(send === true, hint && typeof hint === 'object' ? hint : {});
   });
   /* кнопка «Оновити» в кабінеті */
-  ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion() } : null));
+  ipcMain.handle('update-state', e => (trusted(e) ? { ...(updates?.state() || { status: 'idle' }), current: app.getVersion(), auto: autoUpdate() } : null));
   ipcMain.handle('update-install', e => { if (trusted(e)) updates?.install(); });
 
   showLogin();
@@ -986,6 +1010,10 @@ app.whenReady().then(() => {
   createStrip();
   createTray();
   startUpdates();
+  if (updatedFrom && Notification.isSupported()) {
+    const n = new Notification({ title: `Q-Hub оновлено до ${app.getVersion()}`, body: 'Що нового — у плашці Alt+Q: «Програму оновлено — що нового».', icon: path.join(__dirname, 'icon.png') });
+    n.on('click', () => showBar()); n.show();
+  }
   startDrafts();
   startOnline();
   startSessionTimer();
