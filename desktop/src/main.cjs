@@ -458,7 +458,7 @@ async function insertDeal(c, a) {
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
 const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
 const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'F9' };
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 const autostart = () => app.isPackaged && app.getLoginItemSettings().openAtLogin;
@@ -573,7 +573,8 @@ async function startLocator() {
 async function readScale(img, bar) {
   if (!scaleOcr) {
     scaleOcr = await createWorker('eng', 1, { langPath: unpacked(path.join(__dirname, 'ocr')), gzip: false, cacheMethod: 'none' });
-    await scaleOcr.setParameters({ tessedit_char_whitelist: '0123456789mk.,', tessedit_pageseg_mode: '7' });
+    /* «m / km» або «ft / mi» — залежно від одиниць у налаштуваннях гри */
+    await scaleOcr.setParameters({ tessedit_char_whitelist: '0123456789mkfti.,', tessedit_pageseg_mode: '7' });
   }
   const part = img.crop(bar.number), { width } = part.getSize();
   const text = (await scaleOcr.recognize(part.resize({ width: width * 3, quality: 'best' }).toPNG())).data.text.trim();
@@ -593,11 +594,20 @@ async function locatePin(img) {
   if (r.error) { pinLog('locate ' + r.error); return { kind: 'error' }; }
   return { ...r.result, scale_text: sc.text, bar_px: bar.px };
 }
+/* чи вдалося зайняти клавішу — у pin.log лише коли змінилось (refreshRole перереєстровує її раз на 10 хв);
+   не вдалося — один раз сказати в треї: інакше F9 «просто не працює» без жодного сліду */
+let pinKeyState = '';
 function registerPinKey(key) {
   if (pinKeyReg) { globalShortcut.unregister(pinKeyReg); pinKeyReg = null; }
   if (!STAFF.includes(myRole)) return true;
-  const ok = globalShortcut.register(key, () => pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)));
+  const ok = globalShortcut.register(key, () => { pinLog(`${key} натиснуто`); pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); });
   if (ok) pinKeyReg = key;
+  const st = `${key}:${ok}`;
+  if (st !== pinKeyState) {
+    pinKeyState = st;
+    pinLog(ok ? `клавішу ${key} зайнято` : `клавішу ${key} зайняти не вдалося — її тримає інша програма`);
+    if (!ok) tray?.displayBalloon?.({ title: 'Q-Hub', content: `${key} зайнята іншою програмою — мітки з гри не працюють. Зміни клавішу в налаштуваннях плашки → Зір програми.` });
+  }
   return ok;
 }
 /* повідомлення поверх гри без фокусу (гра не втрачає керування) — і само ховається */
@@ -881,6 +891,8 @@ app.whenReady().then(() => {
   if (mark) try { fs.unlinkSync(installMark()); } catch { /* не страшно: застаріла позначка нічого не блокує */ }
   Menu.setApplicationMenu(null);   // без меню «File / Edit / View» і його гарячих клавіш — це програма, не браузер
   try { settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { settings = {}; }
+  /* збережене раніше F9 гра забирає собі — один раз переводимо на Alt+F9 (стандартна з 0.3) */
+  if (settings.bar?.pinKey === 'F9') { settings.bar.pinKey = 'Alt+F9'; saveSettings(); }
   const enc = s => (safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s) : Buffer.from(s));
   const dec = b => (safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : b.toString());
   sb = makeClient(cfg, fileStorage(path.join(dir(), 'session.bin'), enc, dec));

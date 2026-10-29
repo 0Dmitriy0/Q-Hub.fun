@@ -13,6 +13,8 @@ interface SetApi {
 }
 const api = (window as unknown as { qhub: SetApi }).qhub;
 export const AI_DAY = 50;   // питань до ШІ на день — так само, як у 0027_assistant_limit_50.sql
+/* клавіші мітки з гри — готові варіанти: F9 без модифікатора гра забирає собі */
+const PIN_KEYS = ['Alt+F9', 'Alt+M', 'Ctrl+F9', 'Alt+X'];
 
 export type SetSec = 'main' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
 const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
@@ -118,14 +120,17 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
           <div className="scard">
             <Row t="Навчальні знімки" d={<><Keys k={shots?.key ?? 'Alt+S'} /> у грі · зібрано {shots?.n ?? 0}</>}><button className="btn sm" onClick={() => api.shotsOpen()}>Відкрити папку</button></Row>
             <Row t="Ділитися знімками" d="Допомагають навчити програму читати екран"><Toggle on={prefs.shareShots} set={v => save({ shareShots: v })} label="Ділитися знімками" /></Row>
-            {staff && <Row t="Мітка з гри" d="На великій карті — знімок іде чернеткою на сайт"><KeyRec value={prefs.pinKey || 'F9'} set={k => save({ pinKey: k })} /></Row>}
+            {staff && <Row t="Мітка з гри" d="На великій карті — знімок іде чернеткою на сайт. Клавіші без Alt/Ctrl гра забирає собі">
+              <span className="row">{PIN_KEYS.map(k => <button key={k} className={'skrec' + (prefs.pinKey === k ? ' on' : '')} aria-pressed={prefs.pinKey === k} onClick={() => save({ pinKey: k })}><Keys k={k} /></button>)}
+                {!PIN_KEYS.includes(prefs.pinKey || '') && <KeyRec value={prefs.pinKey || 'Alt+F9'} set={k => save({ pinKey: k })} />}</span>
+            </Row>}
           </div>
           <p className="muted">Зір працює, лише коли запущена гра.</p>
         </>}
         {sec === 'keys' && <div className="scard">
           {([['Показати чи сховати плашку', prefs.hotkey], ['Пошук у правилах або записати суму', 'Enter'], ['Спитати ШІ', 'Shift+Enter'], ['Пошук ↔ Ціни', 'Tab'],
             ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'],
-            ...(staff ? [['Мітка на мапі з гри', prefs.pinKey || 'F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
+            ...(staff ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
         </div>}
         {sec === 'changes' && <>
           <p className="muted">Що змінилось у програмі — найновіше зверху. Зараз у тебе {version ? `v${version}` : 'ця версія'}.</p>
