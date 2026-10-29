@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { MapArea, MapCategory, MapMark } from '../lib/mapData';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
@@ -19,6 +20,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
   const list = groups;
   const [iconM, setIconM] = useState(20);
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);   // архів завантажено — показати, як поставити (specs/023)
   const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
   const picked = marks.filter(m => catById[m.category] && on(catById[m.category]));
@@ -35,6 +37,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       const blob = await buildGamePack(pins, { iconM, layers, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      setDone(true);
     } catch (e) { setErr('Не вдалося зібрати архів: ' + (e as Error).message); }
     setBusy('');
   }
@@ -43,6 +46,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
     <details className="madmin mgame" open>
       <summary>Карта для гри</summary>
       <p className="muted">Наша мапа для заміни мінікарти в GTA V через OpenIV. Галочками вибери, що потрібно: назви місць, зелені зони, поля скарбів і мітки — вони стануть частиною мапи.</p>
+      <Link className="h-more" to="/mapa/v-gru">Як поставити в гру →</Link>
       <div className="mseg" role="group" aria-label="Усі мітки">
         <button type="button" onClick={() => set(all.map(c => c.id), true)}>Усі</button>
         <button type="button" onClick={() => set(all.map(c => c.id), false)}>Жодної</button>
@@ -66,6 +70,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn }: {
       {/* specs/017 FR-014: велика категорія (напр. 700+ гарбузів) закриє на мінікарті все інше */}
       {(() => { const big = all.filter(c => on(c) && (count[c.id] || 0) > 200 && !LAYER_COUNT[c.id as keyof typeof LAYER_COUNT]);
         return big.length > 0 && !busy && <p className="muted">Велика категорія: {big.map(c => `${c.name} (${count[c.id]})`).join(', ')} — на мінікарті вона закриє інші мітки. Радимо значок 7 м або 12 м.</p>; })()}
+      {done && !busy && <p className="mmsg" role="status">Архів завантажено. Тепер — <Link to="/mapa/v-gru">як поставити його в гру</Link>.</p>}
       {err && <p className="mmsg" role="alert">{err}</p>}
     </details>
   );

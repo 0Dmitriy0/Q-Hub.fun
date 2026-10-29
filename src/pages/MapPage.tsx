@@ -8,7 +8,7 @@ import { OCEAN, PX_PER_M, TILE, ZMAX, makeHash, parseHash, toGame, toPx } from '
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
-import { isVisible, toggled } from '../lib/mapFilters';
+import { isVisible, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
@@ -152,7 +152,7 @@ export default function MapPage() {
       if (d.areas) setAreas(d.areas);
       if (d.owners) setOwners(d.owners);
       setCats(d.cats); setMarks(d.marks);
-      setOnly(o => (o && d.marks.some(mk => mk.category === o) ? o : null));
+      setOnly(o => (o && d.marks.some(mk => onlyIds(o).includes(mk.category)) ? o : null));
     });
   }, [dataV]);
 
@@ -203,6 +203,8 @@ export default function MapPage() {
       const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
+        /* specs/012 FR-009a: мітки з Open Hydra Map — з підписом джерела */
+        + (mk.source === 'ohm' ? '<small class="msrc">Координати — за даними <a href="https://gtav.fanwiki.top/" target="_blank" rel="noopener noreferrer">Open Hydra Map</a></small>' : '')
         + (mk.link ? `<a class="mgo" data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
@@ -236,7 +238,7 @@ export default function MapPage() {
   const fitted = useRef(!!parseHash(location.hash));
   useEffect(() => {
     const m = map.current; if (!m || !only || fitted.current) return;
-    const pts = marks.filter(mk => mk.category === only); if (!pts.length) return;
+    const ids = onlyIds(only), pts = marks.filter(mk => ids.includes(mk.category)); if (!pts.length) return;
     fitted.current = true;
     m.fitBounds(L.latLngBounds(pts.map(mk => m.unproject(toPx(mk.x, mk.y), ZMAX))), { paddingTopLeft: [wide ? 380 : 30, 90], paddingBottomRight: [30, 30] });
   }, [marks, only]);   // eslint-disable-line react-hooks/exhaustive-deps
