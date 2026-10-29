@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
+import HalloweenBanner from '../components/HalloweenBanner';
 import MiniMap from '../components/MiniMap';
 import SitePromo from '../components/SitePromo';
 import { useAuth } from '../lib/auth';
@@ -55,15 +56,7 @@ export default function Home() {
             <Link className="btn ghost" to="/tsiny"><Icon name="buyer" />Дізнатися ціни</Link>
           </div>
         </div>
-        <Link className="h-promo" to="/mapa?show=pryvydy">
-          <img src="/promo/ghost-tile.webp" alt="" width="700" height="380" fetchPriority="high" />
-          <span className="h-promo-body">
-            <span className="h-promo-tag">Сезонний івент</span>
-            <b>Карта привидів уже тут</b>
-            <span>Швидко знаходь усіх привидів осіннього оновлення Quant RP.</span>
-            <span className="h-promo-go">Відкрити мапу →</span>
-          </span>
-        </Link>
+        <HalloweenBanner />
       </section>
       <div className="h-stats">
         {stats.map(([l, v, d]) => <div key={l} className="h-stat"><span className="h-lbl">{l}</span><b className="mono">{v}</b><small>{d}</small></div>)}

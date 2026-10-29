@@ -8,15 +8,17 @@ export const DEFAULT_GROUPS = new Set(['Магазини', 'Структури',
 const SAVED_DEFAULT_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги']);
 
 export interface Filters {
-  only: string | null;              // ?show=<id>: тимчасовий вид, не зберігається
+  only: string | null;              // ?show=<id>[,<id>…]: тимчасовий вид, не зберігається (банер Хелловіну — привиди й гарбузи)
   on: Record<string, boolean>;      // перемкнуте в цьому відкритті мапи
   saved: Record<string, boolean>;   // з localStorage
 }
 
 type Cat = Pick<MapCategory, 'id' | 'grp'>;
 
+export const onlyIds = (only: string) => only.split(',').map(s => s.trim()).filter(Boolean);
+
 export const isVisible = (c: Cat, { only, on, saved }: Filters) =>
-  only ? c.id === only || c.id === 'names'
+  only ? onlyIds(only).includes(c.id) || c.id === 'names'
     : on[c.id] ?? saved[c.id] ?? (Object.keys(saved).length ? SAVED_DEFAULT_GROUPS : DEFAULT_GROUPS).has(c.grp);
 
 /* набір для збереження після перемикання — усе, що гравець бачить зараз (у виді «лише <id>» — саме це, а не старе збережене) */
