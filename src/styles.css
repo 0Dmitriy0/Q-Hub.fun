@@ -7,7 +7,7 @@
   --accent: #ff6b00; --accent-hi: #ff7a1a; --accent-fg: #160800;
   --good: #10b981; --good-soft: rgba(16, 185, 129, .12); --warn: #f59e0b; --warn-soft: rgba(245, 158, 11, .12);
   --bad: #ef4444; --bad-soft: rgba(239, 68, 68, .12);
-  --sans: 'Manrope', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace; --disp: var(--sans);
+  --sans: 'Manrope', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace; --disp: var(--sans); --brand-font: 'Archivo', 'Arial Black', system-ui, sans-serif;
   --r: 16px; --side: 244px;
   --topbar: rgba(7, 10, 14, .9); --hover: #262a31; --shadow: none;
   --deco-a: rgba(255, 107, 0, .20); --deco-b: rgba(14, 165, 233, .10); --deco-line: rgba(139, 155, 176, .08); --deco-fill: rgba(255, 107, 0, .16); --deco-dot: rgba(139, 155, 176, .07);
@@ -43,9 +43,9 @@ p { margin: 0; }
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
 .top { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 12px max(16px, env(safe-area-inset-left)); background: var(--topbar); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); flex: none; }
-.logo { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font: 800 18px var(--disp); color: #140700; background: linear-gradient(150deg, #ff7a2e, #d9480f); box-shadow: 0 8px 20px -6px rgba(255, 106, 31, .6), inset 0 1px 0 rgba(255, 255, 255, .3); }
-img.logo { background: none; box-shadow: 0 8px 20px -6px rgba(255, 106, 31, .6); }   /* фірмовий знак — public/brand/q-hub-logo.svg */
-.brand b { font: 800 17px var(--disp); letter-spacing: -.02em; }
+.logo { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font: 800 18px var(--disp); color: #140700; background: #ff6b00; }
+img.logo { background: none; }   /* фірмовий знак — public/brand/q-hub-logo.svg */
+.brand b { font: 800 17px var(--brand-font); font-stretch: 125%; letter-spacing: -.02em; }   /* назва Q-Hub — широкий Archivo */
 .nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; justify-self: center; max-width: 100%; }
 .nav::-webkit-scrollbar { display: none; }
 .nav a { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px; }
@@ -481,7 +481,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mpop a.mgo { display: flex; justify-content: center; margin-right: -22px; padding: 10px 14px; border-radius: 12px; background: var(--accent); color: var(--accent-fg); font: 700 13px var(--sans); box-shadow: 0 4px 16px rgba(255, 107, 0, .35); }
 .mpop a.mgo:hover { box-shadow: 0 0 20px -2px rgba(255, 107, 0, .6); }
 .mcoord { position: absolute; left: 10px; bottom: 10px; z-index: 500; padding: 4px 10px; border-radius: 999px; background: rgba(10, 14, 17, .8); color: #cfd6dc; font-size: 12px; pointer-events: none; }
-.mbrand { position: absolute; right: 10px; bottom: 10px; z-index: 500; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border-radius: 999px; background: rgba(10, 14, 17, .8); color: #aab3ba; font-size: 11.5px; pointer-events: none; }
+.mbrand { font-family: var(--brand-font); font-stretch: 125%; font-weight: 800; position: absolute; right: 10px; bottom: 10px; z-index: 500; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border-radius: 999px; background: rgba(10, 14, 17, .8); color: #aab3ba; font-size: 11.5px; pointer-events: none; }
 .msearch { position: relative; }
 .mfound { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 600; list-style: none; margin: 0; padding: 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line2); box-shadow: var(--shadow); }
 .mfound button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: 600 14px var(--sans); cursor: pointer; text-align: left; }
