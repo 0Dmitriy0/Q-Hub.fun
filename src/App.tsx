@@ -5,6 +5,7 @@ import Prices from './pages/Prices';
 import Transport from './pages/Transport';
 import Jobs from './pages/Jobs';
 import MapPage from './pages/MapPage';
+import GameMapGuide from './pages/GameMapGuide';
 import Download from './pages/Download';
 import NotFound from './pages/NotFound';
 import Cabinet from './pages/cabinet/Cabinet';
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="transport" element={<ToWiki to="/wiki/transport" />} />
         <Route path="roboty" element={<ToWiki to="/wiki/roboty" />} />
         <Route path="mapa" element={<MapPage />} />
+        <Route path="mapa/v-gru" element={<GameMapGuide />} />
         <Route path="programa" element={<Download />} />
         <Route path="kabinet/*" element={<Cabinet />} />
         <Route path="*" element={<NotFound />} />
