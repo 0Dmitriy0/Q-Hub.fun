@@ -9,7 +9,7 @@ import type { Character } from './types';
 const OWN_TABLES = ['deals', 'transactions', 'cars', 'documents', 'game_sessions'];
 const WORD = 'СКИНУТИ';
 
-type Mode = 'char' | 'all';
+type Mode = 'char' | 'del' | 'all';
 
 /* Налаштування: нік і статік, персонажі, скидання даних. Скидання — лише після введення слова підтвердження;
    RLS у базі дозволяє видаляти тільки свої рядки, персонажі видаляються разом з усім (on delete cascade) */
@@ -32,13 +32,17 @@ export default function SettingsPage({ c }: { c: Character }) {
         const { error } = await supabase.from(t).delete().eq('character_id', c.id);
         if (error) { failed = true; break; }
       }
+    } else if (mode === 'del') {
+      /* персонаж разом з усім своїм (on delete cascade); ціни для скупників лишаються */
+      const { error } = await supabase.from('characters').delete().eq('id', c.id);
+      failed = !!error;
     } else {
       const { error } = await supabase.from('characters').delete().eq('owner', session.user.id);
       failed = !!error;
     }
     setBusy(false);
     if (failed) { setMsg('Не вдалося скинути дані. Перевір інтернет і спробуй ще раз — те, що встигло видалитись, не повернеться.'); return; }
-    setMsg(mode === 'char' ? `Облік, угоди, склад і гараж персонажа ${c.name} очищено.` : 'Усі персонажі й їхні дані видалено. Можна починати з чистого листа.');
+    setMsg(mode === 'char' ? `Облік, угоди, склад і гараж персонажа ${c.name} очищено.` : mode === 'del' ? `Персонажа ${c.name} видалено разом з його даними.` : 'Усі персонажі й їхні дані видалено. Можна починати з чистого листа.');
     setMode(null); setWord('');
     await reloadCharacters();
   }
@@ -63,6 +67,10 @@ export default function SettingsPage({ c }: { c: Character }) {
             <button type="button" className="btn sm bad" onClick={() => ask('char')}>Очистити</button>
           </div>
           <div className="li">
+            <div><b>Видалити персонажа {c.name}</b><br /><small>Сам персонаж разом з обліком, угодами, складом і гаражем. Інші персонажі лишаються.</small></div>
+            <button type="button" className="btn sm bad" onClick={() => ask('del')}>Видалити</button>
+          </div>
+          <div className="li">
             <div><b>Видалити всіх персонажів</b><br /><small>Усі персонажі разом з усіма даними. Акаунт, нік і статік лишаються.</small></div>
             <button type="button" className="btn sm bad" onClick={() => ask('all')}>Видалити все</button>
           </div>
@@ -74,7 +82,7 @@ export default function SettingsPage({ c }: { c: Character }) {
             </label>
             <div className="row">
               <button className="btn bad" disabled={busy || word.trim().toUpperCase() !== WORD}>
-                {busy ? 'Видаляю…' : mode === 'char' ? `Очистити ${c.name}` : 'Видалити всіх персонажів'}
+                {busy ? 'Видаляю…' : mode === 'char' ? `Очистити ${c.name}` : mode === 'del' ? `Видалити ${c.name}` : 'Видалити всіх персонажів'}
               </button>
               <button type="button" className="btn ghost" onClick={() => setMode(null)} disabled={busy}>Скасувати</button>
             </div>

@@ -4,6 +4,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const cfg = require('./config.json');
 const { makeClient, login } = require('./auth.cjs');
+const { parseCharacter } = require('./character.cjs');
 const { fileStorage } = require('./store.cjs');
 const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
@@ -1096,17 +1097,13 @@ app.whenReady().then(() => {
     return { user: null };
   });
   ipcMain.handle('character', (_e, id) => { if (typeof id === 'string') { settings.character = id; saveSettings(); } return true; });
-  /* Ім'я_Прізвище, як у грі (RAGE MP): латиниця, по 2–15 літер */
-  const CHAR_NAME = /^[A-Z][a-zA-Z]{1,14}_[A-Z][a-zA-Z]{1,14}$/;
   /* новий персонаж — у плашці входу: кабінет на сайті лише для перегляду, створити там не можна */
   ipcMain.handle('char-add', async (e, p) => {
     if (!fromGate(e)) return null;
     const fail = async error => ({ ...(await state()), error });
-    const name = typeof p?.name === 'string' ? p.name.trim() : '';
-    if (!CHAR_NAME.test(name)) return fail("Ім'я й прізвище персонажа — латиницею через «_», як у грі: Dmitriy_Core");
-    const stat = Number(String(p?.static ?? '').replace(/D/g, ''));
-    if (!Number.isInteger(stat) || stat < 1 || stat > 999999999) return fail('Вкажи статік персонажа — число з гри, напр. 162183');
-    const start = Math.max(0, Math.round(Number(String(p?.start ?? '').replace(/[^d]/g, '')) || 0));
+    const c = parseCharacter(p);
+    if (c.error) return fail(c.error);
+    const { name, stat, start } = c;
     /* нік і статік — у профілі (з ними подаються ціни, specs 0007–0008); статік унікальний */
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return fail('Сесія закінчилась — увійди ще раз.');
