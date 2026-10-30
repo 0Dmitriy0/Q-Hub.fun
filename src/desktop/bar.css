@@ -89,6 +89,7 @@ body.in-bar input { user-select: text; }
 .bkindtag { flex: none; font: 700 11px var(--sans); letter-spacing: .02em; padding: 2px 7px; border-radius: 6px; color: var(--accent-hi); background: rgba(255, 106, 31, .12); }
 .bkindtag.law { color: #7cb7ff; background: rgba(80, 150, 255, .14); }
 .bkindtag.order { color: var(--good); background: var(--good-soft); }
+.bkindtag.info { color: var(--muted); background: rgba(160, 170, 185, .14); }
 .bpunkt { flex: none; font: 700 12px var(--mono); color: var(--accent-hi); background: rgba(255, 106, 31, .12); padding: 2px 7px; border-radius: 6px; }
 .brule a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brule a:hover { color: var(--fg); text-decoration: underline; }

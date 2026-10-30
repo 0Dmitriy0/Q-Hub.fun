@@ -1,6 +1,6 @@
 /* Розбір тем форуму QuantRP (IPS) на пункти правил і статті законів (specs/010). Без залежностей середовища:
    той самий модуль бере функція rules-sync (Deno) і scripts/fetch-rules.mjs (Node) для вбудованої копії в програмі */
-export type Kind = 'rules' | 'law' | 'order';
+export type Kind = 'rules' | 'law' | 'order' | 'info';
 export interface Item { n: string; h: string; s: string }
 export interface Topic { title: string; section: string; url: string; kind: Kind; items: Item[] }
 
@@ -16,6 +16,8 @@ export const numOf = (u: string) => Number((u.match(/\/(?:forum|topic)\/(\d+)/) 
 export const pageTitle = (h: string) => ent((h.match(/<title>([^<]*)<\/title>/) || [])[1] || '');
 export const heading = (h: string) => ent((h.match(/<h1[^>]*>([^<]+)</) || [])[1] || '').trim();
 
+/* позначка форуму про правку поста («Змінено 19 травня 2025 користувачем Nika Senju») — не текст правил */
+const EDITED = /^(Змінено|Edited) .{0,40}(користувачем|by) \S.{0,40}$/u;
 /* текст першого поста теми (IPS: data-role='commentContent'); у кількох темах автор продовжує правила наступними постами — їх теж */
 export function postText(h: string): string[] {
   const author = (h.match(/data-commentID="\d+"[^>]*data-quoteData='[^']*?&quot;username&quot;:&quot;([^&]*)&quot;/) || [])[1];
@@ -25,7 +27,8 @@ export function postText(h: string): string[] {
     const c = (p.split("data-role='commentContent'")[1] || '').split(/cPostShareMenu|<\/article>/)[0];
     return ent(c.replace(/^[^>]*>/, '').replace(/<(script|style)[\s\S]*?<\/\1>/g, '').replace(/<br\s*\/?>/g, '\n')
       .replace(/<\/(p|div|li|h\d|tr)>/g, '\n').replace(/<[^>]+>/g, ''));
-  }).join('\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && l !== '•' && !/^<div/.test(l) && !/^\d{1,2}$/.test(l));   // «3» — номери картинок, не текст
+  }).join('\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim())
+    .filter(l => l && l !== '•' && !/^<div/.test(l) && !/^\d{1,2}$/.test(l) && !EDITED.test(l));   // «3» — номери картинок, не текст
 }
 
 /* пункти: «1.4 Заборонено…», «6.5 [Р] Викрадення…» — окремо, рядки під ними («Покарання: штраф $20 000») — у пункт;

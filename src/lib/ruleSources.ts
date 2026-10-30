@@ -1,7 +1,7 @@
 /* Джерела правил для адміна (specs/010 US3): адреса розділу чи теми форуму QuantRP → як її зберігає база (0039).
    Та сама перевірка, що й check у базі; тут — щоб помилку було видно одразу, українською */
-export type RuleKind = 'rules' | 'law' | 'order';
-export const KINDS: [RuleKind, string][] = [['rules', 'Правила сервера'], ['law', 'Закон штату'], ['order', 'Наказ організації']];
+export type RuleKind = 'rules' | 'law' | 'order' | 'info';
+export const KINDS: [RuleKind, string][] = [['rules', 'Правила сервера'], ['law', 'Закон штату'], ['order', 'Наказ організації'], ['info', 'Довідка (F.A.Q.)']];
 export const SOURCE_URL = /^https:\/\/forum\.quant5\.com\.ua\/index\.php\?\/(forum|topic)\/[^\s"'<>]+$/;
 
 /* посилання з браузера (закодоване «%D0%BF…», без «/» у кінці, з #коментарем чи /page/2) → одна форма, щоб не було дублів */

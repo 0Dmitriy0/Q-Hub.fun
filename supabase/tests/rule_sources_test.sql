@@ -52,6 +52,9 @@ do $$ begin
   assert not (select enabled from public.rule_sources where url like '%/forum/57-%'), 'адмін не вимкнув джерело';
   delete from public.rule_sources where url like '%/forum/57-%';
   assert not exists (select 1 from public.rule_sources where url like '%/forum/57-%'), 'адмін не видалив джерело';
+  -- «Довідка» (0041): F.A.Q. з «Новин та інформації»
+  insert into public.rule_sources (url, kind) values ('https://forum.quant5.com.ua/index.php?/forum/3-новини-та-інформація/', 'info');
+  delete from public.rule_sources where kind = 'info';
   -- інший сайт, http, розділ без «/forum/» чи «/topic/», лапки — відмова
   assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('https://quantfun.com.ua/index.php?/forum/1-x/', 'rules')$q$) like '23514%', 'прийнято чужий сайт';
   assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('http://forum.quant5.com.ua/index.php?/forum/1-x/', 'rules')$q$) like '23514%', 'прийнято http';

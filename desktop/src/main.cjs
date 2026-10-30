@@ -351,6 +351,15 @@ async function toggleBar() {
   if (bar.isVisible()) { hideBarToGame(); return; }
   await showBar();
 }
+/* свіжі правила й закони — при запуску, кожні 6 год і при відкритті плашки, але не частіше разу на 5 хв (304 без змін —
+   кілька сотень байт): нове джерело адміна видно в пошуку за хвилини, а не за 6 год. Змінились — плашка перечитає
+   (specs/010 FR-017, SC-005) */
+let rulesAt = 0;
+function pullRules(force = false) {
+  if (!force && Date.now() - rulesAt < 5 * 60e3) return;
+  rulesAt = Date.now();
+  rulesSnap().refresh().then(ch => { if (ch) bar?.webContents.send('rules-changed'); }).catch(() => {});
+}
 async function showBar() {
   const { data: { session } } = await sb.auth.getSession();
   if (session && hasNick === null) await state().catch(() => {});   // після запуску ще не знаємо, чи вибрано нік
@@ -358,6 +367,7 @@ async function showBar() {
   placeBar();
   raiseBar();
   bar.webContents.send('quick-show');
+  pullRules();
 }
 
 function createTray() {
@@ -1211,9 +1221,7 @@ app.whenReady().then(() => {
   /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */
   const later = f => (autostarted ? setTimeout(f, 30e3) : f());
   later(startUpdates);
-  /* свіжі правила й закони — при запуску й кожні 6 год; змінились — плашка перечитає (specs/010 FR-017) */
-  const pullRules = () => rulesSnap().refresh().then(ch => { if (ch) bar?.webContents.send('rules-changed'); }).catch(() => {});
-  later(pullRules); setInterval(pullRules, 6 * 3600e3);
+  later(() => pullRules(true)); setInterval(() => pullRules(true), 6 * 3600e3);
   if (autostarted) sb.auth.getSession().then(({ data }) => {
     if (!data.session || !settings.character) tray?.displayBalloon?.({ title: 'Q-Hub', content: `Увійди в Q-Hub — клікни іконку в треї або натисни ${prefs().hotkey}.` });
   }).catch(() => {});
