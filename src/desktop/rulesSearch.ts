@@ -1,15 +1,15 @@
 /* Пошук по правилах сервера й законах штату (знімок rules-sync або вбудована src/data/rules.json, specs/010) — без ШІ, у плашці Alt+Q по Enter.
    Слова запиту зрізаються до основи («зеленій» → «зелен»), пункт підходить, коли якесь його слово з неї починається;
    рідкісні слова важать більше, пункт, де збіглися всі слова, — вище. Ці ж пункти йдуть помічнику по Shift+Enter. */
-export type RuleKind = 'rules' | 'law' | 'order';
+export type RuleKind = 'rules' | 'law' | 'order' | 'info';
 export interface RuleItem { n: string; h: string; s: string }
 /* kind немає в старій вбудованій копії — тоді це правила сервера */
 export interface RuleTopic { title: string; section: string; url: string; kind?: RuleKind; items: RuleItem[] }
 export interface RuleHit { topic: string; url: string; kind: RuleKind; n: string; h: string; s: string; score: number }
-/* правила сервера карає адміністрація, закони штату — гра (FR-003, FR-006) */
-export const KIND: Record<RuleKind, string> = { rules: 'Правила сервера', law: 'Закон штату', order: 'Наказ організації' };
+/* правила сервера карає адміністрація, закони штату — гра (FR-003, FR-006); довідка (F.A.Q.) — пояснення, не заборона */
+export const KIND: Record<RuleKind, string> = { rules: 'Правила сервера', law: 'Закон штату', order: 'Наказ організації', info: 'Довідка' };
 /* номер пункту: у законах — стаття, у правилах — пункт */
-export const numLabel = (kind: RuleKind, n: string) => (n ? `${kind === 'rules' ? 'п.' : 'ст.'} ${n}` : '');
+export const numLabel = (kind: RuleKind, n: string) => (n ? `${kind === 'rules' || kind === 'info' ? 'п.' : 'ст.'} ${n}` : '');
 
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '');
 const words = (s: string) => norm(s).match(/[\p{L}\d]+/gu) ?? [];
@@ -83,7 +83,7 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
     /* «КК 4.1»: стаття з таким номером; кодекс названо в назві документа — вище, ніж лише згадано в тексті */
     if (num && got === terms.length) score += terms.every((_, i) => has(d.head, i)) ? 10 : 4;
     else if (!got || !terms.some((_, i) => has(d.words, i) && idf[i] > 0)) continue;
-    else score *= got / terms.length * (d.item.n ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів
+    else score *= got / terms.length * (d.item.n || d.topic.kind === 'info' ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів (у довідці номерів немає взагалі)
     if (penalty && d.topic.kind === 'law') score *= 1.5;
     if (numq && /\d/.test(d.item.s)) score *= qtyOf?.test(d.low) ? 2 : QTY.test(d.low) ? 1.6 : 1.3;
     if (without.some(re => re.test(d.low))) score *= 1.5;
