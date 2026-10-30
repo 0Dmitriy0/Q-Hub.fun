@@ -57,6 +57,11 @@ description: "Задачі: усі правила й закони QuantRP у п�
 - [X] T022 `npx.cmd tsc --noEmit`, `npx.cmd vitest run`, `cd desktop; npm.cmd test`, SQL-тести (PGlite локально, `run.sh` у CI) — зелене; SC-002 на 30 питаннях — у spec.md «Реалізація»
 - [x] T023 Власнику — кроки з quickstart.md «Один раз», оновити під те, як це реально робиться: міграція — вміст файлу в буфер → Supabase SQL Editor (**до** злиття в `main`); функція — у PowerShell `npx.cmd supabase functions deploy rules-sync --project-ref mcuolznwwvptffcueswm --use-api` (вхід `npx.cmd supabase login` — у звичайному терміналі, не через `!`); секрет — `npx.cmd supabase secrets set RULES_SYNC_SECRET=…` і той самий у GitHub → Settings → Secrets → `RULES_SYNC_SECRET`; секрет у чат не вставляти
 
+## Phase 8: Доведення SC-003 і SC-005 (/speckit-implement 2026-10-30)
+
+- [X] T024 [US1] SC-003 кодом, а не надією на модель: `supabase/functions/assistant/plan.ts` — `checkRefs(reply, rules)`: кожне «п. N» / «ст. N» у відповіді, якого немає у витягу `rules` (номери з дужок «[… , п. 1.1]» і з тексту пунктів), прибирається разом із комою перед ним («(Кримінальний кодекс, ст. 9.9)» → «(Кримінальний кодекс)»); без витягу — відповідь без змін. Виклик — у `supabase/functions/assistant/index.ts` після `clean`. Тести в `plan.test.ts`: справжній номер лишається, вигаданий зникає, «п. 6.31» з тексту пункту — справжній, відповідь про облік не чіпається
+- [ ] T025 Власнику, SC-005: на сторінці адміна «Правила» додати джерело-тему поза розділами за замовчуванням (напр. наказ організації), «Оновити зараз», засікти час до появи пунктів у пошуку плашки; результат — у spec.md «Реалізація»
+
 ## Dependencies & Execution Order
 
 - Phase 2 → US1 (пошук по вбудованій копії) → US2 → US3 (база й функція) → US4 (програма бере знімок функції)
