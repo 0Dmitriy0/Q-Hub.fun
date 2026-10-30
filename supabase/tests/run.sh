@@ -72,3 +72,4 @@ echo 'Гарбузи ok'
 $P -f supabase/tests/guides_test.sql
 $P -f supabase/tests/account_nick_test.sql
 $P -f supabase/tests/rule_sources_test.sql
+$P -f supabase/tests/buyers_merge_test.sql

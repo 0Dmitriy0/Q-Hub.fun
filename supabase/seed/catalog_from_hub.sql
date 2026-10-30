@@ -11,8 +11,7 @@ insert into public.buyers (id, name, sort) values
   ('fuel', 'Паливо', 5),
   ('fish', 'Риба', 6),
   ('food', 'Харчі', 7),
-  ('hide', 'Шкури', 8),
-  ('meat', 'М''ясо', 9)
+  ('hide', 'Шкури', 8)
 on conflict (id) do update set name = excluded.name, sort = excluded.sort;
 insert into public.items (name, category, sub, unit) values
   ('Томат', 'res', 'Врожай', 'шт'),
@@ -254,14 +253,14 @@ select v.buyer_id, i.id, v.price, v.price_at::timestamptz from (values
   ('hide', 'Груба шкура корови', 0, null),
   ('hide', 'Цілісна шкура корови', 0, null),
   ('hide', 'Бездоганна шкура корови', 0, null),
-  ('meat', 'М''ясо кролика', 284, '2026-10-18T22:16:29.065000+00:00'),
-  ('meat', 'М''ясо оленя', 296, '2026-10-18T22:16:42.166000+00:00'),
-  ('meat', 'М''ясо кабана', 253, '2026-10-18T21:33:38.589000+00:00'),
-  ('meat', 'М''ясо койота', 475, '2026-10-18T22:16:01.141000+00:00'),
-  ('meat', 'М''ясо пуми', 424, '2026-10-18T22:17:11.563000+00:00'),
-  ('meat', 'М''ясо пантери', 544, '2026-10-18T22:16:59.283000+00:00'),
-  ('meat', 'М''ясо свині', 375, '2026-10-18T22:17:17.404000+00:00'),
-  ('meat', 'М''ясо корови', 430, '2026-10-18T22:16:16.549000+00:00')
+  ('hide', 'М''ясо кролика', 284, '2026-10-18T22:16:29.065000+00:00'),
+  ('hide', 'М''ясо оленя', 296, '2026-10-18T22:16:42.166000+00:00'),
+  ('hide', 'М''ясо кабана', 253, '2026-10-18T21:33:38.589000+00:00'),
+  ('hide', 'М''ясо койота', 475, '2026-10-18T22:16:01.141000+00:00'),
+  ('hide', 'М''ясо пуми', 424, '2026-10-18T22:17:11.563000+00:00'),
+  ('hide', 'М''ясо пантери', 544, '2026-10-18T22:16:59.283000+00:00'),
+  ('hide', 'М''ясо свині', 375, '2026-10-18T22:17:17.404000+00:00'),
+  ('hide', 'М''ясо корови', 430, '2026-10-18T22:16:16.549000+00:00')
 ) v(buyer_id, item_name, price, price_at) join public.items i on i.name = v.item_name
 on conflict (buyer_id, item_id) do update set price = excluded.price, price_at = excluded.price_at
   where excluded.price_at is not null and (public.buyer_items.price_at is null or excluded.price_at > public.buyer_items.price_at);
