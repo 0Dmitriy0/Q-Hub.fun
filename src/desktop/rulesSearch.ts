@@ -14,7 +14,7 @@ export const numLabel = (kind: RuleKind, n: string) => (n ? `${kind === 'rules' 
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').replace(/[’'`ʼ]/g, '');
 const words = (s: string) => norm(s).match(/[\p{L}\d]+/gu) ?? [];
 /* службові слова, з яких складаються питання, а не правила */
-const STOP = new Set('що як чи де коли хто чому таке такий така можна треба мені мене мій моя ми ви ти він вона воно вони це той та ті і й а але або на за по до від під над при про для без із зі з в у о не ні так якщо щоб бо же ж ли би б є буде було яка який які яке скільки правило правила пункт'.split(' '));
+const STOP = new Set('що як чи де коли хто чому таке такий така можна треба мені мене мій моя ми ви ти він вона воно вони це той та ті і й а але або на за по до від під над при про для без із зі з в у о не ні так якщо щоб бо же ж ли би б є буде було яка який які яке скільки правило правила пункт має мають може можуть потрібно потрібна потрібен потрібні'.split(' '));
 const stem = (w: string) => (w.length >= 7 ? w.slice(0, w.length - 3) : w.length >= 4 ? w.slice(0, Math.max(3, w.length - 2)) : w);
 /* у правилах терміни латиницею (DM, PG…), а гравці пишуть як чують */
 const ALIAS: Record<string, string[]> = {
@@ -29,6 +29,8 @@ const SLANG: [string, string[]][] = [
   ['капт', ['захоплен']], ['мст', ['помст', 'revenge', 'rk']], ['помст', ['revenge', 'rk']],
   ['машин', ['транспорт', 'т/с', 'автомоб']], ['тачк', ['транспорт', 'т/с', 'автомоб']], ['авто', ['транспорт', 'т/с']],
   ['нацгвард', ['ng', 'national', 'національн']], ['поновл', ['відновл']], ['бізвар', ['бізнес']],
+  /* «забити бізвар / капт» — запланувати війну; «стріляти з машини» — DriveBy */
+  ['забит', ['заплан']], ['забив', ['заплан']], ['стріля', ['стрільб', 'db', 'driveby']],
 ];
 const PREFIX = ['по', 'за', 'роз', 'ви', 'пере', 'від', 'при', 'на', 'у', 'в'];
 const slang = (w: string) => SLANG.filter(([p]) => w.startsWith(p)).flatMap(([, v]) => v);
@@ -38,12 +40,14 @@ const PENALTY = /^(покаран|покарат|караєт|карают)/;
 const NUMQ = /(^|\s)(скільки|коли|котрій|кількість|термін)(\s|$)/u, QTY = /кількіст|мінімальн|максимальн|не більше|не менше|щонайменше/;
 
 interface Doc { topic: RuleTopic; item: RuleItem; low: string; words: string[]; lead: string[]; head: string[] }
-let cache: { src: RuleTopic[]; docs: Doc[] } | null = null;
+let cache: { src: RuleTopic[]; docs: Doc[]; vocab: string[] } | null = null;
 function index(topics: RuleTopic[]) {
-  if (cache?.src === topics) return cache.docs;
+  if (cache?.src === topics) return cache;
   const docs = topics.flatMap(topic => topic.items.map(item => ({ topic, item, low: norm(item.s), words: [...new Set(words(item.s))], lead: words(item.s).slice(0, 4), head: words(`${topic.title} ${item.h}`) })));
-  cache = { src: topics, docs };
-  return docs;
+  /* усі різні слова бази: збіг слова запиту рахується по них один раз, а не в кожному пункті (SC-006) */
+  const vocab = [...new Set(docs.flatMap(d => [...d.words, ...d.head]))];
+  cache = { src: topics, docs, vocab };
+  return cache;
 }
 
 export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[] {
@@ -55,27 +59,34 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
   const penalty = all.some(w => PENALTY.test(w)), numq = NUMQ.test(norm(q));
   const terms = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w)).map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);
   if (!terms.length && !nums.size) return [];
-  const docs = index(topics);
+  const { docs, vocab } = index(topics);
   /* «грабувати» — і «пограбування», «почати» — і «розпочати»: основа після префікса (від 4 літер — інакше шуму забагато) */
-  const has = (ws: string[], t: string[]) => ws.some(w => t.some(x => w.startsWith(x) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x)))));
-  const idf = terms.map(t => Math.log(1 + docs.length / (1 + docs.filter(d => has(d.words, t)).length)));
+  const fits = (w: string, t: string[]) => t.some(x => w.startsWith(x) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x))));
+  const match = terms.map(t => new Set(vocab.filter(w => fits(w, t))));
+  const has = (ws: string[], i: number) => ws.some(w => match[i].has(w));
+  const idf = terms.map((_, i) => Math.log(1 + docs.length / (1 + docs.filter(d => has(d.words, i)).length)));
   const defs = terms.map(t => new RegExp(`(^|[^\\p{L}])(${t.join('|')})\\p{L}* \\(`, 'u'));
+  /* «без ліцензії», «без маски»: «без» — службове, але заперечення важливе — пункт, де так і написано, вище */
+  const without = [...norm(q).matchAll(/(?:^|\s)без\s+(\p{L}+)/gu)].map(m => new RegExp(`(^|[^\\p{L}])без ${stem(m[1])}`, 'u'));
+  /* «скільки учасників»: пункт «кількість учасників» відповідає прямо — вище за будь-який пункт з цифрами */
+  const qtyOf = numq && terms.length ? new RegExp(`(кількіст|мінімальн|максимальн)\\p{L}* (${terms.flat().join('|')})`, 'u') : null;
   const hits: RuleHit[] = [];
   for (const d of docs) {
     let score = 0, got = 0;
-    terms.forEach((t, i) => {
-      const inText = has(d.words, t), inHead = has(d.head, t);
+    terms.forEach((_, i) => {
+      const inText = has(d.words, i), inHead = has(d.head, i);
       /* слово на початку пункту («Заборонено DM…») чи з розшифровкою («DM (DeathMatch)») — пункт саме про нього */
-      const about = (has(d.lead, t) ? 0.5 : 0) + (defs[i].test(d.low) ? 0.5 : 0);
+      const about = (has(d.lead, i) ? 0.5 : 0) + (inText && defs[i].test(d.low) ? 0.5 : 0);
       if (inText || inHead) { got++; score += idf[i] * ((inText ? 1 : 0.6) + (inHead ? 0.4 : 0) + about); }
     });
     const num = nums.has(d.item.n);
     /* «КК 4.1»: стаття з таким номером; кодекс названо в назві документа — вище, ніж лише згадано в тексті */
-    if (num && got === terms.length) score += terms.every(t => has(d.head, t)) ? 10 : 4;
-    else if (!got || !terms.some((t, i) => has(d.words, t) && idf[i] > 0)) continue;
+    if (num && got === terms.length) score += terms.every((_, i) => has(d.head, i)) ? 10 : 4;
+    else if (!got || !terms.some((_, i) => has(d.words, i) && idf[i] > 0)) continue;
     else score *= got / terms.length * (d.item.n ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів
     if (penalty && d.topic.kind === 'law') score *= 1.5;
-    if (numq && /\d/.test(d.item.s)) score *= QTY.test(d.low) ? 1.6 : 1.3;
+    if (numq && /\d/.test(d.item.s)) score *= qtyOf?.test(d.low) ? 2 : QTY.test(d.low) ? 1.6 : 1.3;
+    if (without.some(re => re.test(d.low))) score *= 1.5;
     hits.push({ topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score });
   }
   return hits.sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);
