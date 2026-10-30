@@ -2,7 +2,7 @@
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
 do $$ begin
-  assert (select count(*) from public.buyers) = 10, 'скупників не 10';
+  assert (select count(*) from public.buyers) = 9, 'скупників не 9 (М''ясо — у Шкурах, specs/003)';
   assert (select count(*) from public.buyer_items) = 122, 'повторний імпорт дублює рядки';
   assert (select count(*) from public.buyer_items where price > 0) = 59, 'не всі ціни власника';
   assert (select unit from public.items where name = 'Окунь') = 'кг', 'риба не в кг';

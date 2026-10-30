@@ -61,7 +61,7 @@ test('покриття: N з M за відкриття вікна, pending, по
 test('покриття: кадр, хибно впізнаний як інший скупник, не обнуляє лік (живу гру 2026-10-29)', () => {
   const cov = coverage();
   cov.frame('hide', 32, [1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8], 0);
-  assert.strictEqual(cov.frame('meat', 8, [90], [90], 18e3).buyer, 'meat');   // «М'ясо» посеред «Шкур»
+  assert.strictEqual(cov.frame('meat', 8, [90], [90], 18e3).buyer, 'meat');   // 'meat' — умовний інший скупник посеред «Шкур»
   assert.deepStrictEqual(cov.frame('hide', 32, [9, 10], [9, 10], 40e3), { buyer: 'hide', read: 10, total: 32, pending: 0, shown: true });
 });
 
@@ -120,7 +120,9 @@ test('скупник за заголовком «Купує …» ліворуч
   assert.strictEqual(headerBuyer(L('f', 'Kyrye', 'о puby', 'ra і')), 'fish');
   assert.strictEqual(headerBuyer(L('fa', '[—', 'Kynye', 'метали')), 'metal');
   assert.strictEqual(headerBuyer(L('B1 Kie', 'fa', 'BRAD SHIDER', 'Купує', 'шкури')), 'hide');
-  assert.strictEqual(headerBuyer(L('Купуе', "м'ясо")), 'meat');
+  assert.strictEqual(headerBuyer(L('Купуе', "м'ясо")), 'hide');   // «М'ясо» — у «Шкурах» (specs/003)
+  assert.strictEqual(headerBuyer(L('Купуе', 'мясо')), 'hide');
+  assert.strictEqual(headerBuyer(L('Купуе', 'м’ясо')), 'hide');
   assert.strictEqual(headerBuyer([{ text: 'метали', y: 0, x: 900, col: 0 }], { maxX: 800 }), null);   // картка товару, не заголовок
   assert.strictEqual(headerBuyer([{ text: 'рибу', y: 40, col: 1 }]), null);                            // права половина екрана
   assert.strictEqual(headerBuyer(L('ЛІМІТ ПРОДАЖУ', '0')), null);
