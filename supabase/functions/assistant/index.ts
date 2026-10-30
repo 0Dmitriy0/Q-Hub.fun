@@ -4,7 +4,7 @@
    Нічого не записує — записує програма після Enter гравця. Ключ Anthropic — лише в секретах Supabase. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { SCHEMA, SYSTEM, clean, context, rulesBlock, type Ctx } from './plan.ts';
+import { SCHEMA, SYSTEM, checkRefs, clean, context, rulesBlock, type Ctx } from './plan.ts';
 
 const KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const anthropic = KEY ? new Anthropic({ apiKey: KEY }) : null;
@@ -58,7 +58,8 @@ Deno.serve(async req => {
     if (res.stop_reason === 'refusal') return json({ reply: 'З цим не допоможу.', actions: [] });
     const block = res.content.find(b => b.type === 'text');
     if (res.stop_reason === 'max_tokens' || !block || block.type !== 'text') return fail(502, 'Помічник не договорив — спробуй коротше');
-    return json(clean(JSON.parse(block.text), c));
+    const plan = clean(JSON.parse(block.text), c);
+    return json({ ...plan, reply: checkRefs(plan.reply, rules) });
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) return fail(503, 'Помічник перевантажений — спробуй за хвилину');
     if (e instanceof Anthropic.APIError) return fail(502, 'Помічник недоступний — спробуй пізніше');

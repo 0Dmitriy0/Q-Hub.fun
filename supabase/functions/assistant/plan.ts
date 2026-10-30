@@ -99,6 +99,19 @@ ${r}
 ` : '';
 }
 
+/* SC-003: номер пункту чи статті у відповіді — лише той, що є у витягу (у дужках «[…, п. 1.1]» чи в тексті пункту
+   «пункт 6.31»). Вигаданий прибирається разом із комою перед ним: «(Кримінальний кодекс, ст. 9.9)» → «(Кримінальний кодекс)».
+   Без витягу (питання про облік) — відповідь як є */
+const NUMS = String.raw`\d+(?:\.\d+)*(?:\s*(?:,|і|та|–|-)\s*\d+(?:\.\d+)*)*`;
+export function checkRefs(reply: string, rules: unknown): string {
+  if (typeof rules !== 'string' || !rules.trim()) return reply;
+  const known = new Set([...rules.matchAll(/(?:п\.|ст\.|пункт\p{L}*|статт\p{L}*)\s*(\d+(?:\.\d+)*)/giu)].map(m => m[1]));
+  return reply.replace(new RegExp(`(,\\s*)?(?<!\\p{L})(п|ст)\\.\\s*(${NUMS})`, 'gu'), (m, comma = '', k: string, list: string) => {
+    const ns = list.split(/\s*(?:,|і|та|–|-)\s*/u), ok = ns.filter(n => known.has(n));
+    return ok.length === ns.length ? m : ok.length ? `${comma}${k}. ${ok.join(', ')}` : '';
+  }).replace(/\s*\(\s*\)/g, '').replace(/ {2,}/g, ' ').trim();
+}
+
 export function context(c: Ctx): string {
   const held = holdings(c.deals);
   const byItem = new Map<string, PriceIn[]>();

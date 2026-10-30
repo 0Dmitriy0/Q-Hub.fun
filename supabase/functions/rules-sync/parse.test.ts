@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chunks, forumTopics, links, numOf, postText, topicTitle } from './parse';
+import { chunks, forumTopics, links, numOf, postText, topicSection, topicTitle } from './parse';
 
 /* пост IPS у тому вигляді, як його віддає форум */
 const post = (id: number, user: string, body: string) => `<div id='comment-${id}_wrap'><div data-commentID="${id}" data-quoteData='{&quot;username&quot;:&quot;${user}&quot;}'></div>`
@@ -49,6 +49,12 @@ describe('розбір тем форуму (specs/010)', () => {
     expect(links(h, 'topic')).toEqual(['index.php?/topic/153-кримінальний-кодекс']);
     expect(numOf('index.php?/topic/153-кримінальний-кодекс')).toBe(153);
     expect(topicTitle('<title>Кримінальний кодекс штату Quant - Законодавча база Штату - QuantRP</title>', 'Законодавча база Штату')).toBe('Кримінальний кодекс штату Quant');
+  });
+  it('окрема тема без розділу: назва й розділ — із заголовка, не злипаються (2026-10-30, «Джагернаут»)', () => {
+    const h = '<title>Правила івентів &quot;Джагернаут&quot; та &quot;Чорна Борода&quot; - Правила сімей - QuantRP</title>';
+    expect(topicTitle(h, '')).toBe('Правила івентів "Джагернаут" та "Чорна Борода"');
+    expect(topicSection(h)).toBe('Правила сімей');
+    expect(topicSection('<title>Тема - QuantRP</title>')).toBe('');
   });
 });
 

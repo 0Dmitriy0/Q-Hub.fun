@@ -52,7 +52,10 @@ export function chunks(lines: string[]): Item[] {
 }
 
 /* назва теми: «Кримінальний кодекс штату Quant - Законодавча база Штату - QuantRP» → без розділу й сайту */
-export const topicTitle = (h: string, section: string) => pageTitle(h).replace(/ - [^-]*$/, '').replace(' - ' + section, '').trim();
+/* окрема тема-джерело розділу не знає (section = '') — тоді розділ — останнє перед сайтом: «Назва - Розділ» */
+const titleParts = (h: string) => { const t = pageTitle(h).replace(/ - [^-]*$/, ''), i = t.lastIndexOf(' - '); return i > 0 ? [t.slice(0, i), t.slice(i + 3)] : [t, '']; };
+export const topicTitle = (h: string, section: string) => (section ? pageTitle(h).replace(/ - [^-]*$/, '').replace(' - ' + section, '') : titleParts(h)[0]).trim();
+export const topicSection = (h: string) => titleParts(h)[1].trim();
 
 /* підрозділи розділу — рядки списку (ipsDataItem_title), а не «хлібні крихти», де теж є посилання на розділи */
 export const subforums = (h: string) => [...new Set([...h.matchAll(/ipsDataItem_title[^>]*>\s*<a href=["'][^"']*?(index\.php\?\/forum\/\d+-[^"'/]*)/g)].map(m => m[1]))];
@@ -74,6 +77,7 @@ export async function forumTopics(get: Get, url: string, seen = new Set<string>(
 /* тема → пункти */
 export async function readTopic(get: Get, url: string, section: string, kind: Kind): Promise<Topic> {
   const th = await get(url.replace(/\/+$/, '') + '/');
+  section ||= topicSection(th);
   return { title: topicTitle(th, section), section, url: FORUM + url.replace(/^https:\/\/forum\.quant5\.com\.ua\//, '').replace(/\/+$/, '') + '/', kind, items: chunks(postText(th)) };
 }
 

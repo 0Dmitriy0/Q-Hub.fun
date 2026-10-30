@@ -21,7 +21,8 @@ export function plan(sources: SourceRow[], listed: Map<number, { url: string; se
   const out: Planned[] = [], seen = new Set<string>();
   const add = (url: string, section: string, s: SourceRow) => {
     const k = topicKey(url);
-    if (seen.has(k)) return;
+    /* окрема тема, що є й у розділі: тип і джерело — її, а розділ — справжній, з розділу */
+    if (seen.has(k)) { const p = out.find(o => topicKey(o.url) === k); if (p && !p.section) p.section = section; return; }
     const own = topicSrc.get(k);
     if (own && !own.enabled) return;
     seen.add(k);

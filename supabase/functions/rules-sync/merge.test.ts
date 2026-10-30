@@ -17,10 +17,14 @@ describe('plan: які теми брати', () => {
     const off: SourceRow = { id: 3, url: F + 'index.php?/topic/6-pg-інша-назва/', kind: 'rules', enabled: false };
     expect(plan([rules, law, off], listed).map(p => topicKey(p.url))).toEqual(['t5', 't7']);
   });
-  it('тема і з розділу, і окремо — один раз, тип і джерело від окремого', () => {
+  it('тема і з розділу, і окремо — один раз, тип і джерело від окремого, розділ — з розділу', () => {
     const own: SourceRow = { id: 4, url: F + 'index.php?/topic/7-kk/', kind: 'order', enabled: true };
     const p = plan([rules, law, own], listed);
-    expect(p.filter(x => topicKey(x.url) === 't7')).toEqual([{ url: own.url, section: '', kind: 'order', src: 4 }]);
+    expect(p.filter(x => topicKey(x.url) === 't7')).toEqual([{ url: own.url, section: 'Закони', kind: 'order', src: 4 }]);
+  });
+  it('окрема тема, якої немає в жодному розділі, — без розділу (його дасть заголовок сторінки)', () => {
+    const solo: SourceRow = { id: 5, url: F + 'index.php?/topic/99-ivent/', kind: 'rules', enabled: true };
+    expect(plan([solo], new Map())).toEqual([{ url: solo.url, section: '', kind: 'rules', src: 5 }]);
   });
   it('вимкнений розділ — його теми не беруться', () => {
     expect(plan([{ ...rules, enabled: false }, law], listed).map(p => topicKey(p.url))).toEqual(['t7']);
