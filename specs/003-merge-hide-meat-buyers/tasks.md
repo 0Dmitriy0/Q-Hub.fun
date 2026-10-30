@@ -29,7 +29,7 @@ description: "Задачі: один скупник «Шкури» заміст�
 
 ## Phase 1: Setup
 
-- [ ] T001 Перед міграцією — числа для SC-002 у Supabase → SQL Editor (квікстарт «Перед міграцією»), записати в `specs/003-merge-hide-meat-buyers/quickstart.md` під заголовком «Знімок до злиття»: `select buyer_id, count(*) from buyer_items where buyer_id in ('hide','meat') group by 1`, те саме для `price_history`, `price_reports`, `buyer_unknown_items`, `buyer_limit_reports`; без даних гравців — лише кількості
+- [X] T001 Перед міграцією — числа для SC-002 у Supabase → SQL Editor (квікстарт «Перед міграцією»), записати в `specs/003-merge-hide-meat-buyers/quickstart.md` під заголовком «Знімок до злиття»: `select buyer_id, count(*) from buyer_items where buyer_id in ('hide','meat') group by 1`, те саме для `price_history`, `price_reports`, `buyer_unknown_items`, `buyer_limit_reports`; без даних гравців — лише кількості
 
 ---
 
