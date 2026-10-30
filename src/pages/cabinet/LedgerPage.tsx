@@ -11,6 +11,8 @@ import { BalanceChart, DaysChart } from '../../components/Charts';
 import { hm, perHour, played, type GameSession } from '../../lib/sessions';
 import type { Character, Tx } from './types';
 import Select from '../../components/Select';
+import Icon from '../../components/Icon';
+import { txFields, txForm, txPatch, type TxForm } from '../../lib/txEdit';
 
 const FEW = 8;   // скільки останніх записів історії видно без «Показати все»
 const PERIODS: [Period, string][] =[['all', 'Усе'], ['today', 'Сьогодні'], ['yesterday', 'Вчора'], ['week', '7 днів'], ['month', '30 днів']];
@@ -53,6 +55,8 @@ export default function LedgerPage({ c }: { c: Character }) {
   const [realCash, setRealCash] = useState(''); const [realCard, setRealCard] = useState('');
   const [msg, setMsg] = useState(''); const [sure, setSure] = useState('');
   const [period, setPeriod] = useState<Period>('all');
+  /* правка запису на місці: відкрита одна форма за раз */
+  const [editing, setEditing] = useState(''); const [form, setForm] = useState<TxForm | null>(null); const [editMsg, setEditMsg] = useState('');
   /* історія: у програмі — останні FEW і «Показати все»; на сайті кнопки вимкнено (fieldset), тож одразу все */
   const [all, setAll] = useState(!canEdit);
   const b = balances(c, rows), bal = b.total;
@@ -111,6 +115,36 @@ export default function LedgerPage({ c }: { c: Character }) {
     else await supabase!.from('transactions').delete().eq('id', t.id);
     setSure(''); reload();
   }
+  function startEdit(t: Tx) { setEditing(t.id); setForm(txForm(t)); setEditMsg(''); setSure(''); }
+  function stopEdit() { setEditing(''); setForm(null); setEditMsg(''); }
+  async function save(e: React.FormEvent, t: Tx) {
+    e.preventDefault(); if (!form) return;
+    const p = txPatch(t, form);
+    if ('error' in p) { setEditMsg(p.error); return; }
+    if (!Object.keys(p.set).length) { stopEdit(); return; }
+    /* переказ — обидві половини (той самий ts), як і у видаленні */
+    const q = supabase!.from('transactions').update(p.set);
+    const { error } = t.source === 'transfer' ? await q.eq('character_id', c.id).eq('source', 'transfer').eq('ts', t.ts) : await q.eq('id', t.id);
+    if (error) { setEditMsg(t.source === 'transfer' ? 'Не вдалося змінити переказ.' : 'Не вдалося змінити запис.'); return; }
+    stopEdit(); reload();
+  }
+  function editForm(t: Tx, f: TxForm) {
+    const can = txFields(t.source), set = (v: Partial<TxForm>) => setForm({ ...f, ...v });
+    /* категорія не зі списку (коригування, угода, імпорт) — лишається варіантом, щоб не підмінилась сама */
+    const cats: string[] = [...TX_CATS[f.type]]; if (!cats.includes(f.category)) cats.unshift(f.category);
+    return (
+      <form className="form" style={{ gridColumn: '1 / -1' }} onSubmit={e => save(e, t)} onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); stopEdit(); } }}>
+        {editMsg && <p className="err">{editMsg}</p>}
+        {can.type && <div className="seg sm" role="group" aria-label="Тип"><button type="button" aria-pressed={f.type === 'in'} onClick={() => set({ type: 'in' })}>Прибуток</button><button type="button" aria-pressed={f.type === 'out'} onClick={() => set({ type: 'out' })}>Витрата</button></div>}
+        {can.amount ? <label className="fld">Сума, ${t.source === 'transfer' ? ' (обидва записи переказу)' : ''}<input autoFocus value={f.amount} onChange={e => set({ amount: e.target.value })} inputMode="numeric" /></label>
+          : <small className="muted">Суму змінює угода: видали її в «Угодах» і запиши знову.</small>}
+        {can.category && <label className="fld">Категорія<Select value={f.category} onChange={v => set({ category: v })} options={cats.map(x => ({ value: x, label: x }))} /></label>}
+        {can.account && <div className="fld"><span>Рахунок</span><div className="seg sm" role="group" aria-label="Рахунок">{(Object.keys(ACCOUNTS) as Account[]).map(k => <button type="button" key={k} aria-pressed={f.account === k} onClick={() => set({ account: k })}>{ACCOUNTS[k]}</button>)}</div></div>}
+        <label className="fld">Нотатка<input autoFocus={!can.amount} value={f.note} onChange={e => set({ note: e.target.value })} maxLength={200} /></label>
+        <div className="row"><button className="btn acc sm">Зберегти</button><button type="button" className="btn ghost sm" onClick={stopEdit}>Скасувати</button></div>
+      </form>
+    );
+  }
 
   return (
     <>
@@ -164,7 +198,11 @@ export default function LedgerPage({ c }: { c: Character }) {
             {rows.length ? <div className="list">{rows.slice(0, all ? 200 : FEW).map(t => (
               <div className="li" key={t.id}>
                 <div><b className={t.source === 'transfer' ? '' : t.type === 'in' ? 'good' : 'bad'}>{signed(t.type === 'in' ? t.amount : -t.amount)}</b> · {t.category} <span className="pill">{ACCOUNTS[t.account ?? 'cash']}</span><br /><small>{when(t.ts)}{t.note ? ' · ' + t.note : ''}</small></div>
-                <button className="btn sm ghost edit-only" onClick={() => del(t)}>{sure === t.id ? (t.source === 'transfer' ? 'Так, обидва записи' : 'Так, видалити') : 'Видалити'}</button>
+                <div className="row edit-only" style={{ gap: 6 }}>
+                  <button className="btn sm ghost" title="Редагувати" aria-label="Редагувати" aria-expanded={editing === t.id} onClick={() => (editing === t.id ? stopEdit() : startEdit(t))}><Icon name="edit" size={16} /></button>
+                  <button className="btn sm ghost" onClick={() => del(t)}>{sure === t.id ? (t.source === 'transfer' ? 'Так, обидва записи' : 'Так, видалити') : 'Видалити'}</button>
+                </div>
+                {editing === t.id && form && editForm(t, form)}
               </div>))}</div> : <div className="empty">Записів ще немає. Додай перший прибуток або витрату — дата й час проставляться самі.</div>}
             {canEdit && rows.length > FEW && <button className="btn ghost sm" style={{ alignSelf: 'center' }} aria-expanded={all} onClick={() => setAll(a => !a)}>{all ? 'Сховати' : `Показати все (${Math.min(rows.length, 200)})`}</button>}
           </section>
