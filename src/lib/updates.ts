@@ -5,6 +5,8 @@ export interface Update {
   id: number; buyer_id: string; item_id: number; price: number; created_at: string;
   /* зведення price_updates (0038): нік акаунта й Ім'я_Прізвище персонажа, з якого вписано ціну; статіку там немає */
   reporter_id?: string; reporter_name: string; reporter_character?: string | null;
+  /* 0043 (specs/029): внесення поставило ціну; false — голос, що чекає на інших гравців */
+  confirmed?: boolean;
 }
 export interface UpdateGroup { key: string; who: string; buyer_id: string; at: string; items: Update[] }
 

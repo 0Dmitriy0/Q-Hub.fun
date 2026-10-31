@@ -11,7 +11,7 @@ const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
 const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
-const { vision } = require('./vision.cjs');
+const { vision, TICK_POLL } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
 const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
@@ -606,9 +606,16 @@ const AUTOSTART_ERR = 'Windows не дала змінити автозапуск
 let pricesAt = 0, pricesCache = [];
 async function barPrices() {
   if (Date.now() - pricesAt < 5 * 60e3 && pricesCache.length) return pricesCache;
-  const { data, error } = await sb.from('buyer_items').select('price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url,sub)');
+  const [{ data, error }, pend] = await Promise.all([
+    sb.from('buyer_items').select('item_id,price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url,sub)'),
+    /* ціни, що чекають другого гравця (specs/029) — доповнення: без них плашка однаково показує поточні */
+    sb.from('price_pending').select('buyer_id,item_id,price,votes,need').then(r => r.data || [], () => []),
+  ]);
   if (error) return pricesCache;
+  const top = new Map();
+  for (const p of pend) { const k = p.buyer_id + ':' + p.item_id; if (!top.has(k) || top.get(k).votes < p.votes) top.set(k, { price: Number(p.price), votes: p.votes, need: p.need }); }
   pricesCache = (data || []).filter(r => r.buyers && r.items).map(r => ({
+    pend: top.get(r.buyers.id + ':' + r.item_id),
     item: r.items.name, unit: r.items.unit || 'шт', icon: r.items.image_url || '', sub: r.items.sub || '', buyer: r.buyers.name, buyerIcon: r.buyers.image_url || '',
     price: Number(r.price) || 0, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, at: r.price_at,
   }));
@@ -1051,7 +1058,7 @@ function startVision() {
     onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
     onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
   });
-  setInterval(() => eye.tick(), 2000);
+  setInterval(() => eye.tick(), TICK_POLL);
 }
 
 /* таймер ігрової сесії: гра запущена — сесія йде, гру закрито — записана (session.cjs) */

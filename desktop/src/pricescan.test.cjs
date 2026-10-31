@@ -236,3 +236,15 @@ test('ціна поза межами — у журнал відкинутих, �
   assert.deepStrictEqual(pick('hide', rows, 0), [{ buyer_id: 'hide', item_id: 2, price: 1500 }]);
   assert.deepStrictEqual(pick.rejected, [{ item_id: 1, price: 91986, min: 1000, max: 2000, why: 'далеко поза межами' }]);
 });
+
+test('listParts: 16:9 — заголовок і дві смуги карток, масштаб за висотою; інший формат — дві половини', () => {
+  const { listParts } = require('./pricescan.cjs');
+  assert.deepEqual(listParts(1920, 1080), [
+    { col: 0, r: { x: 0, y: 0, width: 400, height: 330 } },
+    { col: 0, r: { x: 700, y: 0, width: 375, height: 1080 } },
+    { col: 1, r: { x: 1263, y: 0, width: 377, height: 1080 } },
+  ]);
+  const q = listParts(2560, 1440);
+  assert.deepEqual(q[2].r, { x: 1684, y: 0, width: 503, height: 1440 });
+  assert.deepEqual(listParts(3440, 1440), [{ col: 0, r: { x: 0, y: 0, width: 1720, height: 1440 } }, { col: 1, r: { x: 1720, y: 0, width: 1720, height: 1440 } }]);
+});

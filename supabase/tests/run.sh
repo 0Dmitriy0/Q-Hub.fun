@@ -63,6 +63,7 @@ $P -f supabase/tests/app_online_test.sql
 $P -f supabase/tests/buyer_unknown_items_test.sql
 $P -f supabase/tests/buyer_limit_reports_test.sql
 $P -f supabase/tests/desktop_price_limits_test.sql
+$P -f supabase/tests/price_confirm_test.sql
 $P -f supabase/tests/site_promo_test.sql
 $P -f supabase/tests/site_stats_test.sql
 $P -f supabase/tests/map_batches_test.sql

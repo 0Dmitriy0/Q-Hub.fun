@@ -6,15 +6,17 @@
    OCR — tesseract.js у робочих потоках головного процесу; мовні дані — у src/ocr (scripts/ocr.mjs). */
 const path = require('node:path');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { createWorker } = require('tesseract.js');
 const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
-const { OPEN_GAP, pricePicker, coverage, textLeft, parseChange, changePicker, changeRegion, headerBuyer } = require('./pricescan.cjs');
+const { OPEN_GAP, pricePicker, coverage, textLeft, parseChange, changePicker, changeRegion, headerBuyer, listParts } = require('./pricescan.cjs');
 const { ocrRelease } = require('./ocridle.cjs');
 
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const TICK_EVERY = 2000, TICK_POLL = 250;   // кадр гри — раз на 2 с; вікно скупника — кадр за кадром
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
 const SCENE_TTL = 120e3;        // скільки після меню зміна грошей ще належить йому
 const TOAST_TTL = 20e3;         // скільки після значка зміни пам'ятати текст підтвердження
@@ -50,7 +52,7 @@ function toastRegions(w, h) {
    onRecords(recs), onBaseline({cash,bank}), onPrices([{buyer_id,item_id,price}]), logFile */
 function vision(deps) {
   /* lists — окремий рушій для великих кадрів списку скупника: його пам'ять росте найбільше, тож він закривається сам (ocridle.cjs) */
-  let digits = null, text = null, lists = null, listsAt = 0, inactiveSince = 0, busy = false;
+  let digits = null, text = null, lists = null, listsAt = 0, inactiveSince = 0, busy = false, lastLines = null, lastTick = 0, atList = false;
   const feed = hud.watcher();
   let baselineSent = false, place = null, toast = null, lastScene = 0;
   const pickPrices = pricePicker();
@@ -71,17 +73,25 @@ function vision(deps) {
     if (!text) text = await createWorker(['ukr', 'eng'], 1, { langPath: OCR, gzip: false, cacheMethod: 'none' });
   }
   const read = async (w, img) => (await w.recognize(img.toPNG())).data.text;
-  /* рядки з висотою й колонкою для розбору скупника (як readLines() на сайті): дві половини екрана, збільшені вдвічі */
+  /* рядки з висотою й колонкою для розбору скупника (як readLines() на сайті) — у координатах половини екрана, збільшеної
+     вдвічі; читаються лише ділянки з listParts(). Ті самі білі пікселі, що й минулого кадру (гравець не гортав), — той самий
+     результат без OCR: розпізнавання однакового зображення однакове, тож друга зчитка для підтвердження ціни — миттєва */
   async function lines(img) {
     if (!lists) lists = await createWorker(['ukr', 'eng'], 1, { langPath: OCR, gzip: false, cacheMethod: 'none' });
     listsAt = Date.now();
     const { width, height } = img.getSize(), out = [], half = Math.floor(width / 2);
-    for (let c = 0; c < 2; c++) {
-      const part = whiteOnly(img.crop({ x: c * half, y: 0, width: half, height }), deps.nativeImage).resize({ width: half * 2, quality: 'best' });
-      const { data } = await lists.recognize(part.toPNG(), {}, { blocks: true });
+    const parts = listParts(width, height).map(p => ({ ...p, img: whiteOnly(img.crop(p.r), deps.nativeImage) }));
+    const hash = crypto.createHash('sha1');
+    for (const p of parts) hash.update(JSON.stringify(p.r)).update(p.img.toBitmap());
+    const key = hash.digest('hex');
+    if (lastLines?.key === key) return lastLines.out;
+    for (const { col, r, img: part } of parts) {
+      const { data } = await lists.recognize(part.resize({ width: r.width * 2, quality: 'best' }).toPNG(), {}, { blocks: true });
+      const dx = (r.x - col * half) * 2, dy = r.y * 2;
       /* h — висота рядка: обрізаний краєм списку рядок нижчий за решту, parseShot його відкидає (specs/024, R5) */
-      for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0, x: l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, col: c });
+      for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0 + dy, x: l.bbox.x0 + dx, h: l.bbox.y1 - l.bbox.y0, col });
     }
+    lastLines = { key, out };
     /* QHUB_PRICE_TRACE=1 — розпізнаний текст кадру в журнал, щоб записати фікстуру (fixtures/prices/README.md); знімок не пишеться */
     if (process.env.QHUB_PRICE_TRACE === '1') log('trace ' + JSON.stringify(out));
     return out;
@@ -101,8 +111,13 @@ function vision(deps) {
     await Promise.all(ws.map(w => w?.terminate().catch(() => {})));
   }
 
+  /* main кличе tick часто (TICK_POLL): кадр раз на TICK_EVERY, а поки минулий кадр був вікном скупника — одразу після
+     попереднього, без очікування (кадр 2,5 с при таймері 2 с займав 4 с). Вікно закрили — знову раз на TICK_EVERY */
   async function tick() {
     if (busy) return;
+    if (Date.now() - lastTick < TICK_EVERY && !atList) return;
+    lastTick = Date.now();
+    atList = false;
     const active = deps.active();
     busy = true;
     try { await release(active); } finally { busy = false; }
@@ -142,7 +157,7 @@ function vision(deps) {
          на живій грі кадр займав 20–25 с, з них кілька — розпізнавання меню (specs/024) */
       if (!money && !badge && deps.prices() && now - lastPricesAt < OPEN_GAP) {
         lastScene = now;
-        if (await scanPrices(img, now)) { place = { ...(place || { kind: 'buyer', title: 'Скупник' }), at: now }; return; }
+        if (await scanPrices(img, now)) { atList = true; place = { ...(place || { kind: 'buyer', title: 'Скупник' }), at: now }; return; }
       }
       if (!money && !badge && now - lastScene > (atBuyer ? 0 : SCENE_EVERY)) {
         /* HUD закритий — гравець у меню: де саме */
@@ -152,7 +167,7 @@ function vision(deps) {
         if (sc) {
           if (place?.title !== sc.title) log('scene ' + sc.title);
           place = { ...sc, at: now };
-          if (sc.kind === 'buyer' && deps.prices()) await scanPrices(img, now);
+          if (sc.kind === 'buyer' && deps.prices()) atList = !!await scanPrices(img, now);
         }
       }
     } catch (e) { log('error ' + (e?.stack || e)); }
@@ -289,4 +304,4 @@ function vision(deps) {
   return { tick, stop };
 }
 
-module.exports = { vision, toastRegions, whiteOnly };
+module.exports = { vision, toastRegions, whiteOnly, TICK_POLL };
