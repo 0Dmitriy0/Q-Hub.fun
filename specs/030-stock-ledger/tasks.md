@@ -17,8 +17,9 @@
 
 - [ ] T002 Виправити видалення угоди в `src/pages/cabinet/DealsPage.tsx` (рядок ~49): запис `transactions` за `d.tx_id` видаляти лише тоді, коли його `source = 'deal'` (прочитати `source` перед видаленням); інакше запис про гроші лишається (research R5, FR-003a)
 - [ ] T003 У `desktop/src/main.cjs` `autoRecords`: вставка «tx» повертає `id` (`.insert(...).select('id').single()`); функція повертає масив `{ rec, txId }` для записів з `type: 'in'`, без зміни поведінки для решти
+- [ ] T003a Видалення запису обліку видаляє прив'язані угоди (FR-003b): `src/pages/cabinet/LedgerPage.tsx` `del` і `deleteTx` у `desktop/src/main.cjs` — спершу `deals.delete().eq('tx_id', id)`, потім запис
 
-**Checkpoint**: облік пишеться як раніше; видалення угоди з `tx_id` на автозапис не стирає гроші.
+**Checkpoint**: облік пишеться як раніше; видалення угоди з `tx_id` на автозапис не стирає гроші; видалення запису не лишає угод-сиріт.
 
 ---
 
@@ -43,7 +44,9 @@
   - `add` за `txId` без дублів;
   - TTL 10 хв → `expired`;
   - `confirm` → `undo` дозволено ≤ 10 с, після — відмова;
-  - перевірка рядків: `qty > 0`, `0 ≤ farm ≤ qty`, `price ≥ 0`, `item` 1–80 символів, «Σ (qty × price) має дорівнювати amount з точністю до 1 $».
+  - перевірка рядків: `qty > 0`, `0 ≤ farm ≤ qty`, `price ≥ 0` ціле, `item` 1–80 символів, `|Σ (qty × price) − amount| ≤ max(1, Σ qty)`;
+  - `dealRows(txId, lines, at, character)` → `farm` (на 1 мс раніше) і `sell` з `external_id = sale:<txId>:<n>:<op>`;
+  - `manualLine(item, qty, amount)` → `price = round(amount / qty)`, проходить `validate`.
 
 ### Implementation
 
@@ -60,13 +63,14 @@
   - `bar-data` віддає `sales` (усі `pending`, з назвою скупника).
   - Якщо плашка відкрита — подія `sale-new`.
 - [ ] T010 [US1] `desktop/src/main.cjs`: IPC з contracts/bar-sale.md, лише `fromBar(e)`.
-  - `sale-confirm(txId, lines)`: перевірка → угоди `deals`: `farm` з `price 0` і часом на 1 мс раніше, потім `sell`, усі з `tx_id = txId`; помилка посередині → видалити вставлені угоди цього `txId`.
+  - `sale-confirm(txId, lines)`: перевірка → `dealRows` → `upsert` з `onConflict: 'character_id,external_id'`, `ignoreDuplicates`; помилка мережі → у чергу `sales-out.json` (відправка кожні 30 с і при старті), пропозиція `confirmed`.
   - `sale-decline(txId)`.
-  - `sale-undo(txId)`: видалити лише угоди з `tx_id = txId`, ≤ 10 с; запис обліку не чіпати.
+  - `sale-undo(txId)`: ≤ 10 с; ще в черзі — прибрати з черги; уже відправлено — видалити угоди з `tx_id = txId` і `external_id like 'sale:<txId>:%'`; запис обліку не чіпати.
+  - Трей (FR-010): кількість `pending` у підказці іконки, коли плашка закрита.
 - [ ] T011 [US1] `desktop/src/preload.cjs`: `saleConfirm`, `saleDecline`, `saleUndo`, підписка `onSaleNew`
 - [ ] T012 [US1] `src/desktop/SaleCard.tsx` + підключення в `src/desktop/Bar.tsx` (як `UpdateBanner`).
   - **Один товар чи «усе»**: картка над рядком «Продав 10 × Шкура оленя по 475 $» або «Нафармив і продав …», Enter — так, Esc — ні.
-  - **`manual`**: вибір товару (спершу «є на складі») і поле кількості.
+  - **`manual`**: вибір товару (спершу «є на складі») і поле кількості; ціна = `round(amount / qty)`.
   - **Після Enter**: «Скасувати» 10 с.
   - Кандидат рахує `saleGuess`: ціни з `sale.prices`, інакше з `barPrices` цього скупника; склад — `barStock`.
 - [ ] T013 [US1] `src/desktop/bar.css`: стилі `SaleCard` у темі плашки
@@ -112,7 +116,7 @@
 - [ ] T023 [P] [US3] `src/lib/txCsv.ts` + `downloadCsv(name, text)` через `Blob` і `<a download>` (research R7)
 - [ ] T024 [P] [US3] `src/lib/perHourByCat.ts` за research R6
 - [ ] T025 [US3] `src/pages/cabinet/LedgerPage.tsx`: панель фільтрів над «Історією» (категорія — `Select`, рахунок і джерело — `seg`, період — наявні `PERIODS`), сума відфільтрованого, кнопка «Вивантажити».
-  - Фільтри й вивантаження працюють і на сайті: не `edit-only`, поза `fieldset disabled` або з `disabled={false}` (FR-009).
+  - Фільтри, період і вивантаження працюють і на сайті (FR-009): `src/pages/cabinet/Cabinet.tsx` дає слот `#cab-view` над `fieldset`, панель рендериться туди через `createPortal` (research R8).
 - [ ] T026 [US3] `src/pages/cabinet/LedgerPage.tsx` «Підсумки»: таблиця «Чистий за годину за видами» з `perHourByCat`; `null` → «замало даних»; підпис «наближення: час між записами програми»
 - [ ] T027 [US3] `src/data/changelog.json`: доповнити запис з T014 — «added»: фільтри історії, вивантаження, «чистий за годину» за видами
 
@@ -128,7 +132,7 @@
 
 ## Dependencies
 
-- Phase 2 (T002, T003) → US1.
+- Phase 2 (T002, T003, T003a) → US1.
 - US2 і US3 від US1 не залежать, тож їх можна робити паралельно з US1 або в будь-якому порядку.
 - **US1**: T004, T005 → T006, T007 → T008 → T009 → T010 → T011 → T012 → T013 → T014.
 - **US2**: T015 → T016 → T017 → T018.
