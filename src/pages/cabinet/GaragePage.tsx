@@ -10,7 +10,7 @@ import type { Car, Character } from './types';
 export default function GaragePage({ c }: { c: Character }) {
   const { rows, error, reload } = useRows<Car>('cars', c.id, 'pos', true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  useEffect(() => { supabase?.from('vehicles').select('id,name,brand,price,image_url').limit(1000).then(async ({ data }) => setVehicles(await withSitePhotos((data as Vehicle[]) || []))); }, []);
+  useEffect(() => { supabase?.from('vehicles').select('*').limit(1000).then(async ({ data }) => setVehicles(await withSitePhotos((data as Vehicle[]) || []))); }, []);
   const [f, setF] = useState({ name: '', plate: '', gov: '', paid: '', tune: '' });
   const [adding, setAdding] = useState(false);
   const [sell, setSell] = useState<Record<string, string>>({});
