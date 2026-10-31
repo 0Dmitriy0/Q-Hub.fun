@@ -605,10 +605,10 @@ const AUTOSTART_ERR = 'Windows не дала змінити автозапуск
 let pricesAt = 0, pricesCache = [];
 async function barPrices() {
   if (Date.now() - pricesAt < 5 * 60e3 && pricesCache.length) return pricesCache;
-  const { data, error } = await sb.from('buyer_items').select('price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url)');
+  const { data, error } = await sb.from('buyer_items').select('price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url,sub)');
   if (error) return pricesCache;
   pricesCache = (data || []).filter(r => r.buyers && r.items).map(r => ({
-    item: r.items.name, unit: r.items.unit || 'шт', icon: r.items.image_url || '', buyer: r.buyers.name, buyerIcon: r.buyers.image_url || '',
+    item: r.items.name, unit: r.items.unit || 'шт', icon: r.items.image_url || '', sub: r.items.sub || '', buyer: r.buyers.name, buyerIcon: r.buyers.image_url || '',
     price: Number(r.price) || 0, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, at: r.price_at,
   }));
   pricesAt = Date.now();

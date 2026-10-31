@@ -1,6 +1,9 @@
 /* пошук у режимі «Ціни» плашки Alt+Q: гравець називає скупника («скупщик шкур», «риба») — плашка відкриває його товари з цінами.
    Назвав товар, а не скупника, — ті скупники, що його беруть, дорожчий першим */
-export interface BarPrice { item: string; unit: string; icon: string; buyer: string; buyerIcon: string; price: number; min: number; max: number; at: string | null }
+import { subRank, subRanks } from '../lib/subOrder';
+
+/* sub — підгрупа товару («Шкури» / «М'ясо»), стара програма її не віддає */
+export interface BarPrice { item: string; unit: string; icon: string; buyer: string; buyerIcon: string; price: number; min: number; max: number; at: string | null; sub?: string }
 export interface Found { item: string; unit: string; icon: string; best: BarPrice | null; buyers: BarPrice[]; have: number }
 export interface BuyerHit { buyer: string; icon: string; items: (BarPrice & { have: number })[] }
 
@@ -29,7 +32,11 @@ export function buyers(prices: BarPrice[], q: string, stock: Record<string, numb
     const it = b.items.filter(i => has(i.item));
     return { b, s: it.length ? 1 : -1, top: Math.max(0, ...it.map(i => i.price)) };
   }).filter(x => x.s >= 0);
-  for (const { b } of scored) b.items.sort((x, y) => (y.have > 0 ? 1 : 0) - (x.have > 0 ? 1 : 0) || x.item.localeCompare(y.item, 'uk'));
+  /* спершу те, що на складі; в обох частинах — основна підгрупа, потім решта (м'ясо після шкур, specs/028) */
+  for (const { b } of scored) {
+    const r = subRanks(b.buyer, b.items.map(i => i.sub || ''));
+    b.items.sort((x, y) => (y.have > 0 ? 1 : 0) - (x.have > 0 ? 1 : 0) || subRank(r, x.sub) - subRank(r, y.sub) || x.item.localeCompare(y.item, 'uk'));
+  }
   return scored.sort((a, b) => b.s - a.s || b.top - a.top || a.b.buyer.localeCompare(b.b.buyer, 'uk')).map(x => x.b).slice(0, limit);
 }
 
