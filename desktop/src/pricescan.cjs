@@ -118,6 +118,16 @@ function changeRegion(w, h) {
   const s = h / 1080;
   return { x: Math.round(100 * s), y: Math.round(870 * s), width: Math.round(200 * s), height: Math.round(100 * s) };
 }
+/* що читати з кадру вікна скупника. На 16:9 (виміряно на 1920×1080, масштаб — за висотою) текст карток лише у двох смугах,
+   решта — фото, кнопки, фон: читаємо смуги й заголовок «Купує …» ліворуч угорі — кадр 4,5 с → 1,7 с. Інший формат
+   екрана — як раніше, дві половини. col — колонка, у координатах якої (половина екрана ×2) повертаються рядки */
+const LIST_HEAD = { x: 0, y: 0, width: 400, height: 330 }, LIST_COLS = [{ x: 700, width: 375 }, { x: 1263, width: 377 }];
+function listParts(w, h) {
+  const half = Math.floor(w / 2);
+  if (Math.abs(w / h - 16 / 9) > 0.01) return [0, 1].map(col => ({ col, r: { x: col * half, y: 0, width: half, height: h } }));
+  const s = h / 1080, sc = (r, height) => ({ x: Math.round(r.x * s), y: Math.round((r.y || 0) * s), width: Math.round(r.width * s), height: height ?? Math.round(r.height * s) });
+  return [{ col: 0, r: sc(LIST_HEAD) }, ...LIST_COLS.map((r, col) => ({ col, r: sc(r, h) }))];
+}
 /* «2 год. 55 хв.» → 175 хв; «55 хв.» → 55; «1 год.» → 60; не схоже на таймер → null. OCR іноді зливає число з «год» */
 function parseChange(t) {
   /* OCR плутає схожі літери: «3rop. 12xe.», «xB.», «З год.» (кирилична З замість трійки) — зводимо до «3 год. 12 хв.» */
@@ -161,4 +171,4 @@ function headerBuyer(lines, box = {}) {
   return null;
 }
 
-module.exports = { headerBuyer, textLeft, SURE, OPEN_GAP, pricePicker, coverage, parseChange, changePicker, changeRegion, PRICES_EVERY };
+module.exports = { headerBuyer, textLeft, SURE, OPEN_GAP, pricePicker, coverage, parseChange, changePicker, changeRegion, listParts, PRICES_EVERY };
