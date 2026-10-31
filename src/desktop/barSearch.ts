@@ -3,7 +3,9 @@
 import { subRank, subRanks } from '../lib/subOrder';
 
 /* sub — підгрупа товару («Шкури» / «М'ясо»), стара програма її не віддає */
-export interface BarPrice { item: string; unit: string; icon: string; buyer: string; buyerIcon: string; price: number; min: number; max: number; at: string | null; sub?: string }
+export interface BarPrice { item: string; unit: string; icon: string; buyer: string; buyerIcon: string; price: number; min: number; max: number; at: string | null; sub?: string;
+  /* непідтверджена новіша ціна (price_pending, specs/029): «нова 500 $ · 1 з 2» */
+  pend?: { price: number; votes: number; need: number } }
 export interface Found { item: string; unit: string; icon: string; best: BarPrice | null; buyers: BarPrice[]; have: number }
 export interface BuyerHit { buyer: string; icon: string; items: (BarPrice & { have: number })[] }
 

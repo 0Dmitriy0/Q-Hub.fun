@@ -29,6 +29,8 @@ const noLim = (r: Pick<Row, 'min_price' | 'max_price'>) => !(r.min_price > 0 && 
 type Data = PriceData<Buyer, Row, Update, Contributor, NextChange>;
 
 interface Hist { buyer_id: string; item_id: number; price: number; at: string }
+/* непідтверджена ціна (price_pending, 0043): votes різних акаунтів з need, поточною стане після need */
+interface Pending { buyer_id: string; item_id: number; price: number; votes: number; need: number; last_at: string }
 
 const DAY = 864e5;
 /* історію тягнемо за рік із запасом: остання ціна до вікна графіка стає початком лінії */
@@ -52,6 +54,9 @@ export default function Prices() {
   const [ups, setUps] = useState<Update[]>(cached?.ups || []);
   const [top, setTop] = useState<Contributor[]>(cached?.top || []);
   const [saving, setSaving] = useState('');
+  const [pend, setPend] = useState<Pending[]>([]);
+  /* після внесення, що ще не стало поточним: пояснення під ціною (не помилка) */
+  const [note, setNote] = useState<Record<string, string>>({});
   const [next, setNext] = useState<NextChange[]>(cached?.next || []);
   /* «через скільки» зміна цін: години й хвилини, як показує гра; null — форма закрита */
   const [nextEdit, setNextEdit] = useState<{ h: string; m: string } | null>(null);
@@ -102,6 +107,7 @@ export default function Prices() {
 
   async function load() {
     if (!supabase) return;
+    supabase.from('price_pending').select('*').then(({ data }) => setPend((data as Pending[] | null) || []), () => {});
     const [b, r, u, c, n] = await Promise.all([
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)'),
@@ -153,9 +159,9 @@ export default function Prices() {
     return rows.filter(r => r.items && (ql ? r.items.name.toLowerCase().includes(ql) : r.buyer_id === tab) && (!noLimOnly || noLim(r)))
       .map(r => {
         /* автор поточної ціни — останнє внесення гравця, якщо воно і є цією ціною; інакше ціна з імпорту */
-        const u = ups.find(x => x.buyer_id === r.buyer_id && x.item_id === r.item_id);
-        const mine = u && Math.abs(ms(u.created_at) - ms(r.price_at)) < 2000;
-        return { ...r, shown: r.price, at: r.price_at, by: mine ? who(u!) : r.price_at ? 'редактор' : '' };
+        /* з 0043 новіші внесення можуть бути голосами, що чекають, — тож шукаємо саме те, що поставило ціну */
+        const u = ups.find(x => x.buyer_id === r.buyer_id && x.item_id === r.item_id && Math.abs(ms(x.created_at) - ms(r.price_at)) < 2000);
+        return { ...r, shown: r.price, at: r.price_at, by: u ? who(u) : r.price_at ? 'редактор' : '' };
       })
       .sort((a, b) => {
         const byName = a.items!.name.localeCompare(b.items!.name, 'uk');
@@ -202,6 +208,8 @@ export default function Prices() {
     if (error) { setMsg(m => ({ ...m, [key]: error.code === 'P0001' ? error.message : 'Не вдалося зберегти ціну. Спробуй ще раз.' })); return; }
     setEdit(e => { const n = { ...e }; delete n[key]; return n; });
     setMsg(m => { const n = { ...m }; delete n[key]; return n; });
+    /* ціна гравця стає поточною, коли ту саму внесе ще хтось (specs/029); staff вручну й та сама ціна — одразу */
+    if (!isStaff && v !== r.price) setNote(m => ({ ...m, [key]: 'Прийнято. Поточною ціна стане, коли ту саму внесе ще один гравець.' }));
     reload(r.buyer_id);
   }
   const cs = tick - STALE;
@@ -369,6 +377,9 @@ export default function Prices() {
                         : <b className="mono">{r.shown ? money(r.shown) : '—'}</b>}
                       {!editing && <small className="muted">за {r.items!.unit}</small>}
                       {!editing && session && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
+                      {!editing && pend.filter(p => p.buyer_id === r.buyer_id && p.item_id === r.item_id).sort((a, b) => b.votes - a.votes).slice(0, 2).map(p =>
+                        <small key={p.price} className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось">нова: {money(p.price)} · {p.votes} з {p.need}</small>)}
+                      {!editing && note[key] && <small className="muted pnote">{note[key]}</small>}
                       {msg[key] && <small className="err" role="alert">{msg[key]}</small>}
                     </div>
                     {isAdmin && <PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
@@ -456,7 +467,7 @@ export default function Prices() {
                       <span className="muted">{one ? 'оновив ціну' : all ? 'оновив усі ціни' : `оновив ${g.items.length} цін`} · {buyerLink}</span>
                       <span className={'ug-at' + (ms(g.at) < cs ? ' muted' : '')}>{when(g.at)}</span></div>
                     <div className="ug-items">{one
-                      ? <>{itemName(g.items[0].item_id)} — <b className="mono">{money(g.items[0].price)}</b></>
+                      ? <>{itemName(g.items[0].item_id)} — <b className="mono">{money(g.items[0].price)}</b>{g.items[0].confirmed === false && <span className="muted"> · чекає підтвердження</span>}</>
                       : g.items.map(u => itemName(u.item_id)).sort((a, b) => a.localeCompare(b, 'uk')).join(', ')}</div>
                   </li>;
                 })}</ul>

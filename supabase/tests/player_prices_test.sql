@@ -68,17 +68,32 @@ end $$;
 -- виправлення впродовж 10 хв замінює попереднє
 insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 160 from public.items where name = 'Окунь';
 reset role;
+-- один акаунт — один голос: ціна ще не поточна, видно «160 $ · 1 з 2» (0043, specs/029)
 do $$ declare r record; begin
   select * into r from public.buyer_items where buyer_id = 'fish' and item_id = (select id from public.items where name = 'Окунь');
-  assert r.price = 160 and r.price_by = '00000000-0000-0000-0000-00000000000b', 'ціна гравця не стала поточною';
-  assert r.price_at > now() - interval '1 minute', 'час ціни не оновився';
+  assert r.price is distinct from 160, 'ціна одного гравця стала поточною';
   assert (select count(*) from public.price_reports where reporter = '00000000-0000-0000-0000-00000000000b' and kind = 'buyer') = 1, 'виправлення не замінило внесення';
-  assert exists (select 1 from public.price_history where price = 160 and by = '00000000-0000-0000-0000-00000000000b'), 'в історії немає автора';
+  assert (select votes || '/' || need from public.price_pending where buyer_id = 'fish' and item_id = r.item_id and price = 160) = '1/2', 'немає варіанта «1 з 2»';
 end $$;
--- інший гравець ту саму свіжу ціну не «підтвердить» заради бала
+-- другий акаунт з тією самою ціною — ціна поточна, автор — той, хто підтвердив
 update public.profiles set nick = 'Dmitriy_A' where id = '00000000-0000-0000-0000-00000000000a';
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
+insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 160 from public.items where name = 'Окунь';
+reset role;
+do $$ declare r record; begin
+  select * into r from public.buyer_items where buyer_id = 'fish' and item_id = (select id from public.items where name = 'Окунь');
+  assert r.price = 160 and r.price_by = '00000000-0000-0000-0000-00000000000a', 'дві однакові ціни не стали поточною';
+  assert r.price_at > now() - interval '1 minute', 'час ціни не оновився';
+  assert (select bool_and(confirmed) from public.price_reports where kind = 'buyer' and item_id = r.item_id and price = 160), 'голоси не позначено підтвердженими';
+  assert not exists (select 1 from public.price_pending where item_id = r.item_id and buyer_id = 'fish'), 'підтверджена ціна лишилась у «чекають»';
+  assert exists (select 1 from public.price_history where price = 160 and by = '00000000-0000-0000-0000-00000000000a'), 'в історії немає автора';
+end $$;
+-- третій гравець ту саму свіжу ціну не «підтвердить» заради бала
+insert into public.characters (owner, name, static_id) values ('00000000-0000-0000-0000-00000000000c', 'Petro_Cee', 90003);
+update public.profiles set nick = 'Petro_C' where id = '00000000-0000-0000-0000-00000000000c';
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false) \gset
 do $$ begin
   begin
     insert into public.price_reports (kind, buyer_id, item_id, price) select 'buyer', 'fish', id, 160 from public.items where name = 'Окунь';
@@ -92,12 +107,12 @@ reset role;
 -- гість бачить «хто оновив» (нік акаунта й Ім'я_Прізвище персонажа, без статіку) і рейтинг
 set role anon;
 do $$ begin
-  assert (select reporter_name || ' · ' || reporter_character from public.price_updates order by created_at desc limit 1) = 'Ivan_P · Ivan_Petrov', 'немає ніка й персонажа в оновленнях';
+  assert (select reporter_name || ' · ' || reporter_character from public.price_updates where reporter_name = 'Ivan_P' limit 1) = 'Ivan_P · Ivan_Petrov', 'немає ніка й персонажа в оновленнях';
   assert (select total from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 1, 'рейтинг рахує не так';
   assert (select week + month + year from public.contributors where id = '00000000-0000-0000-0000-00000000000b') = 3, 'рейтинг за періоди рахує не так';
 end $$;
 reset role;
-\echo 'Ціни гравців ok: гість не вносить; межі ±10%; виправлення за 10 хв замінює, ту саму свіжу ціну не приймає; без ніка й персонажа не приймає, статік унікальний; видно нік і персонажа; автор у ціні, історії й рейтингу'
+\echo 'Ціни гравців ok: гість не вносить; межі ±10%; виправлення за 10 хв замінює, ціна одного акаунта чекає, друга така сама — поточна, третю таку саму свіжу не приймає; без ніка й персонажа не приймає, статік унікальний; видно нік і персонажа; автор у ціні, історії й рейтингу'
 
 -- час наступної зміни цін: акаунт з ніком і персонажем зі статіком вписує, гість — ні, минулий час не приймається
 set role authenticated;

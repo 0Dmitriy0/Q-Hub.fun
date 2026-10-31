@@ -407,7 +407,7 @@ function Prices({ hits, setSel, cur, q, pick }: { hits: BuyerHit[]; setSel: (n: 
       <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
         <button key={x.item} className="bbuy" title="Підставити в рядок «продав …»" onClick={() => pick(`продав ${x.have > 0 ? (x.unit === 'кг' ? `${x.have} кг ` : `${x.have} `) : ''}${x.item.toLowerCase()}`)}>
           {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
-          <span><b>{x.item}</b><small>{x.have > 0 ? `у тебе ${x.have} ${x.unit}` : x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}</small></span>
+          <span><b>{x.item}</b><small>{x.have > 0 ? `у тебе ${x.have} ${x.unit}` : x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
           {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
           <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
         </button>); })}</div>
