@@ -8,7 +8,7 @@ import VehicleEdit from './VehicleEdit';
 export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia' | 'boat'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
-  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric'; currency?: 'game' | 'donate';
+  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric'; currency?: 'game' | 'donate'; model?: string | null;
 }
 
 export const KIND_ICON: Record<VehicleFull['kind'], string> = { auto: 'car', moto: 'moto', avia: 'plane', boat: 'boat' };
