@@ -587,8 +587,9 @@ const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
-   Windows, і вона стартує тихо, лише іконкою в треї. Ім'я фіксоване, щоб інсталятор прибрав запис при видаленні (build/installer.nsh) */
-const LOGIN = { name: 'Q-Hub', args: ['--autostart'] };
+   Windows, і вона стартує тихо, лише іконкою в треї. Ім'я — назва програми («Q-Hub»), як ${PRODUCT_NAME} в інсталяторі, що
+   прибирає запис при видаленні (build/installer.nsh); тестова збірка «Q-Hub Test» так не чіпає запис справжньої */
+const LOGIN = { name: app.getName(), args: ['--autostart'] };
 const autostarted = process.argv.includes('--autostart');
 const autostart = () => app.isPackaged && app.getLoginItemSettings(LOGIN).openAtLogin;
 /* увімкнути чи вимкнути; false — Windows не дала змінити. Старий запис 0.3.x (ім'я за замовчуванням, без аргументу) прибираємо завжди */
@@ -1079,7 +1080,11 @@ app.whenReady().then(() => {
   /* автозапуск (specs/009): новий гравець — увімкнено; хто вже має Q-Hub — як було (запис 0.3.x переносимо на новий);
      далі щоразу оновлюємо шлях — після перевстановлення в іншу теку запис веде туди (FR-011–FR-013) */
   if (app.isPackaged) {
-    const want = autostartOnStart({ init: !!settings.autostartInit, hadSettings, oldOn: app.getLoginItemSettings().openAtLogin, on: autostart() });
+    /* галочка «Запускати разом з Windows» в інсталяторі (specs/008): файл читаємо один раз і прибираємо */
+    const instFile = path.join(dir(), 'installer.json');
+    let chosen;
+    try { chosen = JSON.parse(fs.readFileSync(instFile, 'utf8')).autostart; fs.rmSync(instFile, { force: true }); } catch { /* файла немає — як раніше */ }
+    const want = autostartOnStart({ init: !!settings.autostartInit, hadSettings, oldOn: app.getLoginItemSettings().openAtLogin, on: autostart(), chosen });
     if (want !== null) setAutostart(want);
     if (!settings.autostartInit) { settings.autostartInit = true; saveSettings(); }
   }

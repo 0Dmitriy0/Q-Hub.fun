@@ -35,13 +35,26 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
       "shortcutName": "Q-Hub",
-      "artifactName": "Q-Hub-Setup-${version}.${ext}"
+      "uninstallDisplayName": "${productName}",
+      "artifactName": "Q-Hub-Setup-${version}.${ext}",
+      "installerLanguages": [
+        "uk_UA"
+      ],
+      "language": "1058",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installer-sidebar.bmp",
+      "uninstallerSidebar": "build/installer-sidebar.bmp",
+      "installerHeader": "build/installer-header.bmp",
+      "include": "build/installer.nsh"
     },
     "publish": [
       {
