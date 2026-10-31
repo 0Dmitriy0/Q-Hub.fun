@@ -28,23 +28,26 @@ update public.price_reports set confirmed = true where kind = 'buyer' and not co
 
 create or replace function public.apply_buyer_report() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare bi public.buyer_items; n int; win interval; ids bigint[]; votes int;
+declare bi public.buyer_items; n int; win interval; votes int;
 begin
   if new.kind <> 'buyer' then return null; end if;
   select * into bi from public.buyer_items where buyer_id = new.buyer_id and item_id = new.item_id;
   select coalesce(max(confirm_n), 2), coalesce(max(confirm_window), interval '3 hours') into n, win from public.price_rules;
   /* ціна та сама, що вже стоїть (підтверджена раніше), — лише свіжіший час; staff вручну — одразу */
   if new.price = bi.price or (public.is_staff() and new.source <> 'desktop') then
-    ids := array[new.id]; votes := n;
+    votes := n;
   else
-    select array_agg(r.id), count(distinct r.reporter) into ids, votes from public.price_reports r
+    select count(distinct r.reporter) into votes from public.price_reports r
       where r.kind = 'buyer' and r.buyer_id = new.buyer_id and r.item_id = new.item_id and r.price = new.price
         and not r.confirmed and r.created_at > now() - win and (bi.price_at is null or r.created_at > bi.price_at);
   end if;
   if votes >= n then
     update public.buyer_items set price = new.price, price_at = new.created_at, price_by = new.reporter
       where buyer_id = new.buyer_id and item_id = new.item_id;
-    update public.price_reports set confirmed = true where id = any(ids);
+    /* підтверджені всі голоси за цю ціну у вікні — і ті, що поставили її, і ті, що збіглися з ручним внесенням staff */
+    update public.price_reports set confirmed = true
+      where kind = 'buyer' and buyer_id = new.buyer_id and item_id = new.item_id and price = new.price
+        and not confirmed and created_at > now() - win;
   end if;
   return null;
 end $$;

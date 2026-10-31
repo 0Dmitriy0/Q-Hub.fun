@@ -75,7 +75,8 @@ do $$ declare r record; begin
   assert (select count(*) from public.price_reports where reporter = '00000000-0000-0000-0000-00000000000b' and kind = 'buyer') = 1, 'виправлення не замінило внесення';
   assert (select votes || '/' || need from public.price_pending where buyer_id = 'fish' and item_id = r.item_id and price = 160) = '1/2', 'немає варіанта «1 з 2»';
 end $$;
--- другий акаунт з тією самою ціною — ціна поточна, автор — той, хто підтвердив
+-- другий акаунт з тією самою ціною — ціна поточна, автор — той, хто підтвердив (A тут editor з catalog_test: його ручне
+-- внесення ставить ціну й саме; голос B за ту саму ціну однаково позначається підтвердженим; два звичайні гравці — price_confirm_test)
 update public.profiles set nick = 'Dmitriy_A' where id = '00000000-0000-0000-0000-00000000000a';
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false) \gset
