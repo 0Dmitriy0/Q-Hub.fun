@@ -112,7 +112,11 @@ export default function LedgerPage({ c }: { c: Character }) {
     if (sure !== t.id) { setSure(t.id); setTimeout(() => setSure(s => (s === t.id ? '' : s)), 3000); return; }
     /* переказ видаляється парою — інакше один рахунок «загубить» гроші */
     if (t.source === 'transfer') await supabase!.from('transactions').delete().eq('character_id', c.id).eq('source', 'transfer').eq('ts', t.ts);
-    else await supabase!.from('transactions').delete().eq('id', t.id);
+    else {
+      /* угоди, прив'язані до запису (зокрема списання продажу, specs/030), — разом з ним: інакше склад показував би продаж без грошей */
+      await supabase!.from('deals').delete().eq('character_id', c.id).eq('tx_id', t.id);
+      await supabase!.from('transactions').delete().eq('id', t.id);
+    }
     setSure(''); reload();
   }
   function startEdit(t: Tx) { setEditing(t.id); setForm(txForm(t)); setEditMsg(''); setSure(''); }
