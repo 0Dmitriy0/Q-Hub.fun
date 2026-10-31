@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
-import VehicleDialog, { KIND_ICON, type VehicleFull } from '../components/VehicleDialog';
+import VehicleDialog, { FuelTag, KIND_ICON, type VehicleFull } from '../components/VehicleDialog';
 import Select from '../components/Select';
 import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
 import { withSitePhotos } from '../lib/carMatch';
@@ -58,7 +58,7 @@ export default function Transport() {
   const [kind, setKind] = useState<Kind | 'all'>('all');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<Sort>('price');
-  const [fuel, setFuel] = useState<'all' | 'petrol' | 'electric'>('all');
+  const [fuel, setFuel] = useState<'all' | 'petrol' | 'diesel' | 'electric'>('all');
   const [cur, setCur] = useState<'all' | PriceKind>('all');
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -130,7 +130,7 @@ export default function Transport() {
           <div className="fld sortf"><Select label="Валюта" value={cur} onChange={setCur}
             options={[{ value: 'all', label: 'Будь-яка валюта', icon: 'tag' }, { value: 'game', label: 'Ігрова валюта', icon: 'tag' }, { value: 'donate', label: 'Донатна валюта', icon: 'coin' }, { value: 'exclusive', label: 'Ексклюзив', icon: 'star' }]} /></div>
           <div className="fld sortf"><Select label="Двигун" value={fuel} onChange={setFuel}
-            options={[{ value: 'all', label: 'Пальне й електро', icon: 'car' }, { value: 'petrol', label: 'Лише на пальному', icon: 'fuel' }, { value: 'electric', label: 'Лише електро', icon: 'bolt' }]} /></div>
+            options={[{ value: 'all', label: 'Пальне й електро', icon: 'car' }, { value: 'petrol', label: 'Лише бензин', icon: 'fuel' }, { value: 'diesel', label: 'Лише дизель', icon: 'fuel' }, { value: 'electric', label: 'Лише електро', icon: 'bolt' }]} /></div>
           <div className="fld sortf"><Select label="Сортування" value={sort} onChange={setSort} options={SORTS.map(([k, l]) => ({ value: k, label: l, icon: SORT_ICON[k] }))} /></div>
         </div>
       </div>
@@ -155,7 +155,8 @@ export default function Transport() {
               <ul className="vspec">
                 {v.speed != null && <li><Icon name="speed" size={15} />{v.speed} км/год</li>}
                 {v.trunk != null && <li><Icon name="box" size={15} />{v.trunk} слот(ів)</li>}
-                {v.fuel === 'electric' ? <li className="fuel-tag el"><Icon name="bolt" size={15} />Електро</li> : <li className="fuel-tag"><Icon name="fuel" size={15} />Пальне{v.tank != null ? ` · ${v.tank} л` : ''}</li>}
+                <li><FuelTag fuel={v.fuel} size={15} tank={v.fuel === 'electric' ? null : v.tank} /></li>
+                {v.ua_plate && <li title="Можна поставити український номер"><Icon name="tag" size={15} />UA номер</li>}
                 {v.seats != null && <li><Icon name="user" size={15} />{v.seats} {seatsWord(v.seats)}</li>}
               </ul>
               <div className="stars">
