@@ -85,7 +85,8 @@ do $$ declare r record; begin
   select * into r from public.buyer_items where buyer_id = 'fish' and item_id = (select id from public.items where name = 'Окунь');
   assert r.price = 160 and r.price_by = '00000000-0000-0000-0000-00000000000a', 'дві однакові ціни не стали поточною';
   assert r.price_at > now() - interval '1 minute', 'час ціни не оновився';
-  assert (select bool_and(confirmed) from public.price_reports where kind = 'buyer' and item_id = r.item_id and price = 160), 'голоси не позначено підтвердженими';
+  assert (select count(*) filter (where confirmed) || '/' || count(*) from public.price_reports where kind = 'buyer' and item_id = r.item_id and price = 160
+            and reporter in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b')) = '2/2', 'голоси A і B не позначено підтвердженими';
   assert not exists (select 1 from public.price_pending where item_id = r.item_id and buyer_id = 'fish'), 'підтверджена ціна лишилась у «чекають»';
   assert exists (select 1 from public.price_history where price = 160 and by = '00000000-0000-0000-0000-00000000000a'), 'в історії немає автора';
 end $$;
