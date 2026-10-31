@@ -587,8 +587,9 @@ const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
-   Windows, і вона стартує тихо, лише іконкою в треї. Ім'я фіксоване, щоб інсталятор прибрав запис при видаленні (build/installer.nsh) */
-const LOGIN = { name: 'Q-Hub', args: ['--autostart'] };
+   Windows, і вона стартує тихо, лише іконкою в треї. Ім'я — назва програми («Q-Hub»), як ${PRODUCT_NAME} в інсталяторі, що
+   прибирає запис при видаленні (build/installer.nsh); тестова збірка «Q-Hub Test» так не чіпає запис справжньої */
+const LOGIN = { name: app.getName(), args: ['--autostart'] };
 const autostarted = process.argv.includes('--autostart');
 const autostart = () => app.isPackaged && app.getLoginItemSettings(LOGIN).openAtLogin;
 /* увімкнути чи вимкнути; false — Windows не дала змінити. Старий запис 0.3.x (ім'я за замовчуванням, без аргументу) прибираємо завжди */
@@ -690,15 +691,26 @@ async function refreshRole() {
     myRole = data?.role || 'user';
   }
   registerPinKey(prefs().pinKey);
-  if (STAFF.includes(myRole)) locatorUp();
 }
 
 /* де гравець на великій карті: mapmatch.cjs в окремому потоці; еталон — з сайту (mapref.cjs). Кожна спроба — у pin.log */
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');   // потоки й tesseract читають з диска, не з архіву
 const pinLog = m => { try { fs.appendFileSync(path.join(dir(), 'pin.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
 let locator = null, locatorReady = false, scaleOcr = null, lid = 0, locatorInit = null;
-/* локатор потрібен редакторам (F9) і будь-кому для «Де я?» на мапі (specs/014 FR-009) — запускається раз, за першої потреби */
+/* локатор потрібен редакторам (F9) і будь-кому для «Де я?» на мапі (specs/014 FR-009) — запускається за першої потреби.
+   Еталон із кешем масштабів займає ~85 МБ, а F9 і «Де я?» тиснуть рідко: після LOCATOR_IDLE без них потік і OCR шкали
+   закриваються, наступне натискання запускає їх знову (~1–2 с довше) */
+const LOCATOR_IDLE = 10 * 60e3;
+let locatorIdle = null;
 const locatorUp = () => (locatorInit ??= startLocator());
+function stopLocator() {
+  locator?.terminate(); scaleOcr?.terminate().catch(() => {});
+  locator = null; locatorReady = false; locatorInit = null; scaleOcr = null;
+  for (const f of pending.values()) f({ error: 'stopped' });
+  pending.clear();
+  pinLog('locator stopped (idle)');
+}
+const locatorUsed = () => { clearTimeout(locatorIdle); locatorIdle = setTimeout(stopLocator, LOCATOR_IDLE); };
 const pending = new Map();
 function callLocator(msg, transfer = [], ms = 6000) {
   return new Promise(res => {
@@ -733,6 +745,7 @@ async function readScale(img, bar) {
 const WHY = { no_map: 'не видно шкали великої карти', zoom_in: 'карта надто віддалена — наблизьте до 50–1500 м',
   zoom_out: 'карта надто наближена — віддаліть до 50–1500 м', unsure: 'не впевнений у місці', no_ref: 'мапа ще завантажується', error: 'помилка розпізнавання' };
 async function locatePin(img) {
+  locatorUsed();
   if (!locator || !locatorReady) return { kind: 'no_ref' };
   const bmp = img.toBitmap(), { width, height } = img.getSize(), frame = { width, height, data: bmp };
   const bar = mapmatch.scaleBar(frame);
@@ -783,6 +796,7 @@ async function pinShot() {
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
   bar.webContents.send('pin', { text: 'Шукаю точку на карті…' });
+  await locatorUp();
   let loc;
   try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
   pinLog('F9 ' + JSON.stringify(loc));
@@ -1079,7 +1093,11 @@ app.whenReady().then(() => {
   /* автозапуск (specs/009): новий гравець — увімкнено; хто вже має Q-Hub — як було (запис 0.3.x переносимо на новий);
      далі щоразу оновлюємо шлях — після перевстановлення в іншу теку запис веде туди (FR-011–FR-013) */
   if (app.isPackaged) {
-    const want = autostartOnStart({ init: !!settings.autostartInit, hadSettings, oldOn: app.getLoginItemSettings().openAtLogin, on: autostart() });
+    /* галочка «Запускати разом з Windows» в інсталяторі (specs/008): файл читаємо один раз і прибираємо */
+    const instFile = path.join(dir(), 'installer.json');
+    let chosen;
+    try { chosen = JSON.parse(fs.readFileSync(instFile, 'utf8')).autostart; fs.rmSync(instFile, { force: true }); } catch { /* файла немає — як раніше */ }
+    const want = autostartOnStart({ init: !!settings.autostartInit, hadSettings, oldOn: app.getLoginItemSettings().openAtLogin, on: autostart(), chosen });
     if (want !== null) setAutostart(want);
     if (!settings.autostartInit) { settings.autostartInit = true; saveSettings(); }
   }
