@@ -363,6 +363,31 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .vd-calc { width: 100%; margin-top: 10px; }
 .vd-total { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--surface2); display: flex; flex-direction: column; gap: 4px; }
 .vd-total b { color: var(--accent-hi); font-size: 17px; }
+.vd-total.idle b { color: inherit; }
+/* вибір тюнінгу (TuningPicker): групи плиток, STAGE 1–4 зі швидкістю */
+.tp { display: grid; gap: 12px; }
+.tp-g { border: 0; margin: 0; padding: 0; min-width: 0; }
+.tp-g legend { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 0 0 6px; font-weight: 700; font-size: 13px; }
+.tp-g legend small { font-weight: 500; }
+.tp-all { margin-left: auto; background: none; border: 0; color: var(--accent); font: 600 12.5px var(--sans); cursor: pointer; padding: 2px 4px; }
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.tp-it { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line2);
+  background: var(--surface); color: var(--fg); font: 500 13.5px var(--sans); text-align: left; cursor: pointer; min-height: 40px; }
+.tp-it:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line2)); }
+.tp-it.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.tp-ck { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line2); display: grid; place-items: center; color: #fff; }
+.tp-it.on .tp-ck { background: var(--accent); border-color: var(--accent); }
+.tp-p { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.tp-stage { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-bottom: 8px; }
+.tp-st { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 4px; border-radius: 10px; border: 1px solid var(--line2);
+  background: var(--surface); color: var(--fg); cursor: pointer; font: 600 12.5px var(--sans); }
+.tp-st small { font-weight: 500; font-size: 11.5px; opacity: .8; min-height: 1em; }
+.tp-st.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.tp-price { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; margin: 0 0 8px; }
+.tp-ro .tp-it, .tp-ro .tp-st { cursor: default; }
+.tp-ro .tp-it:not(.on), .tp-ro .tp-st:not(.on) { opacity: .5; }
+.tp button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 480px) { .tp-stage { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tp-grid { grid-template-columns: 1fr; } }
 .vd-info { margin: 0; display: grid; gap: 2px 0; }
 .vd-info dt { font-weight: 700; font-size: 13px; margin-top: 8px; }
 .vd-info dd { margin: 0; font-size: 14px; }
