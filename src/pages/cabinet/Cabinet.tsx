@@ -8,6 +8,7 @@ import LedgerPage from './LedgerPage';
 import StockPage from './StockPage';
 import DealsPage from './DealsPage';
 import GaragePage from './GaragePage';
+import DocumentsPage from './DocumentsPage';
 import Characters from './Characters';
 import SettingsPage from './SettingsPage';
 import Select from '../../components/Select';
@@ -24,6 +25,7 @@ const TABS: [string, string, string, string][] = [
   ['', 'Дашборд', 'Що вигідно зараз', 'home'],
   ['sklad', 'Склад', 'Що лежить і скільки коштує', 'box'], ['harazh', 'Гараж', 'Авто, тюнінг і фото', 'car'],
   ['oblik', 'Облік', 'Баланс, графік, підсумки', 'chart'], ['uhody', 'Угоди', 'Купив, нафармив, продав', 'coin'],
+  ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
   ['nalashtuvannya', 'Налаштування', 'Персонажі, нік і статік', 'user'],
 ];
 
@@ -65,9 +67,9 @@ export default function Cabinet() {
       <Route path="uhody" element={<DealsPage c={current} />} />
       <Route path="sklad" element={<StockPage c={current} />} />
       <Route path="harazh" element={<GaragePage c={current} />} />
+      <Route path="dokumenty" element={<DocumentsPage c={current} />} />
       <Route path="nalashtuvannya" element={<SettingsPage c={current} />} />
       <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
-      <Route path="import" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
     </Routes>
     </fieldset>
   );

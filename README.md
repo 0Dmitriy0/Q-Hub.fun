@@ -44,9 +44,7 @@
 
 ### 4. Перше використання
 1. Відкрий `https://q-hub.fun` → **Увійти через Discord**.
-2. **Кабінет → Імпорт з хабу**: у Quant Hub натисни «Зберегти копію», обери файл, «Перенести».
-   Переїдуть облік, угоди з чеками, гараж, документи й ігрові сесії. Повторний імпорт нічого не дублює.
-3. Зроби себе адміністратором. У Supabase **SQL Editor**:
+2. Зроби себе адміністратором. У Supabase **SQL Editor**:
    `update public.profiles set role = 'admin' where name = 'твоє_ім'я_в_Discord';`
 
 ## Мітки з гри (F9)
@@ -69,7 +67,7 @@
 cp .env.example .env    # встав свої VITE_SUPABASE_URL і VITE_SUPABASE_ANON_KEY
 npm install
 npm run dev             # http://localhost:5173
-npm test                # склад/собівартість, імпорт хабу, івенти, розбір сум
+npm test                # склад/собівартість, івенти, розбір сум
 bash supabase/tests/run.sh   # правила доступу на локальному PostgreSQL
 npm run build           # → dist/
 ```
