@@ -5,7 +5,7 @@ const env = { ...Object.fromEntries(readFileSync('.env.production', 'utf8').spli
 const url = env.VITE_SUPABASE_URL, key = env.VITE_SUPABASE_ANON_KEY;
 const q = {
   buyers: 'buyers?select=id,name,updated_at,image_url&order=sort',
-  rows: 'buyer_items?select=buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)',
+  rows: 'buyer_items?select=buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)',
   ups: 'price_updates?select=*&order=created_at.desc&limit=500',
   top: 'contributors?select=*&order=total.desc&limit=500',
   next: 'buyer_next_change?select=*'

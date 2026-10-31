@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -13,10 +13,12 @@ import PicUpload from '../components/PicUpload';
 import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
 import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
+import { subRank, subRanks } from '../lib/subOrder';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface NextChange { buyer_id: string; next_change_at: string | null; nick: string | null }
-interface Item { id: number; name: string; unit: string; image_url: string }
+/* sub — підгрупа («Шкури» / «М'ясо»); у старому кеші й знімку її немає (specs/028) */
+interface Item { id: number; name: string; unit: string; image_url: string; sub?: string }
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
 interface Unknown { id: number; buyer_id: string; text: string; seen_count: number; last_seen: string }
 /* «перевір межі» (specs/024, T031): ціна поза межами, яку програма впевнено прочитала тричі; на сайт вона не пішла */
@@ -102,7 +104,7 @@ export default function Prices() {
     if (!supabase) return;
     const [b, r, u, c, n] = await Promise.all([
       supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
-      supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url)'),
+      supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)'),
       supabase.from('price_updates').select('*').order('created_at', { ascending: false }).limit(500),
       supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500),
       supabase.from('buyer_next_change').select('*')
@@ -139,6 +141,13 @@ export default function Prices() {
     });
   }
 
+  /* ранги підгруп кожного скупника — з усіх його товарів, а не з відфільтрованих: «лише без меж» не робить м'ясо основним */
+  const ranks = useMemo(() => {
+    const by = new Map<string, string[]>();
+    for (const r of rows) if (r.items) (by.get(r.buyer_id) ?? by.set(r.buyer_id, []).get(r.buyer_id)!).push(r.items.sub || '');
+    return new Map([...by].map(([id, subs]) => [id, subRanks(buyers.find(b => b.id === id)?.name || '', subs)]));
+  }, [rows, buyers]);
+  const rk = (r: Row) => subRank(ranks.get(r.buyer_id), r.items?.sub);
   const cur = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return rows.filter(r => r.items && (ql ? r.items.name.toLowerCase().includes(ql) : r.buyer_id === tab) && (!noLimOnly || noLim(r)))
@@ -156,9 +165,10 @@ export default function Prices() {
           const p = (r: Row) => rangePos(r.price, priceRange(hist[r.buyer_id + ':' + r.item_id] || [], r.min_price, r.max_price, now)) ?? -1;
           return p(b) - p(a) || byName;
         }
-        return byName;
+        /* за назвою — блоками підгруп: шкури, потім м'ясо (specs/028) */
+        return rk(a) - rk(b) || byName;
       });
-  }, [rows, ups, tab, q, sort, hist, now, noLimOnly]);
+  }, [rows, ups, tab, q, sort, hist, now, noLimOnly, ranks]);
   const buyer = buyers.find(b => b.id === tab);
   useEffect(() => { loadHist([...new Set(cur.map(r => r.buyer_id))].filter(id => !histFor.has(id))); }, [cur]);
   const reload = (buyerId: string) => { load(); loadHist([buyerId]); };
@@ -335,11 +345,15 @@ export default function Prices() {
             )}
             {cur.length > 0 && <div className="bp-th" aria-hidden="true"><span>Товар · положення між мін і макс</span><span>30 днів</span><span>Ціна</span></div>}
             {cur.length ? (
-              <div className="plist">{cur.map(r => {
+              <div className="plist">{cur.map((r, i) => {
                 const key = r.buyer_id + ':' + r.item_id, old = !!r.at && ms(r.at) < cs, isOpen = open === key, editing = edit[key] !== undefined;
                 const raw = hist[key] || [], pts = series(raw, now), range = priceRange(raw, r.min_price, r.max_price, now), pos = rangePos(r.shown, range);
+                /* підзаголовок перед блоком неосновної підгрупи («М'ясо»); основна й скупники з однією підгрупою — без нього */
+                const sub = sort === 'name' && rk(r) > 0 && (i === 0 || cur[i - 1].items!.sub !== r.items!.sub) ? r.items!.sub : '';
                 return (
-                  <div className={'prow' + (isOpen ? ' open' : '')} key={key}>
+                  <Fragment key={key}>
+                  {sub && <h3 className="psub">{sub}</h3>}
+                  <div className={'prow' + (isOpen ? ' open' : '')}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
                     <button type="button" className="pname" aria-expanded={isOpen} aria-controls={'pd-' + key} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
                       <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{isAdmin && limFor(r) && <span className="warn"> · перевір межі: у грі {money(limFor(r)!.price)}</span>}</small>
@@ -379,7 +393,8 @@ export default function Prices() {
                         )}
                       </div>
                     )}
-                  </div>);
+                  </div>
+                  </Fragment>);
               })}</div>
             ) : q
               ? <div className="bp-empty">
