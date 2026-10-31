@@ -2,6 +2,7 @@ import L from 'leaflet';
 import { PX_PER_M, TILE, ZMAX, mapUrl, toPx } from './mapGeo';
 import { vectorLayer } from './mapVector';
 import { followTheme, mapTheme } from './mapTheme';
+import type { GameTheme } from './gameTheme';
 import type { MapArea, MapCategory, MapMark } from './mapData';
 import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
@@ -53,19 +54,21 @@ export async function loadMapData(): Promise<MapData | null> {
 }
 
 /* основа мапи: растр до z6, ближче — векторна мапа; без контролів Leaflet (кнопки — свої в HUD) */
-export function baseMap(el: HTMLElement, opts: L.MapOptions = {}) {
+/* theme — тема плиток; за замовчуванням тема сайту, у перегляді «Мапи для гри» — її власна (specs/026): тоді retheme()
+   після зміни теми перемальовує плитки й вектор */
+export function baseMap(el: HTMLElement, opts: L.MapOptions = {}, theme: () => GameTheme = mapTheme) {
   const m = L.map(el, { crs: L.CRS.Simple, minZoom: 1, maxZoom: ZMAX + 2, zoomSnap: 0.5, attributionControl: false, zoomControl: false, ...opts });
   const full = TILE * 2 ** ZMAX;
   const bounds = L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX));
   m.setMaxBounds(bounds.pad(0.05));
-  /* світлі плитки (specs/019, scripts/map-light-tiles.cjs) вантажаться лише в світлій темі сайту */
-  const url = () => mapUrl(mapTheme() === 'light' ? '/map/light/{z}/{x}/{y}.webp' : '/map/{z}/{x}/{y}.webp');
+  /* світлі плитки (specs/019, scripts/map-light-tiles.cjs) вантажаться лише в світлій темі */
+  const url = () => mapUrl(theme() === 'light' ? '/map/light/{z}/{x}/{y}.webp' : '/map/{z}/{x}/{y}.webp');
   const tiles = L.tileLayer(url(), { maxNativeZoom: ZMAX, maxZoom: ZMAX + 2, tileSize: TILE, noWrap: true, bounds,
     errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' });
   followTheme(tiles, () => tiles.setUrl(url(), true)).addTo(m);
-  vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds).addTo(m);
+  const vec = vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds, theme).addTo(m);
   const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
-  return { m, bounds, ll };
+  return { m, bounds, ll, retheme: () => { tiles.setUrl(url()); vec.redraw(); } };
 }
 
 /* значок мітки: напівпрозорий розмитий кружок з обводкою кольору категорії (.mpin) */

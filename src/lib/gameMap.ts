@@ -462,11 +462,3 @@ async function themeZip(entries: ZipEntry[], theme: GameTheme): Promise<ZipEntry
     return { ...e, data: z.data, method: z.method, crc: crc32(raw), size: raw.length };
   }));
 }
-
-/* попередній перегляд теми у вікні «Карта для гри» (specs/021 FR-005): уся мапа маленькою картинкою */
-export async function previewMap(theme: GameTheme, size = 96): Promise<string> {
-  const cv = await drawMap(size, [], 0, new Map(), ['names'], [], true, theme);
-  const out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
-  const ctx = out.getContext('2d')!; ctx.fillStyle = theme === 'light' ? '#8fb3cc' : OCEAN; ctx.fillRect(0, 0, out.width, out.height); ctx.drawImage(cv, 0, 0);
-  return out.toDataURL('image/png');
-}
