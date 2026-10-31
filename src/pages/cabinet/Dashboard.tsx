@@ -8,6 +8,8 @@ import { kyHM } from '../../lib/events';
 import EventList from '../../components/EventList';
 import Profitable from '../../components/Profitable';
 import SessionCard from '../../components/SessionCard';
+import Icon from '../../components/Icon';
+import { docState, sortDocs, stateText, type Doc } from '../../lib/documents';
 import type { Character, DealRow, Tx } from './types';
 
 /* дашборд як у Quant Hub: ліворуч баланс, дії й угоди, праворуч найближчі івенти й підсумки */
@@ -21,6 +23,9 @@ export default function Dashboard({ c }: { c: Character }) {
   const L = ledger(deals.rows), st = stock(L), cost = st.reduce((s, i) => s + i.boughtCost, 0);
   const pct = c.goal ? Math.min(100, Math.max(0, bal / c.goal * 100)) : 0;
   const top = prices ? topPaying(prices) : [];
+  /* документи, що закінчились чи закінчуються за SOON днів, — нагадування згори */
+  const docs = useRows<Doc>('documents', c.id, 'name', true);
+  const due = sortDocs(docs.rows).filter(d => { const k = docState(d.expires).kind; return k === 'expired' || k === 'soon'; });
   return (
     <div className="dash">
       <div className="grid">
@@ -40,6 +45,10 @@ export default function Dashboard({ c }: { c: Character }) {
             <span className="muted">Залишилось {money(Math.max(0, c.goal - bal))}</span>
           </>}
         </section>
+        {due.length > 0 && <Link to="/kabinet/dokumenty" className="card doc-due">
+          <span className="ibub"><Icon name="alert" /></span>
+          <div><b>Документи: продовж вчасно</b><br />{due.slice(0, 3).map((d, i) => <span key={d.id}>{i ? ' · ' : ''}{d.name} — <span className={docState(d.expires).kind === 'expired' ? 'bad' : 'warn'}>{stateText(d.expires)}</span></span>)}{due.length > 3 && <span className="muted"> · ще {due.length - 3}</span>}</div>
+        </Link>}
         <Profitable held={st} />
         <h2 className="sect">Скупники платять найбільше</h2>
         {!prices ? <div className="card empty">Завантаження цін…</div> : top.length ? <div className="list cards">{top.map(t => (
