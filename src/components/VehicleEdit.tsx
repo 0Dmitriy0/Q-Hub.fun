@@ -46,7 +46,7 @@ export default function VehicleEdit({ v, onSaved, onCancel }: { v: VehicleFull; 
         <label>Марка<input className="min" value={f.brand} onChange={e => set('brand', e.target.value)} /></label>
         <label>Салон<input className="min" value={f.salon} onChange={e => set('salon', e.target.value)} /></label>
         <div className="vedit-sel"><span>Тип</span><Select label="Тип" value={f.kind} onChange={v2 => set('kind', v2)} options={[{ value: 'auto', label: 'Авто' }, { value: 'moto', label: 'Мото' }, { value: 'avia', label: 'Авіа' }, { value: 'boat', label: 'Водний' }]} /></div>
-        <div className="vedit-sel"><span>Двигун</span><Select label="Двигун" value={f.fuel} onChange={v2 => set('fuel', v2)} options={[{ value: 'petrol', label: 'Пальне' }, { value: 'electric', label: 'Електро' }]} /></div>
+        <div className="vedit-sel"><span>Двигун</span><Select label="Двигун" value={f.fuel} onChange={v2 => set('fuel', v2)} options={[{ value: 'petrol', label: 'Пальне' }, { value: 'diesel', label: 'Дизель' }, { value: 'electric', label: 'Електро' }]} /></div>
         <div className="vedit-sel"><span>Валюта салону</span><Select label="Валюта салону" value={f.currency} onChange={v2 => set('currency', v2)} options={[{ value: 'game', label: 'Ігрова ($)' }, { value: 'donate', label: 'Донатна' }]} /></div>
         {NUMS.map(([k, label, hint]) => (
           <label key={k}>{label}<input className="min mono" inputMode="numeric" value={f[k]} disabled={k === 'salon_price' && f.exclusive}

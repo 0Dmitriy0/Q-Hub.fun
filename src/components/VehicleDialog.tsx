@@ -5,10 +5,17 @@ import Icon from './Icon';
 import { priceKind, salonLabel } from '../lib/vehiclePrice';
 import VehicleEdit from './VehicleEdit';
 
+/* двигун (0044): дизель — fuelType 3 з configvehicle гри; електро — поле electric */
+export const FUEL_WORD = { petrol: 'пальне', diesel: 'дизель', electric: 'електро' } as const;
+export function FuelTag({ fuel, size, tank }: { fuel?: 'petrol' | 'diesel' | 'electric'; size: number; tank?: number | null }) {
+  if (fuel === 'electric') return <span className="fuel-tag el"><Icon name="bolt" size={size} />Електро</span>;
+  return <span className="fuel-tag"><Icon name="fuel" size={size} />{fuel === 'diesel' ? 'Дизель' : 'Пальне'}{tank != null ? ` · ${tank} л` : ''}</span>;
+}
+
 export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia' | 'boat'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
-  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'electric'; currency?: 'game' | 'donate'; model?: string | null;
+  real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'diesel' | 'electric'; ua_plate?: boolean | null; currency?: 'game' | 'donate'; model?: string | null;
 }
 
 export const KIND_ICON: Record<VehicleFull['kind'], string> = { auto: 'car', moto: 'moto', avia: 'plane', boat: 'boat' };
@@ -50,7 +57,7 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
         </div>
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
         <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={KIND_ICON[v.kind]} size={56} />}
-          {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {v.fuel === 'electric' ? 'електро' : 'пальне'}</span>}</div>
+          {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {FUEL_WORD[v.fuel || 'petrol']}</span>}</div>
         <div className="vd-cols">
           <section>
             <h3 className="ih"><Icon name="bolt" size={16} />Елементи тюнінгу</h3>
@@ -85,11 +92,12 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
             {speeds.length > 0 && <div className="vd-stages"><b>Максимальна швидкість з чіпами для автотюнінгу:</b>
               <ul>{speeds.map((s, i) => <li key={i}><b>Stage {i + 1}:</b> {s} км/год</li>)}</ul></div>}
             <dl className="vd-info">
-              <dt>Двигун</dt><dd>{v.fuel === 'electric' ? <span className="fuel-tag el"><Icon name="bolt" size={14} />Електро</span> : <span className="fuel-tag"><Icon name="fuel" size={14} />Пальне</span>}</dd>
+              <dt>Двигун</dt><dd><FuelTag fuel={v.fuel} size={14} /></dd>
               {v.tank != null && <><dt>{v.fuel === 'electric' ? 'Батарея' : 'Бак'}</dt><dd>{v.tank}{v.fuel === 'electric' ? '' : ' л'}</dd></>}
               {v.trunk != null && <><dt>Багажник</dt><dd>{v.trunk} слот(ів)</dd></>}
               {v.seats != null && <><dt>Місць</dt><dd>{v.seats}</dd></>}
               {v.vinyl && <><dt>Підтримка вінілів</dt><dd className="good">✓ так</dd></>}
+              {v.ua_plate != null && <><dt>Український номер</dt><dd className={v.ua_plate ? 'good' : 'muted'}>{v.ua_plate ? '✓ можна поставити' : 'не ставиться'}</dd></>}
             </dl>
           </section>
         </div>
