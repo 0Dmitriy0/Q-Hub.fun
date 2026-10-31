@@ -1335,8 +1335,10 @@ fieldset .static-form .btn { align-self: end; }
 .mshot-prev img { display: block; width: 100%; height: auto; max-height: 38dvh; object-fit: contain; }
 
 /* інструкція «Як поставити мапу в гру» (specs/023) */
-.guide { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 0 48px; }
+.guide { max-width: 760px; margin: 0 auto; padding: 24px 0 48px; }
+.guide-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .guide h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; }
+.guide .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .guide-pc, .guide-ok { display: flex; align-items: center; gap: 8px; }
 .guide-ok { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
 .guide-wait { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
@@ -1344,6 +1346,55 @@ fieldset .static-form .btn { align-self: end; }
 .guide-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
 .guide-steps li p { margin: 0; white-space: pre-line; line-height: 1.6; }
 .guide-steps img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: 10px; border: 1px solid var(--line); }
+/* specs/027: зміст етапів, плитки «Що потрібно», етапи, попередження, шляхи з «Копіювати», позначки «зроблено» */
+.guide-aside { display: none; }
+.guide-toc { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.guide-toc h2, .guide-toc summary { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.guide-toc.mobile summary { margin: 0; cursor: pointer; }
+.guide-toc.mobile[open] summary { margin-bottom: 8px; }
+.guide-toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.guide-toc-list button { display: flex; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: none; color: var(--fg); font: 500 14px var(--sans); text-align: left; cursor: pointer; }
+.guide-toc-list button:hover, .guide-toc-list button:focus-visible { background: var(--hover); }
+.guide-toc-list .mono { min-width: 20px; color: var(--faint); }
+@media (min-width: 1100px) {
+  .guide.has-toc { max-width: 1020px; display: grid; grid-template-columns: minmax(0, 760px) 236px; gap: 28px; align-items: start; }
+  .guide.has-toc .guide-aside { display: block; position: sticky; top: 88px; }
+  .guide.has-toc .guide-toc.mobile { display: none; }
+}
+.guide-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.guide-tile { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; border: 1px solid var(--line2); background: var(--surface); color: var(--fg); text-decoration: none; transition: border-color .15s, background .15s; }
+.guide-tile:hover { border-color: var(--accent); }
+.guide-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.guide-tile b { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 16px; }
+.guide-tile small { color: var(--muted); font-size: 13.5px; line-height: 1.45; flex: 1; }
+.guide-tile.opt { background: transparent; border-style: dashed; }
+.guide-opt { padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line2); color: var(--muted); font: 600 11px var(--sans); }
+.guide-go { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-hi); font-weight: 700; font-size: 14px; }
+.guide-host { color: var(--faint); font: 500 12px var(--mono); }
+.guide-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; margin-bottom: 8px; }
+.guide-head h2 { margin: 0; }
+.guide-stage { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; scroll-margin-top: 84px; }
+.guide-stage > summary { display: flex; align-items: center; gap: 12px; padding: 4px 0 10px; cursor: pointer; list-style: none; }
+.guide-stage > summary::-webkit-details-marker { display: none; }
+.guide-stage > summary::before { content: ''; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; flex: none; }
+.guide-stage[open] > summary::before { transform: rotate(45deg); }
+.guide-stage > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.guide-stage h3 { margin: 0; font-size: 17px; flex: 1; }
+.guide-left { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font: 600 12px var(--mono); }
+.guide-left.ok { color: var(--good); }
+.guide-steps li.warn { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--warn); background: var(--warn-soft); }
+.guide-warn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--warn); font: 700 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.guide-steps li.done::marker { color: var(--good); }
+.guide-steps li.done > p { color: var(--muted); }
+.guide-done { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line2); background: none; color: var(--muted); font: 600 12.5px var(--sans); cursor: pointer; }
+.guide-done[aria-pressed="true"] { border-color: var(--good); color: var(--good); background: var(--good-soft); }
+.guide-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.guide-btn { padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line2); border-bottom-width: 2px; background: var(--surface2); color: var(--fg); font: 700 .88em var(--sans); white-space: nowrap; }
+.guide-path { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; padding: 6px 6px 6px 10px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface2); white-space: normal; }
+.guide-path code { flex: 1; min-width: 0; font: 500 13px var(--mono); overflow-wrap: anywhere; color: var(--fg); }
+.guide-path button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--surface); color: var(--fg); font: 600 12.5px var(--sans); cursor: pointer; }
+.guide-path button:hover { border-color: var(--accent); }
+.guide-path button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* «Карта для гри»: тема й попередній перегляд (specs/021) */
 .mgame-theme { display: flex; align-items: center; gap: 12px; }
