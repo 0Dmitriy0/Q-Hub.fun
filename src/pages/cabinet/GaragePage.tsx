@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRows } from '../../lib/useRows';
 import { money, parseMoney, signed } from '../../lib/format';
 import { matchVehicle, withSitePhotos, type Vehicle } from '../../lib/carMatch';
 import Icon from '../../components/Icon';
+import TuningPicker from '../../components/TuningPicker';
+import { readTune, tuneSummary, tuneTotal, type TuneState } from '../../lib/tuning';
 import type { Car, Character } from './types';
 
 /* гараж як у Quant Hub: плитки з фото, номером і цифрами; фото й марка — з каталогу транспорту сайту за назвою моделі */
@@ -15,6 +17,7 @@ export default function GaragePage({ c }: { c: Character }) {
   const [adding, setAdding] = useState(false);
   const [sell, setSell] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState('');
+  const [tuneCar, setTuneCar] = useState<Car | null>(null);
   const own = rows.filter(r => r.status === 'own'), sold = rows.filter(r => r.status === 'sold');
   const worth = own.reduce((s, car) => s + (car.gov || matchVehicle(car.name, vehicles)?.price || 0), 0);
   const found = f.name.trim() ? matchVehicle(f.name, vehicles) : null;
@@ -70,17 +73,55 @@ export default function GaragePage({ c }: { c: Character }) {
                 <div><small>Держ. вартість</small><b>{gov ? money(gov) : '—'}</b></div>
                 <div><small>Купив за</small><b>{car.paid ? money(car.paid) : '—'}</b></div>
                 {car.paid > 0 && gov > 0 && <div><small>Проти держ.</small><b className={gov - car.paid >= 0 ? 'good' : 'bad'}>{signed(gov - car.paid)}</b></div>}
-                {car.tune && <div><small>Тюнінг</small><b>{car.tune}</b></div>}
+                {(() => { const t = readTune(car.tuning), s = tuneSummary(t), cost = tuneTotal(gov, t);
+                  /* старий текстовий «Тюнінг» (Quant Hub) — поки не позначено плитками */
+                  return s ? <div><small>Тюнінг</small><b>{s}</b>{gov > 0 && cost > 0 && <small className="muted">вкладено {money(cost)}</small>}</div>
+                    : car.tune ? <div><small>Тюнінг</small><b>{car.tune}</b></div> : null; })()}
               </div>
               <div className="row edit-only">
                 <label className="fld" style={{ flex: 1 }}><input aria-label={'Ціна продажу ' + car.name} placeholder="продав за, $" value={sell[car.id] || ''} onChange={e => setSell({ ...sell, [car.id]: e.target.value })} /></label>
                 <button className="btn sm" onClick={() => markSold(car)}>Продано</button>
               </div>
+              <button type="button" className="btn sm ghost edit-only" onClick={() => setTuneCar(car)}><Icon name="bolt" size={15} />Що встановлено</button>
             </div>
           </article>);
       })}</div> : <div className="card empty">Тут будуть твої авто. Натисни «+ Додати авто»: модель, номер, ціна — фото підтягнеться з каталогу сайту за назвою.</div>}
+      <TuneDialog car={tuneCar} gov={tuneCar ? tuneCar.gov || matchVehicle(tuneCar.name, vehicles)?.price || 0 : 0} speed={tuneCar ? matchVehicle(tuneCar.name, vehicles)?.speed ?? null : null}
+        onClose={() => setTuneCar(null)} onSaved={() => { setTuneCar(null); reload(); }} />
       {sold.length > 0 && <section className="card"><h2>Продані</h2><div className="list">{sold.map(car => (
         <div className="li" key={car.id}><div><b>{car.name}</b><br /><small>продав за {money(car.sold_price)}{car.paid ? ' · ' : ''}{car.paid ? <span className={car.sold_price - car.paid >= 0 ? 'good' : 'bad'}>{signed(car.sold_price - car.paid)}</span> : null}</small></div></div>))}</div></section>}
     </>
+  );
+}
+
+/* «що встановлено» в авто: ті самі плитки, що в калькуляторі транспорту (TuningPicker); зберігається в cars.tuning.
+   Ціни чіпа STAGE і ксенону гравці платять одне одному — їх тут не питаємо, «вкладено» рахує лише ціни гри */
+function TuneDialog({ car, gov, speed, onClose, onSaved }: { car: Car | null; gov: number; speed: number | null; onClose: () => void; onSaved: () => void }) {
+  const dlg = useRef<HTMLDialogElement>(null);
+  const [t, setT] = useState<TuneState>(() => readTune(null));
+  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { if (car) { setT(readTune(car.tuning)); setErr(''); dlg.current?.showModal(); } else dlg.current?.close(); }, [car?.id]);
+  async function save() {
+    if (!car) return;
+    setBusy(true);
+    const { error } = await supabase!.from('cars').update({ tuning: t }).eq('id', car.id);
+    setBusy(false);
+    if (error) { setErr('Не вдалося зберегти тюнінг. Спробуй ще раз.'); return; }
+    onSaved();
+  }
+  return (
+    <dialog ref={dlg} className="modal" aria-labelledby="tune-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
+      {car && <div className="modal-box tune-dlg">
+        <div className="row between"><h2 id="tune-title">Тюнінг · {car.name}</h2>
+          <button type="button" className="hud-b" onClick={onClose} aria-label="Закрити"><Icon name="x" size={18} /></button></div>
+        <p className="muted">Познач, що вже стоїть в авто. Ціни — за держ. вартістю {gov ? money(gov) : '(не відома)'}.</p>
+        <TuningPicker gov={gov} speed={speed} value={t} onChange={setT} />
+        <div className="vd-total" role="status"><span>Вкладено за цінами гри: <b className="mono">{money(tuneTotal(gov, t))}</b></span>
+          {(t.stage > 0 || t.xenon) && <small className="muted">Чіп STAGE і ксенон купують у гравців — їхньої ціни тут немає.</small>}</div>
+        {err && <p className="err" role="alert">{err}</p>}
+        <div className="row"><button type="button" className="btn acc" disabled={busy} onClick={save}>{busy ? 'Зберігаю…' : 'Зберегти'}</button>
+          <button type="button" className="btn ghost" onClick={onClose}>Скасувати</button></div>
+      </div>}
+    </dialog>
   );
 }

@@ -1,6 +1,6 @@
 /* авто з гаража гравця → модель з каталогу транспорту сайту (фото, марка, держ. ціна).
    Гравці пишуть як заманеться: «Zeekr 001», «zeekr-001», «BMW M5 F90» при каталожному «M5 F90» з маркою BMW */
-export interface Vehicle { id: number; name: string; brand: string; price: number; image_url: string; model?: string | null }
+export interface Vehicle { id: number; name: string; brand: string; price: number; image_url: string; model?: string | null; speed?: number | null }
 
 /* фото з CDN гри за кодом моделі (urus → …/Urus.png), як дали розробники */
 export const gamePhoto = (model: string) => `https://1ff720c613a55d1a.cdn.express/vehicles/test/${model[0].toUpperCase()}${model.slice(1)}.png`;

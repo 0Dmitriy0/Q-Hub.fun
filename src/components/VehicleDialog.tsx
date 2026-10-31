@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { money, parseMoney } from '../lib/format';
-import { DRIFT_CHIP, TUNING, XENON_DEFAULT, stageSpeeds, tuningCost } from '../lib/tuning';
+import { TUNING, XENON_DEFAULT, emptyTune, tuneTotal, type TuneState } from '../lib/tuning';
 import Icon from './Icon';
 import { priceKind, salonLabel } from '../lib/vehiclePrice';
 import VehicleEdit from './VehicleEdit';
+import TuningPicker from './TuningPicker';
 
 /* двигун (0044): дизель — fuelType 3 з configvehicle гри; електро — поле electric */
 export const FUEL_WORD = { petrol: 'пальне', diesel: 'дизель', electric: 'електро' } as const;
@@ -25,25 +26,20 @@ export const KIND_ICON: Record<VehicleFull['kind'], string> = { auto: 'car', mot
 export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: VehicleFull | null; onClose: () => void; canEdit?: boolean; onSaved?: (v: VehicleFull) => void }) {
   const [edit, setEdit] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [drift, setDrift] = useState(false);
-  const [stage, setStage] = useState<'none' | 'stage'>('none');
-  const [stagePrice, setStagePrice] = useState('');
-  const [xenon, setXenon] = useState(false);
-  const [xenonPrice, setXenonPrice] = useState(String(XENON_DEFAULT));
-  const [total, setTotal] = useState<number | null>(null);
+  const [tune, setTune] = useState<TuneState>(emptyTune);
+  const [pr, setPr] = useState({ stage: '', xenon: String(XENON_DEFAULT) });
 
   useEffect(() => {
-    if (v) { setEdit(false); setPicked(new Set()); setDrift(false); setStage('none'); setStagePrice(''); setXenon(false); setXenonPrice(String(XENON_DEFAULT)); setTotal(null); dlg.current?.showModal(); }
+    if (v) { setEdit(false); setTune(emptyTune()); setPr({ stage: '', xenon: String(XENON_DEFAULT) }); dlg.current?.showModal(); }
     else dlg.current?.close();
   }, [v?.id]);
   if (!v) return <dialog ref={dlg} className="modal vmodal" onClose={onClose} />;
 
   const gov = v.price || 0;
-  const toggle = (n: string) => setPicked(p => { const s = new Set(p); s.has(n) ? s.delete(n) : s.add(n); return s; });
-  const calc = () => setTotal(TUNING.reduce((s, [n, p]) => s + (picked.has(n) ? tuningCost(gov, p) : 0), 0)
-    + (drift ? DRIFT_CHIP : 0) + (stage === 'stage' ? parseMoney(stagePrice) : 0) + (xenon ? parseMoney(xenonPrice) : 0));
-  const speeds = v.speed ? stageSpeeds(v.speed) : [];
+  const total = tuneTotal(gov, tune, { stage: parseMoney(pr.stage), xenon: parseMoney(pr.xenon) });
+  const any = tune.items.length > 0 || tune.drift || tune.stage > 0 || tune.xenon;
+  /* STAGE вибрано, а ціни немає — у сумі його немає: кажемо прямо, а не мовчки занижуємо */
+  const noStagePrice = tune.stage > 0 && !(parseMoney(pr.stage) > 0);
 
   return (
     <dialog ref={dlg} className="modal vmodal wdlg" aria-labelledby="vd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
@@ -62,20 +58,14 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
           <section>
             <h3 className="ih"><Icon name="bolt" size={16} />Елементи тюнінгу</h3>
             {gov > 0 ? <>
-              <div className="vd-sel"><button type="button" className="btn sm" onClick={() => setPicked(new Set(TUNING.map(t => t[0])))}>Виділити все</button>
-                <button type="button" className="btn sm ghost" onClick={() => setPicked(new Set())}>Зняти все</button></div>
-              <table className="t vd-t"><thead><tr><th>Елемент</th><th className="n">Вартість</th></tr></thead>
-                <tbody>
-                  {TUNING.map(([n, p]) => <tr key={n}><td><label className="ck"><input type="checkbox" checked={picked.has(n)} onChange={() => toggle(n)} />{n}</label></td><td className="n">{money(tuningCost(gov, p))}</td></tr>)}
-                  <tr><td><label className="ck"><input type="checkbox" checked={drift} onChange={e => setDrift(e.target.checked)} />Чіп автотюнінгу «DRIFT»</label></td><td className="n">{money(DRIFT_CHIP)}</td></tr>
-                  <tr><td colSpan={2}><label className="ck"><input type="radio" name={'stage' + v.id} checked={stage === 'none'} onChange={() => setStage('none')} />Без чіпа автотюнінгу «STAGE»</label></td></tr>
-                  <tr><td><label className="ck"><input type="radio" name={'stage' + v.id} checked={stage === 'stage'} onChange={() => setStage('stage')} />Чіп автотюнінгу «STAGE»</label></td>
-                    <td className="n"><input className="vd-in" inputMode="numeric" placeholder="Вкажи ціну" aria-label="Ціна чіпа STAGE" value={stagePrice} onChange={e => { setStagePrice(e.target.value); setStage('stage'); }} /></td></tr>
-                  <tr><td><label className="ck"><input type="checkbox" checked={xenon} onChange={e => setXenon(e.target.checked)} />Ксенон</label></td>
-                    <td className="n"><input className="vd-in" inputMode="numeric" aria-label="Ціна ксенону" value={xenonPrice} onChange={e => { setXenonPrice(e.target.value); setXenon(true); }} /></td></tr>
-                </tbody></table>
-              <button type="button" className="btn acc vd-calc" onClick={calc}><Icon name="chart" />Обрахувати вартість тюнінгу</button>
-              {total !== null && <div className="vd-total" role="status"><span>Тюнінг: <b className="mono">{money(total)}</b></span><span className="muted">Разом з авто (держ.): <b className="mono">{money(total + gov)}</b></span></div>}
+              <div className="vd-sel"><button type="button" className="btn sm" onClick={() => setTune(t => ({ ...t, items: TUNING.map(x => x[0]) }))}>Виділити все</button>
+                <button type="button" className="btn sm ghost" onClick={() => setTune(emptyTune())}>Зняти все</button></div>
+              <TuningPicker gov={gov} speed={v.speed} value={tune} onChange={setTune} prices={{ ...pr, set: (k, val) => setPr(p => ({ ...p, [k]: val })) }} />
+              <div className={'vd-total' + (any ? '' : ' idle')} role="status" aria-live="polite">
+                <span>Тюнінг: <b className="mono">{money(total)}</b></span>
+                <span className="muted">Разом з авто (держ.): <b className="mono">{money(total + gov)}</b></span>
+                {noStagePrice && <small className="warn">Ціну чіпа Stage {tune.stage} не вписано — у сумі його немає.</small>}
+              </div>
             </> : <p className="muted">Держ. вартість ще не вписана — тюнінг рахується від неї, тож поки порахувати не можна.</p>}
           </section>
           <section>
@@ -89,8 +79,6 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
               <dt>Державна вартість</dt><dd>{gov ? <b className="mono">{money(gov)}</b> : <span className="muted">невідома</span>}</dd>
               {v.speed != null && <><dt>Максимальна швидкість</dt><dd>{v.speed} км/год</dd></>}
             </dl>
-            {speeds.length > 0 && <div className="vd-stages"><b>Максимальна швидкість з чіпами для автотюнінгу:</b>
-              <ul>{speeds.map((s, i) => <li key={i}><b>Stage {i + 1}:</b> {s} км/год</li>)}</ul></div>}
             <dl className="vd-info">
               <dt>Двигун</dt><dd><FuelTag fuel={v.fuel} size={14} /></dd>
               {v.tank != null && <><dt>{v.fuel === 'electric' ? 'Батарея' : 'Бак'}</dt><dd>{v.tank}{v.fuel === 'electric' ? '' : ' л'}</dd></>}

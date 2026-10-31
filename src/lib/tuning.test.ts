@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TUNING, stageSpeeds, tuningCost } from './tuning';
+import { DRIFT_CHIP, TUNING, TUNING_GROUPS, emptyTune, readTune, stageSpeeds, tuneSummary, tuneTotal, tuningCost } from './tuning';
 
 const costs = (gov: number) => Object.fromEntries(TUNING.map(([n, p]) => [n, tuningCost(gov, p)]));
 
@@ -14,5 +14,25 @@ describe('тюнінг (звірено зі скрінами з гри)', () => 
   it('швидкість з чіпами STAGE 1–4', () => {
     expect(stageSpeeds(170)).toEqual([178, 187, 196, 204]);
     expect(stageSpeeds(190)).toEqual([200, 209, 218, 228]);
+  });
+});
+
+describe('стан тюнінгу (гараж і калькулятор)', () => {
+  it('групи містять кожен елемент рівно раз', () => {
+    expect(TUNING_GROUPS.flatMap(g => g.items).sort()).toEqual(TUNING.map(t => t[0]).sort());
+  });
+  it('readTune: порожнє, старе й зіпсоване — без падіння, лише відоме', () => {
+    expect(readTune({})).toEqual(emptyTune());
+    expect(readTune(null)).toEqual(emptyTune());
+    expect(readTune({ items: ['Двигун', 'Ракета'], stage: 7, drift: 'так', xenon: true })).toEqual({ items: ['Двигун'], stage: 0, drift: false, xenon: true });
+  });
+  it('tuneTotal: елементи від держ., DRIFT фіксовано, STAGE і ксенон — лише з ціною', () => {
+    const t = { items: ['Двигун', 'Клаксон'], drift: true, stage: 2, xenon: true };
+    expect(tuneTotal(300000, t)).toBe(30000 + 3000 + DRIFT_CHIP);
+    expect(tuneTotal(300000, t, { stage: 1000000, xenon: 300000 })).toBe(30000 + 3000 + DRIFT_CHIP + 1000000 + 300000);
+  });
+  it('tuneSummary', () => {
+    expect(tuneSummary({ items: ['Двигун'], drift: true, stage: 2, xenon: false })).toBe('Stage 2 · DRIFT · 1 з 16');
+    expect(tuneSummary(emptyTune())).toBe('');
   });
 });
