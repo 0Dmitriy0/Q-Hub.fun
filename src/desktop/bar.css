@@ -185,6 +185,11 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .snav nav button[aria-current="page"] { background: #1f2a38; color: var(--fg); }
 .snav nav button[aria-current="page"] .ico { color: var(--accent); }
 .sver { margin-top: auto; padding: 0 6px; color: var(--faint); font: 500 12px var(--mono); }
+.sdisc { margin-top: auto; padding: 0 6px; color: var(--accent); font: 600 12.5px var(--sans); text-decoration: none; }
+.sdisc:hover { text-decoration: underline; }
+.sdisc + .sver { margin-top: 6px; }
+.sask { margin: 4px 0 0; color: var(--muted); font: 500 13px var(--sans); }
+.sask a { color: var(--accent); }
 .sbody { overflow-y: auto; scrollbar-gutter: stable; padding: 16px 14px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
 .sbody h3 { font-size: 18px; }
 .sbody > .muted { font-size: 13px; }

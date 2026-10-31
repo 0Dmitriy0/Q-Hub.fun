@@ -38,7 +38,7 @@ const BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; sales?: Sale[]; prefs: Prefs; staff?: boolean; version?: string }
+interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; sales?: Sale[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[]; places?: PlaceHit[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
@@ -294,7 +294,7 @@ export default function Bar() {
           <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => { setSetStart('main'); setView(x => (x === 'settings' ? 'main' : 'settings')); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
-        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
+        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q}

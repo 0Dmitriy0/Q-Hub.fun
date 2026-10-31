@@ -1338,6 +1338,15 @@ fieldset .static-form .btn { align-self: end; }
 .foot-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
 .foot-about { display: flex; flex-direction: column; gap: 10px; max-width: 580px; }
 .foot-about p { line-height: 21px; }
+/* «by CORE» (specs/033): біля назви, дрібніше й тьмяніше за Q-Hub; на телефоні назва в підвалі лишається, щоб підпис не висів сам */
+.foot-brand { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
+.foot-brand .brand { align-self: center; }
+.foot .brand b { display: inline; }
+.foot-by { font: 700 12px var(--brand-font); letter-spacing: .06em; color: var(--muted); text-decoration: none; white-space: nowrap; }
+a.foot-by:hover { color: var(--fg); text-decoration: underline; }
+.foot-act { display: flex; gap: 10px; flex-wrap: wrap; }
+.p-by { text-align: center; font-size: 13px; }
+.p-link { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .foot-bot { display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; flex-wrap: wrap; padding-top: 20px; border-top: 1px solid var(--line); }
 .foot-nav { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .foot-nav a { color: var(--muted); text-decoration: none; font-size: 13.5px; }
