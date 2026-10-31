@@ -1,7 +1,8 @@
 import L from 'leaflet';
 import { cellOf, parseChunk, triPath, type Chunk, type Index } from './mapChunk';
 import { mapUrl } from './mapGeo';
-import { followTheme, mapTheme, tone } from './mapTheme';
+import { followTheme, mapTheme } from './mapTheme';
+import { recolor, type GameTheme } from './gameTheme';
 
 /* Чітке наближення (z7+): замість розтягнутих картинок браузер сам малює трикутники мінікарти.
    Дані — шматки 800x800 м у /map/v (scripts/map-chunks.py). Тайл z>=7 завжди лежить в одному шматку,
@@ -17,8 +18,8 @@ function getChunk(cx: number, cy: number) {
   return chunks.get(k)!;
 }
 
-/* pxPerM — пікселів на метр на рівні ZMAX (1.28 при ZMAX 6) */
-export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds) {
+/* pxPerM — пікселів на метр на рівні ZMAX (1.28 при ZMAX 6); theme — тема шару, за замовчуванням тема сайту (у перегляді «Мапи для гри» — її власна, specs/026) */
+export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds, theme: () => GameTheme = mapTheme) {
   const Layer = L.GridLayer.extend({
     createTile(coords: L.Coords, done: L.DoneCallback) {
       const t = document.createElement('canvas'); const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -37,7 +38,7 @@ export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bound
           for (; i < n && c[i] === col; i++) {
             const o = i * 6; triPath(ctx, xy, o);
           }
-          ctx.fillStyle = ctx.strokeStyle = tone(ix.palette[col]); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = ctx.strokeStyle = recolor(ix.palette[col], theme()); ctx.fill(); ctx.stroke();
         }
         done(undefined, t);
       });
@@ -64,7 +65,7 @@ const getNames = () => names ??= Promise.all([fetch(mapUrl('/map/game/export.jso
 let namesIndex: Promise<{ n: number; have: Record<number, number[]> } | null> | null = null;
 const getNamesIndex = () => namesIndex ??= fetch(mapUrl('/map/n/index.json')).then(r => r.ok ? r.json() : null).catch(() => null);
 
-export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds) {
+export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds: L.LatLngBounds, theme: () => GameTheme = mapTheme) {
   const Layer = L.GridLayer.extend({
     createTile(coords: L.Coords, done: L.DoneCallback) {
       /* до z6 — готові картинки (scripts/map-names-tiles.py; світлі — scripts/map-light-tiles.cjs, той самий список плиток): 200 тис. трикутників на дальньому зумі вішали браузер */
@@ -74,7 +75,7 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
           if (!ix || !ix.have[coords.z]?.includes(coords.x * ix.n + coords.y)) return done(undefined, box);
           const img = document.createElement('img'); img.alt = ''; img.width = img.height = 256; img.style.display = 'block';
           img.onload = () => done(undefined, box); img.onerror = () => done(undefined, box);
-          img.src = mapUrl(`/map/${mapTheme() === 'light' ? 'n-light' : 'n'}/${coords.z}/${coords.x}/${coords.y}.webp`); box.append(img);
+          img.src = mapUrl(`/map/${theme() === 'light' ? 'n-light' : 'n'}/${coords.z}/${coords.x}/${coords.y}.webp`); box.append(img);
         });
         return box;
       }
@@ -106,7 +107,7 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
           for (; j < vis.length && c[vis[j]] === col; j++) {
             const o = vis[j] * 6; triPath(ctx, xy, o);
           }
-          ctx.fillStyle = ctx.strokeStyle = tone(pal[col]); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = ctx.strokeStyle = recolor(pal[col], theme()); ctx.fill(); ctx.stroke();
         }
         done(undefined, t);
       });

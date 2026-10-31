@@ -9,6 +9,8 @@ import { fmt, money } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useAppOnline } from '../lib/useAppOnline';
 import Icon from '../components/Icon';
+import { readGameTheme, recolor, saveGameTheme, type GameTheme } from '../lib/gameTheme';
+import { OCEAN, mapUrl } from '../lib/mapGeo';
 
 /* головна за макетом Stitch (design/stitch/home.html). Усі цифри справжні: зі знімка цін (public/snapshot) і даних сайту.
    Вигадані блоки макета (кількість гравців, «радар-мод», ШІ-рекомендації з відсотками) не перенесено */
@@ -74,15 +76,7 @@ export default function Home() {
           <div className="h-side">
             <div className="h-feat"><span className="ibub"><Icon name="map" /></span><div><h3>Почни писати — і мітка вже на мапі</h3><p className="muted">Набери «24/7» чи «риболовля» — мапа покаже всі збіги. Повна мапа — з фільтрами груп, полями й зонами.</p></div></div>
             <div className="h-feat"><span className="ibub"><Icon name="layers" /></span><div><h3>Ті самі мітки — на мінікарті в грі</h3><p className="muted">Галочками вибираєш назви, зони й мітки — сайт збирає файли мінікарти, а ти ставиш їх через OpenIV.</p></div></div>
-            <div className="h-dl">
-              <span className="h-lbl"><span className="mdot good" aria-hidden="true" />Збирається на сайті · .zip</span>
-              <h3>Мапа для Quant RP</h3>
-              <p className="muted">Вибери, що показувати, і завантаж архів для папки гри.</p>
-              <div className="row">
-                <Link className="btn acc" to="/mapa?game=1"><Icon name="download" />Зібрати мапу для гри</Link>
-                <Link className="btn ghost" to="/mapa">Відкрити мапу</Link>
-              </div>
-            </div>
+            <GameMapTile />
           </div>
         </div>
       </section>
@@ -171,6 +165,41 @@ export default function Home() {
           </li>
         </ol>
       </section>
+    </div>
+  );
+}
+
+/* плитка «Мапа для Quant RP» (specs/026): мініатюра мапи для гри у вибраній темі, три кроки й кнопка у вікно збирання.
+   Мініатюра — плитка z0 мапи сайту (12800 м на 256 px), обрізана до ділянки текстур гри (2×3 по 4500 м від -4140, 8400) */
+const Z0 = 256 / 12800, THUMB_W = 124, THUMB_K = THUMB_W / (9000 * Z0);
+function GameMapTile() {
+  const [theme, setThemeState] = useState<GameTheme>(readGameTheme);
+  const setTheme = (t: GameTheme) => { setThemeState(t); saveGameTheme(t); };
+  return (
+    <div className="h-dl">
+      <span className="h-lbl"><span className="mdot good" aria-hidden="true" />Збирається на сайті · .zip</span>
+      <div className="h-dl-body">
+        <span className="h-dl-map" style={{ width: THUMB_W, height: 13500 * Z0 * THUMB_K, background: recolor(OCEAN, theme) }}>
+          <img src={mapUrl(theme === 'light' ? '/map/light/0/0/0.webp' : '/map/0/0/0.webp')} alt={`Мапа для гри — ${theme === 'light' ? 'світла' : 'темна'} тема`} loading="lazy"
+            style={{ width: 256 * THUMB_K, left: -(-4140 + 5996) * Z0 * THUMB_K, top: -(8470 - 8400) * Z0 * THUMB_K }} />
+        </span>
+        <div className="h-dl-txt">
+          <h3>Мапа для Quant RP</h3>
+          <div className="mseg" role="radiogroup" aria-label="Тема мапи для гри">
+            <button type="button" role="radio" aria-checked={theme === 'dark'} onClick={() => setTheme('dark')}>Темна</button>
+            <button type="button" role="radio" aria-checked={theme === 'light'} onClick={() => setTheme('light')}>Світла</button>
+          </div>
+          <ol className="h-dl-steps">
+            <li>Вибери мітки — перегляд одразу покаже, що буде на мінікарті</li>
+            <li>Скачай архів .zip</li>
+            <li>Постав через OpenIV — <Link to="/mapa/v-gru">інструкція</Link></li>
+          </ol>
+        </div>
+      </div>
+      <div className="row">
+        <Link className="btn acc" to="/mapa?game=1"><Icon name="download" />Зібрати мапу для гри</Link>
+        <Link className="btn ghost" to="/mapa">Відкрити мапу</Link>
+      </div>
     </div>
   );
 }

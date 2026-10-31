@@ -533,7 +533,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mtabs button:hover { color: var(--fg); }
 .mtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #140700); box-shadow: 0 2px 8px rgba(255, 107, 0, .25); }
 .mfilters > .mseg { margin: 0; }
-.mgame > summary, .madmin > summary { display: none; }
+.madmin > summary { display: none; }
 /* категорії — кнопки-плитки з кольором категорії */
 .mchips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .mchip { position: relative; display: flex; min-width: 0; }
@@ -640,13 +640,57 @@ body.map-open .foot { display: none; }
 .mcheck { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 .mcheck input { accent-color: var(--accent); width: 16px; height: 16px; }
 /* «Карта для гри»: галочки категорій */
-.mgame { display: flex; flex-direction: column; gap: 8px; }
-.mgame > p { margin: 4px 0 0; font-size: 12.5px; }
-.mgame-grp { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 6px 0 2px; display: flex; flex-direction: column; gap: 4px; }
-.mgame-grp legend { font: 700 12.5px var(--sans); color: var(--muted); padding: 0 4px 0 0; }
-.mgame .mcheck { font-size: 13px; }
-.mgame .mcheck .cnt { margin-left: auto; font: 600 11px var(--mono); color: var(--faint); }
-.mgame select.min { width: auto; padding: 4px 6px; }
+/* «Мапа для гри» (specs/026): перегляд ліворуч, вибір праворуч, «Скачати» внизу завжди видно; телефон — перегляд зверху */
+.mdlg.wide { width: min(1180px, calc(100vw - 32px)); height: min(92dvh, 860px); max-height: none; }
+.mdlg.wide .mdlg-in { flex: 1; min-height: 0; overflow: hidden; padding-bottom: 0; }
+.gx { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; }
+.gx-prev { min-height: 0; padding-bottom: 18px; }
+.gx-side { min-height: 0; display: flex; flex-direction: column; }
+.gx-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 0 4px 12px 0; }
+.gx-scroll h3 { margin: 0; font: 700 13.5px var(--sans); }
+.gx-lead { margin: 0; font-size: 13px; line-height: 1.5; }
+.gx-note { margin: 0; font-size: 12.5px; }
+.gx-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.gx-card .mseg { margin: 0; background: var(--surface); }
+.gx-all { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.gx-all h3 { flex: 1; }
+.gx-grp { padding: 6px 8px 6px 6px; }
+.gx-grp-h { display: flex; align-items: center; gap: 4px; }
+.gx-grp-t { flex: 1; display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--fg); font: 700 13px var(--sans); text-align: left; cursor: pointer; }
+.gx-grp-t:hover { background: var(--hover); }
+.gx-grp-t .ico { transition: transform .15s; }
+.gx-grp-t .ico.gx-rot { transform: rotate(-90deg); }
+.gx-grp-t .cnt, .gx-cats .cnt { margin-left: auto; font: 600 11px var(--mono); color: var(--faint); }
+.gx-mini { padding: 3px 8px; border-radius: 7px; border: 1px solid var(--line2); background: var(--surface); color: var(--muted); font: 600 12px var(--sans); cursor: pointer; }
+.gx-mini:hover { color: var(--fg); border-color: var(--accent); }
+.gx-grp-t:focus-visible, .gx-mini:focus-visible, .gprev-map:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gx-cats { display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 2px 28px; }
+.gx-cats .mcheck { min-height: 30px; font-size: 13px; }
+.gx-warn { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 4px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-soft); color: var(--fg); font-size: 12.5px; line-height: 1.45; }
+.gx-warn > .ico { color: var(--warn); flex: none; }
+.gx-warn > span { flex: 1; min-width: 160px; }
+.gx-foot { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 18px; border-top: 1px solid var(--line2); background: var(--surface); }
+.gx-foot .mmsg { margin: 0; }
+.gx-go { justify-content: flex-start; gap: 12px; min-height: 54px; padding: 8px 16px; text-align: left; }
+.gx-go > span { display: flex; flex-direction: column; min-width: 0; }
+.gx-go b { font-size: 15px; }
+.gx-go small { font: 600 12px var(--mono); opacity: .85; line-height: 1.4; }
+.gprev { position: relative; height: 100%; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line2); background: #0a0e11; }
+.gprev-map { position: absolute; inset: 0; background: #0a0e11; }
+.gprev-pins { position: absolute; left: 0; top: 0; z-index: 500; pointer-events: none; }
+.gprev-ctl { position: absolute; top: 10px; right: 10px; z-index: 600; display: flex; flex-direction: column; gap: 2px; padding: 3px; border-radius: 10px; background: var(--topbar); border: 1px solid var(--line); backdrop-filter: blur(8px); }
+.gprev-load { position: absolute; left: 10px; bottom: 10px; z-index: 600; padding: 4px 10px; border-radius: 999px; background: var(--topbar); border: 1px solid var(--line); color: var(--fg); font: 600 12px var(--sans); }
+.gprev-off { display: grid; place-items: center; align-content: center; gap: 8px; padding: 20px; text-align: center; color: var(--muted); background: var(--bg); }
+.gprev-off p { margin: 0; max-width: 300px; font-size: 13px; }
+@media (max-width: 899px) {
+  .mdlg.wide { height: calc(100dvh - 24px); }
+  .mdlg.wide .mdlg-in { overflow-y: auto; }
+  .gx { display: flex; flex-direction: column; gap: 12px; }
+  .gx-prev { flex: none; height: min(42dvh, 360px); padding-bottom: 0; }
+  .gx-side, .gx-scroll { min-height: auto; overflow: visible; flex: none; }
+  .gx-foot { position: sticky; bottom: 0; z-index: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .gx-grp-t .ico { transition: none; } }
 /* назви місць на мапі: розмір у метрах гри (--h) × px на метр (--ms), шрифт сайту */
 .mname-wrap { background: none; border: 0; }
 .mname { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
@@ -926,6 +970,15 @@ fieldset .static-form .btn { align-self: end; }
 .h-feat p, .h-cards p { font-size: 14px; line-height: 22px; }
 .h-dl { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 16px; background: radial-gradient(120% 120% at 100% 0%, rgba(255, 107, 0, .16), transparent 60%), var(--surface); border: 1px solid rgba(255, 107, 0, .3); }
 .h-dl h3 { font-size: 20px; }
+/* плитка «Мапа для Quant RP» (specs/026): мініатюра мапи для гри, тема й три кроки */
+.h-dl-body { display: flex; gap: 16px; align-items: flex-start; }
+.h-dl-map { position: relative; flex: none; overflow: hidden; border-radius: 12px; border: 1px solid var(--line2); box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .6); }
+.h-dl-map img { position: absolute; max-width: none; height: auto; display: block; }
+.h-dl-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.h-dl-txt .mseg { margin: 0; max-width: 220px; }
+.h-dl-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.h-dl-steps li::marker { color: var(--accent-hi); font-weight: 700; }
+@media (max-width: 420px) { .h-dl-map { display: none; } }
 .h-hotkey { display: inline-flex; align-items: center; gap: 12px; padding: 10px 16px 10px 10px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line2); }
 .h-hotkey img { border-radius: 10px; }
 .h-pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -1396,8 +1449,4 @@ fieldset .static-form .btn { align-self: end; }
 .guide-path button:hover { border-color: var(--accent); }
 .guide-path button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* «Карта для гри»: тема й попередній перегляд (specs/021) */
-.mgame-theme { display: flex; align-items: center; gap: 12px; }
-.mgame-theme .mseg { flex: 1; margin: 0; }
-.mgame-theme img, .mgame-prev { width: 64px; height: 96px; border-radius: 8px; border: 1px solid var(--line); object-fit: cover; flex: none; }
-.mgame-prev { display: block; background: var(--bg); }
+

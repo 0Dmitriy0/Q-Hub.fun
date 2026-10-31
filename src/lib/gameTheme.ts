@@ -4,6 +4,11 @@
 import LIGHT_MAP from '../data/mapLight.json';
 export type GameTheme = 'dark' | 'light';
 
+/* вибрана тема мапи для гри — окремо від теми сайту (specs/021 FR-002); ставлять вікно «Мапа для гри» і плитка на головній (specs/026) */
+const THEME_KEY = 'qhub:gamemap:theme';
+export const readGameTheme = (): GameTheme => { try { return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+export const saveGameTheme = (t: GameTheme) => { try { localStorage.setItem(THEME_KEY, t); } catch { /* приватний режим */ } };
+
 /* темний -> світлий (src/data/mapLight.json — та сама таблиця для мапи сайту, specs/019, і для генератора світлих плиток
    scripts/map-light-tiles.cjs): земля #17181a, забудова #24262a, 14 рівнів моря (тло поза мапою = найглибше море #0a0e11);
    світлі назви — темнішими з тієї ж палітри назв, інакше на світлій землі вони не читаються (контраст 1,1–1,2:1);

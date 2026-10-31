@@ -126,6 +126,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* «Мапа для гри» — вікно по центру екрана; ?game=1 відкриває його одразу (посилання з головної) */
   const [params] = useSearchParams();
   const [game, setGame] = useState(() => params.get('game') === '1');
+  /* мітки з бази ще вантажаться — перегляд «Мапи для гри» не показує лічильники як остаточні (specs/026) */
+  const [mapReady, setMapReady] = useState(!supabase);
   const dlg = useRef<HTMLDialogElement>(null);
   /* «Скрін мапи» — таке саме вікно з картинкою всієї мапи й увімкнених міток */
   const [shotOpen, setShotOpen] = useState(false);
@@ -172,6 +174,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   useEffect(() => {
     if (!supabase) return;
     loadMapData().then(d => {
+      setMapReady(true);
       if (!d && embed) { const c = readCopy(); setOffline(c ? c.at : ''); return; }
       if (!d) { setDbMissing(true); setOnly(null); return; }
       if (embed) { saveCopy(d); loadedAt.current = Date.now(); setOffline(null); }
@@ -547,14 +550,14 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                   onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} /></>}
           </>}
         </aside>}
-      <dialog ref={dlg} className="mdlg" aria-labelledby="mdlg-t" onClose={() => setGame(false)} onClick={e => { if (e.target === dlg.current) setGame(false); }}>
+      <dialog ref={dlg} className="mdlg wide" aria-labelledby="mdlg-t" onClose={() => setGame(false)} onClick={e => { if (e.target === dlg.current) setGame(false); }}>
         <div className="mdlg-in">
           <div className="mdlg-h">
             <span className="mdlg-ico" aria-hidden="true"><Icon name="download" size={20} /></span>
             <div><h2 id="mdlg-t">Мапа для гри</h2><small>Заміна мінікарти GTA V через OpenIV</small></div>
             <button type="button" className="hud-b" onClick={() => setGame(false)} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
           </div>
-          {game && <GameMapExport groups={groups} marks={marks} areas={areas} catById={catById} isOn={isOn} />}
+          {game && <GameMapExport groups={groups} marks={marks} areas={areas} catById={catById} isOn={isOn} loading={!mapReady} />}
         </div>
       </dialog>
       <dialog ref={shotDlg} className="mdlg" aria-labelledby="mshot-t" onClose={() => setShotOpen(false)} onClick={e => { if (e.target === shotDlg.current) setShotOpen(false); }}>
