@@ -29,8 +29,9 @@ export function saleGuess(amount: number, items: SaleItem[], stock: Record<strin
   if (held.length >= 2 && Math.abs(held.reduce((s, i) => s + have(i.item) * i.price, 0) - amount) <= 1)
     return { kind: 'all', lines: held.map(i => line(i.item, have(i.item), i.price, have(i.item))) };
   const fits = priced.map(i => ({ i, q: divides(amount, i.price, i.unit) })).filter((f): f is { i: SaleItem; q: number } => f.q !== null);
-  const fitsHeld = fits.filter(f => have(f.i.item) > 0);
-  const pick = fitsHeld.length === 1 ? fitsHeld[0] : !fitsHeld.length && fits.length === 1 ? fits[0] : null;
+  /* суму ділить кілька товарів — не вгадувати навіть на користь складу: 1 шкура свині за 950 $ = 2 шкури кролика по 475 $,
+     а свині на складі не було (жива гра 2026-11-01) */
+  const pick = fits.length === 1 ? fits[0] : null;
   if (pick) return { kind: 'one', lines: [line(pick.i.item, pick.q, pick.i.price, have(pick.i.item))] };
   /* вибір вручну: спершу те, що є на складі; без товарів скупника — увесь склад */
   const list = items.length ? items.map(i => ({ item: i.item, price: i.price, have: have(i.item) }))
