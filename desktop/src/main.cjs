@@ -11,7 +11,7 @@ const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
 const stripCalc = require('./strip.cjs');
 const shots = require('./shots.cjs');
-const { vision } = require('./vision.cjs');
+const { vision, TICK_POLL } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
 const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
@@ -1051,7 +1051,7 @@ function startVision() {
     onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
     onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
   });
-  setInterval(() => eye.tick(), 2000);
+  setInterval(() => eye.tick(), TICK_POLL);
 }
 
 /* таймер ігрової сесії: гра запущена — сесія йде, гру закрито — записана (session.cjs) */
