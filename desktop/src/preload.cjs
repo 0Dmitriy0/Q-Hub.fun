@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('qhub', {
   histData: () => ipcRenderer.invoke('hist-data'),
   histDel: id => ipcRenderer.invoke('hist-del', id),
   histClear: () => ipcRenderer.invoke('hist-clear'),
+  txEdit: (id, set) => ipcRenderer.invoke('tx-edit', id, set),
   onHistChanged: cb => { ipcRenderer.on('hist-changed', () => cb()); },
   /* мапа Q-Hub поверх гри (specs/014): плашка відкриває, вікно мапи ховається */
   mapToggle: () => ipcRenderer.invoke('map-toggle'),

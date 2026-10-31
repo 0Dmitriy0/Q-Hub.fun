@@ -554,7 +554,7 @@ async function editTx(c, id, set = {}) {
   if (set.type === 'in' || set.type === 'out') v.type = set.type;
   if (Number(set.amount) > 0) v.amount = Math.round(Number(set.amount));
   if (typeof set.category === 'string' && set.category.trim()) v.category = set.category.trim().slice(0, 30);
-  if (typeof set.note === 'string') v.note = set.note.slice(0, 200);
+  if (typeof set.note === 'string') v.note = set.note.trim().slice(0, 200);
   if (set.account === 'cash' || set.account === 'card') v.account = set.account;
   if (t.source === 'transfer') {
     const both = {}; if (v.amount) both.amount = v.amount; if (v.note !== undefined) both.note = v.note;
@@ -1181,6 +1181,14 @@ app.whenReady().then(() => {
   ipcMain.handle('hist-data', async e => (fromBar(e) ? { items: histLoad(), tx: await barHistory().catch(() => []) } : null));
   ipcMain.handle('hist-del', (e, id) => { if (fromBar(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
   ipcMain.handle('hist-clear', e => { if (fromBar(e)) { histItems = []; histSave(); } });
+  /* олівець у записі історії: ті самі правила, що й правка помічником (editTx), рядок — лише свого персонажа */
+  ipcMain.handle('tx-edit', async (e, id, set) => {
+    if (!fromBar(e)) return null;
+    const err = await editTx(settings.character, id, set && typeof set === 'object' ? set : {});
+    if (err) return { error: err };
+    refreshCabinet(); bar?.webContents.send('hist-changed');
+    return { ok: true };
+  });
   /* мапа (specs/014, contracts/ipc-map.md): плашка відкриває, вікно мапи ховається й питає клавішу */
   const fromMap = e => mapw && e.sender === mapw.webContents;
   ipcMain.handle('map-toggle', e => (fromBar(e) ? toggleMap('bar') : null));
