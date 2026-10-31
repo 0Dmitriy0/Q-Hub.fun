@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { FAMILY, useDiscord } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
@@ -22,6 +23,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
+  const [discord] = useDiscord();
   useEffect(() => setMenu(false), [pathname]);
   useEffect(() => {
     if (!menu) return;
@@ -57,14 +59,21 @@ export default function Layout() {
         <div className="foot-in">
           <div className="foot-top">
             <div className="foot-about">
-              <Link to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></Link>
-              <p>Q-Hub — фан-проєкт гравців, не пов'язаний з адміністрацією QuantRP. Ціни вносять гравці й перевіряють одне одного. Усі торгові марки й назви належать їхнім правовласникам.</p>
+              <div className="foot-brand">
+                <Link to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></Link>
+                {/* підпис авторів (specs/033): веде на Discord Q-Hub, якщо адмін його задав (specs/037), інакше — просто текст */}
+                {discord ? <a className="foot-by" href={discord} target="_blank" rel="noreferrer" title="Discord Q-Hub">by {FAMILY}</a> : <span className="foot-by">by {FAMILY}</span>}
+              </div>
+              <p>Q-Hub — фан-проєкт гравців сім'ї {FAMILY} на QuantRP, не пов'язаний з адміністрацією сервера. Ціни вносять гравці й перевіряють одне одного. Усі торгові марки й назви належать їхнім правовласникам.</p>
             </div>
-            <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>
+            <div className="foot-act">
+              {discord && <a className="btn ghost" href={discord} target="_blank" rel="noreferrer">Discord Q-Hub<span className="vh"> (відкриється в новій вкладці)</span></a>}
+              <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>
+            </div>
           </div>
           <div className="foot-bot">
             <nav className="foot-nav" aria-label="Розділи сайту">{NAV.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}<Link to="/kabinet">Кабінет</Link></nav>
-            <small className="mono">© {new Date().getFullYear()} Q-Hub</small>
+            <small className="mono">© {new Date().getFullYear()} Q-Hub · зроблено сім'єю {FAMILY}</small>
           </div>
         </div>
       </footer>

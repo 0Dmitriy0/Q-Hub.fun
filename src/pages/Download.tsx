@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
+import { FAMILY, isDiscordInvite, useDiscord } from '../lib/brand';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
    і викладає в реліз «desktop-latest» — посилання завжди веде на останню збірку з main.
@@ -36,6 +38,10 @@ const FAQ: [string, string][] = [
 export default function Download() {
   const [d, setD] = useState(0);
   const demo = DEMO[d];
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+  const [discord, reloadDiscord] = useDiscord();
+  const [editLink, setEditLink] = useState(false);
   return (
     <div className="prog">
       {/* 1. перший екран */}
@@ -110,9 +116,39 @@ export default function Download() {
           <span className="ibub"><Icon name="spark" /></span>
           <h3>Знайшли помилку чи маєте ідею?</h3>
           <p className="muted">Напиши, що сталося і що ти робив перед цим — так помилку виправити найшвидше.</p>
-          <a className="btn ghost" href={ISSUES} target="_blank" rel="noreferrer">Повідомити на GitHub<span className="vh"> (відкриється в новій вкладці)</span></a>
+          <div className="row">
+            {discord && <a className="btn acc" href={discord} target="_blank" rel="noreferrer">Спитати в Discord Q-Hub<span className="vh"> (відкриється в новій вкладці)</span></a>}
+            <a className="btn ghost" href={ISSUES} target="_blank" rel="noreferrer">Повідомити на GitHub<span className="vh"> (відкриється в новій вкладці)</span></a>
+          </div>
+          {isAdmin && (editLink ? <DiscordForm url={discord} done={() => { setEditLink(false); reloadDiscord(); }} />
+            : <button type="button" className="btn ghost sm" onClick={() => setEditLink(true)}>{discord ? 'Змінити посилання Discord' : 'Додати посилання Discord'}</button>)}
         </div>
       </section>
+      <p className="muted p-by">Програму робить сім'я {FAMILY} на QuantRP.</p>
     </div>
+  );
+}
+
+/* посилання «Discord Q-Hub» для всього сайту й програми (specs/037) — змінює лише admin, база перевіряє ще раз */
+function DiscordForm({ url, done }: { url: string; done: () => void }) {
+  const [v, setV] = useState(url);
+  const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    const u = v.trim();
+    if (u && !isDiscordInvite(u)) return setMsg('Потрібне запрошення Discord: https://discord.gg/… або https://discord.com/invite/…');
+    setBusy(true);
+    const { error } = await supabase!.from('site_links').upsert({ id: true, discord_url: u });
+    setBusy(false);
+    if (error) return setMsg(/row-level|permission/i.test(error.message) ? 'Змінювати посилання може лише адмін.' : 'Не вдалося зберегти: ' + error.message);
+    done();
+  }
+  return (
+    <form className="form p-link" onSubmit={save} aria-label="Посилання Discord Q-Hub">
+      <label className="fld">Запрошення Discord Q-Hub (безстрокове, без ліміту)<input value={v} onChange={e => setV(e.target.value)} placeholder="https://discord.gg/…" autoFocus /></label>
+      <small className="muted">Видно в підвалі, тут, в інструкції до мапи й у програмі. Порожньо — кнопок Discord ніде немає.</small>
+      <div className="row"><button className="btn acc sm" disabled={busy}>Зберегти</button><button type="button" className="btn ghost sm" onClick={done}>Скасувати</button></div>
+      {msg && <p className="err" role="alert">{msg}</p>}
+    </form>
   );
 }

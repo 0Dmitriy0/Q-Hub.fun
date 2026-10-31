@@ -3,6 +3,7 @@ import Icon from '../components/Icon';
 import { toAccelerator } from './hotkey';
 import type { Prefs } from './Bar';
 import LOG from '../data/changelog.json';
+import { FAMILY } from '../lib/brand';
 
 /* Налаштування плашки — як у помічників для RP-серверів: ліворуч профіль, розділи й версія програми,
    праворуч картки з рядками «назва — перемикач». Зберігає головний процес (barPrefs у desktop/src/main.cjs). */
@@ -65,8 +66,8 @@ function KeyRec({ value, set }: { value: string; set: (k: string) => void }) {
     {rec ? 'Натисни комбінацію…' : <Keys k={value} />}</button>;
 }
 
-export default function Settings({ prefs, save, staff, user, version, start = 'main', unseen, onSeen }: {
-  prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; start?: SetSec; unseen: number; onSeen: () => void;
+export default function Settings({ prefs, save, staff, user, version, discord, start = 'main', unseen, onSeen }: {
+  prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; discord?: string; start?: SetSec; unseen: number; onSeen: () => void;
   user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null;
 }) {
   const [sec, setSec] = useState<SetSec>(start);
@@ -83,7 +84,9 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
         {user && <div className="sme">{user.avatar ? <img src={user.avatar} alt="" /> : <span className="bava">{(user.nick || user.name)[0]}</span>}
           <div><b>{user.nick || user.name}</b><small>Discord: {user.name}</small></div></div>}
         <nav>{NAV.map(([k, l, ico]) => <button key={k} aria-current={sec === k ? 'page' : undefined} onClick={() => setSec(k)}><Icon name={ico} size={16} />{l}{k === 'changes' && unseen > 0 && <span className="sdot" aria-label={`нових: ${unseen}`}>{unseen}</span>}</button>)}</nav>
-        {version && <small className="sver">Q-Hub v{version}</small>}
+        {/* Discord Q-Hub (specs/037) — лише коли адмін задав посилання; підпис авторів (specs/033) */}
+        {discord && <a className="sdisc" href={discord} target="_blank" rel="noreferrer">Discord Q-Hub</a>}
+        <small className="sver">{version ? `Q-Hub v${version}` : 'Q-Hub'} · by {FAMILY}</small>
       </aside>
       <div className="sbody">
         <h3>{title}</h3>
@@ -153,6 +156,7 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
             <h4>{g}</h4>
             <div className="scard">{list.map(([q, a]) => <details key={q}><summary>{q}<Icon name="chev" size={15} /></summary><p>{a}</p></details>)}</div>
           </section>))}
+        {sec === 'faq' && discord && <p className="sask">Не знайшов відповіді — <a href={discord} target="_blank" rel="noreferrer">спитай у Discord Q-Hub</a>.</p>}
       </div>
     </div>
   );
