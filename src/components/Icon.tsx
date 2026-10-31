@@ -35,6 +35,8 @@ const P: Record<string, string> = {
   x: 'M6 6l12 12M18 6L6 18',
   edit: 'M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4',
   chev: 'M6 9l6 6 6-6',
+  ext: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+  alert: 'M12 3l10 18H2zM12 10v5M12 18h.01',
   spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'
 };
 
