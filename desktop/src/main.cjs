@@ -691,15 +691,26 @@ async function refreshRole() {
     myRole = data?.role || 'user';
   }
   registerPinKey(prefs().pinKey);
-  if (STAFF.includes(myRole)) locatorUp();
 }
 
 /* де гравець на великій карті: mapmatch.cjs в окремому потоці; еталон — з сайту (mapref.cjs). Кожна спроба — у pin.log */
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');   // потоки й tesseract читають з диска, не з архіву
 const pinLog = m => { try { fs.appendFileSync(path.join(dir(), 'pin.log'), `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
 let locator = null, locatorReady = false, scaleOcr = null, lid = 0, locatorInit = null;
-/* локатор потрібен редакторам (F9) і будь-кому для «Де я?» на мапі (specs/014 FR-009) — запускається раз, за першої потреби */
+/* локатор потрібен редакторам (F9) і будь-кому для «Де я?» на мапі (specs/014 FR-009) — запускається за першої потреби.
+   Еталон із кешем масштабів займає ~85 МБ, а F9 і «Де я?» тиснуть рідко: після LOCATOR_IDLE без них потік і OCR шкали
+   закриваються, наступне натискання запускає їх знову (~1–2 с довше) */
+const LOCATOR_IDLE = 10 * 60e3;
+let locatorIdle = null;
 const locatorUp = () => (locatorInit ??= startLocator());
+function stopLocator() {
+  locator?.terminate(); scaleOcr?.terminate().catch(() => {});
+  locator = null; locatorReady = false; locatorInit = null; scaleOcr = null;
+  for (const f of pending.values()) f({ error: 'stopped' });
+  pending.clear();
+  pinLog('locator stopped (idle)');
+}
+const locatorUsed = () => { clearTimeout(locatorIdle); locatorIdle = setTimeout(stopLocator, LOCATOR_IDLE); };
 const pending = new Map();
 function callLocator(msg, transfer = [], ms = 6000) {
   return new Promise(res => {
@@ -734,6 +745,7 @@ async function readScale(img, bar) {
 const WHY = { no_map: 'не видно шкали великої карти', zoom_in: 'карта надто віддалена — наблизьте до 50–1500 м',
   zoom_out: 'карта надто наближена — віддаліть до 50–1500 м', unsure: 'не впевнений у місці', no_ref: 'мапа ще завантажується', error: 'помилка розпізнавання' };
 async function locatePin(img) {
+  locatorUsed();
   if (!locator || !locatorReady) return { kind: 'no_ref' };
   const bmp = img.toBitmap(), { width, height } = img.getSize(), frame = { width, height, data: bmp };
   const bar = mapmatch.scaleBar(frame);
@@ -784,6 +796,7 @@ async function pinShot() {
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
   bar.webContents.send('pin', { text: 'Шукаю точку на карті…' });
+  await locatorUp();
   let loc;
   try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
   pinLog('F9 ' + JSON.stringify(loc));

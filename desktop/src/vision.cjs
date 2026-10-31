@@ -11,6 +11,7 @@ const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
 const { OPEN_GAP, pricePicker, coverage, textLeft, parseChange, changePicker, changeRegion, headerBuyer } = require('./pricescan.cjs');
+const { ocrRelease } = require('./ocridle.cjs');
 
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
@@ -48,7 +49,8 @@ function toastRegions(w, h) {
 /* deps: nativeImage, capture() → NativeImage|null, active() → чи гра йде й зір увімкнено, catalog() → [{id,name,buyer_id}],
    onRecords(recs), onBaseline({cash,bank}), onPrices([{buyer_id,item_id,price}]), logFile */
 function vision(deps) {
-  let digits = null, text = null, busy = false;
+  /* lists — окремий рушій для великих кадрів списку скупника: його пам'ять росте найбільше, тож він закривається сам (ocridle.cjs) */
+  let digits = null, text = null, lists = null, listsAt = 0, inactiveSince = 0, busy = false;
   const feed = hud.watcher();
   let baselineSent = false, place = null, toast = null, lastScene = 0;
   const pickPrices = pricePicker();
@@ -71,10 +73,12 @@ function vision(deps) {
   const read = async (w, img) => (await w.recognize(img.toPNG())).data.text;
   /* рядки з висотою й колонкою для розбору скупника (як readLines() на сайті): дві половини екрана, збільшені вдвічі */
   async function lines(img) {
+    if (!lists) lists = await createWorker(['ukr', 'eng'], 1, { langPath: OCR, gzip: false, cacheMethod: 'none' });
+    listsAt = Date.now();
     const { width, height } = img.getSize(), out = [], half = Math.floor(width / 2);
     for (let c = 0; c < 2; c++) {
       const part = whiteOnly(img.crop({ x: c * half, y: 0, width: half, height }), deps.nativeImage).resize({ width: half * 2, quality: 'best' });
-      const { data } = await text.recognize(part.toPNG(), {}, { blocks: true });
+      const { data } = await lists.recognize(part.toPNG(), {}, { blocks: true });
       /* h — висота рядка: обрізаний краєм списку рядок нижчий за решту, parseShot його відкидає (specs/024, R5) */
       for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0, x: l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, col: c });
     }
@@ -83,8 +87,26 @@ function vision(deps) {
     return out;
   }
 
+  /* звільнити пам'ять рушіїв, які зараз не потрібні (ocridle.cjs) */
+  async function release(active) {
+    const now = Date.now();
+    if (active) inactiveSince = 0; else if (!inactiveSince) inactiveSince = now;
+    const what = ocrRelease({ active, inactiveSince, listsAt, hasAny: !!(digits || text || lists), hasLists: !!lists, now });
+    if (what === 'all') { await stop(); log('ocr released (idle)'); }
+    else if (what === 'lists') { const w = lists; lists = null; await w.terminate().catch(() => {}); }
+  }
+  async function stop() {
+    const ws = [digits, text, lists];
+    digits = text = lists = null;
+    await Promise.all(ws.map(w => w?.terminate().catch(() => {})));
+  }
+
   async function tick() {
-    if (busy || !deps.active()) return;
+    if (busy) return;
+    const active = deps.active();
+    busy = true;
+    try { await release(active); } finally { busy = false; }
+    if (!active) return;
     busy = true;
     try {
       const img = await deps.capture();
@@ -264,7 +286,7 @@ function vision(deps) {
     await deps.onNextChange(buyer, at);
   }
 
-  return { tick, stop: async () => { await digits?.terminate(); await text?.terminate(); digits = text = null; } };
+  return { tick, stop };
 }
 
 module.exports = { vision, toastRegions, whiteOnly };
