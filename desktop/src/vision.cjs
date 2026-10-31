@@ -18,6 +18,7 @@ const { ocrRelease } = require('./ocridle.cjs');
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const TICK_EVERY = 2000, TICK_POLL = 250;   // кадр гри — раз на 2 с; вікно скупника — кадр за кадром
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
+const SALE_PRICES_TTL = 10 * 60e3;   // ціни з вікна скупника годяться для списання продажу 10 хв
 const SCENE_TTL = 120e3;        // скільки після меню зміна грошей ще належить йому
 const TOAST_TTL = 20e3;         // скільки після значка зміни пам'ятати текст підтвердження
 const REREAD_AFTER = 3;         // ціна без назви в стількох кадрах — перечитати назву окремо (T030)
@@ -61,6 +62,7 @@ function vision(deps) {
   const unknownSeen = new Set();
   const reread = { at: -Infinity, seen: new Map(), named: new Set(), prices: new Set() };   // ціни без назви за відкриття: скільки кадрів і що дало перечитування (T030)
   let lastPricesAt = -Infinity;  // останній кадр, де впізнано скупника
+  let lastRead = null;           // { buyer, at, prices: { item_id → price } } — ціни останнього відкриття вікна для списання продажу (specs/030)
   const pickChange = changePicker();
   const quietAt = new Map();
   const log = m => { try { fs.appendFileSync(deps.logFile, `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
@@ -146,6 +148,9 @@ function vision(deps) {
       if (acts.length) {
         const sc = place && now - place.at < SCENE_TTL ? place : null, ts = toast && now - toast.at < TOAST_TTL ? toast.text : '';
         const recs = scenes.records(acts, sc, ts);
+        /* продаж скупнику — з тим, кому й за якими цінами: плашка запропонує списати товар зі складу (specs/030, research R2) */
+        if (sc?.kind === 'buyer' && lastRead && now - lastRead.at <= SALE_PRICES_TTL)
+          for (const r of recs) if (r.category === 'Продаж фарму') Object.assign(r, { buyer_id: lastRead.buyer, prices: { ...lastRead.prices } });
         log('records ' + JSON.stringify(recs));
         toast = null;
         await deps.onRecords(recs);
@@ -194,6 +199,10 @@ function vision(deps) {
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
       .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
     rows.push(...await rereadNames(img, ls, all, buyer, rows, now));
+    /* ціни відкриття накопичуються з кадрів; інший скупник чи стара пам'ять — з нуля */
+    if (lastRead?.buyer !== buyer || now - lastRead.at > SALE_PRICES_TTL) lastRead = { buyer, at: now, prices: {} };
+    lastRead.at = now;
+    for (const r of rows) lastRead.prices[r.item_id] = r.price;
     await scanChange(img, buyer, now);
     const fresh = pickPrices(buyer, rows, now);
     /* та сама ціна поза межами, впевнено прочитана тричі: межі на сайті, мабуть, хибні — адміну «перевір межі» (T031) */

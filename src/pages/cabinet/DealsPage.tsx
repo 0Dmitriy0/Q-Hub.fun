@@ -46,7 +46,12 @@ export default function DealsPage({ c }: { c: Character }) {
   async function del(d: DealRow) {
     if (sure !== d.id) { setSure(d.id); setTimeout(() => setSure(s => (s === d.id ? '' : s)), 3000); return; }
     await supabase!.from('deals').delete().eq('id', d.id);
-    if (d.tx_id && !rows.some(x => x.id !== d.id && x.tx_id === d.tx_id)) await supabase!.from('transactions').delete().eq('id', d.tx_id);
+    /* запис обліку видаляється лише тоді, коли його створила сама угода: угода списання (specs/030) прив'язана до автозапису
+       «Продаж фарму», і її видалення не має стирати гроші, що справді надійшли */
+    if (d.tx_id && !rows.some(x => x.id !== d.id && x.tx_id === d.tx_id)) {
+      const { data: t } = await supabase!.from('transactions').select('source').eq('id', d.tx_id).maybeSingle();
+      if (t?.source === 'deal') await supabase!.from('transactions').delete().eq('id', d.tx_id);
+    }
     setSure(''); reload();
   }
 

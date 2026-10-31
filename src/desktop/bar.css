@@ -292,3 +292,11 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .mwhere-list b { color: var(--muted); font-size: 12px; }
 .mwhere-you { display: block; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #fff 0 5px, var(--accent) 6px 9px, rgba(255, 106, 31, .25) 10px); box-shadow: 0 0 0 2px #fff; }
 .mwin .mhud-r { align-items: flex-start; }
+
+/* списання продажу скупнику (specs/030): над рядком, у темі плашки */
+.bsale { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: rgba(255, 107, 0, .07); font-size: 14px; }
+.bsale-t { flex: 1; min-width: 220px; color: var(--fg); }
+.bsale select, .bsale-n { background: var(--surface2); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; font: 600 13px var(--sans); padding: 5px 8px; }
+.bsale select { max-width: 260px; }
+.bsale-n { width: 80px; }
+.bsale small.bad { flex-basis: 100%; order: 9; }

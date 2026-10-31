@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('qhub', {
   quickSize: (h, w) => ipcRenderer.invoke('quick-size', h, w),
   quickHide: () => ipcRenderer.invoke('quick-hide'),
   barData: () => ipcRenderer.invoke('bar-data'),
+  /* списання продажу скупнику (specs/030): пропозиції приходять у bar-data й подією sale-new */
+  saleConfirm: (txId, lines) => ipcRenderer.invoke('sale-confirm', txId, lines),
+  saleDecline: txId => ipcRenderer.invoke('sale-decline', txId),
+  saleUndo: txId => ipcRenderer.invoke('sale-undo', txId),
+  onSaleNew: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('sale-new', f); return () => ipcRenderer.removeListener('sale-new', f); },
   rulesData: () => ipcRenderer.invoke('rules-data'),
   onRulesChanged: cb => { ipcRenderer.on('rules-changed', () => cb()); },
   /* історія — окрема плашка: плашка пише й відкриває її, вікно історії читає й повертає вибране */

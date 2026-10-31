@@ -15,6 +15,7 @@ const { vision, TICK_POLL } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
 const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
+const saleq = require('./salequeue.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
 const { createRules } = require('./rules.cjs');
@@ -370,9 +371,14 @@ async function showBar() {
   pullRules();
 }
 
+/* підказка іконки: гра чи клавіша плашки, плюс продажі, що чекають списання (specs/030 FR-010) */
+function trayTip() {
+  const n = sales.pending().length;
+  tray?.setToolTip((settings.session ? 'Q-Hub — гра йде, сесія рахується' : `Q-Hub — ${prefs().hotkey}: швидкий запис`) + (n ? ` · списати продаж: ${n}` : ''));
+}
 function createTray() {
   tray = new Tray(path.join(__dirname, 'icon.png'));
-  tray.setToolTip(`Q-Hub — ${prefs().hotkey}: швидкий запис`);
+  trayTip();
   trayMenu();
   tray.on('click', showMain);
 }
@@ -544,7 +550,8 @@ async function deleteTx(c, id) {
   const t = await txRow(c, id);
   if (!t) return 'Запис уже видалено або він не твій.';
   if (t.source === 'transfer') return (await sb.from('transactions').delete().eq('character_id', c).eq('source', 'transfer').eq('ts', t.ts)).error ? 'Не вдалося видалити переказ.' : null;
-  if (t.source === 'deal') { const { error } = await sb.from('deals').delete().eq('character_id', c).eq('tx_id', id); if (error) return 'Не вдалося видалити угоду.'; }
+  /* угоди запису — разом з ним: угода «Угод» (source deal) і списання автоматичного продажу (specs/030) */
+  { const { error } = await sb.from('deals').delete().eq('character_id', c).eq('tx_id', id); if (error) return 'Не вдалося видалити угоду.'; }
   return (await sb.from('transactions').delete().eq('id', id)).error ? 'Не вдалося видалити запис.' : null;
 }
 async function editTx(c, id, set = {}) {
@@ -616,6 +623,7 @@ async function barPrices() {
   for (const p of pend) { const k = p.buyer_id + ':' + p.item_id; if (!top.has(k) || top.get(k).votes < p.votes) top.set(k, { price: Number(p.price), votes: p.votes, need: p.need }); }
   pricesCache = (data || []).filter(r => r.buyers && r.items).map(r => ({
     pend: top.get(r.buyers.id + ':' + r.item_id),
+    buyerId: r.buyers.id, itemId: r.item_id,
     item: r.items.name, unit: r.items.unit || 'шт', icon: r.items.image_url || '', sub: r.items.sub || '', buyer: r.buyers.name, buyerIcon: r.buyers.image_url || '',
     price: Number(r.price) || 0, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, at: r.price_at,
   }));
@@ -633,7 +641,7 @@ async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
   const [prices, stock] = await Promise.all([barPrices(), barStock(s.character)]);
-  return { ...s, prices, stock, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion() };
+  return { ...s, prices, stock, sales: await Promise.all(sales.pending().map(saleView)), prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion() };
 }
 async function barHistory() {
   const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(50);
@@ -873,6 +881,9 @@ function startDrafts() {
   refreshRole().catch(() => {});
   setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
   setInterval(() => { if (draftBox().size()) draftBox().flush().catch(() => {}); }, 30e3);
+  /* угоди списання, що не дійшли без зв'язку (specs/030) — при старті й кожні 30 с */
+  const sendSales = () => { if (salesOut().size()) salesOut().flush(sendDeals).then(() => refreshCabinet()).catch(() => {}); };
+  sendSales(); setInterval(sendSales, 30e3);
 }
 
 /* Alt+S: навчальний знімок екрана гри → плашка з прев'ю й кнопками «що на ньому» (shots.cjs) */
@@ -992,10 +1003,56 @@ async function captureFrame() {
 async function autoRecords(recs) {
   const c = settings.character;
   for (const r of recs) {
-    if (r.kind === 'transfer') await insertTransfer(c, r.from, r.to, r.amount);
-    else await sb.from('transactions').insert({ character_id: c, type: r.type, amount: r.amount, category: r.category, note: ('Авто · ' + r.note).slice(0, 200), source: 'desktop', account: r.account });
+    if (r.kind === 'transfer') { await insertTransfer(c, r.from, r.to, r.amount); continue; }
+    const { data } = await sb.from('transactions').insert({ character_id: c, type: r.type, amount: r.amount, category: r.category, note: ('Авто · ' + r.note).slice(0, 200), source: 'desktop', account: r.account }).select('id').single();
+    /* продаж скупнику → пропозиція списати товар зі складу; без id запису (немає зв'язку) пропозиції немає (specs/030) */
+    if (data?.id && r.type === 'in' && r.category === 'Продаж фарму') addSale({ txId: data.id, character: c, amount: r.amount, buyerId: r.buyer_id || null, prices: r.prices || null, at: Date.now() });
   }
   refreshCabinet();
+}
+
+/* ---------- списання продажу скупнику (specs/030, contracts/bar-sale.md) ---------- */
+const sales = saleq.saleQueue();
+let salesOutQ = null;
+const salesOut = () => (salesOutQ ??= saleq.outQueue(path.join(dir(), 'sales-out.json')));
+function addSale(sale) {
+  if (!sales.add(sale)) return;
+  trayTip();
+  if (bar?.isVisible()) saleView(sale).then(v => bar?.webContents.send('sale-new', v), () => {});
+}
+/* для плашки: назва скупника й товари з цінами — з вікна, що щойно читалось, інакше з сайту (research R2) */
+async function saleView(s) {
+  const list = s.buyerId ? (await barPrices()).filter(p => p.buyerId === s.buyerId) : [];
+  const items = list.map(p => ({ item: p.item, unit: p.unit, price: Number(s.prices?.[p.itemId]) || p.price }));
+  return { txId: s.txId, amount: s.amount, buyerId: s.buyerId, buyer: list[0]?.buyer || null, items, at: s.at };
+}
+const sendDeals = async rows => {
+  const { error } = await sb.from('deals').upsert(rows, { onConflict: 'character_id,external_id', ignoreDuplicates: true });
+  return error ? 'retry' : 'ok';
+};
+async function saleConfirm(txId, lines) {
+  const s = sales.get(txId);
+  if (!s || sales.state(txId) !== 'pending') return 'Пропозиція вже неактуальна.';
+  const bad = saleq.validate(lines, s.amount);
+  if (bad) return bad;
+  const rows = saleq.dealRows(txId, lines, s.at, s.character);
+  sales.confirm(txId);
+  /* спершу на диск, потім у базу: без зв'язку угоди підуть пізніше, external_id не дасть дубля (принцип V) */
+  salesOut().put(txId, rows);
+  await salesOut().flush(sendDeals).catch(() => {});
+  trayTip(); refreshCabinet(); stockAt = 0;
+  return null;
+}
+async function saleUndo(txId) {
+  const s = sales.get(txId);
+  if (!s || !sales.undo(txId)) return 'Скасувати вже не можна — видали угоду в «Угодах».';
+  sales.add(s);   // знову чекає: гравець скасував вгадане, а продаж був — можна обрати вручну
+  if (!salesOut().drop(txId)) {
+    const { error } = await sb.from('deals').delete().eq('character_id', s.character).eq('tx_id', txId).like('external_id', `sale:${txId}:%`);
+    if (error) { sales.decline(txId); trayTip(); return 'Немає зв\'язку — скасуй у «Угодах».'; }
+  }
+  trayTip(); refreshCabinet(); stockAt = 0;
+  return null;
 }
 /* при вході в гру облік має збігатися з HUD: різниця — коригування; картку ще не розділено — розділити, як ручна звірка */
 async function autoBaseline({ cash, bank }) {
@@ -1075,7 +1132,7 @@ function startSessionTimer() {
     },
     load: () => settings.session || null,
     save: v => { settings.session = v; saveSettings(); },
-    changed: () => { tray?.setToolTip(settings.session ? 'Q-Hub — гра йде, сесія рахується' : `Q-Hub — ${prefs().hotkey}: швидкий запис`); refreshCabinet(); },
+    changed: () => { trayTip(); refreshCabinet(); },
   });
   const run = () => tick().catch(() => {});   // мережа впала — наступна спроба за 10 с
   run(); setInterval(run, 10e3);
@@ -1198,6 +1255,10 @@ app.whenReady().then(() => {
     bar.setBounds({ x: Math.round(b.x + (b.width - w) / 2), y: prefs().position === 'bottom' ? b.y + b.height - h : b.y, width: w, height: h });
   });
   ipcMain.handle('bar-data', e => (fromBar(e) ? barData() : null));
+  /* списання продажу скупнику (specs/030, contracts/bar-sale.md) */
+  ipcMain.handle('sale-confirm', (e, txId, lines) => (fromBar(e) ? saleConfirm(String(txId), lines) : null));
+  ipcMain.handle('sale-decline', (e, txId) => { if (fromBar(e)) { sales.decline(String(txId)); trayTip(); } return null; });
+  ipcMain.handle('sale-undo', (e, txId) => (fromBar(e) ? saleUndo(String(txId)) : null));
   /* правила для пошуку плашки: знімок rules-sync з кешу; null — плашка бере вбудовану копію (specs/010 US4) */
   ipcMain.handle('rules-data', e => (fromBar(e) ? rulesSnap().current() : null));
   /* історія: плашка пише пошуки й відповіді ШІ, вікно історії читає їх разом із записами й повертає вибране в плашку */

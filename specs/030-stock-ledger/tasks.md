@@ -9,15 +9,15 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Звірити гілку `030-stock-ledger` з `main` і переконатися, що `npx.cmd vitest run` і `cd desktop && npm.cmd test` зелені до змін; не запускати `tsc -b` (кладе `.js` поруч з `.ts`) — лише `npx.cmd tsc --noEmit`
+- [x] T001 Звірити гілку `030-stock-ledger` з `main` і переконатися, що `npx.cmd vitest run` і `cd desktop && npm.cmd test` зелені до змін; не запускати `tsc -b` (кладе `.js` поруч з `.ts`) — лише `npx.cmd tsc --noEmit`
 
 ---
 
 ## Phase 2: Foundational (блокує US1)
 
-- [ ] T002 Виправити видалення угоди в `src/pages/cabinet/DealsPage.tsx` (рядок ~49): запис `transactions` за `d.tx_id` видаляти лише тоді, коли його `source = 'deal'` (прочитати `source` перед видаленням); інакше запис про гроші лишається (research R5, FR-003a)
-- [ ] T003 У `desktop/src/main.cjs` `autoRecords`: вставка «tx» повертає `id` (`.insert(...).select('id').single()`); функція повертає масив `{ rec, txId }` для записів з `type: 'in'`, без зміни поведінки для решти
-- [ ] T003a Видалення запису обліку видаляє прив'язані угоди (FR-003b): `src/pages/cabinet/LedgerPage.tsx` `del` і `deleteTx` у `desktop/src/main.cjs` — спершу `deals.delete().eq('tx_id', id)`, потім запис
+- [x] T002 Виправити видалення угоди в `src/pages/cabinet/DealsPage.tsx` (рядок ~49): запис `transactions` за `d.tx_id` видаляти лише тоді, коли його `source = 'deal'` (прочитати `source` перед видаленням); інакше запис про гроші лишається (research R5, FR-003a)
+- [x] T003 У `desktop/src/main.cjs` `autoRecords`: вставка «tx» повертає `id` (`.insert(...).select('id').single()`); функція повертає масив `{ rec, txId }` для записів з `type: 'in'`, без зміни поведінки для решти
+- [x] T003a Видалення запису обліку видаляє прив'язані угоди (FR-003b): `src/pages/cabinet/LedgerPage.tsx` `del` і `deleteTx` у `desktop/src/main.cjs` — спершу `deals.delete().eq('tx_id', id)`, потім запис
 
 **Checkpoint**: облік пишеться як раніше; видалення угоди з `tx_id` на автозапис не стирає гроші; видалення запису не лишає угод-сиріт.
 
@@ -31,7 +31,7 @@
 
 ### Tests
 
-- [ ] T004 [P] [US1] `src/lib/saleGuess.test.ts`:
+- [x] T004 [P] [US1] `src/lib/saleGuess.test.ts`:
   - один товар без остачі → `{ kind: 'one' }`;
   - дві кратні ціни (10 × 475 = 19 × 250) → `manual`;
   - товар зі складу має пріоритет над товаром без складу;
@@ -40,7 +40,7 @@
   - товар без складу → `farm = qty`;
   - кг: 12,5 кг × 80 = 1 000 → `qty 12.5`;
   - сума не ділиться → `manual`, спершу товари зі складу.
-- [ ] T005 [P] [US1] `desktop/src/salequeue.test.cjs`: черга пропозицій.
+- [x] T005 [P] [US1] `desktop/src/salequeue.test.cjs`: черга пропозицій.
   - `add` за `txId` без дублів;
   - TTL 10 хв → `expired`;
   - `confirm` → `undo` дозволено ≤ 10 с, після — відмова;
@@ -50,31 +50,31 @@
 
 ### Implementation
 
-- [ ] T006 [P] [US1] `src/lib/saleGuess.ts`: `saleGuess(amount, items: { item; price }[], stock: Record<string, number>)` → `{ kind: 'one' | 'all', lines: { item; qty; price; farm }[] } | { kind: 'manual', items: { item; price; have }[] }` за research R3 (поділ без остачі; для кг — точність 0,01)
-- [ ] T007 [P] [US1] `desktop/src/salequeue.cjs`: черга пропозицій.
+- [x] T006 [P] [US1] `src/lib/saleGuess.ts`: `saleGuess(amount, items: { item; price }[], stock: Record<string, number>)` → `{ kind: 'one' | 'all', lines: { item; qty; price; farm }[] } | { kind: 'manual', items: { item; price; have }[] }` за research R3 (поділ без остачі; для кг — точність 0,01)
+- [x] T007 [P] [US1] `desktop/src/salequeue.cjs`: черга пропозицій.
   - Стан `pending → confirmed | declined | expired (10 хв)`, `confirmed → undone` ≤ 10 с.
   - `validate(lines, amount)` за contracts/bar-sale.md.
   - Модуль без Electron, щоб тест не тягнув програму.
-- [ ] T008 [US1] `desktop/src/vision.cjs`: ціни скупника для пропозиції.
+- [x] T008 [US1] `desktop/src/vision.cjs`: ціни скупника для пропозиції.
   - Після `scanPrices` зберігати `lastRead[buyer] = { at, prices: { item_id → price } }` з розпізнаних рядків (`rows`).
   - До записів з `category === 'Продаж фарму'` додавати `buyer_id` і `prices`, якщо `place.kind === 'buyer'` і вікно читалось ≤ 10 хв тому (research R2).
-- [ ] T009 [US1] `desktop/src/main.cjs`: продаж → пропозиція.
+- [x] T009 [US1] `desktop/src/main.cjs`: продаж → пропозиція.
   - `autoRecords` для «Продаж фарму» з `txId` кладе пропозицію в чергу (`salequeue`).
   - `bar-data` віддає `sales` (усі `pending`, з назвою скупника).
   - Якщо плашка відкрита — подія `sale-new`.
-- [ ] T010 [US1] `desktop/src/main.cjs`: IPC з contracts/bar-sale.md, лише `fromBar(e)`.
+- [x] T010 [US1] `desktop/src/main.cjs`: IPC з contracts/bar-sale.md, лише `fromBar(e)`.
   - `sale-confirm(txId, lines)`: перевірка → `dealRows` → `upsert` з `onConflict: 'character_id,external_id'`, `ignoreDuplicates`; помилка мережі → у чергу `sales-out.json` (відправка кожні 30 с і при старті), пропозиція `confirmed`.
   - `sale-decline(txId)`.
   - `sale-undo(txId)`: ≤ 10 с; ще в черзі — прибрати з черги; уже відправлено — видалити угоди з `tx_id = txId` і `external_id like 'sale:<txId>:%'`; запис обліку не чіпати.
   - Трей (FR-010): кількість `pending` у підказці іконки, коли плашка закрита.
-- [ ] T011 [US1] `desktop/src/preload.cjs`: `saleConfirm`, `saleDecline`, `saleUndo`, підписка `onSaleNew`
-- [ ] T012 [US1] `src/desktop/SaleCard.tsx` + підключення в `src/desktop/Bar.tsx` (як `UpdateBanner`).
+- [x] T011 [US1] `desktop/src/preload.cjs`: `saleConfirm`, `saleDecline`, `saleUndo`, підписка `onSaleNew`
+- [x] T012 [US1] `src/desktop/SaleCard.tsx` + підключення в `src/desktop/Bar.tsx` (як `UpdateBanner`).
   - **Один товар чи «усе»**: картка над рядком «Продав 10 × Шкура оленя по 475 $» або «Нафармив і продав …», Enter — так, Esc — ні.
   - **`manual`**: вибір товару (спершу «є на складі») і поле кількості; ціна = `round(amount / qty)`.
   - **Після Enter**: «Скасувати» 10 с.
   - Кандидат рахує `saleGuess`: ціни з `sale.prices`, інакше з `barPrices` цього скупника; склад — `barStock`.
-- [ ] T013 [US1] `src/desktop/bar.css`: стилі `SaleCard` у темі плашки
-- [ ] T014 [US1] `src/data/changelog.json`: запис дня (новий id, якщо попередній уже в `main`) — «added»: продаж скупнику пропонує списати товар зі складу
+- [x] T013 [US1] `src/desktop/bar.css`: стилі `SaleCard` у темі плашки
+- [x] T014 [US1] `src/data/changelog.json`: запис дня (новий id, якщо попередній уже в `main`) — «added»: продаж скупнику пропонує списати товар зі складу
 
 **Checkpoint**: quickstart 1–5 проходять; облік не задвоюється.
 

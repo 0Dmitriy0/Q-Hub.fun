@@ -10,10 +10,12 @@
 | `sale-new` (подія) | `Sale` | автооблік записав продаж, плашка відкрита |
 
 ```ts
-interface Sale { txId: string; amount: number; buyerId: string | null; buyer: string | null; prices: Record<number, number> | null; at: number }
+interface Sale { txId: string; amount: number; buyerId: string | null; buyer: string | null; items: { item: string; unit: string; price: number }[]; at: number }
 ```
 
-Плашка сама рахує кандидата: `saleGuess(sale, catalog, stock)`.
+`items` — товари цього скупника: ціна з вікна, що щойно читалось, інакше з сайту (main зводить їх у `saleView`). Скупник не впізнаний — `items: []`, і плашка пропонує вибір зі складу.
+
+Плашка сама рахує кандидата: `saleGuess(sale.amount, sale.items, stock)`.
 
 ## плашка → main
 

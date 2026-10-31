@@ -14,6 +14,7 @@ import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isSellQuestion, sellAdvice, type Sell } from './sellAdvice';
+import SaleCard, { type Sale } from './SaleCard';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -37,7 +38,7 @@ const BAR_WIDE = 1120;
 type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
   | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; prefs: Prefs; staff?: boolean; version?: string }
+interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; sales?: Sale[]; prefs: Prefs; staff?: boolean; version?: string }
 interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[]; places?: PlaceHit[] }
 type Res = { ok?: boolean; error?: string; character?: string };
 interface BarApi {
@@ -53,6 +54,7 @@ interface BarApi {
   onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
+  onSaleNew?(cb: (s: Sale) => void): () => void;
 }
 interface Shot { name: string; preview: string; black: boolean }
 interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null }
@@ -137,8 +139,10 @@ export default function Bar() {
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
+    /* автооблік записав продаж скупнику, поки плашка відкрита, — пропозиція списання одразу (specs/030) */
+    api.onSaleNew?.(() => load());
     loadPlaces();
-    const pullRules = () => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
+    const pullRules =() => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
     pullRules(); api.onRulesChanged?.(pullRules);
   }, [load]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -253,6 +257,7 @@ export default function Bar() {
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
       {prefs?.tab !== false && <NextEvent />}
       <div className="bbox">
+        {d?.sales && <SaleCard sales={d.sales} stock={d.stock} changed={load} />}
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
           {/* ‹ › — лише коли відкрита головна з кабінетом */}
