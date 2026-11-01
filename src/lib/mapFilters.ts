@@ -6,6 +6,8 @@ import type { MapCategory } from './mapData';
 export const DEFAULT_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги', 'Заробіток']);
 /* до specs/020 зберігались лише перемкнуті категорії, решта бралась звідси — у кого вже є збережене, «Заробіток» сам не вмикається */
 const SAVED_DEFAULT_GROUPS = new Set(['Магазини', 'Структури', 'Транспорт', 'Розваги']);
+/* окремі категорії, увімкнені за замовчуванням усім, навіть з уже збереженими фільтрами (кільцева траса — новий шар) */
+const DEFAULT_ON = new Set(['ring']);
 
 export interface Filters {
   only: string | null;              // ?show=<id>[,<id>…]: тимчасовий вид, не зберігається (банер Хелловіну — привиди й гарбузи)
@@ -19,7 +21,7 @@ export const onlyIds = (only: string) => only.split(',').map(s => s.trim()).filt
 
 export const isVisible = (c: Cat, { only, on, saved }: Filters) =>
   only ? onlyIds(only).includes(c.id) || c.id === 'names'
-    : on[c.id] ?? saved[c.id] ?? (Object.keys(saved).length ? SAVED_DEFAULT_GROUPS : DEFAULT_GROUPS).has(c.grp);
+    : on[c.id] ?? saved[c.id] ?? (DEFAULT_ON.has(c.id) || (Object.keys(saved).length ? SAVED_DEFAULT_GROUPS : DEFAULT_GROUPS).has(c.grp));
 
 /* набір для збереження після перемикання — усе, що гравець бачить зараз (у виді «лише <id>» — саме це, а не старе збережене) */
 export function toggled(cats: Cat[], f: Filters, ids: string[], v: boolean): Record<string, boolean> {

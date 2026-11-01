@@ -13,6 +13,7 @@ import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
+import RING from '../data/ringRoad.json';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
@@ -38,7 +39,9 @@ const LABEL_ZOOM = 5;
 const HOME: [number, number] = [0, -800];
 const HOME_Z = 3;
 /* швидкі перемикачі шарів у верхній панелі (як «Зони & GZ» у макеті) */
-const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names', 'Назви']];
+/* товщина кільцевої траси: ~14 м дороги в пікселях поточного наближення, але не тонша за 2,5 px на дальньому */
+const ringWeight = (z: number) => Math.max(2.5, 14 * PX_PER_M * 2 ** (z - ZMAX));
+const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names', 'Назви'], ['ring', 'Кільцева']];
 
 /* embed — мапа у вікні програми (specs/014): лише перегляд — без інструментів адміна, «Скріну», «Мапи для гри» й чернеток;
    кадр — у localStorage (адреси немає), посилання на сторінки сайту — onLink (програма відкриває їх у браузері) */
@@ -50,6 +53,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layers = useRef<Record<string, L.LayerGroup>>({});
+  const ringLine = useRef<L.Polyline | null>(null);
   const markers = useRef<Record<string, L.Marker>>({});
   const pickRef = useRef(false);
   const pickMarker = useRef<L.CircleMarker | null>(null);
@@ -145,7 +149,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }, [game]);
   const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
   const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
-  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas]);
+  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length, ring: 1 }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas]);
   const today = kyivDay(Date.now());   // для «з 23.10 до 12.11» під назвою категорії-івенту
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
@@ -208,6 +212,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       setZoom(m.getZoom());
     };
     m.on('zoomend', labels); labels();
+    m.on('zoomend', () => ringLine.current?.setStyle({ weight: ringWeight(m.getZoom()) }));
     m.on('moveend', () => { const c = m.project(m.getCenter(), ZMAX); const [x, y] = toGame(c.x, c.y); if (embed) saveView(x, y, m.getZoom()); else history.replaceState(null, '', makeHash(x, y, Math.round(m.getZoom()))); });
     map.current = m;
     return () => { m.remove(); map.current = null; layers.current = {}; markers.current = {}; };
@@ -248,6 +253,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     }
     /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
+    /* кільцева траса: лінія поверх доріг (під назвами й мітками), товщина — як у справжньої дороги, від наближення (ringWeight) */
+    ringLine.current = layers.current.ring ? L.polyline(RING.map(([x, y]) => ll(x, y)), { color: '#ffd24a', weight: ringWeight(m.getZoom()), opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(layers.current.ring) : null;
     if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
     /* назви — трикутники тексту Hydra частиною мапи, як у грі (namesLayer) */
     if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }

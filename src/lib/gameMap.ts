@@ -414,7 +414,7 @@ async function brand(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.fillText(sub, tx, y + pad + logo - small * 0.15);
 }
 
-export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
+export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number; ring?: [number, number][] }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
   const size = opt.size ?? 1024, areas = opt.areas ?? [];
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
@@ -425,6 +425,11 @@ export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: Gam
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
   ctx.fillStyle = OCEAN; ctx.fillRect(0, 0, W, H); ctx.drawImage(map, 0, 0);
+  /* кільцева траса, як на мапі сайту: жовта лінія завширшки ~14 м */
+  if (opt.ring?.length) {
+    ctx.beginPath(); opt.ring.forEach(([x, y], i) => { const [px, py] = gamePx(x, y, size); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    ctx.strokeStyle = 'rgba(255, 210, 74, .95)'; ctx.lineWidth = Math.max(3, 14 * size / GAME.tile); ctx.lineCap = ctx.lineJoin = 'round'; ctx.stroke();
+  }
   await brand(ctx, W, H);
   const basePng = await png(cv);
   step?.('Ставлю мітки…');

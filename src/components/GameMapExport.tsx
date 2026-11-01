@@ -28,7 +28,8 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   /* поки галочку не чіпали — як у фільтрі мапи (категорії з бази приходять уже після відкриття сторінки) */
   const [sel, setSel] = useState<Record<string, boolean>>({});
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
-  const list = groups.filter(g => !IN_GAME_GROUPS.has(g.grp));
+  /* кільцевої траси в даних гри немає — у грі вона й так є на мінікарті */
+  const list = groups.filter(g => !IN_GAME_GROUPS.has(g.grp)).map(g => ({ ...g, cats: g.cats.filter(c => c.id !== 'ring') })).filter(g => g.cats.length);
   const [iconM, setIconM] = useState(20);
   const [theme, setThemeState] = useState<GameTheme>(readGameTheme);
   const setTheme = (t: GameTheme) => { setThemeState(t); saveGameTheme(t); };

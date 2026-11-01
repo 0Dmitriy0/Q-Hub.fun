@@ -17,6 +17,8 @@ export const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<'
 export const BUILTIN: MapCategory[] = [
   { id: 'names', name: 'Назви місць', grp: 'Шари мапи', icon: '/icons/map/layer-names.svg', color: '#f4f1ec', sort: 1, shown: true, builtin: true },
   { id: 'zones', name: 'Зелені зони', grp: 'Шари мапи', icon: '/icons/map/layer-zones.svg', color: '#2ea057', sort: 2, shown: true, builtin: true },
+  /* дорога навколо всього штату (src/data/ringRoad.json, scripts/ring-road.py) — іншим кольором поверх доріг мапи */
+  { id: 'ring', name: 'Кільцева траса', grp: 'Шари мапи', icon: '/icons/map/layer-ring.svg', color: '#ffd24a', sort: 3, shown: true, builtin: true },
   { id: 'jobs', name: 'Роботи', grp: 'Заробіток', icon: '/icons/map/jobs.svg', color: '#ff6a1f', sort: 52, shown: true, builtin: true },
   { id: 'buyers', name: 'Скупники', grp: 'Заробіток', icon: '/icons/harvest/buyer.svg', color: '#f5b301', sort: 53, shown: true, builtin: true }
 ];
