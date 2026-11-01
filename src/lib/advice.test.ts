@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advise, stockValue, topPaying, type BuyerPrice, type Held } from './advice';
+import { advise, stockValue, topPaying, unsold, type BuyerPrice, type Held } from './advice';
 
 const now = Date.parse('2026-10-23T12:00:00Z');
 const fresh = new Date(now - 36e5).toISOString();
@@ -19,6 +19,17 @@ describe('advise', () => {
     const r = advise([h('A', 5), h('Нема', 3)], [p('X', 'A', 10, 0, 0, new Date(now - 4 * 36e5).toISOString()), p('Y', 'A', 0)], now);
     expect(r).toHaveLength(1);
     expect(r[0]).toMatchObject({ profit: null, stale: true, value: 50 });
+  });
+  it('«краще почекати» — нижче 40% діапазону; без меж — ні', () => {
+    const r = advise([h('A', 1), h('B', 1), h('C', 1), h('D', 1)], [p('X', 'A', 39, 0, 100), p('X', 'B', 40, 0, 100), p('X', 'C', 85, 0, 100), p('X', 'D', 50)], now);
+    expect(Object.fromEntries(r.map(x => [x.item, [x.wait, x.sell]]))).toEqual({ A: [true, false], B: [false, false], C: [false, true], D: [false, false] });
+  });
+});
+
+describe('unsold', () => {
+  it('товари складу без жодної ціни — з кількістю й собівартістю; чи скупник узагалі має товар', () => {
+    const r = unsold([h('Глива', 3, 3, 100), h('Скриня', 2), h('Нема', 1, 1, 50)], [p('X', 'глива', 200), p('Y', 'Скриня', 0)]);
+    expect(r).toEqual([{ item: 'Нема', qty: 1, cost: 50, listed: false }, { item: 'Скриня', qty: 2, cost: 0, listed: true }]);
   });
 });
 
