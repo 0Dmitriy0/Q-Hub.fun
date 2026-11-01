@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Скан погано читає окремі товари
+# Specification Quality Checklist: Межі цін не відстають від гри
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-11-01
@@ -31,4 +31,4 @@
 
 ## Notes
 
-- Одне уточнення: доступ до журналу зору й знімків для діагностики.
+- Одне уточнення (Q1): межі розширюються самі за двома акаунтами (зміна конституції, принцип II) чи лише адмін однією кнопкою. Переписано 2026-11-01 після діагностики журналу зору.
