@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Icon from '../components/Icon';
 import { toAccelerator } from './hotkey';
 import type { Prefs } from './Bar';
-import LOG from '../data/changelog.json';
+import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 import { FAMILY } from '../lib/brand';
 
 /* Налаштування плашки — як у помічників для RP-серверів: ліворуч профіль, розділи й версія програми,
@@ -20,13 +20,10 @@ const PIN_KEYS = ['Alt+F9', 'Alt+M', 'Ctrl+F9', 'Alt+X'];
 export type SetSec = 'main' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
 const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
 
-/* журнал оновлень (src/data/changelog.json): найновіший — першим; id — дата релізу, другий реліз того самого дня — «2026-10-29.2» */
-interface Entry { id: string; version?: string; title: string; added?: string[]; changed?: string[]; fixed?: string[] }
-export const CHANGES = (LOG as { entries: Entry[] }).entries;
+/* журнал оновлень (src/data/changelog.json, спільний із сайтом — src/lib/changelog.ts): найновіший — першим */
+export { CHANGES };
 /* скільки записів журналу гравець ще не бачив: seen — id останнього побаченого (null — ще жодного) */
 export const unseenCount = (seen: string | null) => { const i = CHANGES.findIndex(e => e.id === seen); return i < 0 ? CHANGES.length : i; };
-const GROUPS: ['added' | 'changed' | 'fixed', string, string][] = [['added', 'Додано', 'good'], ['changed', 'Змінено', 'warn'], ['fixed', 'Виправлено', 'acc']];
-const dayOf = (id: string) => new Date(id.slice(0, 10) + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /* часті питання: [група, [питання, відповідь][]] */
 const FAQ: [string, [string, string][]][] = [

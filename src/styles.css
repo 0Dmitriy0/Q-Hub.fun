@@ -1117,6 +1117,20 @@ fieldset .static-form .btn { align-self: end; }
 .p-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
 .p-faq p { padding: 0 14px 14px; font-size: 14px; line-height: 22px; }
 .p-help { gap: 10px; align-items: flex-start; }
+.p-bottom:has(> :only-child) { grid-template-columns: 1fr; }   /* без Discord блок «Знайшли помилку?» сховано */
+/* журнал оновлень на сторінці «Програма» — ті самі записи, що в програмі (src/data/changelog.json) */
+.p-log { display: grid; gap: 12px; }
+.p-log-e { gap: 12px; scroll-margin-top: 90px; }
+.p-log-e header { display: flex; align-items: baseline; gap: 6px 10px; flex-wrap: wrap; }
+.p-log-e header h3 { font-size: 16px; margin: 0; }
+.p-log-e header .pill { margin-left: auto; }
+.p-log-g h4 { margin: 0 0 6px; font: 700 12px var(--sans); text-transform: uppercase; letter-spacing: .06em; }
+.p-log-g.good h4 { color: var(--good); }
+.p-log-g.warn h4 { color: var(--warn); }
+.p-log-g.acc h4 { color: var(--accent-hi); }
+.p-log-g ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; line-height: 1.5; }
+.p-log-more { justify-self: center; margin-top: 12px; }
+#onovlennya { scroll-margin-top: 90px; display: grid; }
 @media (max-width: 1000px) { .p-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .p-req, .p-bottom { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
   .prog { gap: 40px; }
