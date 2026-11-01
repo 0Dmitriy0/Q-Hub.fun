@@ -12,6 +12,8 @@ const PRICES_EVERY = 10 * 60e3; // ту саму ціну того самого 
 const SURE = 0.9;
 /* та сама ціна поза межами, впевнено прочитана стільки разів за відкриття, — межі на сайті хибні: адміну «перевір межі» (T031) */
 const ODD_SURE = 0.95, ODD_TIMES = 3;
+/* правдоподібна ціна поза межами — від 0,2 × мінімуму до 5 × максимуму: далі — зайва чи пропущена цифра, не нові межі (specs/035) */
+const ODD_LOW = 0.2, ODD_HIGH = 5;
 const inLimits = r => r.min > 0 && r.max > r.min && r.price >= r.min && r.price <= r.max;
 /* товар без меж: ціна, що більш ніж удвічі відрізняється від останньої на сайті, — зайва чи пропущена цифра (specs/004 FR-002) */
 const jump = r => r.last > 0 && (r.price > r.last * 2 || r.price * 2 < r.last);
@@ -37,16 +39,18 @@ function pricePicker(every = PRICES_EVERY) {
           /* «$» прочитано як «5» («Продати $1 050» → 51050). Але «5495» — це 549 із зайвою цифрою, а не $495: виправлене число
              саме нічого не підтверджує, лише разом зі звичайною зчиткою того самого числа */
           r = { ...r, price: fixed }; repaired = true;
-        } else if (r.price >= r.min * 0.5 && r.price <= r.max * 1.5) {
+        } else if (r.price >= r.min * ODD_LOW && r.price <= r.max * ODD_HIGH) {
           /* близько до меж — або крива зчитка, або межі на сайті застарілі («Молоток» 64 при 76–498, «Дубова колода» 260 при
-             295–449). На сайт не йде ніколи (сервер однаково відхиляє ціну за межами ±10 %), але та сама впевнена зчитка
-             ODD_TIMES разів за відкриття — адміну «перевір межі», один раз */
+             295–449). Далеко, але в межах правдоподібного — те саме: «Ключка для гольфу» 50 при 144–299 (жива гра 2026-10-31,
+             specs/035) — справжня ціна після зміни цін, яка раніше зникала без сліду. На сайт не йде ніколи (сервер однаково
+             відхиляє ціну за межами ±10 %), але та сама впевнена зчитка ODD_TIMES разів за відкриття — адміну «перевір межі», один раз */
+          const near = r.price >= r.min * 0.5 && r.price <= r.max * 1.5;
           const sure = (r.score ?? 0) >= ODD_SURE, odds = sure ? (s?.odd === r.price ? (s.odds || 0) + 1 : 1) : 0;
           seen.set(k, { ...(s || { plain: [] }), odd: sure ? r.price : s?.odd, odds: sure ? odds : s?.odds });
           if (odds === ODD_TIMES) odd.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max });
-          rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'поза межами' });
+          rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: near ? 'поза межами' : 'далеко поза межами' });
           continue;
-        } else { rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'далеко поза межами' }); seen.delete(k); continue; }   // «51050» без виправлення — не ціна
+        } else { rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'далеко поза межами' }); seen.delete(k); continue; }   // «51050» без виправлення, «91986» — зайва цифра, не ціна
       }
       /* уже надіслану в цьому відкритті ціну міняє лише друга однакова зчитка, а не один кадр */
       const changing = done && done.at >= last.opened && done.price !== r.price;

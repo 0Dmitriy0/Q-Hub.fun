@@ -14,6 +14,7 @@ import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
 import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
 import { subRank, subRanks } from '../lib/subOrder';
+import { widen } from '../lib/limits';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface NextChange { buyer_id: string; next_change_at: string | null; nick: string | null }
@@ -100,6 +101,14 @@ export default function Prices() {
   async function dropLimRep(l: LimitReport) {
     const { error } = await supabase!.from('buyer_limit_reports').delete().eq('buyer_id', l.buyer_id).eq('item_id', l.item_id);
     if (!error) setLimRep(x => x.filter(y => y !== l));
+  }
+  /* «Розширити» (specs/035 US3): межі до прочитаної ціни з запасом одним натисканням, звіт прибирається */
+  async function widenLimRep(r: Row, l: LimitReport) {
+    const w = widen(r.min_price, r.max_price, l.price);
+    const { error } = await supabase!.from('buyer_items').update({ min_price: w.min, max_price: w.max }).eq('buyer_id', r.buyer_id).eq('item_id', r.item_id);
+    if (error) { alert('Не вдалося змінити межі.'); return; }
+    await dropLimRep(l);
+    load();
   }
   /* підказка зникає сама, коли адмін виправив межі так, що прочитана ціна в них */
   const limFor = (r: Pick<Row, 'buyer_id' | 'item_id' | 'min_price' | 'max_price'>) =>
@@ -323,7 +332,10 @@ export default function Prices() {
                       {lr.length > 0 && <details><summary>Перевір межі: {lr.length}</summary>
                         <ul className="list">{lr.map(({ r, l }) => (
                           <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, межі {money(r.min_price)}–{money(r.max_price)} <small className="muted">· {l.seen_count} раз · {when(l.last_seen)}</small></span>
-                            <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)}>Прибрати</button></li>))}</ul>
+                            <span className="row" style={{ gap: 6 }}>
+                              {(() => { const w = widen(r.min_price, r.max_price, l.price); return <button type="button" className="btn sm acc" onClick={() => widenLimRep(r, l)} title="Межі з запасом 10 %, щоб наступна зміна цін не вийшла за них">Розширити до {money(w.min)}–{money(w.max)}</button>; })()}
+                              <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)} title="Це помилка розпізнавання — межі не змінювати">Відхилити</button>
+                            </span></li>))}</ul>
                       </details>}
                     </div>
                   );
