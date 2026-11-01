@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Icon from '../components/Icon';
 import { toAccelerator } from './hotkey';
 import type { Prefs } from './Bar';
-import LOG from '../data/changelog.json';
+import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
+import { FAMILY } from '../lib/brand';
 
 /* Налаштування плашки — як у помічників для RP-серверів: ліворуч профіль, розділи й версія програми,
    праворуч картки з рядками «назва — перемикач». Зберігає головний процес (barPrefs у desktop/src/main.cjs). */
@@ -19,13 +20,10 @@ const PIN_KEYS = ['Alt+F9', 'Alt+M', 'Ctrl+F9', 'Alt+X'];
 export type SetSec = 'main' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
 const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
 
-/* журнал оновлень (src/data/changelog.json): найновіший — першим; id — дата релізу, другий реліз того самого дня — «2026-10-29.2» */
-interface Entry { id: string; version?: string; title: string; added?: string[]; changed?: string[]; fixed?: string[] }
-export const CHANGES = (LOG as { entries: Entry[] }).entries;
+/* журнал оновлень (src/data/changelog.json, спільний із сайтом — src/lib/changelog.ts): найновіший — першим */
+export { CHANGES };
 /* скільки записів журналу гравець ще не бачив: seen — id останнього побаченого (null — ще жодного) */
 export const unseenCount = (seen: string | null) => { const i = CHANGES.findIndex(e => e.id === seen); return i < 0 ? CHANGES.length : i; };
-const GROUPS: ['added' | 'changed' | 'fixed', string, string][] = [['added', 'Додано', 'good'], ['changed', 'Змінено', 'warn'], ['fixed', 'Виправлено', 'acc']];
-const dayOf = (id: string) => new Date(id.slice(0, 10) + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /* часті питання: [група, [питання, відповідь][]] */
 const FAQ: [string, [string, string][]][] = [
@@ -65,8 +63,8 @@ function KeyRec({ value, set }: { value: string; set: (k: string) => void }) {
     {rec ? 'Натисни комбінацію…' : <Keys k={value} />}</button>;
 }
 
-export default function Settings({ prefs, save, staff, user, version, start = 'main', unseen, onSeen }: {
-  prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; start?: SetSec; unseen: number; onSeen: () => void;
+export default function Settings({ prefs, save, staff, user, version, discord, start = 'main', unseen, onSeen }: {
+  prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; discord?: string; start?: SetSec; unseen: number; onSeen: () => void;
   user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null;
 }) {
   const [sec, setSec] = useState<SetSec>(start);
@@ -83,7 +81,9 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
         {user && <div className="sme">{user.avatar ? <img src={user.avatar} alt="" /> : <span className="bava">{(user.nick || user.name)[0]}</span>}
           <div><b>{user.nick || user.name}</b><small>Discord: {user.name}</small></div></div>}
         <nav>{NAV.map(([k, l, ico]) => <button key={k} aria-current={sec === k ? 'page' : undefined} onClick={() => setSec(k)}><Icon name={ico} size={16} />{l}{k === 'changes' && unseen > 0 && <span className="sdot" aria-label={`нових: ${unseen}`}>{unseen}</span>}</button>)}</nav>
-        {version && <small className="sver">Q-Hub v{version}</small>}
+        {/* Discord Q-Hub (specs/037) — лише коли адмін задав посилання; підпис авторів (specs/033) */}
+        {discord && <a className="sdisc" href={discord} target="_blank" rel="noreferrer">Discord Q-Hub</a>}
+        <small className="sver">{version ? `Q-Hub v${version}` : 'Q-Hub'} · by {FAMILY}</small>
       </aside>
       <div className="sbody">
         <h3>{title}</h3>
@@ -153,6 +153,7 @@ export default function Settings({ prefs, save, staff, user, version, start = 'm
             <h4>{g}</h4>
             <div className="scard">{list.map(([q, a]) => <details key={q}><summary>{q}<Icon name="chev" size={15} /></summary><p>{a}</p></details>)}</div>
           </section>))}
+        {sec === 'faq' && discord && <p className="sask">Не знайшов відповіді — <a href={discord} target="_blank" rel="noreferrer">спитай у Discord Q-Hub</a>.</p>}
       </div>
     </div>
   );

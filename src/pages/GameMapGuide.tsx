@@ -4,6 +4,7 @@ import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { useDiscord } from '../lib/brand';
 import { guide, joinTiles, pieces, splitTiles, steps, tileError, version, type GuideStage, type GuideStep, type GuideTile } from '../lib/guide';
 
 /* «Як поставити мапу в гру» (specs/023): постійна адреса /mapa/v-gru, щоб давати посиланням у Discord.
@@ -18,6 +19,9 @@ export default function GameMapGuide() {
   const isAdmin = role === 'admin';
   const [g, setG] = useState<Guide | null | undefined>(undefined);
   const [edit, setEdit] = useState(false);
+  /* своє посилання інструкції, а як порожнє — загальний Discord Q-Hub (specs/037) */
+  const [discord] = useDiscord();
+  const ask = g?.discord_url || discord;
   const load = () => {
     if (!supabase) { setG(null); return; }
     supabase.from('guides').select('title,install,restore,faq,permission_url,discord_url,checked_on,published').eq('slug', SLUG).maybeSingle()
@@ -40,7 +44,7 @@ export default function GameMapGuide() {
           : !g || (!g.published && !isAdmin) || !stages.length ? (
             <div className="card guide-wait">
               <h2>Інструкцію готуємо</h2>
-              <p className="muted">Кожен крок перевіряємо на справжній грі, перш ніж показувати. Поки що питай у Discord Q-Hub.</p>
+              <p className="muted">Кожен крок перевіряємо на справжній грі, перш ніж показувати. {ask ? <>Поки що питай у <a href={ask} target="_blank" rel="noopener noreferrer">Discord Q-Hub</a>.</> : 'Загляни трохи згодом.'}</p>
               {isAdmin && <button type="button" className="btn acc sm" onClick={() => setEdit(true)}>Написати інструкцію</button>}
             </div>
           ) : (
@@ -53,7 +57,7 @@ export default function GameMapGuide() {
               <Install stages={stages} ver={version(g.install)} />
               <Section title="Повернути як було" text={g.restore} />
               <Section title="Не вийшло?" text={g.faq} />
-              {g.discord_url && <p>Не знайшов своєї проблеми — <a href={g.discord_url} target="_blank" rel="noopener noreferrer">напиши в Discord Q-Hub</a>.</p>}
+              {ask && <p>Не знайшов своєї проблеми — <a href={ask} target="_blank" rel="noopener noreferrer">напиши в Discord Q-Hub</a>.</p>}
               {isAdmin && <button type="button" className="btn ghost sm" onClick={() => setEdit(true)}>Змінити інструкцію</button>}
             </>
           )}
@@ -229,7 +233,7 @@ function GuideForm({ g, done }: { g: Guide | null; done: () => void }) {
       {area('restore', 'Повернути як було (до 5 кроків)', 6)}
       {area('faq', 'Не вийшло? (проблема й рішення — одним кроком)', 8)}
       <label className="fld">Підтвердження дозволу адміністрації (посилання)<input value={f.permission_url} onChange={e => setF({ ...f, permission_url: e.target.value })} placeholder="https://discord.com/channels/…" /></label>
-      <label className="fld">Discord Q-Hub для питань<input value={f.discord_url} onChange={e => setF({ ...f, discord_url: e.target.value })} placeholder="https://discord.gg/…" /></label>
+      <label className="fld">Discord Q-Hub для питань<input value={f.discord_url} onChange={e => setF({ ...f, discord_url: e.target.value })} placeholder="порожньо — загальний Discord Q-Hub" /></label>
       <label className="fld">Перевірено на грі<input type="date" value={f.checked_on} onChange={e => setF({ ...f, checked_on: e.target.value })} /></label>
       <label className="mcheck"><input type="checkbox" checked={f.published} onChange={e => setF({ ...f, published: e.target.checked })} />Опублікувати для гравців</label>
       <div className="row wide"><button type="button" className="btn acc" disabled={busy} onClick={save}>Зберегти</button><button type="button" className="btn ghost" onClick={done}>Скасувати</button></div>

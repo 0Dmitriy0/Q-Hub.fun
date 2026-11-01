@@ -65,6 +65,7 @@ $P -f supabase/tests/buyer_limit_reports_test.sql
 $P -f supabase/tests/desktop_price_limits_test.sql
 $P -f supabase/tests/price_confirm_test.sql
 $P -f supabase/tests/site_promo_test.sql
+$P -f supabase/tests/site_links_test.sql
 $P -f supabase/tests/site_stats_test.sql
 $P -f supabase/tests/map_batches_test.sql
 $P -f supabase/seed/map_pumpkins_ohm.sql >/dev/null; $P -f supabase/seed/map_pumpkins_ohm.sql >/dev/null   # гарбузи: повтор без дублів

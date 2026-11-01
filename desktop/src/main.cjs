@@ -116,8 +116,8 @@ function createBar() {
   });
   bar.setAlwaysOnTop(true, 'screen-saver');
   /* прозорість плашки — CSS-ом у самій плашці (Bar.tsx): setOpacity на Windows робить прозоре вікно чорним прямокутником */
-  /* з плашки відкриваються лише теми правил на форумі сервера — у звичайному браузері */
-  bar.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://forum.quant5.com.ua/')) openExternal(url); return { action: 'deny' }; });
+  /* з плашки відкриваються лише теми правил на форумі сервера й запрошення Discord Q-Hub — у звичайному браузері */
+  bar.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://forum.quant5.com.ua/') || DISCORD_RE.test(url)) openExternal(url); return { action: 'deny' }; });
   bar.webContents.on('will-navigate', e => e.preventDefault());
   /* повернувся в гру — плашка зникає, якщо її не закріпили шпилькою.
      Але гра (RAGE MP) сама забирає фокус назад приблизно за секунду після появи плашки — тоді це не «повернувся»:
@@ -637,11 +637,24 @@ async function barStock(c) {
   for (const d of data || []) m[d.item] = (m[d.item] || 0) + (d.op === 'sell' ? -1 : 1) * Number(d.qty);
   return Object.fromEntries(Object.entries(m).filter(([, q]) => q > 0.001).map(([k, q]) => [k, Math.round(q * 100) / 100]));
 }
+/* Discord Q-Hub (specs/037): посилання задає адмін на сайті (public.site_links); останнє відоме лежить у settings,
+   щоб без інтернету налаштування однаково показували кнопку. Перевірка та сама, що в src/lib/brand.ts і 0045 */
+const DISCORD_RE = /^https:\/\/(discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]{2,64}\/?$/;
+async function siteDiscord() {
+  try {
+    const { data, error } = await sb.from('site_links').select('discord_url').maybeSingle();
+    if (!error) {
+      const u = data && DISCORD_RE.test(data.discord_url) ? data.discord_url : '';
+      if (u !== (settings.discord || '')) { settings.discord = u; saveSettings(); }
+    }
+  } catch { /* немає зв'язку — лишаємо збережене */ }
+  return settings.discord || '';
+}
 async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
-  const [prices, stock] = await Promise.all([barPrices(), barStock(s.character)]);
-  return { ...s, prices, stock, sales: await Promise.all(sales.pending().map(saleView)), prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion() };
+  const [prices, stock, discord] = await Promise.all([barPrices(), barStock(s.character), siteDiscord()]);
+  return { ...s, prices, stock, sales: await Promise.all(sales.pending().map(saleView)), prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord };
 }
 async function barHistory() {
   const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(50);
