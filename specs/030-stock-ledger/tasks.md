@@ -86,12 +86,12 @@
 
 **Independent Test**: quickstart крок 6.
 
-- [ ] T015 [P] [US2] `src/lib/advice.test.ts`: `wait` при `pos < 40`; `unsold` — товари без жодного скупника з `qty` і `cost`; нафармлене (`boughtQty = 0`) → `profit null`
-- [ ] T016 [US2] `src/lib/advice.ts`: `export const WAIT = 40`; `Advice.wait`; нова `unsold(held, prices)`
-- [ ] T017 [US2] `src/pages/cabinet/StockPage.tsx`: таблиця «На складі».
+- [x] T015 [P] [US2] `src/lib/advice.test.ts`: `wait` при `pos < 40`; `unsold` — товари без жодного скупника з `qty` і `cost`; нафармлене (`boughtQty = 0`) → `profit null`
+- [x] T016 [US2] `src/lib/advice.ts`: `export const WAIT = 40`; `Advice.wait`; нова `unsold(held, prices)`
+- [x] T017 [US2] `src/pages/cabinet/StockPage.tsx`: таблиця «На складі».
   - Стовпці: собівартість, «зараз» (найкращий скупник і ціна), прибуток (`signed`, для нафармленого — «увесь дохід»), позначки «краще почекати» і «ціна може бути застаріла».
   - Нижче — блок «Не купує жоден скупник».
-- [ ] T018 [US2] `src/styles.css`: стилі нових стовпців і блоку; на телефоні таблиця прокручується, як зараз (`.scroll`)
+- [x] T018 [US2] `src/styles.css`: стилі нових стовпців і блоку; на телефоні таблиця прокручується, як зараз (`.scroll`)
 
 **Checkpoint**: склад радить; дашборд показує те саме, що й раніше.
 

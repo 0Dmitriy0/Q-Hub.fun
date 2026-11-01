@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRows } from '../../lib/useRows';
 import { ledger, stock } from '../../lib/ledger';
-import { money, qty } from '../../lib/format';
-import { stockValue } from '../../lib/advice';
+import { money, qty, signed } from '../../lib/format';
+import { advise, stockValue, unsold } from '../../lib/advice';
 import { usePrices, type CatalogPrice } from '../../lib/usePrices';
 import { STALE } from '../../lib/pricestats';
 import { asset } from '../../lib/app';
 import type { Character, DealRow } from './types';
 
+const key = (s: string) => s.trim().toLowerCase();
 const pos = (p: CatalogPrice) => (p.max > p.min && p.price > 0 ? Math.round(Math.min(100, Math.max(0, ((p.price - p.min) / (p.max - p.min)) * 100))) : null);
 
 /* склад як у Quant Hub: ліворуч — що лежить і скільки коштує за цінами скупників, праворуч — каталог скупників */
@@ -18,6 +19,9 @@ export default function StockPage({ c }: { c: Character }) {
   const st = stock(ledger(rows));
   const held = new Map(st.map(i => [i.name.trim().toLowerCase(), i]));
   const val = prices ? stockValue(st, prices) : null;
+  /* порада по кожному товару (specs/030 US2): кому продати, прибуток, чи краще почекати; без цін — окремим блоком */
+  const adv = new Map((prices ? advise(st, prices) : []).map(a => [key(a.item), a]));
+  const none = prices ? unsold(st, prices) : [];
   const cost = st.reduce((s, i) => s + i.boughtCost, 0);
   const [tab, setTab] = useState('held');
   const [q, setQ] = useState('');
@@ -51,11 +55,36 @@ export default function StockPage({ c }: { c: Character }) {
         <section className="card">
           <h2>На складі</h2>
           {loading ? <div className="empty">Завантаження…</div> : st.length ? (
-            <div className="scroll"><table className="t">
-              <thead><tr><th>Товар</th><th>Кількість</th><th>Собівартість</th><th>Разом</th></tr></thead>
-              <tbody>{st.map(i => <tr key={i.name}><td><span className="titem"><Ico name={i.name} />{i.name}</span></td><td className="n">{qty(i.qty)}</td><td className="n">{i.boughtQty ? money(i.avg) : '—'}</td><td className="n">{money(i.boughtCost)}</td></tr>)}</tbody>
+            <div className="scroll"><table className="t tstock">
+              <thead><tr><th>Товар</th><th>Кількість</th><th>Собівартість</th><th>Зараз</th><th>Прибуток</th></tr></thead>
+              <tbody>{st.filter(i => !prices || adv.has(key(i.name))).map(i => {
+                const a = adv.get(key(i.name));
+                return (
+                  <tr key={i.name}>
+                    <td><span className="titem"><Ico name={i.name} />{i.name}</span></td>
+                    <td className="n">{qty(i.qty)}</td>
+                    <td className="n">{i.boughtQty ? <>{money(i.avg)}/шт<small>{money(i.boughtCost)}</small></> : <span className="muted">нафармлено</span>}</td>
+                    <td>{a ? <>
+                      <b className="mono">{money(a.value)}</b>
+                      <small>{a.buyer} · {money(a.price)}/шт</small>
+                      <span className="tags">
+                        {a.sell && <span className="pill good">Здавати зараз</span>}
+                        {a.wait && <span className="pill warn">Краще почекати</span>}
+                        {a.stale && <span className="pill">ціна може бути застаріла</span>}
+                      </span>
+                    </> : '…'}</td>
+                    <td className="n">{!a ? '—' : a.profit !== null ? <>
+                      <b className={a.profit >= 0 ? 'good' : 'bad'}>{signed(a.profit)}</b>
+                      <small>{signed(a.price - i.avg)}/шт{i.boughtQty < i.qty ? ` · ще ${qty(i.qty - i.boughtQty)} нафармлено` : ''}</small>
+                    </> : <><b className="good">{signed(a.value)}</b><small>увесь дохід — нафармлене</small></>}</td>
+                  </tr>);
+              })}</tbody>
             </table></div>
           ) : <div className="empty">Склад порожній. Він складається з угод: «Купив» і «Нафармив» додають, «Продав» списує.</div>}
+          {none.length > 0 && <div className="nobuy">
+            <h3>Не купує жоден скупник</h3>
+            <ul>{none.map(u => <li key={u.item}><span className="titem"><Ico name={u.item} />{u.item}</span><span className="mono">{qty(u.qty)}{u.cost ? ` · вкладено ${money(u.cost)}` : ''}</span><small className="muted">{u.listed ? 'ціни ще ніхто не вніс' : 'немає в жодного скупника'}</small></li>)}</ul>
+          </div>}
         </section>
       </div>
       <div className="grid">

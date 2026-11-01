@@ -8,7 +8,9 @@ export interface Advice {
   profit: number | null;        // проти собівартості купленого; null — усе нафармлене
   pos: number | null;           // де ціна в межах скупника, 0–100; null — межі ще не вписані
   sell: boolean; stale: boolean;
+  wait: boolean;                // ціна ближче до мінімуму (< WAIT % діапазону) — краще почекати (specs/030 US2)
 }
+export const WAIT = 40;
 
 const key = (s: string) => s.trim().toLowerCase();
 
@@ -27,12 +29,24 @@ export function advise(held: Held[], prices: BuyerPrice[], now = Date.now()): Ad
     out.push({
       item: h.name, qty: h.qty, buyer: b.buyer, price: b.price, value: Math.round(h.qty * b.price),
       profit: h.boughtQty > 0 ? Math.round(h.boughtQty * (b.price - h.avg)) : null,
-      pos, sell: pos !== null && pos >= GOOD,
+      pos, sell: pos !== null && pos >= GOOD, wait: pos !== null && pos < WAIT,
       stale: !b.at || now - new Date(b.at).getTime() > STALE,
     });
   }
   /* спершу те, що варто здати зараз, далі — дорожче */
   return out.sort((a, b) => Number(b.sell) - Number(a.sell) || b.value - a.value);
+}
+
+/* «Не купує жоден скупник»: те, що advise пропускає, — щоб склад не ховав товар мовчки.
+   listed — скупник товар має, але ціни ще ніхто не вніс */
+export interface Unsold { item: string; qty: number; cost: number; listed: boolean }
+export function unsold(held: Held[], prices: BuyerPrice[]): Unsold[] {
+  const priced = new Set(prices.filter(p => p.price > 0).map(p => key(p.item)));
+  const listed = new Set(prices.map(p => key(p.item)));
+  return held
+    .filter(h => !priced.has(key(h.name)))
+    .map(h => ({ item: h.name, qty: h.qty, cost: Math.round(h.boughtCost), listed: listed.has(key(h.name)) }))
+    .sort((a, b) => a.item.localeCompare(b.item, 'uk'));
 }
 
 /* «Скупники платять найбільше»: товари, чия ціна зараз найближча до максимуму діапазону скупника */
