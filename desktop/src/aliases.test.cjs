@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { expandAliases } = require('./aliases.cjs');
-const shot = require('./lib/shotparse.cjs');
+/* src/lib/shotparse.cjs збирається з сайту (npm run ui) і в git не лежить — тести CI йдуть до збірки, тож тут без нього */
 
 test('псевдонім — ще одна назва того самого товару, оригінал першим', () => {
   const out = expandAliases([{ id: 7, name: 'Шкура вовка', buyer_id: 'hide', aliases: ['Шкура вовка 1', 'шкура вовка 1', ' ', 'ШКУРА ВОВКА'] }]);
@@ -13,9 +13,8 @@ test('без псевдонімів список не змінюється', () 
   assert.deepEqual(expandAliases(items), items);
 });
 
-test('назва, що читається з помилкою, знаходить товар через псевдонім', () => {
-  const items = [{ id: 7, name: 'Шкура вовка', buyer_id: 'hide', aliases: ['Шкyрa вoвкa XL'] }, { id: 8, name: 'Шкура оленя', buyer_id: 'hide' }];
-  const b = shot.bestItem('Шкyрa вoвкa XL', expandAliases(items));
-  assert.equal(b.item.id, 7);
-  assert.ok(b.score >= shot.MIN_SCORE);
+test('копія-псевдонім несе той самий товар: id, скупника й межі — ціна піде в правильний товар', () => {
+  const [, a] = expandAliases([{ id: 7, name: 'Шкура вовка', buyer_id: 'hide', min: 100, max: 900, last: 450, aliases: ['Шкyрa вoвкa XL'] }]);
+  assert.deepEqual({ id: a.id, buyer_id: a.buyer_id, min: a.min, max: a.max, last: a.last, name: a.name },
+    { id: 7, buyer_id: 'hide', min: 100, max: 900, last: 450, name: 'Шкyрa вoвкa XL' });
 });
