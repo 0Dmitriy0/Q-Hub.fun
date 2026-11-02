@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon';
 import type { MapArea, MapCategory, MapMark } from '../lib/mapData';
-import RING from '../data/ringRoad.json';
 
 /* «Скрін мапи»: уся мапа з мітками, які зараз увімкнені у фільтрах, — картинкою PNG (для Discord, Telegram) або SVG */
 const SIZES: [number, string][] = [[12, 'дрібні'], [20, 'звичайні'], [32, 'великі']];
@@ -21,8 +20,7 @@ export default function MapShot({ marks, areas, catById, isOn }: { marks: MapMar
       const { mapShot } = await import('../lib/gameMap');
       const pins = picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color, name: m.name || c.name }; });
       const layers = (['names', 'zones'] as const).filter(id => catById[id] && isOn(catById[id]));
-      const ring = catById.ring && isOn(catById.ring) ? (RING as [number, number][]) : undefined;
-      const r = await mapShot(pins, { pinPx, layers, ring, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
+      const r = await mapShot(pins, { pinPx, layers, areas: pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })) }, setBusy);
       setShot({ png: URL.createObjectURL(r.png), svg: URL.createObjectURL(r.svg), w: r.w, h: r.h, kb: Math.round(r.png.size / 1024) });
     } catch (e) { setErr('Не вдалося зробити скрін: ' + (e as Error).message); }
     setBusy('');
