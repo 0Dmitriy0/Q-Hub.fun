@@ -31,7 +31,7 @@ export default function Layout() {
   }, [menu]);
   useEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
-    document.title = key === '/' ? 'Q-Hub — ціни, мапа й облік для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
+    document.title = key === '/' ? 'Q-Hub — ціни, мапа й правила для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
   }, [pathname]);
   return (
     <div className="app">

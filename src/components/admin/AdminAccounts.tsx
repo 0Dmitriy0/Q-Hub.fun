@@ -29,7 +29,7 @@ export default function AdminAccounts() {
 
   return (
     <AdminSection title="Гравці й ролі" error={err}
-      hint="Знайди акаунт за ніком у Q-Hub чи іменем у Discord. Облік, склад і баланси тут не показуються — лише хто це й яка роль.">
+      hint="Знайди акаунт за ніком у Q-Hub чи іменем у Discord. Особисті дані персонажів тут не показуються — лише хто це й яка роль.">
       <label className="fld adm-search">Нік чи Discord (від 2 символів)
         <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="наприклад, D_VYRX" autoFocus />
       </label>

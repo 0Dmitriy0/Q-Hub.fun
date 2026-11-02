@@ -1,4 +1,5 @@
-/* Q-Hub Desktop — головний процес: вхід, сесія, вибір персонажа, кабінет, швидкий запис по Alt+Q. Далі — баланс з екрана. */
+/* Q-Hub Desktop — головний процес: вхід, вибір персонажа, плашка Alt+Q (пошук, ШІ, ціни), мапа, зір цін скупників,
+   прибуток за годину сеансу з балансу HUD (лише показ — облік програма не веде, specs/040). */
 const { app, BrowserWindow, ipcMain, shell, safeStorage, dialog, globalShortcut, Tray, Menu, Notification, screen, desktopCapturer, nativeImage, protocol } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -7,15 +8,13 @@ const { makeClient, login } = require('./auth.cjs');
 const { parseCharacter } = require('./character.cjs');
 const { parseNick } = require('./nick.cjs');
 const { fileStorage } = require('./store.cjs');
-const quick = require('./quick.cjs');
 const gameSession = require('./session.cjs');
-const stripCalc = require('./strip.cjs');
+const { sessionMoney } = require('./sessionmoney.cjs');
 const shots = require('./shots.cjs');
 const { vision, TICK_POLL } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
 const { autostartOnStart } = require('./autostart.cjs');
 const { outbox, pinKeyConflict } = require('./outbox.cjs');
-const saleq = require('./salequeue.cjs');
 const mapmatch = require('./mapmatch.cjs');
 const { loadMapRef } = require('./mapref.cjs');
 const { createRules } = require('./rules.cjs');
@@ -111,7 +110,7 @@ const showMain = () => { if (gate) { gate.show(); gate.focus(); } else showBar()
 function createBar() {
   bar = new BrowserWindow({
     width: BAR_W, height: 150, show: false, frame: false, transparent: true, resizable: false, movable: false,
-    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, title: 'Q-Hub · швидкий запис',
+    skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, title: 'Q-Hub · плашка',
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
   });
   bar.setAlwaysOnTop(true, 'screen-saver');
@@ -269,29 +268,26 @@ function createStrip() {
   strip.webContents.on('will-navigate', e => e.preventDefault());
   strip.loadFile(path.join(__dirname, 'strip.html'));
 }
-/* сесія з таймера гри (settings.session) і записи персонажа з її початку; без гри — порожньо */
-/* ціль персонажа — з усіх його записів, незалежно від сесії (strip.cjs → goalOf) */
-async function stripGoal(c) {
-  const [{ data: ch }, { data: rows }] = await Promise.all([
-    sb.from('characters').select('start_balance,goal_name,goal').eq('id', c).maybeSingle(),
-    sb.from('transactions').select('type,amount,source').eq('character_id', c).limit(20000),
-  ]);
-  return stripCalc.goalOf(ch, rows);
+/* прибуток за годину сеансу — з балансу HUD, лише в пам'яті й settings (specs/040): у базу нічого не пишеться */
+let sessMoney = null;
+const moneyKey = () => (settings.session ? `${settings.session.started}:${settings.character || ''}` : null);
+function onMoney(m, at) {
+  sessMoney ??= sessionMoney(settings.sessionMoney);
+  if (sessMoney.update(moneyKey(), m, at)) { settings.sessionMoney = sessMoney.state(); saveSettings(); }
 }
-async function stripData() {
-  const s = settings.session, c = settings.character;
-  if (!c) return { started: null, perHour: null, game: false, goal: null };
-  const goal = await stripGoal(c).catch(() => null);
-  if (!s) return { started: null, perHour: null, game: false, goal };
-  const { data } = await sb.from('transactions').select('type,amount,source').eq('character_id', c).gte('ts', new Date(s.started).toISOString());
-  return { started: s.started, perHour: stripCalc.perHour(stripCalc.netOf(data), Date.now() - s.started), game: true, goal };
+/* сесія з таймера гри (settings.session); без гри — порожньо */
+function stripData() {
+  const s = settings.session;
+  if (!s) return { started: null, perHour: null, game: false };
+  sessMoney ??= sessionMoney(settings.sessionMoney);
+  return { started: s.started, perHour: sessMoney.perHour(moneyKey(), Date.now()), game: true };
 }
 async function showStrip() {
   if (!strip || prefs().strip === false) return;
   const { bounds: b } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   strip.setBounds({ x: b.x + 16, y: b.y + b.height - STRIP_H - STRIP_GAP, width: b.width - 32, height: STRIP_H });
   if (strip.webContents.isLoading()) await new Promise(r => strip.webContents.once('did-finish-load', r));
-  const push = async () => { if (covOn) return; try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(await stripData())})`); } catch { /* мережа — наступна спроба за хвилину */ } };
+  const push = async () => { if (covOn) return; try { await strip.webContents.executeJavaScript(`render(${JSON.stringify(stripData())})`); } catch { /* вікно смужки ще вантажиться — наступна спроба за хвилину */ } };
   await push();
   if (!bar.isVisible()) return;   // плашку вже сховали, поки рахували
   strip.showInactive(); strip.moveTop();
@@ -371,10 +367,9 @@ async function showBar() {
   pullRules();
 }
 
-/* підказка іконки: гра чи клавіша плашки, плюс продажі, що чекають списання (specs/030 FR-010) */
+/* підказка іконки: гра йде чи клавіша плашки */
 function trayTip() {
-  const n = sales.pending().length;
-  tray?.setToolTip((settings.session ? 'Q-Hub — гра йде, сесія рахується' : `Q-Hub — ${prefs().hotkey}: швидкий запис`) + (n ? ` · списати продаж: ${n}` : ''));
+  tray?.setToolTip(settings.session ? 'Q-Hub — гра йде, сесія рахується' : `Q-Hub — ${prefs().hotkey}: пошук і ціни`);
 }
 function createTray() {
   tray = new Tray(path.join(__dirname, 'icon.png'));
@@ -387,7 +382,7 @@ function trayMenu() {
   const u = updates?.state();
   tray?.setContextMenu(Menu.buildFromTemplate([
     ...(u && u.status !== 'idle' ? [{ label: u.status === 'downloading' ? `Оновлення ${u.percent}%…` : `Оновити до ${u.version}`, enabled: u.status !== 'downloading', click: () => updates.install() }, { type: 'separator' }] : []),
-    { label: 'Швидкий запис', click: () => toggleBar() },
+    { label: 'Плашка Alt+Q', click: () => toggleBar() },
     { label: 'Відкрити Q-Hub', click: showMain },
     { type: 'separator' },
     ...(app.isPackaged ? [{ label: 'Запускати разом з Windows', type: 'checkbox', checked: autostart(), click: mi => {
@@ -453,144 +448,18 @@ function startUpdates() {
   }, 60e3);
 }
 
-const charName = async () => (await sb.from('characters').select('name').eq('id', settings.character).maybeSingle()).data?.name || '';
-/* відкритий кабінет одразу показує нові записи — сторінки перечитують дані, без перезавантаження */
-const refreshCabinet = () => bar?.webContents.send('changed');
-
-/* товари для угод одним рядком («нафармив 20 гливи»): товари скупників і те, що вже є на складі.
-   buyer — скупник, відкритий у режимі «Ціни»: «продав» без ціни — за його ціною. Без нього (режим «Пошук») угода з гравцем —
-   ціну гравець пише сам (best = 0). Склад — не частіше раз на 30 с (плашка питає на кожну літеру) */
-let stockAt = 0, stockCache = {};
-async function dealCatalog(buyer = null) {
-  const prices = await barPrices();
-  if (Date.now() - stockAt > 30e3 && settings.character) { stockCache = await barStock(settings.character); stockAt = Date.now(); }
-  const m = new Map();
-  for (const p of prices) m.set(p.item, { name: p.item, unit: p.unit, best: Math.max(m.get(p.item)?.best || 0, p.buyer === buyer ? p.price : 0) });
-  for (const k of Object.keys(stockCache)) if (!m.has(k)) m.set(k, { name: k, unit: 'шт', best: 0 });
-  return [...m.values()];
-}
-/* що запише Enter: угода зі складом, переказ чи запис грошей. Каталог не завантажився — лишається звичайний запис */
-async function quickParse(text, buyer) { return quick.parseDeal(text, await dealCatalog(buyer).catch(() => [])) || quick.parse(text); }
-
-/* Enter із сумою: записати рядок за правилами, без помічника */
-async function quickAdd(text, buyer) {
-  /* «нафармив / купив / продав N товару» — угода: склад + запис в облік (ціна скупника — лише з режиму «Ціни») */
-  const d = quick.parseDeal(text, await dealCatalog(buyer).catch(() => []));
-  if (d) {
-    if (d.price === null) return { error: `Вкажи ціну: «${text.trim()} по 300» (за ${d.unit === 'кг' ? 'кг' : 'штуку'}) або «за 3000» (за все)` };
-    const r = await quickDeal(d.op, d.item, d.qty, d.price);
-    if (r.ok) stockAt = 0;   // склад змінився
-    return r;
-  }
-  const r = quick.parse(text);
-  if (!r) return { error: 'Немає суми — напиши, наприклад, 450к' };
-  const err = r.kind === 'transfer' ? await insertTransfer(settings.character, r.from, r.to, r.amount)
-    : (await sb.from('transactions').insert({ character_id: settings.character, type: r.type, amount: r.amount, category: r.category, note: r.note, source: 'desktop', account: r.account })).error;
-  if (err) return { error: 'Не вдалося записати. Перевір інтернет і спробуй ще раз.' };
-  refreshCabinet();
-  return { ok: true, character: await charName() };
-}
-
 /* Shift+Enter: спитати помічника (supabase/functions/assistant); rules — пункти правил сервера, які плашка знайшла під питання.
-   План лишається тут — виконується лише він, після Enter */
-let plan = null;
+   Помічник лише відповідає: облік програма більше не веде (specs/040), тож дій-записів немає */
 async function quickAsk(text, rules) {
-  plan = null;
   const { data, error } = await sb.functions.invoke('assistant', { body: { text: String(text).slice(0, 500), character_id: settings.character, rules: typeof rules === 'string' ? rules.slice(0, 8000) : '' } });
   if (error) {
     const msg = await error.context?.json?.().then(b => b.error).catch(() => null);
-    return { error: msg || 'Помічник недоступний. Перевір інтернет або запиши суму через Enter.' };
+    return { error: msg || 'Помічник недоступний. Перевір інтернет і спробуй ще раз.' };
   }
-  plan = { reply: String(data.reply || ''), actions: Array.isArray(data.actions) ? data.actions : [] };
-  return plan;
+  return { reply: String(data.reply || ''), actions: [] };
 }
-async function quickRun() {
-  if (!plan?.actions.length) return { error: 'Нема чого записувати' };
-  const c = settings.character;
-  for (const a of plan.actions) {
-    if (a.kind === 'transfer') {
-      if (await insertTransfer(c, a.from, a.to, a.amount)) return { error: 'Не вдалося записати переказ.' };
-      continue;
-    }
-    if (a.kind === 'delete' || a.kind === 'edit') {
-      const err = a.kind === 'delete' ? await deleteTx(c, a.id) : await editTx(c, a.id, a.set);
-      if (err) return { error: err };
-      continue;
-    }
-    if (a.kind === 'tx') {
-      const { error } = await sb.from('transactions').insert({ character_id: c, type: a.type, amount: a.amount, category: a.category, note: a.note, source: 'desktop', account: a.account === 'card' ? 'card' : 'cash' });
-      if (error) return { error: 'Не вдалося записати. Перевір інтернет і спробуй ще раз.' };
-      continue;
-    }
-    const err = await insertDeal(c, a);
-    if (err) return { error: err };
-  }
-  plan = null;
-  refreshCabinet();
-  return { ok: true, character: await charName() };
-}
-
-/* переказ між готівкою й карткою — пара записів з одним часом (не прибуток і не витрата); повертає помилку або null */
-const ACC = { cash: 'Готівка', card: 'Картка' };
-async function insertTransfer(c, from, to, amount) {
-  if (!ACC[from] || !ACC[to] || from === to || !(amount > 0)) return 'bad';
-  const ts = new Date().toISOString(), base = { character_id: c, amount: Math.round(amount), category: 'Переказ', note: `${ACC[from]} → ${ACC[to]}`, source: 'transfer', ts };
-  const { error } = await sb.from('transactions').insert([{ ...base, type: 'out', account: from }, { ...base, type: 'in', account: to }]);
-  return error;
-}
-
-/* правка й видалення записів помічником (після Enter гравця). Рядок береться з бази заново — RLS пускає лише до своїх;
-   переказ змінюється обома половинами, запис угоди видаляється разом з угодою (інакше товар лишився б на складі) */
-async function txRow(c, id) {
-  if (typeof id !== 'string') return null;
-  const { data } = await sb.from('transactions').select('id,source,ts').eq('id', id).eq('character_id', c).maybeSingle();
-  return data;
-}
-async function deleteTx(c, id) {
-  const t = await txRow(c, id);
-  if (!t) return 'Запис уже видалено або він не твій.';
-  if (t.source === 'transfer') return (await sb.from('transactions').delete().eq('character_id', c).eq('source', 'transfer').eq('ts', t.ts)).error ? 'Не вдалося видалити переказ.' : null;
-  /* угоди запису — разом з ним: угода «Угод» (source deal) і списання автоматичного продажу (specs/030) */
-  { const { error } = await sb.from('deals').delete().eq('character_id', c).eq('tx_id', id); if (error) return 'Не вдалося видалити угоду.'; }
-  return (await sb.from('transactions').delete().eq('id', id)).error ? 'Не вдалося видалити запис.' : null;
-}
-async function editTx(c, id, set = {}) {
-  const t = await txRow(c, id);
-  if (!t) return 'Запис уже видалено або він не твій.';
-  const v = {};
-  if (set.type === 'in' || set.type === 'out') v.type = set.type;
-  if (Number(set.amount) > 0) v.amount = Math.round(Number(set.amount));
-  if (typeof set.category === 'string' && set.category.trim()) v.category = set.category.trim().slice(0, 30);
-  if (typeof set.note === 'string') v.note = set.note.trim().slice(0, 200);
-  if (set.account === 'cash' || set.account === 'card') v.account = set.account;
-  if (t.source === 'transfer') {
-    const both = {}; if (v.amount) both.amount = v.amount; if (v.note !== undefined) both.note = v.note;
-    if (!Object.keys(both).length) return null;
-    return (await sb.from('transactions').update(both).eq('character_id', c).eq('source', 'transfer').eq('ts', t.ts)).error ? 'Не вдалося змінити переказ.' : null;
-  }
-  if (t.source === 'deal') { delete v.type; delete v.amount; }
-  if (!Object.keys(v).length) return null;
-  return (await sb.from('transactions').update(v).eq('id', id)).error ? 'Не вдалося змінити запис.' : null;
-}
-
-/* угода — як у «Угодах» кабінету: спершу запис в облік, потім угода з посиланням на нього; null — успіх */
-async function insertDeal(c, a) {
-  let txId = null;
-  if (a.tx) {
-    /* угоди з гравцями й скупниками — готівкою */
-    const { data, error } = await sb.from('transactions').insert({ character_id: c, ...a.tx, source: 'deal', account: 'cash' }).select('id').single();
-    if (error) return 'Не вдалося записати в облік.';
-    txId = data.id;
-  }
-  const { error } = await sb.from('deals').insert({ character_id: c, op: a.op, item: a.item, qty: a.qty, price: a.price, category: '', tx_id: txId });
-  if (error) { if (txId) await sb.from('transactions').delete().eq('id', txId); return `Не вдалося зберегти угоду «${a.item}».`; }
-  return null;
-}
-
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
-const OPS = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
-const money = n => new Intl.NumberFormat('uk-UA').format(Math.round(n)).replace(/ /g, ' ') + ' $';
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoLedger: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
@@ -640,13 +509,6 @@ async function barPrices() {
   pricesAt = Date.now();
   return pricesCache;
 }
-/* що лежить на складі персонажа: купив і нафармив додають, продав списує */
-async function barStock(c) {
-  const { data } = await sb.from('deals').select('op,item,qty').eq('character_id', c).limit(5000);
-  const m = {};
-  for (const d of data || []) m[d.item] = (m[d.item] || 0) + (d.op === 'sell' ? -1 : 1) * Number(d.qty);
-  return Object.fromEntries(Object.entries(m).filter(([, q]) => q > 0.001).map(([k, q]) => [k, Math.round(q * 100) / 100]));
-}
 /* Discord Q-Hub (specs/037): посилання задає адмін на сайті (public.site_links); останнє відоме лежить у settings,
    щоб без інтернету налаштування однаково показували кнопку. Перевірка та сама, що в src/lib/brand.ts і 0045 */
 const DISCORD_RE = /^https:\/\/(discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]{2,64}\/?$/;
@@ -663,30 +525,8 @@ async function siteDiscord() {
 async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
-  const [prices, stock, discord] = await Promise.all([barPrices(), barStock(s.character), siteDiscord()]);
-  return { ...s, prices, stock, sales: await Promise.all(sales.pending().map(saleView)), prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord };
-}
-async function barHistory() {
-  const { data } = await sb.from('transactions').select('id,type,amount,category,note,ts,source,account').eq('character_id', settings.character).order('ts', { ascending: false }).limit(50);
-  return data || [];
-}
-/* «Купив / Продав / Нафармив» з плану ШІ-помічника (quickRun) */
-async function quickDeal(op, item, qty, price) {
-  if (!OPS[op] || typeof item !== 'string' || !item.trim()) return { error: 'Обери товар' };
-  qty = Math.round(Number(qty) * 100) / 100; price = op === 'farm' ? 0 : Math.round(Number(price));
-  if (!(qty > 0)) return { error: 'Вкажи кількість' };
-  if (op !== 'farm' && !(price > 0)) return { error: 'Вкажи ціну за штуку' };
-  const c = settings.character;
-  let cat = 'Перекуп';
-  if (op === 'sell') {
-    const { count } = await sb.from('deals').select('id', { count: 'exact', head: true }).eq('character_id', c).eq('item', item).eq('op', 'buy');
-    if (!count) cat = 'Продаж фарму';
-  }
-  const tx = op === 'farm' ? null : { type: op === 'buy' ? 'out' : 'in', amount: Math.round(qty * price), category: cat, note: `${OPS[op]}: ${item} × ${qty} по ${money(price)}` };
-  const err = await insertDeal(c, { op, item: item.trim(), qty, price, tx });
-  if (err) return { error: err };
-  refreshCabinet();
-  return { ok: true, character: await charName() };
+  const [prices, discord] = await Promise.all([barPrices(), siteDiscord()]);
+  return { ...s, prices, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord };
 }
 /* зміна персонажа з плашки — кабінет перемикається разом із нею */
 async function barCharacter(id) {
@@ -904,9 +744,6 @@ function startDrafts() {
   refreshRole().catch(() => {});
   setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
   setInterval(() => { if (draftBox().size()) draftBox().flush().catch(() => {}); }, 30e3);
-  /* угоди списання, що не дійшли без зв'язку (specs/030) — при старті й кожні 30 с */
-  const sendSales = () => { if (salesOut().size()) salesOut().flush(sendDeals).then(() => refreshCabinet()).catch(() => {}); };
-  sendSales(); setInterval(sendSales, 30e3);
 }
 
 /* Alt+S: навчальний знімок екрана гри → плашка з прев'ю й кнопками «що на ньому» (shots.cjs) */
@@ -965,7 +802,6 @@ function barPrefs(p) {
   if (Number.isFinite(p?.opacity)) next.opacity = Math.min(1, Math.max(0.6, p.opacity));
   if (['ai', 'prices'].includes(p?.mode)) next.mode = p.mode;
   if (typeof p?.tab === 'boolean') next.tab = p.tab;
-  if (typeof p?.autoLedger === 'boolean') next.autoLedger = p.autoLedger;
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
   if (typeof p?.autoUpdate === 'boolean') next.autoUpdate = p.autoUpdate;
@@ -998,13 +834,13 @@ function barPrefs(p) {
     try { ok = registerHotkey(p.hotkey); } catch { ok = false; }
     if (!ok) { registerHotkey(cur.hotkey); return { error: `${p.hotkey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
     next.hotkey = p.hotkey;
-    tray?.setToolTip(`Q-Hub — ${next.hotkey}: швидкий запис`);
+    tray?.setToolTip(`Q-Hub — ${next.hotkey}: пошук і ціни`);
   }
   settings.bar = next; saveSettings();
   return { prefs: { ...next, autostart: autostart() } };
 }
 
-/* ---------- «зір» програми (vision.cjs): гроші з HUD → облік, вікна скупників → ціни на сайт ---------- */
+/* ---------- «зір» програми (vision.cjs): гроші з HUD → прибуток за годину (лише показ), вікна скупників → ціни на сайт ---------- */
 const visionLog = () => path.join(dir(), 'vision.log');
 let catalogAt = 0, catalogCache = [];
 async function visionCatalog() {
@@ -1021,80 +857,6 @@ async function captureFrame() {
   const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
   const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
   return (srcs.find(s => s.display_id === String(d.id)) || srcs[0])?.thumbnail || null;
-}
-/* зміни грошей → облік; «Авто ·» у нотатці — щоб такі записи було видно й легко виправити через Alt+Q */
-async function autoRecords(recs) {
-  const c = settings.character;
-  for (const r of recs) {
-    if (r.kind === 'transfer') { await insertTransfer(c, r.from, r.to, r.amount); continue; }
-    const { data } = await sb.from('transactions').insert({ character_id: c, type: r.type, amount: r.amount, category: r.category, note: ('Авто · ' + r.note).slice(0, 200), source: 'desktop', account: r.account }).select('id').single();
-    /* продаж скупнику → пропозиція списати товар зі складу; без id запису (немає зв'язку) пропозиції немає (specs/030) */
-    if (data?.id && r.type === 'in' && r.category === 'Продаж фарму') addSale({ txId: data.id, character: c, amount: r.amount, buyerId: r.buyer_id || null, prices: r.prices || null, at: Date.now() });
-  }
-  refreshCabinet();
-}
-
-/* ---------- списання продажу скупнику (specs/030, contracts/bar-sale.md) ---------- */
-const sales = saleq.saleQueue();
-let salesOutQ = null;
-const salesOut = () => (salesOutQ ??= saleq.outQueue(path.join(dir(), 'sales-out.json')));
-function addSale(sale) {
-  if (!sales.add(sale)) return;
-  trayTip();
-  if (bar?.isVisible()) saleView(sale).then(v => bar?.webContents.send('sale-new', v), () => {});
-}
-/* для плашки: назва скупника й товари з цінами — з вікна, що щойно читалось, інакше з сайту (research R2) */
-async function saleView(s) {
-  const list = s.buyerId ? (await barPrices()).filter(p => p.buyerId === s.buyerId) : [];
-  const items = list.map(p => ({ item: p.item, unit: p.unit, price: Number(s.prices?.[p.itemId]) || p.price }));
-  return { txId: s.txId, amount: s.amount, buyerId: s.buyerId, buyer: list[0]?.buyer || null, items, at: s.at };
-}
-const sendDeals = async rows => {
-  const { error } = await sb.from('deals').upsert(rows, { onConflict: 'character_id,external_id', ignoreDuplicates: true });
-  return error ? 'retry' : 'ok';
-};
-async function saleConfirm(txId, lines) {
-  const s = sales.get(txId);
-  if (!s || sales.state(txId) !== 'pending') return 'Пропозиція вже неактуальна.';
-  const bad = saleq.validate(lines, s.amount);
-  if (bad) return bad;
-  const rows = saleq.dealRows(txId, lines, s.at, s.character);
-  sales.confirm(txId);
-  /* спершу на диск, потім у базу: без зв'язку угоди підуть пізніше, external_id не дасть дубля (принцип V) */
-  salesOut().put(txId, rows);
-  await salesOut().flush(sendDeals).catch(() => {});
-  trayTip(); refreshCabinet(); stockAt = 0;
-  return null;
-}
-async function saleUndo(txId) {
-  const s = sales.get(txId);
-  if (!s || !sales.undo(txId)) return 'Скасувати вже не можна — видали угоду в «Угодах».';
-  sales.add(s);   // знову чекає: гравець скасував вгадане, а продаж був — можна обрати вручну
-  if (!salesOut().drop(txId)) {
-    const { error } = await sb.from('deals').delete().eq('character_id', s.character).eq('tx_id', txId).like('external_id', `sale:${txId}:%`);
-    if (error) { sales.decline(txId); trayTip(); return 'Немає зв\'язку — скасуй у «Угодах».'; }
-  }
-  trayTip(); refreshCabinet(); stockAt = 0;
-  return null;
-}
-/* при вході в гру облік має збігатися з HUD: різниця — коригування; картку ще не розділено — розділити, як ручна звірка */
-async function autoBaseline({ cash, bank }) {
-  const c = settings.character;
-  const [{ data: ch }, { data: tx }] = await Promise.all([
-    sb.from('characters').select('start_balance,start_card').eq('id', c).maybeSingle(),
-    sb.from('transactions').select('type,amount,account').eq('character_id', c).limit(20000),
-  ]);
-  if (!ch) return;
-  const sgn = t => (t.type === 'in' ? 1 : -1) * Number(t.amount);
-  const total = (tx || []).reduce((s, t) => s + sgn(t), Number(ch.start_balance) || 0);
-  let card = (tx || []).reduce((s, t) => s + (t.account === 'card' ? sgn(t) : 0), Number(ch.start_card) || 0), cashNow = total - card;
-  const fix = (account, diff) => diff && sb.from('transactions').insert({ character_id: c, type: diff > 0 ? 'in' : 'out', amount: Math.abs(diff), category: 'Коригування', note: 'Звірка з HUD гри', source: 'reconcile', account });
-  if (!Number(ch.start_card) && !(tx || []).some(t => t.account === 'card')) {
-    await sb.from('characters').update({ start_card: bank }).eq('id', c);
-    cashNow = total - bank; card = bank;
-  } else await fix('card', bank - card);
-  await fix('cash', cash - cashNow);
-  refreshCabinet();
 }
 /* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
 /* час наступної зміни цін з вікна скупника — на сайт від імені гравця (база перевіряє, що це найближчі 24 год і є нік зі статіком) */
@@ -1131,11 +893,10 @@ function startVision() {
   try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
   const eye = vision({
     nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
-    /* зір працює, якщо ввімкнено хоч щось: автооблік або ціни скупників (раніше вимкнений автооблік вимикав і ціни) */
-    active: () => !!settings.session && !!settings.character && (prefs().autoLedger !== false || prefs().autoPrices !== false),
-    ledger: () => prefs().autoLedger !== false,
-    prices: () => prefs().autoPrices !== false,
-    onRecords: autoRecords, onBaseline: autoBaseline, onPrices: autoPrices, onNextChange: autoNextChange,
+    /* гра йде — HUD читаємо завжди (прибуток за годину сеансу, specs/040); ціни скупників — за налаштуванням і з персонажем */
+    active: () => !!settings.session,
+    prices: () => prefs().autoPrices !== false && !!settings.character,
+    onMoney, onPrices: autoPrices, onNextChange: autoNextChange,
     onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
   });
   setInterval(() => eye.tick(), TICK_POLL);
@@ -1155,7 +916,7 @@ function startSessionTimer() {
     },
     load: () => settings.session || null,
     save: v => { settings.session = v; saveSettings(); },
-    changed: () => { trayTip(); refreshCabinet(); },
+    changed: () => { trayTip(); bar?.webContents.send('changed'); },
   });
   const run = () => tick().catch(() => {});   // мережа впала — наступна спроба за 10 с
   run(); setInterval(run, 10e3);
@@ -1270,14 +1031,9 @@ app.whenReady().then(() => {
     return state();
   });
   ipcMain.handle('site', (_e, p) => openExternal(cfg.site + (typeof p === 'string' && p.startsWith('/') ? p : '/')));
-  /* швидкий запис — лише з плашки, не зі сторінок сайту */
+  /* питання до ШІ — лише з плашки, не зі сторінок сайту */
   const fromBar = e => bar && e.sender === bar.webContents;
-  /* buyer — скупник, відкритий у режимі «Ціни» (його ціна для «продав» без ціни); інакше — угода з гравцем */
-  const buyerOf = b => (typeof b === 'string' && b ? b : null);
-  ipcMain.handle('quick-parse', (e, text, buyer) => (fromBar(e) ? quickParse(text, buyerOf(buyer)) : null));
-  ipcMain.handle('quick-add', (e, text, buyer) => (fromBar(e) ? quickAdd(text, buyerOf(buyer)) : null));
   ipcMain.handle('quick-ask', (e, text, rules) => (fromBar(e) ? quickAsk(text, rules) : null));
-  ipcMain.handle('quick-run', e => (fromBar(e) ? quickRun() : null));
   /* плашка росте під відповідь помічника */
   /* плашка росте під вміст; знизу екрана — угору, щоб не вилізти за край */
   ipcMain.handle('quick-size', (e, h, w) => {
@@ -1289,25 +1045,14 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('bar-data', e => (fromBar(e) ? barData() : null));
   /* списання продажу скупнику (specs/030, contracts/bar-sale.md) */
-  ipcMain.handle('sale-confirm', (e, txId, lines) => (fromBar(e) ? saleConfirm(String(txId), lines) : null));
-  ipcMain.handle('sale-decline', (e, txId) => { if (fromBar(e)) { sales.decline(String(txId)); trayTip(); } return null; });
-  ipcMain.handle('sale-undo', (e, txId) => (fromBar(e) ? saleUndo(String(txId)) : null));
   /* правила для пошуку плашки: знімок rules-sync з кешу; null — плашка бере вбудовану копію (specs/010 US4) */
   ipcMain.handle('rules-data', e => (fromBar(e) ? rulesSnap().current() : null));
   /* історія: плашка пише пошуки й відповіді ШІ, вікно історії читає їх разом із записами й повертає вибране в плашку */
   /* історія — у самій плашці (ліва колонка): читає й чистить її лише плашка */
   ipcMain.handle('hist-add', (e, it) => { if (fromBar(e)) histAdd(it); });
-  ipcMain.handle('hist-data', async e => (fromBar(e) ? { items: histLoad(), tx: await barHistory().catch(() => []) } : null));
+  ipcMain.handle('hist-data', async e => (fromBar(e) ? { items: histLoad() } : null));
   ipcMain.handle('hist-del', (e, id) => { if (fromBar(e)) { histItems = histLoad().filter(i => i.id !== id); histSave(); } });
   ipcMain.handle('hist-clear', e => { if (fromBar(e)) { histItems = []; histSave(); } });
-  /* олівець у записі історії: ті самі правила, що й правка помічником (editTx), рядок — лише свого персонажа */
-  ipcMain.handle('tx-edit', async (e, id, set) => {
-    if (!fromBar(e)) return null;
-    const err = await editTx(settings.character, id, set && typeof set === 'object' ? set : {});
-    if (err) return { error: err };
-    refreshCabinet(); bar?.webContents.send('hist-changed');
-    return { ok: true };
-  });
   /* мапа (specs/014, contracts/ipc-map.md): плашка відкриває, вікно мапи ховається й питає клавішу */
   const fromMap = e => mapw && e.sender === mapw.webContents;
   ipcMain.handle('map-toggle', e => (fromBar(e) ? toggleMap('bar') : null));
@@ -1365,7 +1110,7 @@ app.whenReady().then(() => {
   if (!registerMapKey(prefs().mapKey))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${prefs().mapKey} зайнята іншою програмою — мапу відкривай кнопкою «Мапа» в плашці або зміни клавішу в налаштуваннях.` });
   if (!registerHotkey(prefs().hotkey))
-    dialog.showErrorBox('Q-Hub', `${prefs().hotkey} уже зайнята іншою програмою — швидкий запис відкривай з іконки в треї або зміни клавішу в налаштуваннях плашки.`);
+    dialog.showErrorBox('Q-Hub', `${prefs().hotkey} уже зайнята іншою програмою — плашку відкривай з іконки в треї або зміни клавішу в налаштуваннях плашки.`);
 }).catch(fail);
 
 /* друга копія програми не запускається — просто показує першу (інакше Alt+Q і порти входу зайняті) */

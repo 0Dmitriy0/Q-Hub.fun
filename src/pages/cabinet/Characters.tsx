@@ -29,7 +29,7 @@ export default function Characters({ first }: { first?: boolean }) {
     <div className="grid side">
       <section className="card">
         <h2>{first ? 'Додай свого персонажа' : 'Новий персонаж'}</h2>
-        {first && <p className="muted">У кожного персонажа свій облік, склад і гараж.</p>}
+        {first && <p className="muted">У кожного персонажа свої Ім’я_Прізвище, статік і документи.</p>}
         {full ? <p className="muted">В акаунті вже {MAX_CHARACTERS} персонажі — більше не можна. Щоб додати нового, видали одного в «Скинути дані».</p> : <>
           <form className="form cols addchar" onSubmit={add}>
             <label className="fld">Ім'я_Прізвище, як у грі<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} spellCheck={false} /></label>
