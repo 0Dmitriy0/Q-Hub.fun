@@ -41,6 +41,19 @@
   .steps { display: grid; gap: 10px; font-size: 13.5px; color: var(--muted); }
   .steps div { display: flex; gap: 12px; align-items: flex-start; }
   .steps b { flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; font: 700 12px Manrope, sans-serif; color: var(--acc); background: rgba(255, 107, 0, .12); }
+  /* налаштування встановлення: інсталятор нічого не питає, вибір тут */
+  .setup { display: grid; gap: 2px; margin-top: 18px; padding: 6px 4px; border-radius: 14px; border: 1px solid var(--line); background: rgba(26, 35, 48, .45); }
+  .sw { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; cursor: pointer; -webkit-app-region: no-drag; font: 600 13.5px Manrope, sans-serif; }
+  .sw:hover { background: var(--surface); }
+  .sw span { flex: 1; }
+  .sw small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+  .sw input { appearance: none; flex: none; position: relative; width: 34px; height: 20px; margin: 0; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--line2); cursor: pointer; transition: background .15s, border-color .15s; }
+  .sw input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .sw input:checked { background: var(--acc); border-color: var(--acc); }
+  .sw input:checked::after { transform: translateX(14px); background: #fff; }
+  .sw input:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .sw input:disabled { opacity: .5; cursor: progress; }
+  @media (prefers-reduced-motion: reduce) { .sw input, .sw input::after { transition: none; } }
   .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(1turn); } }
 
@@ -94,6 +107,10 @@
     <div class="steps">
       <div><b>1</b>Відкриється браузер — увійди тим самим Discord, що й на q-hub.fun.</div>
       <div><b>2</b>Підтверди вхід і повертайся сюди: програма підхопить його сама.</div>
+    </div>
+    <div class="setup" id="setup" hidden>
+      <label class="sw"><span>Запускати разом з Windows<small>Тихо, лише іконкою в треї</small></span><input type="checkbox" role="switch" id="optAuto"></label>
+      <label class="sw"><span>Ярлик на робочому столі</span><input type="checkbox" role="switch" id="optDesk"></label>
     </div>
   </section>
 

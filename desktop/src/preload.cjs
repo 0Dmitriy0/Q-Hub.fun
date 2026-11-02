@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('qhub', {
   /* плашка входу: висота під вміст і хрестик у трей */
   gateSize: h => ipcRenderer.invoke('gate-size', h),
   gateHide: () => ipcRenderer.invoke('gate-hide'),
+  setup: () => ipcRenderer.invoke('setup'),
+  setupSet: p => ipcRenderer.invoke('setup-set', p),
   openBar: () => ipcRenderer.invoke('open-bar'),
   hotkey: () => ipcRenderer.invoke('hotkey'),
   /* рядок швидкого запису (Alt+Q) */
