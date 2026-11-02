@@ -8,11 +8,14 @@ import Icon from '../components/Icon';
 export default function Wiki() {
   const { pathname } = useLocation();
   const [cars, setCars] = useState<number | null>(null);
+  const [guides, setGuides] = useState<number | null>(null);
   useEffect(() => {
     if (!supabase) return;
     supabase.from('vehicles').select('id', { count: 'exact', head: true }).then(({ count, error }) => { if (!error && count != null) setCars(count); });
+    /* гайди WIKI — лише опубліковані (чернетки адміна в лічильник не йдуть) */
+    supabase.from('guides').select('slug', { count: 'exact', head: true }).neq('category', '').eq('published', true).then(({ count, error }) => { if (!error && count != null) setGuides(count); });
   }, []);
-  const here = pathname.startsWith('/wiki/transport') ? 'Транспорт' : 'Роботи';
+  const here = pathname.startsWith('/wiki/transport') ? 'Транспорт' : pathname.startsWith('/wiki/haidy') ? 'Гайди' : 'Роботи';
   return (
     <div className="wiki">
       <div className="wiki-top">
@@ -20,6 +23,7 @@ export default function Wiki() {
         <div className="wiki-tabs" role="tablist" aria-label="Розділ WIKI">
           <NavLink to="/wiki/roboty" role="tab"><Icon name="jobs" size={16} />Роботи<span className="cnt mono">{JOBS.length}</span></NavLink>
           <NavLink to="/wiki/transport" role="tab"><Icon name="car" size={16} />Транспорт{cars != null && <span className="cnt mono">{cars}</span>}</NavLink>
+          <NavLink to="/wiki/haidy" role="tab"><Icon name="book" size={16} />Гайди{guides ? <span className="cnt mono">{guides}</span> : null}</NavLink>
         </div>
       </div>
       <Outlet />

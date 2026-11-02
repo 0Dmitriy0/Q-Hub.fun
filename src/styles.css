@@ -1316,6 +1316,8 @@ fieldset .static-form .btn { align-self: end; }
 @media (max-width: 640px) {
   .wiki-top { flex-direction: column; align-items: stretch; }
   .wiki-tabs { display: flex; } .wiki-tabs a { flex: 1; justify-content: center; }
+  /* три вкладки (Роботи · Транспорт · Гайди) мають уміститися в 360 px */
+  .wiki-tabs a { min-width: 0; padding: 0 8px; gap: 6px; font-size: 13px; }
   .wiki-hero { padding: 18px; }
   .wiki-stats > div { min-width: 0; flex: 1; }
   .wdlg .modal-box { padding: 16px; }
@@ -1514,3 +1516,15 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .doc-date { background: var(--surface2); color: var(--fg); border: 1px solid var(--line2); border-radius: 8px; font: 600 13px var(--sans); padding: 5px 8px; }
 .doc-due { display: flex; align-items: center; gap: 12px; flex-direction: row; text-decoration: none; color: var(--fg); border-color: var(--warn); }
 .doc-due:hover { background: var(--surface2); }
+
+/* WIKI → Гайди (Guides.tsx): список розділами, картка гайду; чернетка — пунктирна рамка */
+.wguides { display: flex; flex-direction: column; gap: 18px; }
+.wguides-sec h2 { margin: 0 0 10px; font-size: 18px; }
+.wguides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.wguide { position: relative; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--fg); transition: border-color .15s, transform .15s; }
+.wguide:hover { border-color: var(--accent); transform: translateY(-1px); }
+.wguide:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wguide b { font-size: 16px; } .wguide .muted { font-size: 13.5px; line-height: 1.5; } .wguide small { color: var(--faint); font-size: 12px; }
+.wguide.draft { border-style: dashed; }
+.wguide-draft { align-self: flex-start; padding: 2px 8px; border-radius: 99px; background: rgba(255, 106, 31, .14); color: var(--accent-hi); font: 700 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+@media (prefers-reduced-motion: reduce) { .wguide, .wguide:hover { transition: none; transform: none; } }

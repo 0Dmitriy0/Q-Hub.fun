@@ -10,6 +10,7 @@ import Download from './pages/Download';
 import NotFound from './pages/NotFound';
 import Cabinet from './pages/cabinet/Cabinet';
 import Wiki, { ToWiki } from './pages/Wiki';
+import { GuidePage, GuidesList } from './pages/Guides';
 import RulesAdmin from './pages/RulesAdmin';
 
 export default function App() {
@@ -23,6 +24,8 @@ export default function App() {
           <Route index element={<Navigate to="roboty" replace />} />
           <Route path="roboty" element={<Jobs />} />
           <Route path="transport" element={<Transport />} />
+          <Route path="haidy" element={<GuidesList />} />
+          <Route path="haidy/:slug" element={<GuidePage />} />
         </Route>
         <Route path="transport" element={<ToWiki to="/wiki/transport" />} />
         <Route path="roboty" element={<ToWiki to="/wiki/roboty" />} />
