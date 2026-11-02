@@ -6,6 +6,7 @@ import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
 import Backdrop from './Backdrop';
+import DiscordMenu from './DiscordMenu';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
@@ -22,7 +23,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
-  const [{ discord_url: discord, family_url: family, market_url: market }] = useLinks();
+  const [{ family_url: family }] = useLinks();
   useEffect(() => setMenu(false), [pathname]);
   useEffect(() => {
     if (!menu) return;
@@ -67,8 +68,8 @@ export default function Layout() {
               <p>Q-Hub — фан-проєкт гравців сім'ї {FAMILY} на QuantRP, не пов'язаний з адміністрацією сервера. Ціни вносять гравці й перевіряють одне одного. Усі торгові марки й назви належать їхнім правовласникам.</p>
             </div>
             <div className="foot-act">
-              {discord && <a className="btn ghost" href={discord} target="_blank" rel="noreferrer">Discord Q-Hub<span className="vh"> (відкриється в новій вкладці)</span></a>}
-              {market && <a className="btn ghost" href={market} target="_blank" rel="noreferrer"><Icon name="coin" />Торговий майданчик<span className="vh"> — Discord, відкриється в новій вкладці</span></a>}
+              {/* три сервери Discord — одним меню (макет власника 2026-11-03) */}
+              <DiscordMenu />
               <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>
             </div>
           </div>
