@@ -46,9 +46,9 @@ export default function EventsBlock() {
       <div className="evhead">
         <h2 className="ih"><Icon name="clock" />Найближчі івенти</h2>
         <div className="seg sm" role="tablist" aria-label="Що показати">
-          <button role="tab" aria-selected={tab === 'sched'} aria-pressed={tab === 'sched'} onClick={() => pick('sched')}>Розклад</button>
-          <button role="tab" aria-selected={tab === 'season'} aria-pressed={tab === 'season'} onClick={() => pick('season')}>Івенти{live(ev) > 0 && <span className="evdot" aria-label={`${live(ev)} триває`}>{live(ev)}</span>}</button>
-          <button role="tab" aria-selected={tab === 'promo'} aria-pressed={tab === 'promo'} onClick={() => pick('promo')}>Промокоди{live(pr) > 0 && <span className="evdot" aria-label={`${live(pr)} діє`}>{live(pr)}</span>}</button>
+          <button role="tab" aria-selected={tab === 'sched'} onClick={() => pick('sched')}>Розклад</button>
+          <button role="tab" aria-selected={tab === 'season'} onClick={() => pick('season')}>Івенти{live(ev) > 0 && <span className="evdot" aria-label={`${live(ev)} триває`}>{live(ev)}</span>}</button>
+          <button role="tab" aria-selected={tab === 'promo'} onClick={() => pick('promo')}>Промокоди{live(pr) > 0 && <span className="evdot" aria-label={`${live(pr)} діє`}>{live(pr)}</span>}</button>
         </div>
       </div>
 
