@@ -2,7 +2,7 @@
 
 ## Підготовка
 
-1. Застосувати `supabase/migrations/0046_admin_panel.sql` на робочій базі. Перед цим перевірити, що 0043–0045 уже є (пам'ять `prod-migrations-gaps`).
+1. Застосувати `supabase/migrations/0046_admin_panel.sql` на робочій базі. **Перевірено 2026-11-02 (T001): 0044 і 0045 застосовані, 0043 — НІ** (немає `price_rules`, `price_pending`). Спершу 0043, потім 0046 — інакше 0046 впаде на `price_rules`.
 2. Тести прав: `supabase/tests/run.sh` (усі `*_test.sql`, зокрема `admin_panel_test.sql`), очікувано — без помилок.
 3. Логіка: `npx.cmd vitest run src/lib/admin.test.ts`, `cd desktop && npm.cmd test`.
 4. Сайт локально: `npx.cmd vite --mode production` (пам'ять `dev-server-needs-production-mode`).

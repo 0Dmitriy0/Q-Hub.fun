@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import Cabinet from './pages/cabinet/Cabinet';
 import Wiki, { ToWiki } from './pages/Wiki';
 import RulesAdmin from './pages/RulesAdmin';
+import Admin from './pages/Admin';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="mapa/v-gru" element={<GameMapGuide />} />
         <Route path="programa" element={<Download />} />
         <Route path="kabinet/*" element={<Cabinet />} />
+        <Route path="admin" element={<Admin />} />
         <Route path="admin/pravyla" element={<RulesAdmin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
