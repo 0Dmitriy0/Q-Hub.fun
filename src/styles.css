@@ -89,7 +89,7 @@ main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px max(16px, e
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
 .seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
 .seg button { border: 0; background: transparent; color: var(--muted); font: 700 14px var(--sans); padding: 9px 16px; border-radius: 999px; cursor: pointer; min-height: 40px; }
-.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
 .fld { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); min-width: 0; }
 .fld input, .fld select, .fld textarea { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 14px; font: 600 16px var(--sans); min-height: 44px; }
 .fld input:focus, .fld select:focus { border-color: var(--accent); outline: 0; }
@@ -1150,13 +1150,6 @@ fieldset .static-form .btn { align-self: end; }
   .p-hud-cash { text-align: left; }
 }
 
-/* шапка: скільки гравців зараз у програмі (src/components/AppOnline.tsx) */
-.online { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.online b { color: var(--fg); font-size: 13px; }
-.online:hover { color: var(--fg); border-color: color-mix(in srgb, var(--good) 50%, var(--line2)); }
-.online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); animation: online-pulse 2s ease-in-out infinite; }
-@keyframes online-pulse { 50% { box-shadow: 0 0 0 6px transparent; } }
-@media (max-width: 600px) { .online { padding: 0 10px; } .online-t { display: none; } }
 
 /* ---------- ціни скупників (Figma «Скупники» + design/stitch/buyers.html, src/pages/Prices.tsx) ---------- */
 .bp { display: flex; flex-direction: column; gap: 32px; }
@@ -1419,7 +1412,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .evhead .seg { display: inline-flex; flex-wrap: nowrap; max-width: 100%; }
 .evhead .seg button { flex: none; white-space: nowrap; min-height: 34px; padding: 6px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
 .evdot { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--good); color: #04150e; font: 700 11px var(--mono); }
-.seg button[aria-pressed="true"] .evdot { background: var(--accent-fg); color: var(--accent); }
+.seg button[aria-pressed="true"] .evdot, .seg button[aria-selected="true"] .evdot { background: var(--accent-fg); color: var(--accent); }
 .sv { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 16px; background: var(--surface2); }
 .sv.on { background: var(--good-soft); }
 .sv-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
