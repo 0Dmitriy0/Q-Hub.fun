@@ -4,43 +4,56 @@ import { useAuth } from '../../lib/auth';
 import { ROLES, ROLE_NAMES, adminError, day, when } from '../../lib/admin';
 import AdminSection from './AdminSection';
 
-/* Гравці й ролі (specs/039 US2): пошук за ніком чи Discord, персонажі (лише ім'я й статік), зміна ролі.
-   Свою роль admin і роль останнього admin база зняти не дасть (0046 admin_set_role) */
+/* Гравці й ролі (specs/039 US2): одразу всі акаунти сайту, новіші першими, порціями по 50 (0047 admin_accounts);
+   рядок пошуку фільтрує за ніком чи Discord. Персонажі — лише ім'я й статік. Свою роль admin і роль останнього admin
+   база зняти не дасть (0046 admin_set_role) */
 type Account = { id: string; nick: string | null; name: string; avatar_url: string | null; role: string; created_at: string;
-  last_seen: string | null; version: string | null; characters: { name: string; static_id: number | null }[] };
+  last_seen: string | null; version: string | null; characters: { name: string; static_id: number | null }[]; total?: number };
+const PAGE = 50;
 
 export default function AdminAccounts() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<Account[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+  const page = async (s: string, offset: number) => {
+    setBusy(true);
+    const { data, error } = await supabase!.rpc('admin_accounts', { q: s, p_offset: offset, p_limit: PAGE });
+    setBusy(false);
+    if (error) { setErr(adminError(error)); return; }
+    const got = (data || []) as Account[];
+    setErr(''); setTotal(Number(got[0]?.total ?? (offset ? total : 0)));
+    setRows(rs => (offset ? [...(rs || []), ...got] : got));
+  };
+  /* порожній рядок — одразу всі; пишеш — фільтр з паузою 300 мс */
   useEffect(() => {
     const s = q.trim();
-    if (s.length < 2) { setRows(null); setErr(''); return; }
-    setBusy(true);
-    const t = setTimeout(() => {
-      supabase!.rpc('admin_find_accounts', { q: s }).then(({ data, error }) => {
-        setBusy(false);
-        if (error) { setErr(adminError(error)); setRows(null); } else { setErr(''); setRows((data || []) as Account[]); }
-      });
-    }, 300);
+    const t = setTimeout(() => { page(s, 0); }, s ? 300 : 0);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, tick]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  const s = q.trim();
   return (
-    <AdminSection title="Гравці й ролі" error={err}
-      hint="Знайди акаунт за ніком у Q-Hub чи іменем у Discord. Особисті дані персонажів тут не показуються — лише хто це й яка роль.">
-      <label className="fld adm-search">Нік чи Discord (від 2 символів)
+    <AdminSection title="Гравці й ролі" error={err} onRetry={() => setTick(t => t + 1)}
+      actions={rows && <span className="pill">{s ? `Знайдено: ${total}` : `Усього акаунтів: ${total}`}</span>}
+      hint="Усі, хто входив на сайт через Discord, — новіші першими. Особисті дані персонажів тут не показуються — лише хто це й яка роль.">
+      <label className="fld adm-search">Фільтр: нік чи Discord
         <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="наприклад, D_VYRX" autoFocus />
       </label>
-      {busy && <p className="muted adm-loading">Шукаю…</p>}
-      {!busy && rows && !rows.length && <p className="adm-empty">Нікого не знайдено за «{q.trim()}».</p>}
-      {!busy && rows && rows.length > 0 && (
+      {busy && !rows && <p className="muted adm-loading">Вантажу…</p>}
+      {rows && !rows.length && !busy && <p className="adm-empty">{s ? `Нікого не знайдено за «${s}».` : 'Акаунтів ще немає.'}</p>}
+      {rows && rows.length > 0 && (
         <ul className="adm-cards">
           {rows.map(a => <AccountCard key={a.id} a={a} onRole={role => setRows(rs => rs!.map(x => (x.id === a.id ? { ...x, role } : x)))} />)}
         </ul>
       )}
-      {!busy && rows?.length === 20 && <p className="muted">Показано перші 20 — уточни запит.</p>}
+      {rows && rows.length < total && (
+        <button type="button" className="btn ghost" disabled={busy} onClick={() => page(s, rows.length)}>
+          {busy ? 'Вантажу…' : `Показати ще (${rows.length} з ${total})`}
+        </button>
+      )}
     </AdminSection>
   );
 }

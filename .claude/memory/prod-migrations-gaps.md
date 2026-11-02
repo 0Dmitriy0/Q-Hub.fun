@@ -19,3 +19,5 @@ metadata:
 2026-11-02: 0043 (`price_rules`, `price_pending`, specs/029) на робочій базі ще немає, 0044 і 0045 — є. Перевірка без власника:
 публічним ключем з `desktop/src/config.json` — `GET <url>/rest/v1/<таблиця>`; `PGRST205` = таблиці немає. 0046 (specs/039) залежить від 0043.
 SQL-тести можна прогнати локально без Postgres — у PGlite (`@electric-sql/pglite`): моки з `run.sh`, міграції по черзі, тест без `\gset`/psql-змінних.
+2026-11-03: власник застосував 0043 і 0046 на робочій базі (перевірено: `price_rules` є, функції `admin_*` є); функцію `assistant` задеплоєно з specs/040.
+Деплой функцій — з теки репо (`cd C:\Users\User\Q-Hub.fun`), в окремому PowerShell: `npx.cmd supabase login` у `!`-рядку Claude Code не працює (не TTY).
