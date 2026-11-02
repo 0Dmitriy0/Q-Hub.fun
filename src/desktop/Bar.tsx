@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Hub from './Hub';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
@@ -13,48 +13,30 @@ import { matchCats } from './catMatch';
 import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
-import { isSellQuestion, sellAdvice, type Sell } from './sellAdvice';
-import SaleCard, { type Sale } from './SaleCard';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
-   Режими: «Пошук» (Enter — пошук у правилах сервера чи запис із сумою без ШІ, Shift+Enter — спитати ШІ-помічника)
-   і «Ціни» (миттєвий пошук по скупниках, без ШІ).
+   Режими: «Пошук» (Enter — пошук у правилах сервера й місцях мапи, Shift+Enter — спитати ШІ-помічника)
+   і «Ціни» (миттєвий пошук по скупниках, без ШІ). Облік, угоди й склад прибрано (specs/040).
    Даних із бази тут немає — усе дає головний процес програми через міст (desktop/src/preload.cjs). */
 
-type Op = 'buy' | 'farm' | 'sell';
-type Acc = 'cash' | 'card';
-interface TxAct { kind: 'tx'; type: 'in' | 'out'; amount: number; category: string; note: string; account?: Acc }
-interface MoveAct { kind: 'transfer'; from: Acc; to: Acc; amount: number }
-interface DealAct { kind: 'deal'; op: Op; item: string; qty: number; price: number; tx: Omit<TxAct, 'kind'> | null }
-interface Rec { type: 'in' | 'out'; amount: number; category: string; note: string; ts: string; account?: Acc; source: string }
-interface EditAct { kind: 'edit'; id: string; rec: Rec; set: Partial<Pick<Rec, 'type' | 'amount' | 'category' | 'note' | 'account'>> }
-interface DelAct { kind: 'delete'; id: string; rec: Rec }
-type Action = TxAct | DealAct | MoveAct | EditAct | DelAct;
-const ACC: Record<Acc, string> = { cash: 'готівка', card: 'картка' };
 /* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
 /* плашка завжди однієї ширини — і порожня, і з результатами: не «стрибає», коли з'являються результати */
 const BAR_WIDE = 1120;
-type Rule = { kind?: 'transfer'; type?: 'in' | 'out'; amount: number; category?: string; account?: Acc; from?: Acc; to?: Acc }
-  | { kind: 'deal'; op: Op; item: string; qty: number; unit: string; price: number | null } | null;
-export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoLedger: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; stock: Record<string, number>; sales?: Sale[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
-interface Ask { q: string; reply: string; actions: Action[]; done: boolean; error?: string; hits?: RuleHit[]; sells?: Sell[]; places?: PlaceHit[] }
-type Res = { ok?: boolean; error?: string; character?: string };
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
+interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
+interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
   histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; mapToggle(): Promise<boolean>;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
-  quickParse(t: string, buyer?: string | null): Promise<Rule>;
-  quickAdd(t: string, buyer?: string | null): Promise<Res>; quickAsk(t: string, rules: string): Promise<{ reply: string; actions: Action[]; error?: string }>;
-  quickRun(): Promise<Res>;
+  quickAsk(t: string, rules: string): Promise<{ reply: string; error?: string }>;
   quickSize(h: number, w: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void; mapOpen(p: { id?: string; x: number; y: number }): Promise<void>;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
   onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
-  onSaleNew?(cb: (s: Sale) => void): () => void;
 }
 interface Shot { name: string; preview: string; black: boolean }
 interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null }
@@ -67,27 +49,11 @@ let TOPICS = BUILT.topics, RULES_AT = BUILT.fetched;
 /* «станом на 29 жовтня» — коли зібрано правила, щоб гравець бачив, наскільки вони свіжі (FR-017) */
 const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' : RULES_AT).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
-const OPS: Record<Op, string> = { buy: 'Купив', farm: 'Нафармив', sell: 'Продав' };
-/* рядок починається з угоди («продав …», «нафармив …») — як DEAL_OPS у desktop/src/quick.cjs */
-const DEAL = /^\s*((на)?фарм|зібра|накопа|налов|добу|нарубав|нарубала|назбира|купи|скупи|прикупи|прода|зда|збув)/i;
 /* пошук у правилах сервера без ШІ — і для Enter, і для повтору з історії */
 /* пошук без ШІ: правила сервера й місця на мапі (specs/014) */
-const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', actions: [], done: true, hits, places: pl }; };
+const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl }; };
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
-const sum = (type: 'in' | 'out', n: number) => <b className={type === 'in' ? 'good' : 'bad'}>{type === 'in' ? '+' : '−'}{money(n)}</b>;
-
-/* запис, який помічник пропонує змінити чи видалити */
-const RecLine = ({ r }: { r: Rec }) => <>{sum(r.type, r.amount)} · {r.category} · {ACC[r.account ?? 'cash']}{r.note ? ` · «${r.note}»` : ''} <small className="muted">{when(r.ts)}</small></>;
-
-function ActLine({ a }: { a: Action }) {
-  if (a.kind === 'delete') return <li className="bdel">Видалити: <RecLine r={a.rec} />{a.rec.source === 'deal' && <small className="bad"> · разом з угодою (товар зникне зі складу)</small>}{a.rec.source === 'transfer' && <small> · обидві половини переказу</small>}</li>;
-  if (a.kind === 'edit') { const n = { ...a.rec, ...a.set }; return <li>Змінити: <s className="muted"><RecLine r={a.rec} /></s><br />→ <RecLine r={n} /></li>; }
-  if (a.kind === 'transfer') return <li>Переказ <b>{money(a.amount)}</b>: {ACC[a.from]} → {ACC[a.to]}</li>;
-  if (a.kind === 'tx') return <li>{sum(a.type, a.amount)} · {a.category} · {ACC[a.account ?? 'cash']}{a.note ? ` · ${a.note}` : ''}</li>;
-  return <li>{OPS[a.op]} <b>{a.item}</b> × {a.qty}{a.op !== 'farm' && <> по {money(a.price)}</>}{a.tx && <> → {sum(a.tx.type, a.tx.amount)} · {a.tx.category}</>}</li>;
-}
-
 /* найближчий івент — у вкладці над плашкою */
 function NextEvent() {
   const [now, setNow] = useState(Date.now());
@@ -108,7 +74,6 @@ export default function Bar() {
   const [sel, setSel] = useState(0);
   const [asks, setAsks] = useState<Ask[]>([]);
   const [, setRulesAt] = useState(RULES_AT);   // прийшов новий знімок правил — перемалювати «станом на …»
-  const [rule, setRule] = useState<Rule>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
   const [histOn, setHistOn] = useState(false);
@@ -139,8 +104,6 @@ export default function Bar() {
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
-    /* автооблік записав продаж скупнику, поки плашка відкрита, — пропозиція списання одразу (specs/030) */
-    api.onSaleNew?.(() => load());
     loadPlaces();
     const pullRules =() => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
     pullRules(); api.onRulesChanged?.(pullRules);
@@ -159,75 +122,48 @@ export default function Bar() {
     ro.observe(el); return () => ro.disconnect();
   }, [fit]);
 
-  /* «Ціни»: назвав скупника чи товар — відкривається скупник; «продав …» у цьому режимі — угода за ціною відкритого скупника */
+  /* «Ціни»: назвав скупника чи товар — відкривається скупник з цінами */
   const [buyer, setBuyer] = useState<string | null>(null);
-  const dealish = mode === 'prices' && DEAL.test(q);
-  const hits = useMemo(() => (d && mode === 'prices' && !dealish ? buyers(d.prices, q, d.stock) : []), [d, q, mode, dealish]);
+  const hits = useMemo(() => (d && mode === 'prices' ? buyers(d.prices, q) : []), [d, q, mode]);
   useEffect(() => { if (hits.length) setBuyer(hits[Math.min(sel, hits.length - 1)].buyer); }, [hits, sel]);
-  const cur = useMemo(() => (d && buyer ? buyers(d.prices, buyer, d.stock).find(b => b.buyer === buyer) ?? null : null), [d, buyer]);
+  const cur = useMemo(() => (d && buyer ? buyers(d.prices, buyer).find(b => b.buyer === buyer) ?? null : null), [d, buyer]);
   /* розділ кабінету — у головній плашки; почав писати на головній — під рядком пошук, стер — знову головна */
   const nav = useNavigate();
   const { signOut } = useAuth();
   const go = (p: string) => { nav(p); setQ(''); setView('hub'); setChars(false); };
   const v = view === 'hub' && q.trim() ? 'main' : view;
-  const dash = useLocation().pathname === '/kabinet/dashbord' && v === 'hub';
   const prefs = d?.prefs;
   const decidePin = (send: boolean, hint?: PinHint) => { setPinQ(null); setView('main'); api.pinDecide(send, hint); };
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
-  /* «Пошук» — лише правила й закони, нічого не записує; записи в облік (угода, дохід, витрата, переказ) — у «Цінах».
-     Підказка під рядком: що запишеться по Enter */
-  useEffect(() => {
-    if (mode !== 'prices' || !q.trim()) { setRule(null); return; }
-    let live = true; api.quickParse(q, buyer).then(r => live && setRule(r)); return () => { live = false; };
-  }, [q, mode, buyer]);
 
-  const latest = asks[0];
   async function ask() {
     const text = q.trim(); if (!text || busy) return;
-    if (pending(text)) return runPlan();
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
     const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
     setBusy(false);
-    setAsks(a => [{ q: text, reply: r.reply || '', actions: r.actions || [], done: !(r.actions || []).length, error: r.error }, ...a].slice(0, 30));
+    setAsks(a => [{ q: text, reply: r.reply || '', error: r.error }, ...a].slice(0, 30));
     setSel(0);
     if (!r.error && r.reply) api.histAdd({ kind: 'ai', q: text, reply: r.reply });
   }
-  const pending = (text: string) => !!latest && !latest.done && latest.actions.length > 0 && latest.q === text;
-  async function runPlan() {   // Enter після відповіді помічника — записати його план
-    setBusy(true); const r = await api.quickRun(); setBusy(false);
-    if (r.error) { setNote({ text: r.error, bad: true }); return; }
-    setAsks(a => [{ ...a[0], done: true }, ...a.slice(1)]); setNote({ text: `Записано · ${r.character}` }); setQ(''); load();
-  }
-  /* Enter без ШІ: план помічника чекає — записати; інакше — пошук у правилах і законах (сума тут не записується — це в «Цінах») */
+  /* Enter без ШІ: пошук у правилах, законах і місцях мапи */
   function plain() {
     const text = q.trim(); if (!text || busy) return;
-    if (pending(text)) { runPlan(); return; }
-    /* «що продати?» — відповідь зі складу й цін скупників, без ШІ */
-    if (d && isSellQuestion(text)) {
-      setAsks(a => [{ q: text, reply: '', actions: [], done: true, sells: sellAdvice(d.prices, d.stock) }, ...a].slice(0, 30));
-      setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text }); return;
-    }
     setAsks(a => [askRules(text), ...a].slice(0, 30));
     setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text });
-  }
-  async function quickRule() {
-    if (!rule) { setNote({ text: 'Без ШІ потрібна сума — наприклад, 450к', bad: true }); return; }
-    setBusy(true); const r = await api.quickAdd(q, buyer); setBusy(false);
-    setNote(r.error ? { text: r.error, bad: true } : { text: `Записано · ${r.character}` }); if (!r.error) { setQ(''); load(); }
   }
   /* історія — окрема плашка ліворуч (src/desktop/History.tsx) */
   /* історія — ліва колонка плашки, поки її не закрили (specs: «показуй тут завжди історію») */
   function toggleHistory() { setHistOn(h => !h); setMode('ai'); setView('main'); setChars(false); }
-  /* вибрали рядок в історії: пошук і відповідь ШІ — праворуч без нового запиту (ліміт ШІ не витрачається), запис — облік */
+  /* вибрали рядок в історії: пошук і відповідь ШІ — праворуч без нового запиту (ліміт ШІ не витрачається) */
   function pickHist(it: HistPick) {
     setChars(false); setNote(null); setSel(0);
-    if (it.kind === 'tx' || !it.q) { setHistOn(false); nav('/kabinet/oblik'); setQ(''); setView('hub'); return; }
+    if (!it.q) return;
     const text = it.q;
     setQ(text); setView('main');
-    setAsks(a => [it.kind === 'ai' ? { q: text, reply: it.reply || '', actions: [], done: true } : askRules(text), ...a].slice(0, 30));
+    setAsks(a => [it.kind === 'ai' ? { q: text, reply: it.reply || '' } : askRules(text), ...a].slice(0, 30));
   }
   /* мапа Q-Hub — окрема плашка під цією, праворуч від історії (map.html, specs/014) */
   async function toggleMap() { setMapOn(await api.mapToggle()); }
@@ -241,7 +177,7 @@ export default function Bar() {
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) { e.preventDefault(); setSel(s => (s + (e.key === 'ArrowDown' ? 1 : n - 1)) % n); return; }
     if (e.key === 'Enter' && v === 'main') {
       e.preventDefault();
-      if (mode === 'prices') { if (saves) quickRule(); return; }
+      if (mode === 'prices') return;
       if (e.shiftKey) ask(); else plain();
     }
   }
@@ -250,14 +186,11 @@ export default function Bar() {
   useLayoutEffect(() => { fit(); }, [expanded, fit]);
   const ch = d?.characters.find(c => c.id === d.character);
   const aiNext = mode === 'ai' && shift;
-  /* Enter запише — лише в «Цінах»: угода — коли рядок починається з «продав / купив / нафармив…», дохід, витрата чи переказ — коли є сума */
-  const saves = mode === 'prices' && !!rule && (rule.kind !== 'deal' || dealish);
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
       {prefs?.tab !== false && <NextEvent />}
       <div className="bbox">
-        {d?.sales && <SaleCard sales={d.sales} stock={d.stock} changed={load} />}
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
           {/* ‹ › — лише коли відкрита головна з кабінетом */}
@@ -266,9 +199,9 @@ export default function Bar() {
             <button className="bico" onClick={() => nav(1)} title="Вперед" aria-label="Вперед"><Icon name="chev" size={16} className="tr" /></button>
           </>}
           {/* що зробить Enter: пошук, ШІ (з Shift) чи ціни */}
-          <span className={'blead' + (aiNext ? ' ai' : saves ? ' save' : '')} aria-hidden="true"><Icon name={mode === 'prices' ? 'tag' : aiNext ? 'spark' : saves ? 'coin' : 'search'} size={18} /></span>
+          <span className={'blead' + (aiNext ? ' ai' : '')} aria-hidden="true"><Icon name={mode === 'prices' ? 'tag' : aiNext ? 'spark' : 'search'} size={18} /></span>
           <input ref={input} value={q} autoFocus spellCheck={false} onChange={e => { setQ(e.target.value); setSel(0); setNote(null); }}
-            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, закон штату або питання') : 'Скупник: шкури, риба… · «продав 20 …» · «450к зарплата»'} aria-label="Запит" />
+            placeholder={mode === 'ai' ? (aiNext ? 'Спитай ШІ своїми словами…' : 'Правило сервера, закон штату або питання') : 'Скупник чи товар: шкури, риба, глива…'} aria-label="Запит" />
           {q && <button className="bico" title="Очистити" onClick={() => { setQ(''); input.current?.focus(); }}><Icon name="x" size={15} /></button>}
           <div className="bseg" role="group" aria-label="Режим">
             <button aria-pressed={mode === 'ai'} onClick={() => switchMode('ai')}><Icon name="search" size={14} />Пошук</button>
@@ -286,10 +219,8 @@ export default function Bar() {
               <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}
           </div>
           <span className="bsep" aria-hidden="true" />
-          {/* дашборд — окремо від головної: відкрити й сховати однією кнопкою */}
-          <button className={'bico' + (dash ? ' on' : '')} aria-pressed={dash} title={dash ? 'Сховати дашборд' : 'Дашборд'} onClick={() => (dash ? setView('main') : go('/kabinet/dashbord'))}><Icon name="chart" size={17} /></button>
           <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
-          <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки, питання до ШІ й записи" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
+          <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки й питання до ШІ" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
           <button className={'bico' + (mapOn ? ' on' : '')} title={`Мапа Q-Hub · ${prefs?.mapKey || 'Alt+M'}`} aria-label="Мапа Q-Hub" aria-pressed={mapOn} onClick={toggleMap}><Icon name="map" size={17} /></button>
           <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => { setSetStart('main'); setView(x => (x === 'settings' ? 'main' : 'settings')); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
@@ -297,16 +228,15 @@ export default function Bar() {
         {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
-           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q}
-             pick={t => { setQ(t); setTimeout(() => input.current?.focus(), 0); }} /> :
-           <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} run={ask} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
+           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} /> :
+           <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 
         <div className="bhint">
           {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
-          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : saves && rule ? (rule.kind === 'deal' ? <DealLine d={rule} /> : rule.kind === 'transfer' ? <>Enter запише: переказ {money(rule.amount)} · {ACC[rule.from!]} → {ACC[rule.to!]}</> : <>Enter запише: {sum(rule.type!, rule.amount)} · {rule.category} · {ACC[rule.account ?? 'cash']}</>) : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар · «продав 20 …» — за ціною відкритого скупника · «450к зарплата» — в облік')}</span>}
+          <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар — ціни, межі й коли їх оновили')}</span>}
           <span className="bkeys">{mode === 'ai'
-            ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>{saves ? 'записати' : 'пошук'}</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
+            ? <><span className={aiNext ? '' : 'on'}><kbd>Enter</kbd>пошук</span><span className={aiNext ? 'on ai' : ''}><kbd>Shift</kbd><kbd>Enter</kbd>ШІ</span></>
             : <span className="on"><kbd>↑</kbd><kbd>↓</kbd>вибір</span>}
             <span><kbd>Tab</kbd>{mode === 'ai' ? 'ціни' : 'пошук'}</span><span><kbd>Esc</kbd>сховати</span></span>
         </div>
@@ -344,11 +274,11 @@ function RuleCard({ h }: { h: RuleHit }) {
 const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
 
 /* left — історія замість списку запитів цієї сесії, коли натиснуто «Історія» */
-function Ai({ asks, sel, setSel, busy, run, q, left }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; run: () => void; q: string; left?: React.ReactNode }) {
+function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; q: string; left?: React.ReactNode }) {
   const a = asks[sel];
-  const kind = (x: Ask) => (x.error ? 'err' : x.sells ? 'sell' : x.hits ? 'rules' : x.actions.length ? 'plan' : 'ai');
-  const meta = (x: Ask) => x.error ? 'помилка' : x.sells ? (x.sells.length ? `склад · ${x.sells.length}` : 'на складі нічого продати') : x.hits ? (x.hits.length || x.places?.length ? [x.places?.length && `місця · ${x.places.length}`, x.hits.length && `правила · ${x.hits.length}`].filter(Boolean).join(' · ') : 'нічого не знайдено') : x.done && x.actions.length ? 'записано' : x.actions.length ? `${x.actions.length} дії — чекає Enter` : 'відповідь ШІ';
-  const ICO = { rules: 'search', ai: 'spark', plan: 'coin', err: 'x', sell: 'tag' } as const;
+  const kind = (x: Ask) => (x.error ? 'err' : x.hits ? 'rules' : 'ai');
+  const meta = (x: Ask) => x.error ? 'помилка' : x.hits ? (x.hits.length || x.places?.length ? [x.places?.length && `місця · ${x.places.length}`, x.hits.length && `правила · ${x.hits.length}`].filter(Boolean).join(' · ') : 'нічого не знайдено') : 'відповідь ШІ';
+  const ICO = { rules: 'search', ai: 'spark', err: 'x' } as const;
   return <>
     <div className="bleft">{left ?? <>
       {busy && <div className="brow item on"><span className="bkico ai"><Icon name="spark" size={15} /></span><span><b>{q.trim()}</b><small>ШІ думає…</small></span></div>}
@@ -356,7 +286,7 @@ function Ai({ asks, sel, setSel, busy, run, q, left }: { asks: Ask[]; sel: numbe
         <span className={'bkico ' + kind(x)}><Icon name={ICO[kind(x)]} size={15} /></span><span><b>{x.q}</b><small>{meta(x)}</small></span></button>)}
     </>}</div>
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
-      {a.sells ? <SellList sells={a.sells} /> : a.hits ? <>
+      {a.hits ? <>
         {a.places && a.places.length > 0 && <>
           <div className="bkind"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub</div>
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
@@ -369,63 +299,34 @@ function Ai({ asks, sel, setSel, busy, run, q, left }: { asks: Ask[]; sel: numbe
       </> : <>
         <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
         {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}</div>}
-        {a.actions.length > 0 && <ul className="bacts">{a.actions.map((x, i) => <ActLine key={i} a={x} />)}</ul>}
-        {sel === 0 && !a.done && a.actions.length > 0 && <button className="btn acc" onClick={run} disabled={busy || q.trim() !== a.q}>{q.trim() === a.q ? 'Записати (Enter)' : 'Текст змінено — Shift+Enter спитає знову'}</button>}
-        {a.done && a.actions.length > 0 && <p className="good">Записано в облік.</p>}
-        {!a.error && !a.actions.length && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
+        {!a.error && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>
   </>;
 }
 
-/* «що продати?»: найдорожче зі складу разом, кому здати і скільки дасть наступний скупник */
-function SellList({ sells }: { sells: Sell[] }) {
-  if (!sells.length) return <>
-    <div className="bkind"><Icon name="tag" size={14} />Що продати зі складу</div>
-    <p className="bnone">На складі немає товарів, які беруть скупники. Склад — це «Купив» і «Нафармив» у режимі «Ціни» (<kbd>Tab</kbd>) або в кабінеті.</p>
-  </>;
-  return <>
-    <div className="bkind"><Icon name="tag" size={14} />Що продати зі складу · за цінами скупників</div>
-    <ul className="bsells">{sells.map(x => <li key={x.item}>
-      {x.icon ? <img src={asset(x.icon)} alt="" width={32} height={32} /> : <span className="bava">{x.item[0]}</span>}
-      <span className="bsell-txt"><b>{x.item} × {x.qty}</b>
-        <small>{x.buyer} · {money(x.price)} / {x.unit}{x.next && x.next.price < x.price ? ` · у «${x.next.buyer}» на ${money((x.price - x.next.price) * x.qty)} менше` : ''}</small></span>
-      <b className="good mono">{money(x.total)}</b>
-    </li>)}</ul>
-    <p className="bfine">Ціни — останні, які внесли гравці; у грі вони могли змінитися. Продаж записується в режимі «Ціни» (<kbd>Tab</kbd>).</p>
-  </>;
-}
 
-/* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами.
-   Клік по товару — рядок «продав <скільки є> <товар>»: Enter запише за ціною цього скупника */
-function Prices({ hits, setSel, cur, q, pick }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string; pick: (t: string) => void }) {
-  if (!cur) return <div className="bempty">{q.trim() && !DEAL.test(q) ? `Скупника «${q.trim()}» не знайшов. Спробуй «шкури», «риба», «гриби».` : 'Спершу назви скупника — тоді «продав …» запишеться за його ціною.'}</div>;
+/* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами */
+function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string }) {
+  if (!cur) return <div className="bempty">{q.trim() ? `Скупника «${q.trim()}» не знайшов. Спробуй «шкури», «риба», «гриби».` : 'Назви скупника чи товар — побачиш його ціни.'}</div>;
   const left = hits.length ? hits : [cur];
   return <>
     <div className="bleft">{left.map((b, i) => (
       <button key={b.buyer} className={'brow item' + (b.buyer === cur.buyer ? ' on' : '')} onClick={() => hits.length && setSel(i)}>
         {b.icon ? <img src={asset(b.icon)} alt="" /> : <span className="bava" />}
-        <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}{b.items.some(x => x.have > 0) ? ' · є на складі' : ''}</small></span>
+        <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}</small></span>
       </button>))}</div>
     <div className="bright">
-      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">«продав …» у цьому режимі — за цінами цього скупника</small></div></div>
+      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div></div>
       <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
-        <button key={x.item} className="bbuy" title="Підставити в рядок «продав …»" onClick={() => pick(`продав ${x.have > 0 ? (x.unit === 'кг' ? `${x.have} кг ` : `${x.have} `) : ''}${x.item.toLowerCase()}`)}>
+        <div key={x.item} className="bbuy">
           {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
-          <span><b>{x.item}</b><small>{x.have > 0 ? `у тебе ${x.have} ${x.unit}` : x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
+          <span><b>{x.item}</b><small>{x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
           {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
           <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
-        </button>); })}</div>
+        </div>); })}</div>
     </div>
   </>;
-}
-
-/* підказка під рядком для угоди: що Enter запише на склад і в облік */
-function DealLine({ d }: { d: { op: Op; item: string; qty: number; unit: string; price: number | null } }) {
-  const n = d.unit === 'кг' ? `${d.qty} кг` : d.qty;   // риба: показати, у скільки кг перераховано штуки
-  if (d.op === 'farm') return <>Enter запише: нафармив {d.item} × {n} — на склад</>;
-  if (d.price === null) return <>Угода: {OPS[d.op].toLowerCase()} {d.item} × {n} — допиши ціну: «по 300» або «за 3000»</>;
-  return <>Enter запише: {OPS[d.op].toLowerCase()} {d.item} × {n} по {money(d.price)}{d.unit === 'кг' ? '/кг' : ''} = {sum(d.op === 'buy' ? 'out' : 'in', Math.round(d.qty * d.price))} · {d.op === 'buy' ? 'на склад' : 'зі складу'}</>;
 }
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
@@ -499,7 +400,7 @@ function ShotView({ shot, share0, done }: { shot: Shot; share0: boolean; done: (
       <p className="muted">З цих прикладів програма вчиться сама помічати такі екрани в грі. Потрібно 5–10 кожного типу.</p>
       <div className="blabels">{st && Object.entries(st.labels).map(([k, l]) => (
         <button key={k} className="btn" disabled={busy} onClick={() => mark(k)}>{l}<small>{st.stats[k] || 0}</small></button>))}</div>
-      <label className="bnote">Примітка (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="напр. скупник Гриби, продав 20 гливи" /></label>
+      <label className="bnote">Примітка (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="напр. скупник Гриби, вікно з цінами" /></label>
       <label className="bchk bshare"><input type="checkbox" checked={share} onChange={e => setShare(e.target.checked)} />
         <span>Поділитися з розробниками Q-Hub — так програма швидше вчиться бачити гру. Знімок бачить лише адмін; якщо на ньому чат чи чужі ніки, зніми прапорець.</span></label>
       <small className="muted"><kbd>Esc</kbd> — лишити без позначки</small>
