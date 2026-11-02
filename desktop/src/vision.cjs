@@ -11,6 +11,7 @@ const { createWorker } = require('tesseract.js');
 const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
+const { expandAliases } = require('./aliases.cjs');
 const { OPEN_GAP, pricePicker, coverage, textLeft, parseChange, changePicker, changeRegion, headerBuyer, listParts } = require('./pricescan.cjs');
 const { ocrRelease } = require('./ocridle.cjs');
 
@@ -195,10 +196,12 @@ function vision(deps) {
     }
     lastPricesAt = now;
     const all = items.filter(i => i.buyer_id === buyer);
-    const rows = shot.parseShot(ls, all)
+    /* назви для зіставлення — з псевдонімами (specs/039); скільки товарів у скупника — з all, без копій */
+    const names = expandAliases(all);
+    const rows = shot.parseShot(ls, names)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
       .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
-    rows.push(...await rereadNames(img, ls, all, buyer, rows, now));
+    rows.push(...await rereadNames(img, ls, names, buyer, rows, now));
     /* ціни відкриття накопичуються з кадрів; інший скупник чи стара пам'ять — з нуля */
     if (lastRead?.buyer !== buyer || now - lastRead.at > SALE_PRICES_TTL) lastRead = { buyer, at: now, prices: {} };
     lastRead.at = now;
@@ -213,7 +216,7 @@ function vision(deps) {
     const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now);
     deps.onCoverage?.(cov);
     log(`cover ${buyer}: ${cov.read}/${cov.total}, чекають ${cov.pending}, кадр за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
-    reportUnknown(buyer, ls, all, now);
+    reportUnknown(buyer, ls, names, now);
     /* для діагностики: вікно бачимо, але нового немає — раз на хвилину на скупника, щоб не засмічувати журнал */
     if (!fresh.length) { if (now - (quietAt.get(buyer) || 0) > 60e3) { quietAt.set(buyer, now); log(`prices ${buyer}: кадр ${rows.length}/${all.length}, нового немає`); } return buyer; }
     log(`prices ${buyer}: кадр ${rows.length}/${all.length}, на сайт ${JSON.stringify(fresh)}`);

@@ -14,11 +14,11 @@ const NAV: [string, string, string][] = [
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет', '/admin': 'Адмінка',
 };
 
 export default function Layout() {
-  const { session, name, avatar, signIn } = useAuth();
+  const { session, name, avatar, signIn, role } = useAuth();
   const { pathname } = useLocation();
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
@@ -46,6 +46,7 @@ export default function Layout() {
         </button>
         <div className="who">
           <ThemeToggle />
+          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}

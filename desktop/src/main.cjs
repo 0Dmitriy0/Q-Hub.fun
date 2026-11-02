@@ -897,7 +897,7 @@ async function sendDraft(draft, jpeg) {
 /* «онлайн програми» в шапці сайту: раз на хвилину «я тут» (supabase/migrations/0023).
    Без входу або на старій базі без функції — тихо нічого: лічильник не варто того, щоб заважати */
 function startOnline() {
-  const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping'); };
+  const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping', { p_version: app.getVersion() }); };   // версія — для адмін-панелі (specs/039)
   ping().catch(() => {}); setInterval(() => ping().catch(() => {}), 60e3);
 }
 function startDrafts() {
@@ -1011,8 +1011,8 @@ async function visionCatalog() {
   if (Date.now() - catalogAt < 30 * 60e3 && catalogCache.length) return catalogCache;
   /* min/max — межі скупника: з ними ціну з прокручуваного списку можна взяти з одного кадру (pricescan.cjs);
      last — ціна на сайті: товар без меж не отримає зчитку, що відрізняється від неї більш ніж удвічі (specs/004) */
-  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,items(name)');
-  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, last: Number(r.price) || 0 })); catalogAt = Date.now(); }
+  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,items(name,aliases)');
+  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, aliases: r.items.aliases || [], buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, last: Number(r.price) || 0 })); catalogAt = Date.now(); }
   return catalogCache;
 }
 /* кадр екрана гри (основний монітор) у повному розмірі */

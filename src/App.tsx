@@ -14,6 +14,7 @@ const GameMapGuide = lazy(() => import('./pages/GameMapGuide'));
 const Download = lazy(() => import('./pages/Download'));
 const Cabinet = lazy(() => import('./pages/cabinet/Cabinet'));
 const RulesAdmin = lazy(() => import('./pages/RulesAdmin'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="mapa/v-gru" element={<GameMapGuide />} />
         <Route path="programa" element={<Download />} />
         <Route path="kabinet/*" element={<Cabinet />} />
+        <Route path="admin" element={<Admin />} />
         <Route path="admin/pravyla" element={<RulesAdmin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
