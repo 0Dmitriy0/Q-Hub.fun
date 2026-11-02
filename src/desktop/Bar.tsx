@@ -13,6 +13,7 @@ import { matchCats } from './catMatch';
 import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
+import { isRecordLike, RECORD_REPLY } from './recordLike';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -25,7 +26,8 @@ import { asset } from '../lib/app';
 const BAR_WIDE = 1120;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
 interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
-interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
+/* local — відповідь самої плашки, без ШІ (рядок-запис після 0.6, specs/040) */
+interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
@@ -138,8 +140,11 @@ export default function Bar() {
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
 
+  /* «500к зарплата», «продав 20 …» — облік прибрано: відповідь одразу, ліміт ШІ не витрачається */
+  function recordNote(text: string) { setAsks(a => [{ q: text, reply: RECORD_REPLY, local: true }, ...a].slice(0, 30)); setSel(0); setNote(null); }
   async function ask() {
     const text = q.trim(); if (!text || busy) return;
+    if (isRecordLike(text)) { recordNote(text); return; }
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
     const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
@@ -151,6 +156,7 @@ export default function Bar() {
   /* Enter без ШІ: пошук у правилах, законах і місцях мапи */
   function plain() {
     const text = q.trim(); if (!text || busy) return;
+    if (isRecordLike(text)) { recordNote(text); return; }
     setAsks(a => [askRules(text), ...a].slice(0, 30));
     setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text });
   }
@@ -276,9 +282,9 @@ const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).ma
 /* left — історія замість списку запитів цієї сесії, коли натиснуто «Історія» */
 function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; q: string; left?: React.ReactNode }) {
   const a = asks[sel];
-  const kind = (x: Ask) => (x.error ? 'err' : x.hits ? 'rules' : 'ai');
-  const meta = (x: Ask) => x.error ? 'помилка' : x.hits ? (x.hits.length || x.places?.length ? [x.places?.length && `місця · ${x.places.length}`, x.hits.length && `правила · ${x.hits.length}`].filter(Boolean).join(' · ') : 'нічого не знайдено') : 'відповідь ШІ';
-  const ICO = { rules: 'search', ai: 'spark', err: 'x' } as const;
+  const kind = (x: Ask) => (x.error ? 'err' : x.hits ? 'rules' : x.local ? 'local' : 'ai');
+  const meta = (x: Ask) => x.error ? 'помилка' : x.local ? 'облік прибрано — без ШІ' : x.hits ? (x.hits.length || x.places?.length ? [x.places?.length && `місця · ${x.places.length}`, x.hits.length && `правила · ${x.hits.length}`].filter(Boolean).join(' · ') : 'нічого не знайдено') : 'відповідь ШІ';
+  const ICO = { rules: 'search', ai: 'spark', err: 'x', local: 'chart' } as const;
   return <>
     <div className="bleft">{left ?? <>
       {busy && <div className="brow item on"><span className="bkico ai"><Icon name="spark" size={15} /></span><span><b>{q.trim()}</b><small>ШІ думає…</small></span></div>}
@@ -297,9 +303,9 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
       </> : <>
-        <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
+        {a.local ? <div className="bkind"><Icon name="chart" size={14} />Q-Hub</div> : <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>}
         {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}</div>}
-        {!a.error && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
+        {!a.error && !a.local && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>
   </>;
