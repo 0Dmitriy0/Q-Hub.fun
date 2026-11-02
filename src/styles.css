@@ -1581,3 +1581,20 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .adm-line { flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .adm-line > span { overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 600px) { .adm-sec { padding: 14px; } .adm-row-act .btn { flex: 1 1 auto; } }
+
+/* ---------- меню «Discord» у підвалі (src/components/DiscordMenu.tsx): три сервери, відкривається вгору ---------- */
+.ico.tu { transform: rotate(180deg); }
+.dmenu { position: relative; }
+.dmenu-btn svg:first-child { color: #5865f2; }
+.dmenu-pop { position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 30; width: min(340px, calc(100vw - 32px)); padding: 12px 8px 8px;
+  border-radius: 16px; background: var(--surface); border: 1px solid var(--line2); box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .6); }
+:root[data-theme="light"] .dmenu-pop { background: #fff; box-shadow: 0 18px 44px -18px rgba(20, 30, 45, .35); }
+.dmenu-h { display: block; padding: 0 10px 8px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.dmenu-pop ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.dmenu-pop a { display: flex; align-items: flex-start; gap: 12px; padding: 10px; border-radius: 12px; color: var(--fg); text-decoration: none; }
+.dmenu-pop a:hover, .dmenu-pop a:focus-visible { background: var(--hover, var(--surface2)); outline: none; }
+.dmenu-pop a:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.dmenu-pop b { display: block; font-size: 14px; line-height: 1.3; }
+.dmenu-pop small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+.dmenu-ico { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #5865f2; color: #fff; }
+@media (max-width: 600px) { .dmenu-pop { right: auto; left: 0; } }

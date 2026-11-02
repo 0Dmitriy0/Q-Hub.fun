@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { useDiscord } from '../../lib/brand';
+import { useLinks, type LinkKey } from '../../lib/brand';
 import Icon from '../Icon';
-import DiscordForm from '../DiscordForm';
+import DiscordForm, { LINK_TEXT } from '../DiscordForm';
 import PromoForm, { type SitePromoRow } from '../PromoForm';
 import AdminSection from './AdminSection';
 
@@ -14,10 +14,11 @@ const GO: [string, string, string, string][] = [
   ['/mapa/v-gru', 'Інструкція до мапи', 'Як поставити мапу Q-Hub у гру', 'download'],
   ['/#iventy', 'Івенти й промокоди', 'Розклад, сезонні івенти, промокоди сервера', 'clock'],
 ];
+const LINK_KEYS: LinkKey[] = ['discord_url', 'family_url', 'market_url'];
 
 export default function AdminLinks() {
-  const [discord, reloadDiscord] = useDiscord();
-  const [editDiscord, setEditDiscord] = useState(false);
+  const [links, reloadLinks] = useLinks();
+  const [edit, setEdit] = useState<LinkKey | null>(null);
   const [promo, setPromo] = useState<SitePromoRow | null>(null);
   const [editPromo, setEditPromo] = useState(false);
   const loadPromo = () => { supabase!.from('site_promo').select('code,reward,note,enabled').maybeSingle().then(({ data }) => setPromo(data as SitePromoRow | null)); };
@@ -32,10 +33,19 @@ export default function AdminLinks() {
           ))}
         </ul>
       </AdminSection>
-      <AdminSection title="Discord Q-Hub" hint="Одне посилання для підвалу, сторінки «Програма», інструкції до мапи й програми.">
-        {editDiscord
-          ? <DiscordForm url={discord} done={() => { setEditDiscord(false); reloadDiscord(); }} />
-          : <div className="row adm-line"><span className="mono">{discord || 'не задано — кнопок Discord ніде немає'}</span><button type="button" className="btn ghost sm" onClick={() => setEditDiscord(true)}>Змінити посилання</button></div>}
+      <AdminSection title="Посилання Discord" hint="Три окремі сервери: сайт Q-Hub, сім'я CORE і торговий майданчик. Порожнє посилання — кнопки немає.">
+        <ul className="adm-list">
+          {LINK_KEYS.map(k => (
+            <li key={k} className="adm-row">
+              {edit === k
+                ? <DiscordForm field={k} url={links[k]} done={() => { setEdit(null); reloadLinks(); }} />
+                : <>
+                  <div className="adm-row-main"><b>{LINK_TEXT[k].name}</b><span className="muted">{LINK_TEXT[k].where}</span><span className="mono">{links[k] || 'не задано'}</span></div>
+                  <div className="adm-row-act"><button type="button" className="btn ghost sm" onClick={() => setEdit(k)}>Змінити посилання</button></div>
+                </>}
+            </li>
+          ))}
+        </ul>
       </AdminSection>
       <AdminSection title="Промокод Q-Hub" hint="Блок на першому екрані головної.">
         {editPromo
