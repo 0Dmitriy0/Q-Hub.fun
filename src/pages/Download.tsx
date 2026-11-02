@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../components/Icon';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { FAMILY, isDiscordInvite, useDiscord } from '../lib/brand';
+import { FAMILY, isDiscordInvite, loadDiscordLinks, useDiscord, useDiscordLinks } from '../lib/brand';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
@@ -141,24 +141,34 @@ export default function Download() {
   );
 }
 
-/* посилання «Discord Q-Hub» для всього сайту й програми (specs/037) — змінює лише admin, база перевіряє ще раз */
+/* три Discord (specs/037, 0047): Discord Q-Hub — для всього сайту й програми, сім'я й торговий майданчик — у плашці
+   в підвалі. Змінює лише admin, база перевіряє ще раз */
 function DiscordForm({ url, done }: { url: string; done: () => void }) {
-  const [v, setV] = useState(url);
+  const [links] = useDiscordLinks();
+  const [v, setV] = useState({ site: url, family: '', market: '' });
+  useEffect(() => { if (links) setV(x => ({ ...x, family: links.family, market: links.market })); }, [links]);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const u = v.trim();
-    if (u && !isDiscordInvite(u)) return setMsg('Потрібне запрошення Discord: https://discord.gg/… або https://discord.com/invite/…');
+    const t = { site: v.site.trim(), family: v.family.trim(), market: v.market.trim() };
+    if (Object.values(t).some(u => u && !isDiscordInvite(u))) return setMsg('Потрібне запрошення Discord: https://discord.gg/… або https://discord.com/invite/…');
     setBusy(true);
-    const { error } = await supabase!.from('site_links').upsert({ id: true, discord_url: u });
+    const { error } = await supabase!.from('site_links').upsert({ id: true, discord_url: t.site, family_url: t.family, market_url: t.market });
     setBusy(false);
-    if (error) return setMsg(/row-level|permission/i.test(error.message) ? 'Змінювати посилання може лише адмін.' : 'Не вдалося зберегти: ' + error.message);
+    if (error) return setMsg(/row-level|permission/i.test(error.message) ? 'Змінювати посилання може лише адмін.'
+      : /family_url|market_url|column/i.test(error.message) ? 'Полів для сім\'ї й майданчика ще немає: запусти supabase/migrations/0047_site_links_discords.sql у Supabase → SQL Editor.'
+      : 'Не вдалося зберегти: ' + error.message);
+    loadDiscordLinks(true);
     done();
   }
+  const field = (k: 'site' | 'family' | 'market', label: string) => (
+    <label className="fld">{label}<input value={v[k]} onChange={e => setV({ ...v, [k]: e.target.value })} placeholder="https://discord.gg/…" autoFocus={k === 'site'} /></label>);
   return (
-    <form className="form p-link" onSubmit={save} aria-label="Посилання Discord Q-Hub">
-      <label className="fld">Запрошення Discord Q-Hub (безстрокове, без ліміту)<input value={v} onChange={e => setV(e.target.value)} placeholder="https://discord.gg/…" autoFocus /></label>
-      <small className="muted">Видно в підвалі, тут, в інструкції до мапи й у програмі. Порожньо — кнопок Discord ніде немає.</small>
+    <form className="form p-link" onSubmit={save} aria-label="Посилання Discord">
+      {field('site', 'Discord Q-Hub (безстрокове запрошення без ліміту)')}
+      {field('family', `Discord сім'ї ${FAMILY}`)}
+      {field('market', 'Discord торгового майданчика')}
+      <small className="muted">Discord Q-Hub видно в підвалі, тут, в інструкції до мапи й у програмі; сім'я й майданчик — у плашці «Discord» у підвалі. Порожньо — пункту немає.</small>
       <div className="row"><button className="btn acc sm" disabled={busy}>Зберегти</button><button type="button" className="btn ghost sm" onClick={done}>Скасувати</button></div>
       {msg && <p className="err" role="alert">{msg}</p>}
     </form>
