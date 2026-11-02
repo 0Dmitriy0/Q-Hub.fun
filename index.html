@@ -7,8 +7,13 @@
     <meta name="google" content="notranslate" />
     <meta name="description" content="Q-Hub — усе для Quant RP прямо поверх гри: мапа штату з полями й зонами (і в самій GTA V), ціни скупників від гравців, програма Alt+Q з обліком, правилами сервера й помічником." />
     <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
+    <!-- з'єднання наперед: шрифти й база (ціни, вхід) — мінус ~100 мс до першого запиту -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <!-- шрифти не блокують перший кадр: до їх приходу текст системним шрифтом (display=swap) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" /></noscript>
     <title>Q-Hub</title>
     <script>
       /* тема до першого кадру, без спалаху: явна світла, інакше темна (колишнє 'auto' теж темна).

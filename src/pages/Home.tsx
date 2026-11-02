@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
 import HalloweenBanner from '../components/HalloweenBanner';
-import MiniMap from '../components/MiniMap';
 import SitePromo from '../components/SitePromo';
 import { useAuth } from '../lib/auth';
 import { fmt, money } from '../lib/format';
@@ -11,6 +10,9 @@ import { useAppOnline } from '../lib/useAppOnline';
 import Icon from '../components/Icon';
 import { readGameTheme, recolor, saveGameTheme, type GameTheme } from '../lib/gameTheme';
 import { OCEAN, mapUrl } from '../lib/mapGeo';
+
+/* мапа (Leaflet) — окремим файлом: вона нижче першого екрана, а перший кадр без неї легший */
+const MiniMap = lazy(() => import('../components/MiniMap'));
 
 /* головна за макетом Stitch (design/stitch/home.html). Усі цифри справжні: зі знімка цін (public/snapshot) і даних сайту.
    Вигадані блоки макета (кількість гравців, «радар-мод», ШІ-рекомендації з відсотками) не перенесено */
@@ -72,7 +74,7 @@ export default function Home() {
           <p className="muted">Магазини, роботи, скупники, поля полювання й скарбів, зелені зони — з пошуком і фільтрами. А потрібні мітки збери в мінікарту для GTA V.</p>
         </div>
         <div className="h-split">
-          <MiniMap />
+          <Suspense fallback={<div className="mini" aria-busy="true"><div className="mini-map" /></div>}><MiniMap /></Suspense>
           <div className="h-side">
             <div className="h-feat"><span className="ibub"><Icon name="map" /></span><div><h3>Почни писати — і мітка вже на мапі</h3><p className="muted">Набери «24/7» чи «риболовля» — мапа покаже всі збіги. Повна мапа — з фільтрами груп, полями й зонами.</p></div></div>
             <div className="h-feat"><span className="ibub"><Icon name="layers" /></span><div><h3>Ті самі мітки — на мінікарті в грі</h3><p className="muted">Галочками вибираєш назви, зони й мітки — сайт збирає файли мінікарти, а ти ставиш їх через OpenIV.</p></div></div>

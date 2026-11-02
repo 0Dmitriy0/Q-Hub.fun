@@ -1,17 +1,20 @@
+import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
-import Prices from './pages/Prices';
-import Transport from './pages/Transport';
-import Jobs from './pages/Jobs';
-import MapPage from './pages/MapPage';
-import GameMapGuide from './pages/GameMapGuide';
-import Download from './pages/Download';
 import NotFound from './pages/NotFound';
-import Cabinet from './pages/cabinet/Cabinet';
 import Wiki, { ToWiki } from './pages/Wiki';
-import RulesAdmin from './pages/RulesAdmin';
-import Admin from './pages/Admin';
+
+/* головна — одразу; решта сторінок — окремими файлами, лише коли їх відкрили (менше коду на першому відкритті сайту) */
+const Prices = lazy(() => import('./pages/Prices'));
+const Transport = lazy(() => import('./pages/Transport'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const MapPage = lazy(() => import('./pages/MapPage'));
+const GameMapGuide = lazy(() => import('./pages/GameMapGuide'));
+const Download = lazy(() => import('./pages/Download'));
+const Cabinet = lazy(() => import('./pages/cabinet/Cabinet'));
+const RulesAdmin = lazy(() => import('./pages/RulesAdmin'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 export default function App() {
   return (

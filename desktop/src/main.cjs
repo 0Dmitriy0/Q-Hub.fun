@@ -607,6 +607,16 @@ function setAutostart(on) {
   } catch { /* перевірка нижче скаже, що не вийшло */ }
   return autostart() === on;
 }
+/* ярлик на робочому столі: інсталятор «в один клік» ставить його сам, а прибрати чи повернути — тут (екран входу) */
+const deskLink = () => path.join(app.getPath('desktop'), 'Q-Hub.lnk');
+const hasDeskLink = () => app.isPackaged && fs.existsSync(deskLink());
+function setDeskLink(on) {
+  try {
+    if (on) shell.writeShortcutLink(deskLink(), 'create', { target: process.execPath, appUserModelId: 'fun.q-hub.desktop', description: 'Q-Hub' });
+    else fs.rmSync(deskLink(), { force: true });
+  } catch { /* перевірка нижче скаже, що не вийшло */ }
+  return hasDeskLink() === on;
+}
 const AUTOSTART_ERR = 'Windows не дала змінити автозапуск. Перевір «Диспетчер завдань → Автозавантаження»: там Q-Hub можна ввімкнути чи вимкнути вручну.';
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
@@ -1211,6 +1221,16 @@ app.whenReady().then(() => {
     gate.setBounds({ x: b.x, y: Math.round(b.y + (b.height - nh) / 2), width: GATE_W, height: nh });
   });
   ipcMain.handle('gate-hide', e => { if (fromGate(e)) gate.hide(); });
+  /* налаштування встановлення на екрані входу: інсталятор нічого не питає, вибір — тут */
+  const setup = () => ({ packaged: app.isPackaged, autostart: autostart(), desk: hasDeskLink() });
+  ipcMain.handle('setup', e => (fromGate(e) ? setup() : null));
+  ipcMain.handle('setup-set', (e, p) => {
+    if (!fromGate(e) || !app.isPackaged) return null;
+    let error = null;
+    if (typeof p?.autostart === 'boolean') { if (setAutostart(p.autostart)) trayMenu(); else error = AUTOSTART_ERR; }
+    if (typeof p?.desk === 'boolean' && !setDeskLink(p.desk)) error = 'Не вдалося змінити ярлик на робочому столі.';
+    return { ...setup(), error };
+  });
   /* «Швидкий запис» у кабінеті відкриває ту саму плашку, що й Alt+Q */
   ipcMain.handle('open-bar', e => { if (trusted(e)) return showBar().then(() => prefs().hotkey); });
   ipcMain.handle('hotkey', e => (trusted(e) ? prefs().hotkey : null));

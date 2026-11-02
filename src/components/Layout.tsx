@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { FAMILY, useDiscord } from '../lib/brand';
@@ -6,7 +6,6 @@ import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
 import Backdrop from './Backdrop';
-import AppOnline from './AppOnline';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
@@ -46,7 +45,6 @@ export default function Layout() {
           <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
         </button>
         <div className="who">
-          <AppOnline />
           <ThemeToggle />
           {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
           {session
@@ -54,7 +52,8 @@ export default function Layout() {
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}
         </div>
       </header>
-      <main><Outlet /></main>
+      {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
+      <main><Suspense fallback={<div style={{ minHeight: "70vh" }} aria-busy="true" />}><Outlet /></Suspense></main>
       <NickGate />
       <footer className="foot">
         <div className="foot-in">
