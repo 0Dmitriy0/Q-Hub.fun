@@ -180,6 +180,24 @@ export default function Prices() {
   const buyer = buyers.find(b => b.id === tab);
   useEffect(() => { loadHist([...new Set(cur.map(r => r.buyer_id))].filter(id => !histFor.has(id))); }, [cur]);
   const reload = (buyerId: string) => { load(); loadHist([buyerId]); };
+  /* натиснув на скупника — свіжі ціни саме його, без оновлення сторінки (поки дивився інших, ціни могли змінитися);
+     відповідь на попередній клік не перекриває новішу */
+  const buyerReq = useRef(0);
+  async function refreshBuyer(id: string) {
+    if (!supabase || !id) return;
+    const n = ++buyerReq.current;
+    const [r, b, x] = await Promise.all([
+      supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)').eq('buyer_id', id),
+      supabase.from('buyers').select('id,name,updated_at,image_url').eq('id', id).maybeSingle(),
+      supabase.from('buyer_next_change').select('*').eq('buyer_id', id),
+    ]);
+    if (n !== buyerReq.current || r.error) return;
+    setRows(rs => [...rs.filter(q => q.buyer_id !== id), ...(r.data as unknown as Row[])]);
+    if (!b.error && b.data) setBuyers(bs => bs.map(q => (q.id === id ? (b.data as Buyer) : q)));
+    if (!x.error) setNext(ns => [...ns.filter(q => q.buyer_id !== id), ...((x.data as NextChange[]) || [])]);
+    loadHist([id]);
+  }
+  const openBuyer = (id: string) => { setTab(id); refreshBuyer(id); };
 
   function toggle(key: string, r: Row) {
     setOpen(o => (o === key ? '' : key));
@@ -247,7 +265,7 @@ export default function Prices() {
   const priced = useMemo(() => rows.filter(r => r.items && r.price > 0).sort((a, b) => a.items!.name.localeCompare(b.items!.name, 'uk')), [rows]);
   const calcRow = priced.find(r => r.buyer_id + ':' + r.item_id === calc.key) || priced[0];
   const calcQty = Math.max(0, Math.floor(Number(calc.qty.replace(/s/g, '')) || 0));
-  const pick = (id: string) => { setQ(''); setTab(id); document.getElementById('price-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const pick = (id: string) => { setQ(''); openBuyer(id); document.getElementById('price-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   return (
     <div className="bp">
@@ -303,8 +321,8 @@ export default function Prices() {
               </label>
             </div>
             {!q && <div className="tabs bp-tabs" role="tablist">{buyers.map(b => (
-              <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); setTab(b.id); }}>
-                <Pic url={b.image_url} alt={b.name} size={24} />{b.name}<span className="cnt mono">{buyerSize(b.id)}</span>
+              <a key={b.id} href={'#' + b.id} role="tab" aria-selected={b.id === tab} className={'tabpic' + (b.id === tab ? ' active' : '')} onClick={e => { e.preventDefault(); openBuyer(b.id); }}>
+                <Pic url={b.image_url} alt={b.name} size={20} />{b.name}<span className="cnt mono">{buyerSize(b.id)}</span>
               </a>))}</div>}
             {!q && buyer && (
               <div className="bp-buyer">
@@ -452,7 +470,7 @@ export default function Prices() {
               {session
                 ? <ShotImport
                     catalog={rows.filter(r => r.items).map(r => ({ id: r.item_id, name: r.items!.name, buyer_id: r.buyer_id, min: r.min_price, max: r.max_price, price: r.price }))}
-                    buyerName={buyerName} onBuyer={id => { setQ(''); setTab(id); }} onDone={() => load()} />
+                    buyerName={buyerName} onBuyer={id => { setQ(''); openBuyer(id); }} onDone={() => load()} />
                 : <button className="btn acc" onClick={signIn}>Увійти через Discord</button>}
             </div>
           </section>

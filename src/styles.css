@@ -1617,3 +1617,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .earn-sess .btn { margin-left: 8px; }
 .earn-note { font-size: 13px; margin-top: 12px; }
 @media (max-width: 560px) { .earn-stats { grid-template-columns: 1fr; } }
+
+/* «Ціни»: кнопки скупників компактніші; на комп'ютері — у кілька рядків, щоб видно було всіх (на телефоні — прокрутка) */
+.bp-tabs a.tabpic { gap: 6px; padding: 4px 11px 4px 4px; font-size: 13px; }
+@media (min-width: 861px) { .bp-tabs { flex-wrap: wrap; overflow: visible; row-gap: 6px; } }
