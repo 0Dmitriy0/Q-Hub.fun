@@ -5,7 +5,8 @@ import { NickForm } from '../../components/NickGate';
 import Characters from './Characters';
 import type { Character } from './types';
 
-/* таблиці з даними персонажа; deals першими — вони посилаються на transactions */
+/* таблиці з даними персонажа; deals першими — вони посилаються на transactions. Облік, угоди й гараж більше не показуються
+   (specs/040), але старі записи в базі лишаються — «Очистити» прибирає й їх */
 const OWN_TABLES = ['deals', 'transactions', 'cars', 'documents', 'game_sessions'];
 const WORD = 'СКИНУТИ';
 
@@ -42,7 +43,7 @@ export default function SettingsPage({ c }: { c: Character }) {
     }
     setBusy(false);
     if (failed) { setMsg('Не вдалося скинути дані. Перевір інтернет і спробуй ще раз — те, що встигло видалитись, не повернеться.'); return; }
-    setMsg(mode === 'char' ? `Облік, угоди, склад і гараж персонажа ${c.name} очищено.` : mode === 'del' ? `Персонажа ${c.name} видалено разом з його даними.` : 'Усі персонажі й їхні дані видалено. Можна починати з чистого листа.');
+    setMsg(mode === 'char' ? `Дані персонажа ${c.name} очищено.` : mode === 'del' ? `Персонажа ${c.name} видалено разом з його даними.` : 'Усі персонажі й їхні дані видалено. Можна починати з чистого листа.');
     setMode(null); setWord('');
     await reloadCharacters();
   }
@@ -63,11 +64,11 @@ export default function SettingsPage({ c }: { c: Character }) {
         <p className="muted">Видалене не відновити. Ціни, які ти надсилав для скупників, лишаються — вони спільні для всіх гравців.</p>
         <div className="list">
           <div className="li">
-            <div><b>Очистити персонажа {c.name}</b><br /><small>Облік, угоди, склад, гараж, документи й сесії. Сам персонаж, його старт і ціль лишаються.</small></div>
+            <div><b>Очистити персонажа {c.name}</b><br /><small>Документи, сесії гри й старі записи, які лишились у базі. Сам персонаж лишається.</small></div>
             <button type="button" className="btn sm bad" onClick={() => ask('char')}>Очистити</button>
           </div>
           <div className="li">
-            <div><b>Видалити персонажа {c.name}</b><br /><small>Сам персонаж разом з обліком, угодами, складом і гаражем. Інші персонажі лишаються.</small></div>
+            <div><b>Видалити персонажа {c.name}</b><br /><small>Сам персонаж разом з усіма його даними. Інші персонажі лишаються.</small></div>
             <button type="button" className="btn sm bad" onClick={() => ask('del')}>Видалити</button>
           </div>
           <div className="li">

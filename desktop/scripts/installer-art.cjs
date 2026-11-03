@@ -1,6 +1,6 @@
 /* Картинки фірмового інсталятора (specs/008): малює їх Electron з логотипа сайту й тих самих шрифтів,
-   зберігає у формати, які розуміє NSIS: 24-бітні BMP без прозорості й ICO.
-   Запуск (з desktop/): npx.cmd electron scripts/installer-art.cjs → build/installer-*.bmp, build/icon.ico.
+   зберігає у формат, який розуміє NSIS: ICO.
+   Запуск (з desktop/): npx.cmd electron scripts/installer-art.cjs → build/icon.ico.
    Перемальовувати лише коли змінився логотип чи кольори — результат лежить у git. */
 const { app, BrowserWindow } = require('electron');
 const fs = require('fs');
@@ -17,21 +17,8 @@ const page = (w, h, body, bg = BG) => `<!doctype html><meta charset="utf-8">${FO
   svg{display:block}
 </style><body>${body}</body>`;
 
-const ART = {
-  /* бічна смуга вітання й «Готово» (MUI: 164×314) */
-  'installer-sidebar.bmp': [164, 314, page(164, 314, `
-    <div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 100% 0%,rgba(255,107,0,.28),transparent 60%),radial-gradient(90% 50% at 0% 100%,rgba(14,165,233,.10),transparent 60%)"></div>
-    <div style="position:absolute;left:22px;top:40px;width:64px;height:64px">${MARK.replace('<svg ', '<svg width="64" height="64" ')}</div>
-    <div class="brand" style="position:absolute;left:22px;top:118px;font-size:30px">Q-Hub</div>
-    <div class="sub" style="position:absolute;left:22px;top:160px;width:124px;font-size:12px;line-height:1.45">Програма для гравців QuantRP</div>
-    <div style="position:absolute;left:22px;bottom:26px;width:32px;height:3px;border-radius:2px;background:#ff6b00"></div>`)],
-  /* права частина шапки на інших сторінках (MUI: 150×57) */
-  'installer-header.bmp': [150, 57, page(150, 57, `
-    <div style="position:absolute;right:14px;top:12px;display:flex;align-items:center;gap:8px">
-      ${MARK.replace('<svg ', '<svg width="30" height="30" ')}<span class="brand" style="font-size:19px">Q-Hub</span></div>`)],
-  /* знак на екрані «Старт» (nsDialogs) */
-  'installer-logo.bmp': [72, 72, page(72, 72, `<div style="padding:4px">${MARK.replace('<svg ', '<svg width="64" height="64" ')}</div>`)],
-};
+/* BMP для сторінок MUI більше не потрібні: інсталятор «в один клік» малює вікно сам, знак бере з icon.ico */
+const ART = {};
 /* іконка: знак на прозорому тлі; до 128 px — класичний DIB (його читають і NSIS, і старі частини Windows), 256 — PNG */
 const ICON_SIZES = [16, 24, 32, 48, 64, 128, 256];
 const iconPage = s => page(s, s, MARK.replace('<svg ', `<svg width="${s}" height="${s}" `), 'transparent');

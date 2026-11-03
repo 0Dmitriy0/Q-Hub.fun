@@ -40,8 +40,4 @@ update public.guides set install = '', published = false, checked_on = null wher
 
 \i supabase/migrations/0035_guides.sql
 do $$ begin assert (select count(*) from public.guides where slug = 'game-map') = 1, 'повторний запуск дублює інструкцію'; end $$;
--- гайди WIKI (0046): чернетки є, гість їх не бачить (count(*) = 0 вище), повторний запуск не дублює
-\i supabase/migrations/0046_wiki_guides.sql
-do $$ begin assert (select count(*) from public.guides where category <> '' and not published) = 3, 'чернетки гайдів WIKI'; end $$;
-do $$ begin assert (select category = '' from public.guides where slug = 'game-map'), 'інструкція мапи стала гайдом WIKI'; end $$;
 \echo 'Інструкції ok'

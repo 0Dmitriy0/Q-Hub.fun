@@ -18,7 +18,7 @@ const stem = (w: string) => w.slice(0, Math.max(3, w.length - 2));
 /* де ціна між межами скупника, 0–100; null — меж ще немає */
 export const pos = (p: BarPrice) => (p.max > p.min && p.price > 0 ? Math.round(Math.min(100, Math.max(0, ((p.price - p.min) / (p.max - p.min)) * 100))) : null);
 
-export function buyers(prices: BarPrice[], q: string, stock: Record<string, number>, limit = 8): BuyerHit[] {
+export function buyers(prices: BarPrice[], q: string, stock: Record<string, number> = {}, limit = 8): BuyerHit[] {
   const words = norm(q).split(/\s+/).filter(w => w && !FILLER.test(w)).map(stem);
   if (!words.length) return [];
   const by = new Map<string, BuyerHit>();

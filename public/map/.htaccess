@@ -1,0 +1,6 @@
+# плитки мапи мають версію в адресі (?v=…): нова мапа — нова адреса, тож кешувати можна на рік
+<IfModule mod_headers.c>
+  <FilesMatch "\.(webp|png|jpg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

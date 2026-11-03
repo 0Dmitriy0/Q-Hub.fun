@@ -41,6 +41,19 @@
   .steps { display: grid; gap: 10px; font-size: 13.5px; color: var(--muted); }
   .steps div { display: flex; gap: 12px; align-items: flex-start; }
   .steps b { flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; font: 700 12px Manrope, sans-serif; color: var(--acc); background: rgba(255, 107, 0, .12); }
+  /* налаштування встановлення: інсталятор нічого не питає, вибір тут */
+  .setup { display: grid; gap: 2px; margin-top: 18px; padding: 6px 4px; border-radius: 14px; border: 1px solid var(--line); background: rgba(26, 35, 48, .45); }
+  .sw { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; cursor: pointer; -webkit-app-region: no-drag; font: 600 13.5px Manrope, sans-serif; }
+  .sw:hover { background: var(--surface); }
+  .sw span { flex: 1; }
+  .sw small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+  .sw input { appearance: none; flex: none; position: relative; width: 34px; height: 20px; margin: 0; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--line2); cursor: pointer; transition: background .15s, border-color .15s; }
+  .sw input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .sw input:checked { background: var(--acc); border-color: var(--acc); }
+  .sw input:checked::after { transform: translateX(14px); background: #fff; }
+  .sw input:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .sw input:disabled { opacity: .5; cursor: progress; }
+  @media (prefers-reduced-motion: reduce) { .sw input, .sw input::after { transition: none; } }
   .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(1turn); } }
 
@@ -84,7 +97,7 @@
     <div class="hero">
       <div class="mark"><img src="ui/brand/q-hub-logo.svg" alt=""></div>
       <h1>Q-Hub</h1>
-      <p class="muted">Облік, склад і ціни для QuantRP — прямо поверх гри.</p>
+      <p class="muted">Ціни скупників, правила й мапа для QuantRP — прямо поверх гри.</p>
     </div>
     <button class="discord" id="login">
       <svg width="22" height="17" viewBox="0 0 127 96" aria-hidden="true"><path fill="currentColor" d="M107.7 8.1A105 105 0 0 0 81.5 0a72 72 0 0 0-3.4 6.8 97.7 97.7 0 0 0-29.1 0A72 72 0 0 0 45.6 0a105.9 105.9 0 0 0-26.2 8.1C2.8 32.6-1.7 56.6.5 80.2a105.7 105.7 0 0 0 32.2 16.2 77.7 77.7 0 0 0 6.9-11.1 68.4 68.4 0 0 1-10.8-5.2c.9-.7 1.8-1.4 2.7-2.1a75.6 75.6 0 0 0 64.3 0c.9.7 1.8 1.4 2.7 2.1a68.7 68.7 0 0 1-10.9 5.2 77 77 0 0 0 6.9 11.1 105.3 105.3 0 0 0 32.2-16.2c2.6-27.4-4.6-51.2-19.1-72.1ZM42.5 65.7c-6.3 0-11.4-5.7-11.4-12.8s5-12.8 11.4-12.8 11.5 5.8 11.4 12.8c0 7-5 12.8-11.4 12.8Zm42.2 0c-6.3 0-11.4-5.7-11.4-12.8s5-12.8 11.4-12.8 11.5 5.8 11.4 12.8c0 7-5 12.8-11.4 12.8Z"/></svg>
@@ -94,6 +107,10 @@
     <div class="steps">
       <div><b>1</b>Відкриється браузер — увійди тим самим Discord, що й на q-hub.fun.</div>
       <div><b>2</b>Підтверди вхід і повертайся сюди: програма підхопить його сама.</div>
+    </div>
+    <div class="setup" id="setup" hidden>
+      <label class="sw"><span>Запускати разом з Windows<small>Тихо, лише іконкою в треї</small></span><input type="checkbox" role="switch" id="optAuto"></label>
+      <label class="sw"><span>Ярлик на робочому столі</span><input type="checkbox" role="switch" id="optDesk"></label>
     </div>
   </section>
 
@@ -116,7 +133,7 @@
     <div id="chars" hidden>
       <h2>Обери персонажа</h2>
       <div class="tiles" id="tiles"></div>
-      <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: у кожного свій облік, склад і гараж.</p>
+      <p class="muted" id="nochar" hidden style="margin-top:12px;font-size:13px">Персонажа ще немає — додай його тут: Ім’я_Прізвище, як у грі, і статік.</p>
       <form class="addf" id="addf" hidden>
         <label>Ім'я_Прізвище, як у грі<input id="cname" maxlength="40" placeholder="Dmitriy_Core" autocomplete="off" spellcheck="false" required></label>
         <label>Статік<input id="cstatic" inputmode="numeric" maxlength="12" placeholder="162183" autocomplete="off" required></label>

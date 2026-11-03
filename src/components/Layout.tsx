@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { FAMILY, useDiscordLinks } from '../lib/brand';
-import DiscordMenu from './DiscordMenu';
+import { FAMILY, useLinks } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
 import Backdrop from './Backdrop';
-import AppOnline from './AppOnline';
+import DiscordMenu from './DiscordMenu';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
@@ -16,17 +15,15 @@ const NAV: [string, string, string][] = [
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет', '/admin': 'Адмінка',
 };
 
 export default function Layout() {
-  const { session, name, avatar, signIn } = useAuth();
+  const { session, name, avatar, signIn, role } = useAuth();
   const { pathname } = useLocation();
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
-  /* «by CORE» веде в Discord сім'ї; три Discord — у плашці DiscordMenu */
-  const [links] = useDiscordLinks();
-  const family = links?.family || '';
+  const [{ family_url: family }] = useLinks();
   useEffect(() => setMenu(false), [pathname]);
   useEffect(() => {
     if (!menu) return;
@@ -35,7 +32,7 @@ export default function Layout() {
   }, [menu]);
   useEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
-    document.title = key === '/' ? 'Q-Hub — ціни, мапа й облік для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
+    document.title = key === '/' ? 'Q-Hub — ціни, мапа й правила для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
   }, [pathname]);
   return (
     <div className="app">
@@ -49,14 +46,15 @@ export default function Layout() {
           <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
         </button>
         <div className="who">
-          <AppOnline />
           <ThemeToggle />
+          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}
         </div>
       </header>
-      <main><Outlet /></main>
+      {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
+      <main><Suspense fallback={<div style={{ minHeight: "70vh" }} aria-busy="true" />}><Outlet /></Suspense></main>
       <NickGate />
       <footer className="foot">
         <div className="foot-in">
@@ -64,12 +62,13 @@ export default function Layout() {
             <div className="foot-about">
               <div className="foot-brand">
                 <Link to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></Link>
-                {/* підпис авторів (specs/033): веде в Discord сім'ї, якщо посилання є, інакше — просто текст */}
+                {/* підпис авторів (specs/033): веде на Discord сім'ї, якщо адмін його задав (0048), інакше — просто текст */}
                 {family ? <a className="foot-by" href={family} target="_blank" rel="noreferrer" title={`Discord сім'ї ${FAMILY}`}>by {FAMILY}</a> : <span className="foot-by">by {FAMILY}</span>}
               </div>
               <p>Q-Hub — фан-проєкт гравців сім'ї {FAMILY} на QuantRP, не пов'язаний з адміністрацією сервера. Ціни вносять гравці й перевіряють одне одного. Усі торгові марки й назви належать їхнім правовласникам.</p>
             </div>
             <div className="foot-act">
+              {/* три сервери Discord — одним меню (макет власника 2026-11-03) */}
               <DiscordMenu />
               <Link className="btn ghost" to="/programa"><Icon name="download" />Програма поверх гри</Link>
             </div>

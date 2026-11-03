@@ -112,8 +112,10 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const isOn = (c: MapCategory) => isVisible(c, { only, on, saved });
   /* панель: вкладки й згорнуті групи */
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
-  const [tab, setTab] = useState<'admin' | 'drafts'>('admin');
-  const [tools, setTools] = useState(false);
+  /* /mapa?tools=drafts — з адмін-панелі (specs/039): одразу розбір чернеток */
+  const draftsLink = new URLSearchParams(window.location.search).get('tools') === 'drafts';
+  const [tab, setTab] = useState<'admin' | 'drafts'>(draftsLink ? 'drafts' : 'admin');
+  const [tools, setTools] = useState(draftsLink);
   /* скільки нових чернеток з F9 чекає адміна — видно на кнопці внизу мапи; є нові — плитка відкривається одразу на них */
   const [newDrafts, setNewDrafts] = useState(0);
   useEffect(() => {
