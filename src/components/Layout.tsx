@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { FAMILY, useLinks } from '../lib/brand';
+import { FAMILY, familyLink, useLinks } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
@@ -23,7 +23,8 @@ export default function Layout() {
   const { pathname } = useLocation();
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
-  const [{ family_url: family }] = useLinks();
+  const [{ family_url }] = useLinks();
+  const family = familyLink(family_url);   // «by CORE» — завжди на Discord сім'ї
   useEffect(() => setMenu(false), [pathname]);
   useEffect(() => {
     if (!menu) return;

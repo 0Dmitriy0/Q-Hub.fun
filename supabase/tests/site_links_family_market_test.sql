@@ -13,11 +13,11 @@ update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000048a01', false) \gset
 do $$ begin
-  assert (select family_url from public.site_links) = 'https://discord.gg/RxUk5mGgy', 'гравець не бачить Discord сім''ї';
+  assert (select family_url from public.site_links) = 'https://discord.gg/U4SZvvRueT', 'гравець не бачить Discord сім''ї';
   update public.site_links set family_url = 'https://discord.gg/hack', market_url = 'https://discord.gg/hack';
 end $$;
 reset role;
-do $$ begin assert (select family_url = 'https://discord.gg/RxUk5mGgy' and market_url = '' from public.site_links), 'гравець змінив посилання'; end $$;
+do $$ begin assert (select family_url = 'https://discord.gg/U4SZvvRueT' and market_url = 'https://discord.gg/KcCRVzpVAR' from public.site_links), 'гравець змінив посилання'; end $$;
 
 -- адмін: вписує торговий майданчик і сім'ю; чуже чи без https — не проходить
 set role authenticated;
@@ -29,8 +29,17 @@ do $$ begin
   exception when check_violation then null; end;
   begin update public.site_links set family_url = 'http://discord.gg/abc'; raise exception 'посилання сім''ї без https пройшло';
   exception when check_violation then null; end;
-  update public.site_links set market_url = '', family_url = 'https://discord.gg/RxUk5mGgy';   -- як було
+  update public.site_links set market_url = 'https://discord.gg/KcCRVzpVAR', family_url = 'https://discord.gg/U4SZvvRueT';   -- як було
 end $$;
 reset role;
+
+-- 0050 повторно: те, що вписав адмін, лишається; стартове запрошення в «сім'ї» замінюється
+update public.site_links set market_url = 'https://discord.gg/QuantMarket';
+\i supabase/migrations/0050_discord_invites_owner.sql
+do $$ begin assert (select market_url = 'https://discord.gg/QuantMarket' from public.site_links), '0050 перезаписав посилання адміна'; end $$;
+update public.site_links set family_url = 'https://discord.gg/RxUk5mGgy';
+\i supabase/migrations/0050_discord_invites_owner.sql
+do $$ begin assert (select family_url = 'https://discord.gg/U4SZvvRueT' from public.site_links), '0050 не замінив стартове запрошення сім''ї'; end $$;
+update public.site_links set market_url = 'https://discord.gg/KcCRVzpVAR';
 
 \echo 'Три Discord ok'
