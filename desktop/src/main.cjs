@@ -9,7 +9,8 @@ const { parseCharacter } = require('./character.cjs');
 const { parseNick } = require('./nick.cjs');
 const { fileStorage } = require('./store.cjs');
 const gameSession = require('./session.cjs');
-const { sessionMoney } = require('./sessionmoney.cjs');
+const { sessionMoney, MAX_JUMP } = require('./sessionmoney.cjs');
+const { randomUUID } = require('node:crypto');
 const shots = require('./shots.cjs');
 const { vision, TICK_POLL } = require('./vision.cjs');
 const { createUpdater, installPending, installDue, updateDirs } = require('./updater.cjs');
@@ -268,12 +269,27 @@ function createStrip() {
   strip.webContents.on('will-navigate', e => e.preventDefault());
   strip.loadFile(path.join(__dirname, 'strip.html'));
 }
-/* прибуток за годину сеансу — з балансу HUD, лише в пам'яті й settings (specs/040): у базу нічого не пишеться */
+/* гроші сеансу з балансу HUD: прибуток за годину в смужці (specs/040) і підсумок сеансу в game_sessions для кабінету
+   (specs/044) — таймер сесії дописує його в рядок сесії раз на хвилину; окремих зчитувань не зберігаємо */
 let sessMoney = null;
 const moneyKey = () => (settings.session ? `${settings.session.started}:${settings.character || ''}` : null);
+/* пороги з money_rules (0049): без зв'язку — останні прочитані, а ще раніше — типові */
+const moneyRules = () => settings.moneyRules || { max_jump: MAX_JUMP, min_minutes: 5 };
+async function loadMoneyRules() {
+  const { data } = await sb.from('money_rules').select('max_jump, min_minutes').maybeSingle();
+  if (data) { settings.moneyRules = data; saveSettings(); }
+}
 function onMoney(m, at) {
   sessMoney ??= sessionMoney(settings.sessionMoney);
-  if (sessMoney.update(moneyKey(), m, at)) { settings.sessionMoney = sessMoney.state(); saveSettings(); }
+  if (sessMoney.update(moneyKey(), m, at, Number(moneyRules().max_jump) || MAX_JUMP)) { settings.sessionMoney = sessMoney.state(); saveSettings(); }
+}
+/* підсумок для рядка сесії персонажа characterId; стан зберігаємо разом, щоб перезапуск програми не губив «Заробив» */
+function sessionSummary(characterId) {
+  const s = settings.session;
+  if (!s || !characterId) return null;
+  sessMoney ??= sessionMoney(settings.sessionMoney);
+  settings.sessionMoney = sessMoney.state();
+  return sessMoney.summary(`${s.started}:${characterId}`);
 }
 /* сесія з таймера гри (settings.session); без гри — порожньо */
 function stripData() {
@@ -908,18 +924,29 @@ function startSessionTimer() {
     running: async () => { const p = await gameSession.processes(); return p ? gameSession.GAME.some(n => p.has(n)) : null; },
     started: gameSession.gameStart,
     now: Date.now,
+    uuid: randomUUID,
     character: () => settings.character || null,
+    money: sessionSummary,
     db: {
-      start: async (c, at, end) => { const { data } = await sb.from('game_sessions').insert({ character_id: c, started_at: new Date(at).toISOString(), ended_at: new Date(end).toISOString() }).select('id').single(); return data?.id || null; },
-      beat: async (id, at) => { await sb.from('game_sessions').update({ ended_at: new Date(at).toISOString() }).eq('id', id); },
+      /* upsert за id: повторна відправка (без зв'язку, черга) не створює дубля — конституція V */
+      write: async row => {
+        let { error } = await sb.from('game_sessions').upsert(row, { onConflict: 'id' });
+        /* база ще без 0049 (немає колонок money_*) — сесію все одно пишемо, лише без грошей */
+        if (error?.code === 'PGRST204' && 'money_gain' in row) ({ error } = await sb.from('game_sessions').upsert(gameSession.withoutMoney(row), { onConflict: 'id' }));
+        return !error;
+      },
       drop: async id => { await sb.from('game_sessions').delete().eq('id', id); },
     },
     load: () => settings.session || null,
     save: v => { settings.session = v; saveSettings(); },
     changed: () => { trayTip(); bar?.webContents.send('changed'); },
+    loadQueue: () => settings.sessionQueue || [],
+    saveQueue: v => { settings.sessionQueue = v; saveSettings(); },
   });
   const run = () => tick().catch(() => {});   // мережа впала — наступна спроба за 10 с
   run(); setInterval(run, 10e3);
+  const rules = () => loadMoneyRules().catch(() => {});   // без зв'язку — збережені пороги
+  rules(); setInterval(rules, 36e5);
 }
 
 /* помилка запуску — повідомлення замість тихого виходу без вікна */

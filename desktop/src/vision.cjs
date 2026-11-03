@@ -41,7 +41,7 @@ function whiteOnly(img, nativeImage) {
 }
 
 /* deps: nativeImage, capture() → NativeImage|null, active() → чи гра йде й зір увімкнено, catalog() → [{id,name,buyer_id}],
-   onMoney({cash,bank}, at) — стабільний баланс HUD (лише показ прибутку за годину, у базу не пишеться, specs/040),
+   onMoney({cash,bank}, at) — стабільний баланс HUD (прибуток за годину в смужці й підсумок сеансу для кабінету, specs/040, 044),
    onPrices([{buyer_id,item_id,price}]), logFile */
 function vision(deps) {
   /* lists — окремий рушій для великих кадрів списку скупника: його пам'ять росте найбільше, тож він закривається сам (ocridle.cjs) */
