@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { canEdit, desktop } from '../../lib/app';
 import Dashboard from './Dashboard';
 import DocumentsPage from './DocumentsPage';
+import Earnings from './Earnings';
 import Characters from './Characters';
 import SettingsPage from './SettingsPage';
 import Select from '../../components/Select';
@@ -20,6 +21,7 @@ const SITE: [string, string, string, string][] = [
 const TABS: [string, string, string, string][] = [
   ['', 'Дашборд', 'Документи, ціни й івенти', 'home'],
   ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
+  ['zarobitok', 'Заробіток', 'За годину й по днях', 'chart'],
   ['nalashtuvannya', 'Налаштування', 'Персонажі, нік і статік', 'user'],
 ];
 
@@ -60,6 +62,7 @@ export default function Cabinet() {
       {/* розділи, яких більше немає (specs/040), — на головну кабінету */}
       {['oblik', 'uhody', 'sklad', 'harazh'].map(p => <Route key={p} path={p} element={<Navigate to="/kabinet" replace />} />)}
       <Route path="dokumenty" element={<DocumentsPage c={current} />} />
+      <Route path="zarobitok" element={<Earnings c={current} />} />
       <Route path="nalashtuvannya" element={<SettingsPage c={current} />} />
       <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
     </Routes>

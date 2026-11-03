@@ -6,6 +6,7 @@ import Icon from '../Icon';
 import DiscordForm, { LINK_TEXT } from '../DiscordForm';
 import PromoForm, { type SitePromoRow } from '../PromoForm';
 import AdminSection from './AdminSection';
+import MoneyRulesForm from './MoneyRulesForm';
 
 /* Переходи й налаштування (specs/039 US5): інструменти, що вже працюють на своїх сторінках, + Discord і промо прямо тут */
 const GO: [string, string, string, string][] = [
@@ -46,6 +47,9 @@ export default function AdminLinks() {
             </li>
           ))}
         </ul>
+      </AdminSection>
+      <AdminSection title="Заробіток у кабінеті" hint="Пороги для «Заробітку» гравців (specs/044).">
+        <MoneyRulesForm />
       </AdminSection>
       <AdminSection title="Промокод Q-Hub" hint="Блок на першому екрані головної.">
         {editPromo
