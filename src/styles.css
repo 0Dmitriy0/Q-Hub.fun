@@ -1407,7 +1407,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .mcat-info { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%;
   border: 1px solid var(--line2); background: var(--surface); color: var(--accent-hi); cursor: pointer; padding: 0;
   font: 800 12px/1 Georgia, 'Times New Roman', serif; font-style: italic; z-index: 2; }
-.mcat-info.adm { right: 42px; }
+.mcat-info.mcat-info-adm { right: 42px; }   /* не «.adm» — це клас адмін-панелі (width: 100%) */
 .mcat-info:hover, .mcat-info[aria-expanded="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
 .mcat-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mcat-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 200px; z-index: 30; padding: 10px 12px; border-radius: 12px;
