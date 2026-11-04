@@ -525,7 +525,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
                             <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.starts_on || c.ends_on) && <small className="mcat-sub">{period(c.starts_on, c.ends_on, today)}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
-                          {c.description && <button type="button" className={'mcat-info' + (isAdmin && !c.builtin ? ' adm' : '')} aria-expanded={info === c.id} aria-controls={'mcat-pop-' + c.id}
+                          {c.description && <button type="button" className={'mcat-info' + (isAdmin && !c.builtin ? ' mcat-info-adm' : '')} aria-expanded={info === c.id} aria-controls={'mcat-pop-' + c.id}
                             aria-label={'Що це: ' + c.name} title="Що це" onClick={() => setInfo(i => (i === c.id ? null : c.id))}>i</button>}
                           {info === c.id && c.description && <div id={'mcat-pop-' + c.id} className="mcat-pop" role="note"><b>{c.name}</b><p>{c.description}</p></div>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
