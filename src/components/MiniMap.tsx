@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ZMAX, makeHash, toGame, toPx } from '../lib/mapGeo';
 import { groupCategories, type MapCategory, type MapMark } from '../lib/mapData';
-import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import Icon from './Icon';
 
 const HOME: [number, number] = [0, -800];
@@ -55,7 +55,7 @@ export default function MiniMap() {
     g.clearLayers(); markers.current = {};
     for (const mk of found.slice(0, MAX_SHOWN)) {
       const c = catById[mk.category]; if (!c) continue;
-      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
+      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         + (mk.link ? `<a class="mgo" data-nav href="${mk.link.href}">${mk.link.label}</a>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon: pinIcon(c, mk.icon), title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(g);

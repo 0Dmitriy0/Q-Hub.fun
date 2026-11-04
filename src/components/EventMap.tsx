@@ -5,7 +5,7 @@ import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { ZMAX, toPx } from '../lib/mapGeo';
 import type { MapCategory, MapMark } from '../lib/mapData';
-import { baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { asset } from '../lib/app';
 
 /* міні-мапа на сторінці івенту (specs/055 US2): мітки прив'язаних категорій з тих самих даних, що велика мапа
@@ -52,7 +52,7 @@ export default function EventMap({ categoryIds, onCount }: { categoryIds: string
     for (const mk of data.marks) {
       const c = byId[mk.category]; if (!c) continue;
       const at = m.unproject(toPx(mk.x, mk.y), ZMAX); pts.push(at);
-      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(mk.name || c.name)}</b>`
+      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>`
         + (mk.note ? `<span>${esc(mk.note)}</span>` : '') + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span></div>`;
       group.addLayer(L.marker(at, { icon: pinIcon(c, mk.icon), title: mk.name || c.name, keyboard: true }).bindPopup(html));
     }
