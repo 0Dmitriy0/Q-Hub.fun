@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEGEND, kyivTime, money, nextChange, pricesMessage, profit, tier } from './format';
+import { kyivTime, money, nextChange, pricesMessage, profit, tier } from './format';
 import type { BoardRow, Group } from './prices';
 
 const SITE = 'https://q-hub.fun';
@@ -53,25 +53,31 @@ describe('повідомлення цін — увесь прайс скупни
     { item_id: 4, name: 'Лисичка', price: 333, prev: null },
   ];
 
-  it('заголовок, зведення змін, найвигідніше зверху, позначки змін, наступна зміна', () => {
+  it('заголовок, зведення змін і наступна зміна вгорі, розділи за вигідністю, найвигідніше зверху', () => {
     const [m] = pricesMessage([g('mush', rows, '2026-11-04T15:10:00Z', board)], { now: winter, site: SITE });
     expect(m.content).toBe('🍄 Гриби — нові ціни · 14:32');
     const e = m.embeds![0];
     expect(e.title).toBe('🍄 Гриби — ціни скупника');
     expect(e.url).toBe(SITE + '/tsiny#mush');
-    expect(e.description).toBe([
-      '**Змінилось 3: ▲ 1 · ▼ 1 · ● 1 нове**',
-      '',
-      '🔥 **Цар-гриб** — 5 730 $ · 96% ▲ +120',
-      '🔥 **Лисичка** — 333 $ · 95% ● нове',
-      '🟡 **Печериця** — 63 $ · 48% ▼ −5',
-      '🔴 **Опеньок** — 71 $ · 19%',
-      '',
-      '⏰ **Наступна зміна:** сьогодні о 17:10',
-    ].join('\n'));
-    expect(e.footer?.text).toBe(LEGEND + '\nQ-Hub · q-hub.fun');
+    expect(e.description).toBe('**Змінилось 3 з 4:** ▲ 1 · ▼ 1 · ● 1 нове\n⏰ Наступна зміна: **сьогодні о 17:10**');
+    expect(e.fields).toEqual([
+      { name: '🔥 Вигідно продавати · 2', value: '` 96%` Цар-гриб — **5 730 $** ▲ +120\n` 95%` Лисичка — **333 $** ● нове' },
+      { name: '🟡 Середньо · 1', value: '` 48%` Печериця — **63 $** ▼ −5' },
+      { name: '🔴 Краще почекати · 1', value: '` 19%` Опеньок — **71 $**' },
+    ]);
+    expect(e.footer?.text).toContain('Q-Hub · q-hub.fun');
     expect(e.timestamp).toBe(winter.toISOString());
     expect(e.color).toBe(0xff6b00);
+  });
+
+  it('відсоток однакової ширини: 7% і 100%', () => {
+    const [m] = pricesMessage([g('hide', [], null, [
+      { item_id: 1, name: 'А', price: 107, min: 100, max: 200 },
+      { item_id: 2, name: 'Б', price: 200, min: 100, max: 200 },
+    ])], { now: winter, site: SITE });
+    const all = m.embeds![0].fields!.map(f => f.value).join('\n');
+    expect(all).toContain('`100%` Б');
+    expect(all).toContain('`  7%` А');
   });
 
   it('без відомої наступної зміни — рядка немає', () => {
@@ -79,9 +85,9 @@ describe('повідомлення цін — увесь прайс скупни
     expect(m.embeds![0].description).not.toContain('Наступна зміна');
   });
 
-  it('без прайсу — лише змінені предмети, без вигідності', () => {
+  it('без прайсу — лише змінені предмети, розділ «Без меж»', () => {
     const [m] = pricesMessage([g('hide', [{ item_id: 1, name: 'А', price: 1, prev: 2 }])], { now: winter, site: SITE });
-    expect(m.embeds![0].description).toContain('⚪ **А** — 1 $ ▼ −1');
+    expect(m.embeds![0].fields).toEqual([{ name: '⚪ Без меж · 1', value: 'А — **1 $** ▼ −1' }]);
   });
 
   it('кілька скупників в одному каналі — загальний текст, більше 10 — частини (1/2), (2/2)', () => {
@@ -95,24 +101,28 @@ describe('повідомлення цін — увесь прайс скупни
   });
 
   it('довгий прайс ділиться, а не обрізається; ліміти Discord дотримано', () => {
-    const big: BoardRow[] = Array.from({ length: 200 }, (_, i) => ({ item_id: i, name: 'Дуже довга назва предмета номер ' + i, price: 100000 + i, min: 90000, max: 110000 }));
+    const big: BoardRow[] = Array.from({ length: 400 }, (_, i) => ({ item_id: i, name: 'Дуже довга назва предмета номер ' + i, price: 100000 + i, min: 90000, max: 110000 }));
     const ms = pricesMessage([g('hide', [{ item_id: 0, name: big[0].name, price: 100000, prev: 99000 }], '2026-11-04T15:10:00Z', big)], { now: winter, site: SITE });
-    const lines = ms.flatMap(m => m.embeds!.flatMap(e => e.description!.split('\n'))).filter(l => l.includes(' $'));
-    expect(lines).toHaveLength(200);
+    const embeds = ms.flatMap(m => m.embeds!);
+    const lines = embeds.flatMap(e => (e.fields ?? []).flatMap(f => f.value.split('\n')));
+    expect(lines).toHaveLength(400);
     for (const m of ms) {
       expect(m.embeds!.length).toBeLessThanOrEqual(10);
-      const total = m.embeds!.reduce((t, e) => t + (e.title?.length ?? 0) + (e.description?.length ?? 0) + (e.footer?.text.length ?? 0), 0);
+      const total = m.embeds!.reduce((t, e) => t + (e.title?.length ?? 0) + (e.description?.length ?? 0) + (e.footer?.text.length ?? 0)
+        + (e.fields ?? []).reduce((s, f) => s + f.name.length + f.value.length, 0), 0);
       expect(total).toBeLessThanOrEqual(6000);
-      for (const e of m.embeds!) expect(e.description!.length).toBeLessThanOrEqual(4096);
+      for (const e of m.embeds!) {
+        expect(e.fields!.length).toBeLessThanOrEqual(25);
+        for (const f of e.fields!) expect(f.value.length).toBeLessThanOrEqual(1024);
+      }
     }
-    const embeds = ms.flatMap(m => m.embeds!);
+    expect(embeds.length).toBeGreaterThan(1);
     expect(embeds[1].title).toContain('(продовження)');
-    expect(embeds[0].description).toContain('Змінилось 1');
-    expect(embeds[embeds.length - 1].description).toContain('Наступна зміна');
+    expect(embeds[0].description).toContain('Наступна зміна');
   });
 
   it('розмітка в назвах не ламає повідомлення', () => {
     const [m] = pricesMessage([g('hide', [{ item_id: 1, name: 'Риба *золота*_x', price: 1, prev: 2 }])], { now: winter, site: SITE });
-    expect(m.embeds![0].description).toContain('Риба \\*золота\\*\\_x');
+    expect(m.embeds![0].fields![0].value).toContain('Риба \\*золота\\*\\_x');
   });
 });
