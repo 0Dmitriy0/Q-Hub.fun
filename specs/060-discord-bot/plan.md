@@ -86,7 +86,8 @@ specs/060-discord-bot/
 
 ```text
 supabase/
-├── migrations/0055_discord_bot.sql       # discord_bot, discord_outbox, news_drafts, тригер з price_history, cron
+├── migrations/0055_discord_bot.sql       # discord_bot, discord_outbox, discord_posts, news_drafts, тригер з price_history
+├── sql/discord_cron.sql                  # розклад pg_cron — власник запускає вручну (тестова база без pg_cron)
 ├── tests/discord_bot_test.sql            # права й тригер черги
 └── functions/discord-bot/
     ├── index.ts                          # дії: tick (ціни), drafts (з CI), send (новина), test, status
