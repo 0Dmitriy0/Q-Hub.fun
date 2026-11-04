@@ -34,14 +34,22 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
   const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
   const [label, setLabel] = useState(mark.label !== false);
+  const [photo, setPhoto] = useState(mark.photo || '');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const catIcon = cats.find(c => c.id === cat)?.icon || '';
+  /* фото (0052) зберігається одразу після завантаження чи «Прибрати» — без окремого «Зберегти» */
+  async function savePhoto(url: string) {
+    const { error } = await supabase!.from('map_points').update({ photo_url: url }).eq('id', mark.dbId!);
+    if (error) { setMsg(/photo_url/.test(error.message) ? 'Немає колонки фото: запусти міграцію 0052.' : colErr(error.message)); throw error; }
+    setPhoto(url); setMsg(url ? 'Фото збережено.' : 'Фото прибрано.');
+    mark.photo = url || undefined;
+  }
   async function save() {
     setBusy(true); setMsg('');
     const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}) }).eq('id', mark.dbId!);
     setBusy(false);
     if (error) return setMsg(colErr(error.message));
-    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label });
+    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label, photo: photo || undefined });
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити мітку">
@@ -49,6 +57,14 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
       <input className="min" placeholder="Назва (видно під міткою на мапі)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" maxLength={160} />
       <label className="mcheck"><input type="checkbox" checked={label} onChange={e => setLabel(e.target.checked)} /> Показувати назву на мапі</label>
       <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" maxLength={600} />
+      <div className="mphoto-edit">
+        {photo ? <img src={photo} alt="" /> : <span className="muted">Фото немає</span>}
+        <div className="mrow">
+          <PicUpload label={'Фото мітки ' + (mark.name || '')} path={`map/${mark.dbId}.webp`} frame={{ w: 640, h: 360 }} onDone={savePhoto} />
+          {photo && <button type="button" className="btn sm ghost" onClick={() => { savePhoto('').catch(() => {}); }}>Прибрати фото</button>}
+        </div>
+        <small className="muted">Обріж кадр так, щоб не було чату, ніків і HUD — лише місце й об'єкт.</small>
+      </div>
       <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
       <p className="muted">Іконка: перша — як у категорії, або будь-яка інша лише для цієї мітки</p>
       <IconGrid value={icon} onChange={setIcon} catIcon={catIcon} label="Іконка мітки" />

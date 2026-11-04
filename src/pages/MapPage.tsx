@@ -8,7 +8,7 @@ import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, readView, saveView, toGame, 
 import { asset } from '../lib/app';
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
-import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
@@ -229,7 +229,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       const c = catById[mk.category]; if (!c) continue;
       const icon = pinIcon(c, mk.icon);
       /* картка точки як у макеті: мітка-категорія кольору категорії, назва, примітка, смужка координат, дія */
-      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
+      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         /* specs/012 FR-009a: мітки з Open Hydra Map — з підписом джерела */
