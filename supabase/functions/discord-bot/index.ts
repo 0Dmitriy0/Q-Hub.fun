@@ -24,7 +24,7 @@ async function who(req: Request): Promise<Who> {
 }
 
 /* хто яку дію може викликати (contracts/discord-bot-function.md) */
-const ACCESS: Record<string, Who> = { tick: 'secret', drafts: 'secret', send: 'admin', test: 'admin', status: 'admin' };
+const ACCESS: Record<string, Who> = { tick: 'secret', drafts: 'secret', board: 'admin', send: 'admin', test: 'admin', status: 'admin' };
 
 export type Ctx = { db: SupabaseClient; dc: Discord; body: Record<string, unknown> };
 type Action = (c: Ctx) => Promise<Response>;
@@ -195,8 +195,45 @@ const test: Action = async ({ db, dc, body }) => {
   }
 };
 
+/* поточний прайс скупників у їхні канали без змін (рішення власника 2026-11-05):
+   { buyer_ids: [...] } — вибраним; { missing: true } — тим, у чиєму каналі ще немає жодного надісланого повідомлення цін.
+   Ключ — з хвилиною: подвійне натискання не дублює. Рахується в ліміт пересилань каналу (ключ prices:…) */
+const board: Action = async ({ db, dc, body }) => {
+  const { data: map } = await db.from('discord_buyer_channels').select('buyer_id,channel_id');
+  let targets = (map ?? []) as { buyer_id: string; channel_id: string }[];
+  if (Array.isArray(body.buyer_ids)) {
+    const want = new Set((body.buyer_ids as unknown[]).map(String));
+    targets = targets.filter(t => want.has(t.buyer_id));
+  } else if (body.missing === true) {
+    const { data: sent } = await db.from('discord_posts').select('channel_id').like('key', 'prices:%').eq('status', 'sent');
+    const has = new Set((sent ?? []).map((r: { channel_id: string }) => r.channel_id));
+    targets = targets.filter(t => !has.has(t.channel_id));
+  } else return fail(400, 'Вкажи buyer_ids або missing: true.');
+  if (!targets.length) return json({ posted: [], failed: [], note: 'Немає кому надсилати.' });
+
+  const { data: b } = await db.from('buyers').select('id,name,sort,next_change_at').in('id', targets.map(t => t.buyer_id));
+  const buyers = (b ?? []) as BuyerInfo[];
+  const now = new Date(), minute = now.toISOString().slice(0, 16);
+  const posted: string[] = [], failed: { buyer_id: string; error: string }[] = [];
+  for (const t of targets) {
+    const buyer = buyers.find(x => x.id === t.buyer_id);
+    if (!buyer) continue;
+    try {
+      const groups = await withBoard(db, [{ buyer, rows: [] }]);
+      if (!groups[0].board?.length) { failed.push({ buyer_id: t.buyer_id, error: 'У скупника немає цін.' }); continue; }
+      const ch = await dc.channel(t.channel_id);
+      await publish(db, dc, t.channel_id, `prices:board:${t.buyer_id}:${minute}`, pricesMessage(groups, { now, site: SITE }), ch.type === ANNOUNCEMENT);
+      posted.push(t.buyer_id);
+    } catch (e) {
+      failed.push({ buyer_id: t.buyer_id, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  if (failed.length) await markError(db, failed.map(f => `${f.buyer_id}: ${f.error}`).join(' · ')); else await markOk(db);
+  return json({ posted, failed });
+};
+
 const notYet: Action = async () => fail(501, 'Ця дія ще не зроблена.');
-const ACTIONS: Record<string, Action> = { tick, drafts: notYet, send: notYet, test, status };
+const ACTIONS: Record<string, Action> = { tick, board, drafts: notYet, send: notYet, test, status };
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });

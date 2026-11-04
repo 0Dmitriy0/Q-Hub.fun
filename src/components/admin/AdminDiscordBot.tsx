@@ -40,9 +40,9 @@ function ChannelNote({ c }: { c: Ch | undefined }) {
 }
 
 /* поле ID каналу з перевіркою при blur, назвою каналу й кнопкою «Пробне» */
-function ChannelField({ id, label, value, saved, onChange, info, onTest, testMsg, busy }: {
+function ChannelField({ id, label, value, saved, onChange, info, onTest, testMsg, busy, onBoard }: {
   id: string; label: string; value: string; saved: string; onChange: (v: string) => void;
-  info: Ch | undefined; onTest: () => void; testMsg: string; busy: boolean;
+  info: Ch | undefined; onTest: () => void; testMsg: string; busy: boolean; onBoard?: () => void;
 }) {
   const [touched, setTouched] = useState(false);
   const err = idErr(value);
@@ -59,6 +59,8 @@ function ChannelField({ id, label, value, saved, onChange, info, onTest, testMsg
         {testMsg && <small className={testMsg.startsWith('Надіслано') ? 'good' : 'err'} role="status">{testMsg}</small>}
       </div>
       <div className="adm-row-act">
+        {onBoard && <button type="button" className="btn ghost sm" disabled={!saved || value !== saved || busy} onClick={onBoard}
+          title={value !== saved ? 'Спершу збережи зміни' : 'Поточний прайс скупника в його канал'}>Надіслати прайс</button>}
         <button type="button" className="btn ghost sm" disabled={!saved || value !== saved || busy} onClick={onTest}
           title={value !== saved ? 'Спершу збережи зміни' : undefined}>Надіслати пробне</button>
       </div>
@@ -137,6 +139,23 @@ export default function AdminDiscordBot() {
     setBusy(''); loadStatus();
   }
 
+  /* поточний прайс у канали: одному скупнику (key = його id) чи всім, у кого ще немає повідомлення (key = 'missing') */
+  const [boardMsg, setBoardMsg] = useState('');
+  async function sendBoard(key: string, extra: Record<string, unknown>) {
+    setBusy('board-' + key); setBoardMsg('');
+    const name = (id: string) => buyers.find(b => b.id === id)?.name ?? id;
+    try {
+      const r = await call<{ posted: string[]; failed: { buyer_id: string; error: string }[]; note?: string }>('board', extra);
+      const ok = r.posted.length ? `Надіслано: ${r.posted.map(name).join(', ')}.` : r.note || 'Нічого не надіслано.';
+      const bad = r.failed.map(f => `${name(f.buyer_id)} — ${f.error}`).join(' ');
+      if (key === 'missing') setBoardMsg([ok, bad].filter(Boolean).join(' '));
+      else setTestMsg(m => ({ ...m, [key]: r.failed.length ? bad : 'Надіслано — перевір канал.' }));
+    } catch (e) {
+      if (key === 'missing') setBoardMsg((e as Error).message); else setTestMsg(m => ({ ...m, [key]: (e as Error).message }));
+    }
+    setBusy(''); loadStatus();
+  }
+
   const dirty = JSON.stringify(bot) !== JSON.stringify(form);
   const chDirty = buyers.some(b => (chForm[b.id] ?? '') !== (chSaved[b.id] ?? ''));
   const withChannel = buyers.filter(b => chSaved[b.id]).length;
@@ -182,12 +201,17 @@ export default function AdminDiscordBot() {
       </AdminSection>
 
       <AdminSection title="Канали скупників" error={loadErr} onRetry={load} loading={!form && !loadErr}
-        hint={`Зміни цін скупника йдуть лише в його канал. Без каналу — у Discord не публікується. Зараз з каналом: ${withChannel} з ${buyers.length}.`}>
+        hint={`Зміни цін скупника йдуть лише в його канал. Без каналу — у Discord не публікується. Зараз з каналом: ${withChannel} з ${buyers.length}.`}
+        actions={<button type="button" className="btn ghost sm" disabled={busy !== '' || !withChannel || chDirty}
+          onClick={() => sendBoard('missing', { missing: true })}
+          title="Поточний прайс у канали скупників, де бот ще нічого не публікував">Надіслати прайс, де ще немає</button>}>
+        {boardMsg && <p className={boardMsg.startsWith('Надіслано') && !boardMsg.includes(' — ') ? 'good' : 'err'} role="status">{boardMsg}</p>}
         <ul className="adm-list">
           {buyers.map(b => (
             <ChannelField key={b.id} id={'dc-b-' + b.id} label={b.name} value={chForm[b.id] ?? ''} saved={chSaved[b.id] ?? ''}
               onChange={v => setChForm(f => ({ ...f, [b.id]: v }))} info={st?.channels.byId[chSaved[b.id]] ?? undefined}
-              onTest={() => test(b.id, chSaved[b.id])} testMsg={testMsg[b.id] ?? ''} busy={busy !== ''} />
+              onTest={() => test(b.id, chSaved[b.id])} testMsg={testMsg[b.id] ?? ''} busy={busy !== ''}
+              onBoard={() => sendBoard(b.id, { buyer_ids: [b.id] })} />
           ))}
         </ul>
         <div className="row">

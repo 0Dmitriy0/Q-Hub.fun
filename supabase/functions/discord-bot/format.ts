@@ -63,6 +63,7 @@ const size = (e: Embed) => (e.title?.length ?? 0) + (e.description?.length ?? 0)
 
 /* «Змінилось 34 з 40: ▲ 19 · ▼ 15» */
 function summary(rows: Group['rows'], total: number) {
+  if (!rows.length) return `**Поточні ціни** · ${total} ${total % 10 === 1 && total % 100 !== 11 ? 'предмет' : [2, 3, 4].includes(total % 10) && ![12, 13, 14].includes(total % 100) ? 'предмети' : 'предметів'}`;
   const up = rows.filter(r => r.prev !== null && r.price > r.prev).length;
   const down = rows.filter(r => r.prev !== null && r.price < r.prev).length;
   const fresh = rows.filter(r => r.prev === null).length;
@@ -130,7 +131,7 @@ export function pricesMessage(groups: Group[], opt: { now: Date; site: string })
   if (cur.length) packs.push(cur);
   /* текст над карткою — для сповіщення на телефоні: «🍄 Гриби — нові ціни · 14:32» */
   const head = groups.length === 1
-    ? `${buyerIcon(groups[0].buyer.id)} ${escape(groups[0].buyer.name)} — нові ціни · ${kyivTime(opt.now)}`
+    ? `${buyerIcon(groups[0].buyer.id)} ${escape(groups[0].buyer.name)} — ${groups[0].rows.length ? 'нові' : 'поточні'} ціни · ${kyivTime(opt.now)}`
     : `🛒 Нові ціни скупників · ${kyivTime(opt.now)}`;
   return packs.map((p, i) => ({ content: packs.length > 1 ? `${head} (${i + 1}/${packs.length})` : head, embeds: p }));
 }

@@ -80,6 +80,13 @@ describe('повідомлення цін — увесь прайс скупни
     expect(all).toContain('`  7%` А');
   });
 
+  it('прайс без змін — «Поточні ціни», без ▲/▼', () => {
+    const [m] = pricesMessage([g('mush', [], '2026-11-04T15:10:00Z', board)], { now: winter, site: SITE });
+    expect(m.content).toBe('🍄 Гриби — поточні ціни · 14:32');
+    expect(m.embeds![0].description).toBe('**Поточні ціни** · 4 предмети\n⏰ Наступна зміна: **сьогодні о 17:10**');
+    expect(m.embeds![0].fields!.map(f => f.value).join('\n')).not.toMatch(/[▲▼●]/);
+  });
+
   it('без відомої наступної зміни — рядка немає', () => {
     const [m] = pricesMessage([g('mush', rows, null, board)], { now: winter, site: SITE });
     expect(m.embeds![0].description).not.toContain('Наступна зміна');
