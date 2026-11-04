@@ -7,6 +7,7 @@ export const API = 'https://discord.com/api/v10';
 export type Embed = {
   title?: string; url?: string; description?: string; color?: number;
   footer?: { text: string }; image?: { url: string }; timestamp?: string;
+  fields?: { name: string; value: string; inline?: boolean }[];
 };
 export type Body = { content?: string; embeds?: Embed[] };
 export type Channel = { id: string; name: string; type: number; guild_id?: string };

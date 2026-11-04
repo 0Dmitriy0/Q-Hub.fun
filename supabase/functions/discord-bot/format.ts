@@ -5,8 +5,8 @@ import type { Group } from './prices.ts';
 
 export const COLOR = 0xff6b00;   // --accent сайту
 const TZ = 'Europe/Kyiv';
-/* ліміти Discord: 10 embed і 6000 символів на повідомлення, 4096 — опис одного embed */
-const MAX_EMBEDS = 10, MAX_TOTAL = 6000, MAX_DESC = 4096;
+/* ліміти Discord: 10 embed і 6000 символів на повідомлення, 25 полів і 1024 символи на поле */
+const MAX_EMBEDS = 10, MAX_TOTAL = 6000;
 
 export const money = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' $';
 
@@ -34,7 +34,20 @@ function mark(price: number, prev: number | null) {
   return d > 0 ? `▲ +${money(d).slice(0, -2)}` : `▼ −${money(-d).slice(0, -2)}`;
 }
 
-/* рядки → описи не довші за MAX_DESC, ділимо по рядках */
+/* вигідність — де ціна між мінімумом і максимумом скупника, 0–100 (як «за вигідністю» на сайті); без меж — null */
+export function profit(price: number, min: number, max: number): number | null {
+  if (!(max > min) || !(min > 0)) return null;
+  return Math.max(0, Math.min(100, Math.round((price - min) * 100 / (max - min))));
+}
+export const tier = (p: number | null) => (p === null ? '⚪' : p >= 90 ? '🔥' : p >= 70 ? '🟢' : p >= 40 ? '🟡' : '🔴');
+
+/* значок скупника в заголовку; невідомий — кошик */
+const BUYER_ICON: Record<string, string> = {
+  harvest: '🌾', mush: '🍄', wood: '🪵', metal: '🔩', junk: '🧰', fuel: '⛽', fish: '🐟', food: '🍞', hide: '🦌',
+};
+export const buyerIcon = (id: string) => BUYER_ICON[id] ?? '🛒';
+
+/* рядки → шматки не довші за max символів, ділимо по рядках */
 function chunks(lines: string[], max: number): string[] {
   const out: string[] = []; let cur = '';
   for (const l of lines) {
@@ -45,21 +58,68 @@ function chunks(lines: string[], max: number): string[] {
   return out;
 }
 
-const size = (e: Embed) => (e.title?.length ?? 0) + (e.description?.length ?? 0) + (e.footer?.text.length ?? 0);
+const size = (e: Embed) => (e.title?.length ?? 0) + (e.description?.length ?? 0) + (e.footer?.text.length ?? 0)
+  + (e.fields ?? []).reduce((t, f) => t + f.name.length + f.value.length, 0);
 
-/* одне вікно змін → одне чи кілька повідомлень: embed на скупника, довгий список — продовженнями */
+/* «Змінилось 34 з 40: ▲ 19 · ▼ 15» */
+function summary(rows: Group['rows'], total: number) {
+  if (!rows.length) return `**Поточні ціни** · ${total} ${total % 10 === 1 && total % 100 !== 11 ? 'предмет' : [2, 3, 4].includes(total % 10) && ![12, 13, 14].includes(total % 100) ? 'предмети' : 'предметів'}`;
+  const up = rows.filter(r => r.prev !== null && r.price > r.prev).length;
+  const down = rows.filter(r => r.prev !== null && r.price < r.prev).length;
+  const fresh = rows.filter(r => r.prev === null).length;
+  const parts = [up && `▲ ${up}`, down && `▼ ${down}`, fresh && `● ${fresh} нове`].filter(Boolean);
+  return `**Змінилось ${rows.length} з ${Math.max(total, rows.length)}:** ${parts.join(' · ')}`;
+}
+
+/* розділи за вигідністю — замість кружка в кожному рядку: розділ сам каже, що робити */
+const SECTIONS: { name: string; has: (p: number | null) => boolean }[] = [
+  { name: '🔥 Вигідно продавати', has: p => p !== null && p >= 90 },
+  { name: '🟢 Добре', has: p => p !== null && p >= 70 && p < 90 },
+  { name: '🟡 Середньо', has: p => p !== null && p >= 40 && p < 70 },
+  { name: '🔴 Краще почекати', has: p => p !== null && p < 40 },
+  { name: '⚪ Без меж', has: p => p === null },
+];
+const MAX_FIELD = 1024, MAX_FIELDS = 25;
+const FIGURE = ' ';   // цифровий пробіл: « 7%» і «98%» однакової ширини в плашці
+
+/* один рядок: «`98%` Рапана — **493 $** ▲ +235»; без меж — без плашки */
+function line(b: { name: string; price: number; min: number; max: number }, change: Group['rows'][number] | undefined) {
+  const p = profit(b.price, b.min, b.max);
+  const chip = p === null ? '' : `\`${String(p).padStart(3, FIGURE)}%\` `;
+  return `${chip}${escape(b.name)} — **${money(b.price)}**${change ? ' ' + mark(change.price, change.prev) : ''}`;
+}
+
+/* одне вікно змін → одне чи кілька повідомлень: embed на скупника з усім його прайсом розділами за вигідністю
+   (найвигідніше зверху), змінене — з ▲/▼; без прайсу (board) — лише змінені предмети. Довгий список — продовженнями */
 export function pricesMessage(groups: Group[], opt: { now: Date; site: string }): Body[] {
   const embeds: Embed[] = [];
   for (const g of groups) {
-    const lines = g.rows.map(r => `${escape(r.name)} — **${money(r.price)}** ${mark(r.price, r.prev)}`);
+    const changed = new Map(g.rows.map(r => [r.item_id, r]));
+    const board = (g.board?.length ? g.board : g.rows.map(r => ({ item_id: r.item_id, name: r.name, price: r.price, min: 0, max: 0 })))
+      .filter(b => b.price > 0)
+      .sort((a, b) => (profit(b.price, b.min, b.max) ?? -1) - (profit(a.price, a.min, a.max) ?? -1) || a.name.localeCompare(b.name, 'uk'));
     const next = nextChange(g.buyer.next_change_at, opt.now);
-    const footer = { text: next ? `Наступна зміна: ${next} · Q-Hub` : 'Q-Hub' };
-    const title = escape(g.buyer.name);
-    chunks(lines, MAX_DESC).forEach((description, i) => embeds.push({
-      title: i === 0 ? title : `${title} (продовження)`,
-      url: `${opt.site}/tsiny#${encodeURIComponent(g.buyer.id)}`,
-      description, color: COLOR, footer,
-    }));
+    /* поля: розділ → рядки, задовгий розділ ділиться на кілька полів (≤ 1024 символи), продовження без назви */
+    const fields: NonNullable<Embed['fields']> = [];
+    for (const s of SECTIONS) {
+      const items = board.filter(b => s.has(profit(b.price, b.min, b.max)));
+      if (!items.length) continue;
+      chunks(items.map(b => line(b, changed.get(b.item_id))), MAX_FIELD).forEach((value, i) =>
+        fields.push({ name: i === 0 ? `${s.name} · ${items.length}` : '​', value }));
+    }
+    const description = [summary(g.rows, board.length), next ? `⏰ Наступна зміна: **${next}**` : ''].filter(Boolean).join('\n');
+    const title = `${buyerIcon(g.buyer.id)} ${escape(g.buyer.name)} — ціни скупника`;
+    const base = { url: `${opt.site}/tsiny#${encodeURIComponent(g.buyer.id)}`, color: COLOR, timestamp: opt.now.toISOString(),
+      footer: { text: 'Відсоток — де ціна між мінімумом і максимумом скупника · Q-Hub · q-hub.fun' } };
+    /* поля по embed: ≤ 25 і ≤ ~5000 символів, щоб кілька embed влазили в повідомлення */
+    let cur: Embed = { ...base, title, description, fields: [] };
+    for (const f of fields) {
+      if (cur.fields!.length && (cur.fields!.length >= MAX_FIELDS || size(cur) + f.name.length + f.value.length > MAX_TOTAL - 1000)) {
+        embeds.push(cur); cur = { ...base, title: `${title} (продовження)`, fields: [] };
+      }
+      cur.fields!.push(f);
+    }
+    embeds.push(cur);
   }
   /* пакування: ≤ 10 embed і ≤ 6000 символів (з запасом на content) на повідомлення */
   const packs: Embed[][] = [];
@@ -69,7 +129,10 @@ export function pricesMessage(groups: Group[], opt: { now: Date; site: string })
     cur.push(e); total += size(e);
   }
   if (cur.length) packs.push(cur);
-  const head = `🛒 Оновлення цін скупників · ${kyivTime(opt.now)}`;
+  /* текст над карткою — для сповіщення на телефоні: «🍄 Гриби — нові ціни · 14:32» */
+  const head = groups.length === 1
+    ? `${buyerIcon(groups[0].buyer.id)} ${escape(groups[0].buyer.name)} — ${groups[0].rows.length ? 'нові' : 'поточні'} ціни · ${kyivTime(opt.now)}`
+    : `🛒 Нові ціни скупників · ${kyivTime(opt.now)}`;
   return packs.map((p, i) => ({ content: packs.length > 1 ? `${head} (${i + 1}/${packs.length})` : head, embeds: p }));
 }
 

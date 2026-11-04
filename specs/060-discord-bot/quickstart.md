@@ -3,7 +3,7 @@
 ## Підготовка (власник, один раз — research R8)
 
 1. Бот у Discord Developer Portal, токен → `npx.cmd supabase secrets set DISCORD_BOT_TOKEN=…` (у чат не надсилати).
-2. Бот запрошений на сервер Q-Hub; канали `#ціни` і `#новини` — тип «Оголошення».
+2. Бот запрошений на сервер Q-Hub посиланням з `scope=bot` і правами View Channels + Send Messages + Embed Links + Manage Messages (без Read Message History); у Developer Portal → Bot вимкнені «Public Bot» (спершу Installation → Install Link = None) і всі три Privileged Gateway Intents. Канал кожного скупника й `#новини` — тип «Оголошення» (0056: канал на скупника).
 3. `DISCORD_SYNC_SECRET` — у секретах функції й GitHub Secrets; `pg_cron`, `pg_net` увімкнені.
 4. Міграція `0055_discord_bot.sql` у SQL Editor; `npx.cmd supabase functions deploy discord-bot --project-ref mcuolznwwvptffcueswm --use-api --no-verify-jwt` (без перевірки JWT — як rules-sync: cron і CI приходять лише із секретом); розклад — `supabase/sql/discord_cron.sql` у SQL Editor.
 

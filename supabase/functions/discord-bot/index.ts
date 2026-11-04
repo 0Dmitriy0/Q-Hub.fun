@@ -4,7 +4,7 @@
    Секрети функції: DISCORD_BOT_TOKEN, DISCORD_SYNC_SECRET, SUPABASE_SERVICE_ROLE_KEY. Токен не потрапляє ні в базу, ні у відповідь. */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
-import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev } from './prices.ts';
+import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev, type Group } from './prices.ts';
 import { pricesMessage, TEST_MESSAGE } from './format.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
@@ -24,7 +24,7 @@ async function who(req: Request): Promise<Who> {
 }
 
 /* хто яку дію може викликати (contracts/discord-bot-function.md) */
-const ACCESS: Record<string, Who> = { tick: 'secret', drafts: 'secret', send: 'admin', test: 'admin', status: 'admin' };
+const ACCESS: Record<string, Who> = { tick: 'secret', drafts: 'secret', board: 'admin', send: 'admin', test: 'admin', status: 'admin' };
 
 export type Ctx = { db: SupabaseClient; dc: Discord; body: Record<string, unknown> };
 type Action = (c: Ctx) => Promise<Response>;
@@ -70,6 +70,20 @@ export async function publish(db: SupabaseClient, dc: Discord, channelId: string
 
 const SITE = 'https://q-hub.fun';
 
+/* увесь поточний прайс скупників групи — щоб повідомлення показувало весь прайс з вигідністю, а не лише змінене */
+type BiRow = { buyer_id: string; item_id: number; price: number; min_price: number; max_price: number; items: { name: string } | null };
+async function withBoard(db: SupabaseClient, groups: Group[]): Promise<Group[]> {
+  if (!groups.length) return groups;
+  const { data } = await db.from('buyer_items').select('buyer_id,item_id,price,min_price,max_price,items(name)')
+    .in('buyer_id', groups.map(g => g.buyer.id)).gt('price', 0);
+  const rows = (data ?? []) as unknown as BiRow[];
+  return groups.map(g => ({
+    ...g,
+    board: rows.filter(r => r.buyer_id === g.buyer.id)
+      .map(r => ({ item_id: r.item_id, name: r.items?.name ?? `Предмет #${r.item_id}`, price: r.price, min: r.min_price, max: r.max_price })),
+  }));
+}
+
 /* події позначаються опублікованими списком id — частинами, щоб адреса запиту не була задовгою */
 async function markPosted(db: SupabaseClient, events: Ev[], key: string, at: string) {
   const ids = events.map(e => e.id);
@@ -112,7 +126,7 @@ const tick: Action = async ({ db, dc }) => {
     if (!allowed(count ?? 0, bot.crosspost_per_hour)) { waiting += list.length; continue; }
     const key = postKey(list);
     try {
-      const groups = group(list, buyers, items);
+      const groups = await withBoard(db, group(list, buyers, items));
       if (groups.length) {
         const ch = await dc.channel(channelId);
         posted += (await publish(db, dc, channelId, key, pricesMessage(groups, { now, site: SITE }), ch.type === ANNOUNCEMENT)).length;
@@ -181,8 +195,45 @@ const test: Action = async ({ db, dc, body }) => {
   }
 };
 
+/* поточний прайс скупників у їхні канали без змін (рішення власника 2026-11-05):
+   { buyer_ids: [...] } — вибраним; { missing: true } — тим, у чиєму каналі ще немає жодного надісланого повідомлення цін.
+   Ключ — з хвилиною: подвійне натискання не дублює. Рахується в ліміт пересилань каналу (ключ prices:…) */
+const board: Action = async ({ db, dc, body }) => {
+  const { data: map } = await db.from('discord_buyer_channels').select('buyer_id,channel_id');
+  let targets = (map ?? []) as { buyer_id: string; channel_id: string }[];
+  if (Array.isArray(body.buyer_ids)) {
+    const want = new Set((body.buyer_ids as unknown[]).map(String));
+    targets = targets.filter(t => want.has(t.buyer_id));
+  } else if (body.missing === true) {
+    const { data: sent } = await db.from('discord_posts').select('channel_id').like('key', 'prices:%').eq('status', 'sent');
+    const has = new Set((sent ?? []).map((r: { channel_id: string }) => r.channel_id));
+    targets = targets.filter(t => !has.has(t.channel_id));
+  } else return fail(400, 'Вкажи buyer_ids або missing: true.');
+  if (!targets.length) return json({ posted: [], failed: [], note: 'Немає кому надсилати.' });
+
+  const { data: b } = await db.from('buyers').select('id,name,sort,next_change_at').in('id', targets.map(t => t.buyer_id));
+  const buyers = (b ?? []) as BuyerInfo[];
+  const now = new Date(), minute = now.toISOString().slice(0, 16);
+  const posted: string[] = [], failed: { buyer_id: string; error: string }[] = [];
+  for (const t of targets) {
+    const buyer = buyers.find(x => x.id === t.buyer_id);
+    if (!buyer) continue;
+    try {
+      const groups = await withBoard(db, [{ buyer, rows: [] }]);
+      if (!groups[0].board?.length) { failed.push({ buyer_id: t.buyer_id, error: 'У скупника немає цін.' }); continue; }
+      const ch = await dc.channel(t.channel_id);
+      await publish(db, dc, t.channel_id, `prices:board:${t.buyer_id}:${minute}`, pricesMessage(groups, { now, site: SITE }), ch.type === ANNOUNCEMENT);
+      posted.push(t.buyer_id);
+    } catch (e) {
+      failed.push({ buyer_id: t.buyer_id, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  if (failed.length) await markError(db, failed.map(f => `${f.buyer_id}: ${f.error}`).join(' · ')); else await markOk(db);
+  return json({ posted, failed });
+};
+
 const notYet: Action = async () => fail(501, 'Ця дія ще не зроблена.');
-const ACTIONS: Record<string, Action> = { tick, drafts: notYet, send: notYet, test, status };
+const ACTIONS: Record<string, Action> = { tick, board, drafts: notYet, send: notYet, test, status };
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });

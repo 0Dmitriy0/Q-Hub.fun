@@ -7,3 +7,4 @@
 - [Коди моделей транспорту](vehicle-model-codes.md) — vehicles.model + фото з CDN гри; авто-CSV без title, що ще не зіставлено
 - [Журнал — лише про програму](changelog-program-only.md) — зміни лише сайту в changelog.json не вписувати
 - [Мапа на GTA V Enhanced](gta-enhanced-map-ytd.md) — OpenIV не відкриває YTD Enhanced; готові YTD Legacy цілим файлом працюють
+- [Discord-бот: експлуатація](discord-bot-ops.md) — секрети, розклад pg_cron, деплой з --yes; SQL власнику — через буфер, не з чату
