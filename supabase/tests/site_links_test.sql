@@ -11,8 +11,11 @@ update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00
 
 do $$ begin
   assert (select count(*) from public.site_links) = 1, 'посилань не один рядок';
-  assert (select discord_url from public.site_links) = 'https://discord.gg/RxUk5mGgy', 'стартове посилання Discord не те';
+  /* 0048: стартове запрошення (сервер CORE) перенесено в «сім'ю», Discord сайту — порожній */
+  assert (select family_url = 'https://discord.gg/RxUk5mGgy' and discord_url = '' from public.site_links), 'посилання CORE не перенесено в сім''ю';
 end $$;
+-- далі — перевірки прав на discord_url, як до 0048
+update public.site_links set discord_url = 'https://discord.gg/RxUk5mGgy';
 
 -- гість: читає, але не змінює
 set role anon;
@@ -56,4 +59,6 @@ reset role;
 
 \i supabase/migrations/0045_site_links.sql
 do $$ begin assert (select count(*) = 1 and bool_and(discord_url = 'https://discord.gg/RxUk5mGgy') from public.site_links), 'повторний запуск міграції дублює чи перезаписує посилання'; end $$;
+\i supabase/migrations/0048_site_links_family_market.sql
+do $$ begin assert (select discord_url = 'https://discord.gg/RxUk5mGgy' and family_url = 'https://discord.gg/RxUk5mGgy' from public.site_links), 'повторний запуск 0048 знову переніс посилання'; end $$;
 \echo 'Посилання сайту ok'

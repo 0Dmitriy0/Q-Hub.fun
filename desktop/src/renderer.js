@@ -65,6 +65,21 @@ function show(s) {
 $('login').onclick = async () => { waiting(true); show(await window.qhub.login()); };
 $('logout').onclick = async () => show(await window.qhub.logout());
 $('close').onclick = () => window.qhub.gateHide();
+/* налаштування встановлення: лише у встановленій програмі; перемикач показує, що справді вийшло */
+function setup(s) {
+  if (!s?.packaged) return;
+  $('setup').hidden = false;
+  $('optAuto').checked = s.autostart; $('optDesk').checked = s.desk;
+  $('err').hidden = !s.error; $('err').textContent = s.error || '';
+}
+for (const [id, key] of [['optAuto', 'autostart'], ['optDesk', 'desk']]) {
+  $(id).onchange = async () => {
+    $(id).disabled = true;
+    setup(await window.qhub.setupSet({ [key]: $(id).checked }));
+    $(id).disabled = false;
+  };
+}
+window.qhub.setup().then(setup);
 /* вікно рівно під плашку + 60 px прозорого поля під тінь */
 new ResizeObserver(() => window.qhub.gateSize($('panel').offsetHeight + 60)).observe($('panel'));
 window.qhub.state().then(show);

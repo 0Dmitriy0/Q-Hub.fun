@@ -2,7 +2,8 @@ import { useState } from 'react';
 import Icon from '../components/Icon';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { FAMILY, isDiscordInvite, useDiscord } from '../lib/brand';
+import { FAMILY, useDiscord } from '../lib/brand';
+import DiscordForm from '../components/DiscordForm';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
@@ -13,26 +14,25 @@ const LOG_FEW = 3;   // скільки оновлень видно без «По
 /* лічильник «Завантажень програми» на головній (specs/011, 0032): +1 за клік; сторінка лишається відкритою, тож запит встигає */
 const countDownload = () => { supabase?.rpc('count_download').then(() => { /* без бази — просто не рахуємо */ }); };
 
-/* демо рядка Alt+Q: що помічник показав би перед записом (приклади, не справжні дані) */
+/* демо рядка Alt+Q: що плашка показала б на запит (приклади, не справжні дані) */
 const DEMO = [
-  { text: 'продав 10 гливи по 1500', sum: '+15 000 $', what: 'Продаж «Глива», 10 шт.', good: true },
-  { text: 'купив ремкомплект 2500', sum: '−2 500 $', what: 'Витрата «Ремкомплект», 1 шт.', good: false },
-  { text: 'що вигідно здати?', sum: 'Порада', what: 'Скупник з найвищою ціною на те, що є на складі', good: true }
+  { text: 'глива', sum: '1 500 $/шт', what: 'Скупник «Гриби» · межі 900–1 800 $', good: true },
+  { text: 'вимагання грошей', sum: 'КК ст. 6.5', what: 'Кримінальний кодекс — пункт і покарання з форуму', good: true },
+  { text: 'де заправка?', sum: 'Мапа', what: 'Найближчі заправки на мапі Q-Hub поверх гри', good: true }
 ];
 
 const FEATURES: [string, string, string][] = [
-  ['spark', 'Alt+Q — рядок поверх гри', '«Продав 10 гливи», «що вигідно здати?», «видали останній запис». Помічник показує, що запише, і пише лише після Enter.'],
+  ['spark', 'Alt+Q — рядок поверх гри', 'Пошук у правилах сервера, законах штату й на мапі без ШІ, а Shift+Enter — питання ШІ-помічнику своїми словами.'],
   ['buyer', 'Ціни скупників з іконками й межами', 'Миттєвий пошук ціни без ШІ: риба, ферма, руди, метали — одним запитом.'],
-  ['coin', 'Готівка й картка окремо', 'Гроші з HUD гри потрапляють в облік разом з місцем: «−1000 $ · Магазин 24/7».'],
   ['camera', 'Ціни з вікна скупника', 'Відкрив вікно скупника — ціни й час наступної зміни цін йдуть на сайт від твого імені, з тими самими перевірками, що й ручне внесення.'],
-  ['clock', 'Таймер ігрової сесії', 'Скільки відіграно й скільки заробляєш за годину гри — видно, що фармити вигідніше.'],
-  ['box', 'Облік, склад і гараж', 'Ті самі дані, що в кабінеті на сайті: записи, залишки складу й машини персонажа.']
+  ['clock', 'Прибуток за годину сеансу', 'Програма бачить готівку й картку в HUD і показує, скільки в середньому заробляєш за годину гри — видно, що фармити вигідніше. Нікуди не записує.'],
+  ['map', 'Мапа Q-Hub поверх гри', 'Alt+M — мапа з мітками, полями й зонами просто в грі; «Де я?» з відкритою великою картою.']
 ];
 
 const FAQ: [string, string][] = [
   ['Чому Windows лається на файл?', 'Інсталятор ще не підписаний сертифікатом розробника, тому SmartScreen його не знає. Натисни «Докладніше» → «Виконати все одно».'],
   ['Чи бачить програма щось, крім мого екрана?', 'Ні. Вона робить знімки твого екрана (як OBS), не читає пам\'ять гри й нічого в ній не натискає.'],
-  ['Програма записала щось не так — що робити?', 'Записи, які програма зробила сама, мають позначку «Авто ·». Перевір їх у кабінеті на сайті й виправ або видали.']
+  ['Програма внесла неправильну ціну — що робити?', 'Ціна стає поточною лише тоді, коли ту саму внесе ще один гравець. Якщо щось не так — напиши в Discord Q-Hub, адмін перевірить.']
 ];
 
 export default function Download() {
@@ -52,10 +52,10 @@ export default function Download() {
           <span className="p-badge">Тестова збірка</span>
         </div>
         <h1>Програма поверх гри</h1>
-        <p className="h-lead">Облік, склад, гараж і ціни скупників в окремій програмі. <kbd>Alt+Q</kbd> відкриває рядок поверх гри: запиши, що сталося, своїми словами або знайди ціну товару. Програма сама рахує ігрові сесії й бачить готівку та банк у HUD.</p>
+        <p className="h-lead">Ціни скупників, правила сервера, мапа й ШІ-помічник поверх гри. <kbd>Alt+Q</kbd> відкриває рядок: знайди ціну товару, пункт правил чи місце на мапі. Програма рахує ігрову сесію й показує, скільки заробляєш за годину.</p>
         <div className="p-warn" role="note">
           <span className="p-warn-ico" aria-hidden="true">!</span>
-          <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться. Записи, які програма робить сама (з позначкою «Авто ·»), перевіряй у кабінеті.</span></div>
+          <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться.</span></div>
         </div>
         <div className="row">
           <a className="btn acc" href={SETUP} onClick={countDownload}><Icon name="download" />Завантажити для Windows</a>
@@ -71,14 +71,14 @@ export default function Download() {
         </div>
         <div className="p-screen">
           <div className="p-prompt">
-            <div className="p-prompt-h"><span><kbd>Alt+Q</kbd> Помічник Q-Hub</span><span className="p-ready"><span className="mdot good" aria-hidden="true" />Готовий</span></div>
+            <div className="p-prompt-h"><span><kbd>Alt+Q</kbd> Плашка Q-Hub</span><span className="p-ready"><span className="mdot good" aria-hidden="true" />Готовий</span></div>
             <form className="p-prompt-in" onSubmit={e => { e.preventDefault(); setD((d + 1) % DEMO.length); }}>
               <Icon name="search" />
               <input value={demo.text} readOnly aria-label="Приклад запиту до помічника" />
               <button type="submit" className="btn acc sm">Enter</button>
             </form>
             <div className="p-prompt-out">
-              <span className="h-lbl">Помічник запише:</span>
+              <span className="h-lbl">Плашка покаже:</span>
               <b className={'mono ' + (demo.good ? 'good' : 'bad')}>{demo.sum}</b>
               <span>{demo.what}</span>
             </div>
@@ -138,29 +138,5 @@ export default function Download() {
       </section>
       <p className="muted p-by">Програму робить сім'я {FAMILY} на QuantRP.</p>
     </div>
-  );
-}
-
-/* посилання «Discord Q-Hub» для всього сайту й програми (specs/037) — змінює лише admin, база перевіряє ще раз */
-function DiscordForm({ url, done }: { url: string; done: () => void }) {
-  const [v, setV] = useState(url);
-  const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    const u = v.trim();
-    if (u && !isDiscordInvite(u)) return setMsg('Потрібне запрошення Discord: https://discord.gg/… або https://discord.com/invite/…');
-    setBusy(true);
-    const { error } = await supabase!.from('site_links').upsert({ id: true, discord_url: u });
-    setBusy(false);
-    if (error) return setMsg(/row-level|permission/i.test(error.message) ? 'Змінювати посилання може лише адмін.' : 'Не вдалося зберегти: ' + error.message);
-    done();
-  }
-  return (
-    <form className="form p-link" onSubmit={save} aria-label="Посилання Discord Q-Hub">
-      <label className="fld">Запрошення Discord Q-Hub (безстрокове, без ліміту)<input value={v} onChange={e => setV(e.target.value)} placeholder="https://discord.gg/…" autoFocus /></label>
-      <small className="muted">Видно в підвалі, тут, в інструкції до мапи й у програмі. Порожньо — кнопок Discord ніде немає.</small>
-      <div className="row"><button className="btn acc sm" disabled={busy}>Зберегти</button><button type="button" className="btn ghost sm" onClick={done}>Скасувати</button></div>
-      {msg && <p className="err" role="alert">{msg}</p>}
-    </form>
   );
 }

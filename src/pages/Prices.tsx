@@ -15,6 +15,7 @@ import { groupUpdates, who, type Update } from '../lib/updates';
 import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
 import { subRank, subRanks } from '../lib/subOrder';
 import { widen } from '../lib/limits';
+import { useLinks } from '../lib/brand';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
 interface NextChange { buyer_id: string; next_change_at: string | null; nick: string | null }
@@ -48,6 +49,7 @@ export default function Prices() {
   const { isStaff, role, session, signIn } = useAuth();
   const { pick: pickCharacter, dialog: pickDialog } = useCharacterPick();
   const isAdmin = role === 'admin';
+  const [{ market_url: market }] = useLinks();   // торговий майданчик у Discord (0048) — продати чи купити в гравців
   /* останні ціни з цього браузера видно одразу, без очікування бази */
   const [cached] = useState(() => readCache<Data>());
   const [buyers, setBuyers] = useState<Buyer[]>(cached?.buyers || []);
@@ -271,11 +273,12 @@ export default function Prices() {
         <div>
           <span className="h-kicker"><Icon name="buyer" size={16} />Ціни скупників</span>
           <h1>Ціни скупників Quant RP</h1>
-          <p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона одразу стане поточною, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік.</p>
+          <p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона стане поточною, щойно ту саму внесе ще один гравець, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік.</p>
         </div>
         <div className="row">
           {session ? <a className="btn acc" href="#add-price"><Icon name="camera" />Внести ціни</a> : <button className="btn acc" onClick={signIn}><Icon name="user" />Увійти, щоб вносити ціни</button>}
           <Link className="btn ghost" to="/mapa"><Icon name="map" />Скупники на мапі</Link>
+          {market && <a className="btn ghost" href={market} target="_blank" rel="noreferrer" title="Продати чи купити в гравців, а не в скупника"><Icon name="coin" />Торговий майданчик<span className="vh"> — Discord, відкриється в новій вкладці</span></a>}
         </div>
       </section>
 

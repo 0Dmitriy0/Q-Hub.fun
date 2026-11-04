@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
 import HalloweenBanner from '../components/HalloweenBanner';
-import MiniMap from '../components/MiniMap';
 import SitePromo from '../components/SitePromo';
 import { useAuth } from '../lib/auth';
 import { fmt, money } from '../lib/format';
@@ -11,6 +10,9 @@ import { useAppOnline } from '../lib/useAppOnline';
 import Icon from '../components/Icon';
 import { readGameTheme, recolor, saveGameTheme, type GameTheme } from '../lib/gameTheme';
 import { OCEAN, mapUrl } from '../lib/mapGeo';
+
+/* мапа (Leaflet) — окремим файлом: вона нижче першого екрана, а перший кадр без неї легший */
+const MiniMap = lazy(() => import('../components/MiniMap'));
 
 /* головна за макетом Stitch (design/stitch/home.html). Усі цифри справжні: зі знімка цін (public/snapshot) і даних сайту.
    Вигадані блоки макета (кількість гравців, «радар-мод», ШІ-рекомендації з відсотками) не перенесено */
@@ -72,7 +74,7 @@ export default function Home() {
           <p className="muted">Магазини, роботи, скупники, поля полювання й скарбів, зелені зони — з пошуком і фільтрами. А потрібні мітки збери в мінікарту для GTA V.</p>
         </div>
         <div className="h-split">
-          <MiniMap />
+          <Suspense fallback={<div className="mini" aria-busy="true"><div className="mini-map" /></div>}><MiniMap /></Suspense>
           <div className="h-side">
             <div className="h-feat"><span className="ibub"><Icon name="map" /></span><div><h3>Почни писати — і мітка вже на мапі</h3><p className="muted">Набери «24/7» чи «риболовля» — мапа покаже всі збіги. Повна мапа — з фільтрами груп, полями й зонами.</p></div></div>
             <div className="h-feat"><span className="ibub"><Icon name="layers" /></span><div><h3>Ті самі мітки — на мінікарті в грі</h3><p className="muted">Галочками вибираєш назви, зони й мітки — сайт збирає файли мінікарти, а ти ставиш їх через OpenIV.</p></div></div>
@@ -87,12 +89,12 @@ export default function Home() {
           <div>
             <span className="h-kicker"><Icon name="bolt" size={16} />Програма для Windows</span>
             <h2>Уся програма — в одній плашці Alt+Q</h2>
-            <p className="muted">Кабінет, склад, гараж, облік і угоди відкриваються поверх GTA V — гру згортати не треба.</p>
+            <p className="muted">Ціни скупників, правила сервера, мапа й ШІ-помічник відкриваються поверх GTA V — гру згортати не треба.</p>
           </div>
           <div className="h-hotkey"><img src="/brand/q-hub-logo.svg?v=2" alt="" width={40} height={40} /><span className="h-lbl">Виклик у грі</span><span><kbd>Alt</kbd> + <kbd>Q</kbd></span></div>
         </div>
         <div className="h-pillars">
-          <div className="card h-pillar"><span className="ibub"><Icon name="chart" /></span><span className="h-lbl">Облік</span><h3>Угода — одним рядком</h3><p className="muted">Напиши, що зробив, — програма покаже запис і збереже його лише після Enter. Готівку й картку вона бачить у HUD гри сама.</p><div className="h-ex mono"><span>Alt+Q</span><b>«продав 5 руди за 9к»</b></div></div>
+          <div className="card h-pillar"><span className="ibub"><Icon name="chart" /></span><span className="h-lbl">Сесія</span><h3>Скільки заробляєш за годину</h3><p className="muted">Програма бачить готівку й картку в HUD гри і показує під плашкою середній прибуток за годину сеансу. Нікуди не записує — лише рахує.</p><div className="h-ex mono"><span>Під Alt+Q</span><b>«Прибуток: ~84 000 $/год»</b></div></div>
           <div className="card h-pillar"><span className="ibub"><Icon name="camera" /></span><span className="h-lbl">Ціни скупників</span><h3>Відкрив скупника — ціна вже на сайті</h3><p className="muted">Ціни з вікна скупника йдуть у спільну базу від твого імені, з тими самими перевірками, що й ручне внесення.</p><div className="h-ex mono"><span>Хто вносить ціни</span><b>Гравці, а не адміни</b></div></div>
           {/* 50 — як AI_DAY у src/desktop/Settings.tsx і 0027_assistant_limit_50.sql */}
           <div className="card h-pillar"><span className="ibub"><Icon name="spark" /></span><span className="h-lbl">Правила й помічник</span><h3>Правила сервера — під рукою</h3><p className="muted">Enter шукає в правилах сервера, Shift+Enter питає ШІ-помічника. 50 питань на день, ліміт оновлюється опівночі за Києвом.</p><div className="h-ex mono"><span>Alt+Q</span><b>«зелена зона»</b></div></div>
@@ -127,7 +129,7 @@ export default function Home() {
         <div className="h-head"><h2 className="ih"><Icon name="star" />Що ще вміє Q-Hub</h2></div>
         <div className="h-cards">
           <div className="card"><span className="ibub"><Icon name="tag" /></span><h3>Кому продати дорожче</h3><p className="muted">Набери «руда» — побачиш ціну в кожного скупника й де здати вигідніше. <Link to="/tsiny">Дізнатися ціни</Link></p></div>
-          <div className="card"><span className="ibub"><Icon name="box" /></span><h3>Облік, що рахує сам</h3><p className="muted">Купив, продав, нафармив — Q-Hub рахує собівартість, прибуток і що лежить на складі. <Link to="/kabinet">Відкрити кабінет</Link></p></div>
+          <div className="card"><span className="ibub"><Icon name="map" /></span><h3>Мапа поверх гри</h3><p className="muted">Мітки, поля й зони штату — на сайті й у самій GTA V через Alt+M. <Link to="/mapa">Відкрити мапу</Link></p></div>
           <div className="card"><span className="ibub"><Icon name="car" /></span><h3>Скільки коштує машина</h3><p className="muted">Державна й ринкова вартість кожного авто й човна штату — з фото з гри. <Link to="/wiki/transport">Переглянути транспорт</Link></p></div>
           <div className="card"><span className="ibub"><Icon name="jobs" /></span><h3>Де заробити</h3><p className="muted">Усі роботи з рівнем, оплатою й точкою на мапі. <Link to="/wiki/roboty">Переглянути роботи</Link></p></div>
           <div className="card"><span className="ibub"><Icon name="shield" /></span><h3>Правила сервера в Alt+Q</h3><p className="muted">Набери «зелена зона» — програма знайде пункт правил, не виходячи з гри. <Link to="/programa">Завантажити програму</Link></p></div>

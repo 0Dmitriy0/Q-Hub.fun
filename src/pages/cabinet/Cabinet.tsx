@@ -4,11 +4,8 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { canEdit, desktop } from '../../lib/app';
 import Dashboard from './Dashboard';
-import LedgerPage from './LedgerPage';
-import StockPage from './StockPage';
-import DealsPage from './DealsPage';
-import GaragePage from './GaragePage';
 import DocumentsPage from './DocumentsPage';
+import Earnings from './Earnings';
 import Characters from './Characters';
 import SettingsPage from './SettingsPage';
 import Select from '../../components/Select';
@@ -20,12 +17,11 @@ const SITE: [string, string, string, string][] = [
   ['/wiki/transport', 'Транспорт', 'Авто, мото, човни', 'car'], ['/wiki/roboty', 'Роботи', 'Заробіток і маршрути', 'jobs'],
 ];
 
-/* [шлях, назва, підзаголовок, іконка] — у програмі це бічне меню, як у Quant Hub; на сайті — вкладки */
+/* [шлях, назва, підзаголовок, іконка] — у програмі це плитки, на сайті — вкладки. Облік, угоди, склад і гараж прибрано (specs/040) */
 const TABS: [string, string, string, string][] = [
-  ['', 'Дашборд', 'Що вигідно зараз', 'home'],
-  ['sklad', 'Склад', 'Що лежить і скільки коштує', 'box'], ['harazh', 'Гараж', 'Авто, тюнінг і фото', 'car'],
-  ['oblik', 'Облік', 'Баланс, графік, підсумки', 'chart'], ['uhody', 'Угоди', 'Купив, нафармив, продав', 'coin'],
+  ['', 'Дашборд', 'Документи, ціни й івенти', 'home'],
   ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
+  ['zarobitok', 'Заробіток', 'За годину й по днях', 'chart'],
   ['nalashtuvannya', 'Налаштування', 'Персонажі, нік і статік', 'user'],
 ];
 
@@ -40,11 +36,11 @@ export default function Cabinet() {
         <div>
           <span className="h-pill"><span className="mdot" aria-hidden="true" />Особистий кабінет</span>
           <h1>Кабінет гравця</h1>
-          <p className="muted">Облік, склад, гараж і угоди твого персонажа. Бачиш їх лише ти — це перевіряє сама база.</p>
-          <div className="row"><button className="btn acc" onClick={signIn}><Icon name="user" />Увійти через Discord</button><Link className="btn ghost" to="/programa"><Icon name="download" />Програма для запису</Link></div>
+          <p className="muted">Документи з нагадуванням про строк, персонажі й нік у Q-Hub. Бачиш їх лише ти — це перевіряє сама база.</p>
+          <div className="row"><button className="btn acc" onClick={signIn}><Icon name="user" />Увійти через Discord</button><Link className="btn ghost" to="/programa"><Icon name="download" />Програма Q-Hub</Link></div>
         </div>
       </section>
-      <div className="h-cards">{TABS.slice(1, 5).map(([, l, d, ico]) => <div key={l} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{l}</h3><p className="muted">{d}</p></div>)}</div>
+      <div className="h-cards">{TABS.slice(1).map(([, l, d, ico]) => <div key={l} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{l}</h3><p className="muted">{d}</p></div>)}</div>
     </div>
   );
 
@@ -63,11 +59,10 @@ export default function Cabinet() {
       <Route index element={<Dashboard c={current} />} />
       {/* у програмі дашборд — окремою кнопкою плашки, головна лишається з плитками й довідником */}
       <Route path="dashbord" element={<Dashboard c={current} />} />
-      <Route path="oblik" element={<LedgerPage c={current} />} />
-      <Route path="uhody" element={<DealsPage c={current} />} />
-      <Route path="sklad" element={<StockPage c={current} />} />
-      <Route path="harazh" element={<GaragePage c={current} />} />
+      {/* розділи, яких більше немає (specs/040), — на головну кабінету */}
+      {['oblik', 'uhody', 'sklad', 'harazh'].map(p => <Route key={p} path={p} element={<Navigate to="/kabinet" replace />} />)}
       <Route path="dokumenty" element={<DocumentsPage c={current} />} />
+      <Route path="zarobitok" element={<Earnings c={current} />} />
       <Route path="nalashtuvannya" element={<SettingsPage c={current} />} />
       <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
     </Routes>
@@ -94,7 +89,7 @@ export default function Cabinet() {
       </section>
       <nav className="wiki-tabs cab-tabs" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={16} />{l}</NavLink>)}</nav>
       {!canEdit && (
-        <p className="card note" role="note">Тут — лише перегляд статистики. Записувати угоди, облік, склад і гараж — у програмі Q-Hub для Windows.</p>
+        <p className="card note" role="note">На сайті кабінет лише для перегляду. Персонажів і документи змінюй у програмі Q-Hub для Windows.</p>
       )}
       {body}
     </div>
@@ -105,7 +100,7 @@ export default function Cabinet() {
 function Deck({ tab, home, body }: { tab: [string, string, string, string]; home: boolean; body: ReactNode }) {
   return (
     <div className="deck">
-      <nav className="dtiles" aria-label="Кабінет">{TABS.slice(1, 5).map(([p, l, d, ico]) => (
+      <nav className="dtiles" aria-label="Кабінет">{TABS.slice(1).map(([p, l, d, ico]) => (
         <NavLink key={p} to={'/kabinet/' + p}><span className="dbub"><Icon name={ico} /></span><span><b>{l}</b><small>{d}</small></span><Icon name="chev" className="tr dgo" size={16} /></NavLink>))}
       </nav>
       {!home && <><div className="dtitle"><h1>{tab[1]}</h1><small>{tab[2]}</small></div>{body}</>}

@@ -20,7 +20,7 @@ grant execute on function auth.uid() to anon, authenticated;
 -- мінімальна імітація Supabase Storage: таблиці, на які посилаються міграції
 create schema storage;
 create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
-create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets, name text, owner uuid);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets, name text, owner uuid, created_at timestamptz default now());
 alter table storage.objects enable row level security;
 grant usage on schema storage to anon, authenticated;
 grant select, insert, update, delete on storage.objects to anon, authenticated;
@@ -75,3 +75,9 @@ $P -f supabase/tests/guides_test.sql
 $P -f supabase/tests/account_nick_test.sql
 $P -f supabase/tests/rule_sources_test.sql
 $P -f supabase/tests/buyers_merge_test.sql
+$P -f supabase/tests/admin_panel_test.sql
+$P -f supabase/tests/admin_accounts_test.sql
+$P -f supabase/tests/site_links_family_market_test.sql
+$P -f supabase/tests/session_money_test.sql
+$P -f supabase/tests/map_photos_test.sql
+$P -f supabase/tests/season_events_wiki_test.sql

@@ -1,6 +1,5 @@
 /* «Зір» програми: раз на 2 с під час гри знімає екран і
-   — читає готівку й банк з HUD (hud.cjs): стабільна зміна → записи обліку з місцем і текстом гри (scene.cjs);
-   — поки висить значок зміни, читає підтвердження гри внизу й сповіщення зліва («299$ сплачено готівкою!»);
+   — читає готівку й банк з HUD (hud.cjs): стабільний баланс → прибуток за годину сеансу в смужці (лише показ, specs/040);
    — поки HUD закритий меню, визначає місце (магазин, скупник, банкомат…), а вікно скупника ще й розбирає на ціни
      тим самим кодом, що сайт (lib/shotparse.cjs ← src/lib/shotParse.ts).
    OCR — tesseract.js у робочих потоках головного процесу; мовні дані — у src/ocr (scripts/ocr.mjs). */
@@ -11,6 +10,7 @@ const { createWorker } = require('tesseract.js');
 const hud = require('./hud.cjs');
 const scenes = require('./scene.cjs');
 const shot = require('./lib/shotparse.cjs');
+const { expandAliases } = require('./aliases.cjs');
 const { OPEN_GAP, pricePicker, coverage, textLeft, parseChange, changePicker, changeRegion, headerBuyer, listParts } = require('./pricescan.cjs');
 const { ocrRelease } = require('./ocridle.cjs');
 
@@ -18,9 +18,6 @@ const { ocrRelease } = require('./ocridle.cjs');
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const TICK_EVERY = 2000, TICK_POLL = 250;   // кадр гри — раз на 2 с; вікно скупника — кадр за кадром
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
-const SALE_PRICES_TTL = 10 * 60e3;   // ціни з вікна скупника годяться для списання продажу 10 хв
-const SCENE_TTL = 120e3;        // скільки після меню зміна грошей ще належить йому
-const TOAST_TTL = 20e3;         // скільки після значка зміни пам'ятати текст підтвердження
 const REREAD_AFTER = 3;         // ціна без назви в стількох кадрах — перечитати назву окремо (T030)
 
 /* схоже на назву товару гри: кирилиця, без цифр і службових написів вікна. Відсіює шум з живої гри 2026-10-29:
@@ -42,27 +39,21 @@ function whiteOnly(img, nativeImage) {
   }
   return nativeImage.createFromBitmap(d, { width, height });
 }
-/* ділянки тексту гри для екрана w×h (виміряно на 1920×1080): підтвердження внизу посередині, сповіщення над мінікартою */
-function toastRegions(w, h) {
-  const s = h / 1080;
-  return [{ x: Math.round(w / 2 - 160 * s), y: Math.round(950 * s), width: Math.round(480 * s), height: Math.round(110 * s) },
-    { x: Math.round(20 * s), y: Math.round(720 * s), width: Math.round(290 * s), height: Math.round(135 * s) }];
-}
 
 /* deps: nativeImage, capture() → NativeImage|null, active() → чи гра йде й зір увімкнено, catalog() → [{id,name,buyer_id}],
-   onRecords(recs), onBaseline({cash,bank}), onPrices([{buyer_id,item_id,price}]), logFile */
+   onMoney({cash,bank}, at) — стабільний баланс HUD (прибуток за годину в смужці й підсумок сеансу для кабінету, specs/040, 044),
+   onPrices([{buyer_id,item_id,price}]), logFile */
 function vision(deps) {
   /* lists — окремий рушій для великих кадрів списку скупника: його пам'ять росте найбільше, тож він закривається сам (ocridle.cjs) */
   let digits = null, text = null, lists = null, listsAt = 0, inactiveSince = 0, busy = false, lastLines = null, lastTick = 0, atList = false;
   const feed = hud.watcher();
-  let baselineSent = false, place = null, toast = null, lastScene = 0;
+  let place = null, lastScene = 0;
   const pickPrices = pricePicker();
   const covered = coverage();   // «прочитано N з M» → смужка (specs/024)
   const unknownAt = new Map();  // невідомі назви — не частіше разу на годину на пару
   const unknownSeen = new Set();
   const reread = { at: -Infinity, seen: new Map(), named: new Set(), prices: new Set() };   // ціни без назви за відкриття: скільки кадрів і що дало перечитування (T030)
   let lastPricesAt = -Infinity;  // останній кадр, де впізнано скупника
-  let lastRead = null;           // { buyer, at, prices: { item_id → price } } — ціни останнього відкриття вікна для списання продажу (specs/030)
   const pickChange = changePicker();
   const quietAt = new Map();
   const log = m => { try { fs.appendFileSync(deps.logFile, `${new Date().toISOString()} ${m}\n`); } catch { /* журнал не обов'язковий */ } };
@@ -131,30 +122,15 @@ function vision(deps) {
       await workers();
       const { width, height } = img.getSize(), now = Date.now();
       const badge = hud.hasBadge(img.crop(hud.badgeRegion(width, height)).toBitmap());
-      if (badge) {
-        /* гроші щойно змінились — запам'ятати, що гра про це написала */
-        const t = (await Promise.all(toastRegions(width, height).map(r => read(text, img.crop(r))))).join(' ').replace(/\s+/g, ' ').trim();
-        if (t) { toast = { text: t, at: now }; log('toast ' + t); }
-      }
       let money = null;
       if (!badge) {
         const crop = img.crop(hud.region(width, height));
         money = hud.parse(await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })));
       }
-      /* автооблік вимкнено — HUD однаково читаємо (щоб знати, коли відкрите меню скупника), але записів не робимо */
-      const ledger = !deps.ledger || deps.ledger();
-      const acts = ledger ? feed(money) : [];
-      if (ledger && money && !baselineSent && feed.stable) { baselineSent = true; log('baseline ' + JSON.stringify(feed.stable)); await deps.onBaseline(feed.stable); }
-      if (acts.length) {
-        const sc = place && now - place.at < SCENE_TTL ? place : null, ts = toast && now - toast.at < TOAST_TTL ? toast.text : '';
-        const recs = scenes.records(acts, sc, ts);
-        /* продаж скупнику — з тим, кому й за якими цінами: плашка запропонує списати товар зі складу (specs/030, research R2) */
-        if (sc?.kind === 'buyer' && lastRead && now - lastRead.at <= SALE_PRICES_TTL)
-          for (const r of recs) if (r.category === 'Продаж фарму') Object.assign(r, { buyer_id: lastRead.buyer, prices: { ...lastRead.prices } });
-        log('records ' + JSON.stringify(recs));
-        toast = null;
-        await deps.onRecords(recs);
-      }
+      /* баланс HUD — лише для «прибуток за годину сеансу» в смужці (specs/040); облік програма більше не веде.
+         watcher відкидає одиничні похибки OCR: баланс береться, коли два кадри поспіль однакові */
+      feed(money);
+      if (feed.stable) deps.onMoney?.(feed.stable, now);
       /* відкрите вікно скупника читаємо щокадру (~2 с), а не раз на SCENE_EVERY: ціна йде на сайт після двох однакових кадрів,
          і за коротку зупинку біля скупника їх треба встигнути зробити */
       const atBuyer = place?.kind === 'buyer' && now - place.at < 10e3;
@@ -195,14 +171,12 @@ function vision(deps) {
     }
     lastPricesAt = now;
     const all = items.filter(i => i.buyer_id === buyer);
-    const rows = shot.parseShot(ls, all)
+    /* назви для зіставлення — з псевдонімами (specs/039); скільки товарів у скупника — з all, без копій */
+    const names = expandAliases(all);
+    const rows = shot.parseShot(ls, names)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
       .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
-    rows.push(...await rereadNames(img, ls, all, buyer, rows, now));
-    /* ціни відкриття накопичуються з кадрів; інший скупник чи стара пам'ять — з нуля */
-    if (lastRead?.buyer !== buyer || now - lastRead.at > SALE_PRICES_TTL) lastRead = { buyer, at: now, prices: {} };
-    lastRead.at = now;
-    for (const r of rows) lastRead.prices[r.item_id] = r.price;
+    rows.push(...await rereadNames(img, ls, names, buyer, rows, now));
     await scanChange(img, buyer, now);
     const fresh = pickPrices(buyer, rows, now);
     /* та сама ціна поза межами, впевнено прочитана тричі: межі на сайті, мабуть, хибні — адміну «перевір межі» (T031) */
@@ -213,7 +187,7 @@ function vision(deps) {
     const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now);
     deps.onCoverage?.(cov);
     log(`cover ${buyer}: ${cov.read}/${cov.total}, чекають ${cov.pending}, кадр за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
-    reportUnknown(buyer, ls, all, now);
+    reportUnknown(buyer, ls, names, now);
     /* для діагностики: вікно бачимо, але нового немає — раз на хвилину на скупника, щоб не засмічувати журнал */
     if (!fresh.length) { if (now - (quietAt.get(buyer) || 0) > 60e3) { quietAt.set(buyer, now); log(`prices ${buyer}: кадр ${rows.length}/${all.length}, нового немає`); } return buyer; }
     log(`prices ${buyer}: кадр ${rows.length}/${all.length}, на сайт ${JSON.stringify(fresh)}`);
@@ -313,4 +287,4 @@ function vision(deps) {
   return { tick, stop };
 }
 
-module.exports = { vision, toastRegions, whiteOnly, TICK_POLL };
+module.exports = { vision, whiteOnly, TICK_POLL };

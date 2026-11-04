@@ -12,21 +12,15 @@ contextBridge.exposeInMainWorld('qhub', {
   /* плашка входу: висота під вміст і хрестик у трей */
   gateSize: h => ipcRenderer.invoke('gate-size', h),
   gateHide: () => ipcRenderer.invoke('gate-hide'),
+  setup: () => ipcRenderer.invoke('setup'),
+  setupSet: p => ipcRenderer.invoke('setup-set', p),
   openBar: () => ipcRenderer.invoke('open-bar'),
   hotkey: () => ipcRenderer.invoke('hotkey'),
   /* рядок швидкого запису (Alt+Q) */
-  quickParse: (text, buyer) => ipcRenderer.invoke('quick-parse', text, buyer),
-  quickAdd: (text, buyer) => ipcRenderer.invoke('quick-add', text, buyer),
   quickAsk: (text, rules) => ipcRenderer.invoke('quick-ask', text, rules),
-  quickRun: () => ipcRenderer.invoke('quick-run'),
   quickSize: (h, w) => ipcRenderer.invoke('quick-size', h, w),
   quickHide: () => ipcRenderer.invoke('quick-hide'),
   barData: () => ipcRenderer.invoke('bar-data'),
-  /* списання продажу скупнику (specs/030): пропозиції приходять у bar-data й подією sale-new */
-  saleConfirm: (txId, lines) => ipcRenderer.invoke('sale-confirm', txId, lines),
-  saleDecline: txId => ipcRenderer.invoke('sale-decline', txId),
-  saleUndo: txId => ipcRenderer.invoke('sale-undo', txId),
-  onSaleNew: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('sale-new', f); return () => ipcRenderer.removeListener('sale-new', f); },
   rulesData: () => ipcRenderer.invoke('rules-data'),
   onRulesChanged: cb => { ipcRenderer.on('rules-changed', () => cb()); },
   /* історія — окрема плашка: плашка пише й відкриває її, вікно історії читає й повертає вибране */
@@ -34,7 +28,6 @@ contextBridge.exposeInMainWorld('qhub', {
   histData: () => ipcRenderer.invoke('hist-data'),
   histDel: id => ipcRenderer.invoke('hist-del', id),
   histClear: () => ipcRenderer.invoke('hist-clear'),
-  txEdit: (id, set) => ipcRenderer.invoke('tx-edit', id, set),
   onHistChanged: cb => { ipcRenderer.on('hist-changed', () => cb()); },
   /* мапа Q-Hub поверх гри (specs/014): плашка відкриває, вікно мапи ховається */
   mapToggle: () => ipcRenderer.invoke('map-toggle'),
