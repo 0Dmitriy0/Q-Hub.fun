@@ -28,8 +28,8 @@
 Discord REST API v10 через `fetch`; розширення Postgres `pg_cron` і `pg_net` (вмикає власник у Supabase Dashboard); нових
 npm-залежностей немає
 
-**Storage**: Supabase — `discord_bot` (1 рядок), `discord_outbox`, `news_drafts` (міграція `0052`; `0050` зайнята
-`claude/fervent-lamport-cg3ldl`, `0051` — specs/055); секрети функції `DISCORD_BOT_TOKEN`, `DISCORD_SYNC_SECRET`
+**Storage**: Supabase — `discord_bot` (1 рядок), `discord_outbox`, `news_drafts` (міграція `0055`; `0050`–`0054` зайняті
+(`0052` — фото точок мапи, `0054` — specs/035); секрети функції `DISCORD_BOT_TOKEN`, `DISCORD_SYNC_SECRET`
 
 **Testing**: `vitest` (`supabase/functions/discord-bot/*.test.ts` — формат повідомлень, вікно й ліміт, розбір журналу);
 SQL-тест прав `supabase/tests/discord_bot_test.sql`
@@ -86,7 +86,7 @@ specs/060-discord-bot/
 
 ```text
 supabase/
-├── migrations/0052_discord_bot.sql       # discord_bot, discord_outbox, news_drafts, тригер з price_history, cron
+├── migrations/0055_discord_bot.sql       # discord_bot, discord_outbox, news_drafts, тригер з price_history, cron
 ├── tests/discord_bot_test.sql            # права й тригер черги
 └── functions/discord-bot/
     ├── index.ts                          # дії: tick (ціни), drafts (з CI), send (новина), test, status

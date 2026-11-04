@@ -1,6 +1,6 @@
 # Data Model: Discord-бот (060)
 
-Міграція `supabase/migrations/0052_discord_bot.sql`, ідемпотентна. Усі таблиці — RLS лише `public.is_admin()`
+Міграція `supabase/migrations/0055_discord_bot.sql`, ідемпотентна. Усі таблиці — RLS лише `public.is_admin()`
 (select / insert / update / delete); функція працює з service role.
 
 ## `public.discord_bot` (1 рядок, `id boolean primary key default true check (id)`)
