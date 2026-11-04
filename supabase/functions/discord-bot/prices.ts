@@ -41,6 +41,18 @@ export function group(events: Ev[], buyers: BuyerInfo[], items: Map<number, stri
   return out.sort((a, b) => a.buyer.sort - b.buyer.sort || a.buyer.name.localeCompare(b.buyer.name, 'uk'));
 }
 
+/* окремий канал на скупника (0056, рішення власника 2026-11-04): події розходяться по каналах своїх скупників;
+   скупник без каналу — нікуди (orphan: позначаються опублікованими без повідомлення) */
+export function route(events: Ev[], channels: Map<string, string>) {
+  const byChannel = new Map<string, Ev[]>(), orphan: Ev[] = [];
+  for (const e of events) {
+    const ch = channels.get(e.buyer_id);
+    if (!ch) { orphan.push(e); continue; }
+    byChannel.set(ch, [...(byChannel.get(ch) ?? []), e]);
+  }
+  return { byChannel, orphan };
+}
+
 /* ключ публікації вікна — за найменшим id події: повторний tick з тими самими подіями дає той самий ключ (SC-002) */
 export const postKey = (events: Ev[]) => 'prices:' + Math.min(...events.map(e => e.id));
 export const partKey = (key: string, i: number) => (i === 0 ? key : `${key}:${i + 1}`);
