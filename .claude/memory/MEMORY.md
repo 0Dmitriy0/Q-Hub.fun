@@ -6,3 +6,4 @@
 - [Репо лишається публічним](repo-must-stay-public.md) — оновлення й «Завантажити» йдуть з GitHub Releases; закривати лише після переносу на хостинг
 - [Коди моделей транспорту](vehicle-model-codes.md) — vehicles.model + фото з CDN гри; авто-CSV без title, що ще не зіставлено
 - [Журнал — лише про програму](changelog-program-only.md) — зміни лише сайту в changelog.json не вписувати
+- [Мапа на GTA V Enhanced](gta-enhanced-map-ytd.md) — OpenIV не відкриває YTD Enhanced; готові YTD Legacy цілим файлом працюють
