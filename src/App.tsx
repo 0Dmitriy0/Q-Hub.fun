@@ -9,6 +9,8 @@ import Wiki, { ToWiki } from './pages/Wiki';
 const Prices = lazy(() => import('./pages/Prices'));
 const Transport = lazy(() => import('./pages/Transport'));
 const Jobs = lazy(() => import('./pages/Jobs'));
+const WikiEvents = lazy(() => import('./pages/WikiEvents'));
+const WikiEvent = lazy(() => import('./pages/WikiEvent'));
 const MapPage = lazy(() => import('./pages/MapPage'));
 const GameMapGuide = lazy(() => import('./pages/GameMapGuide'));
 const Download = lazy(() => import('./pages/Download'));
@@ -22,11 +24,13 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="tsiny" element={<Prices />} />
-        <Route path="iventy" element={<Navigate to="/" replace />} />
+        <Route path="iventy" element={<ToWiki to="/wiki/iventy" />} />
         <Route path="wiki" element={<Wiki />}>
           <Route index element={<Navigate to="roboty" replace />} />
           <Route path="roboty" element={<Jobs />} />
           <Route path="transport" element={<Transport />} />
+          <Route path="iventy" element={<WikiEvents />} />
+          <Route path="iventy/:slug" element={<WikiEvent />} />
         </Route>
         <Route path="transport" element={<ToWiki to="/wiki/transport" />} />
         <Route path="roboty" element={<ToWiki to="/wiki/roboty" />} />

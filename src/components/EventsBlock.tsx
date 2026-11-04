@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import EventList from './EventList';
+import EventForm from './EventForm';
 import Icon from './Icon';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
@@ -28,7 +30,8 @@ export default function EventsBlock() {
   const load = useCallback(async () => {
     if (!supabase) { setEvents([]); setPromos([]); return; }
     const [e, p] = await Promise.all([
-      supabase.from('season_events').select('id,title,description,starts_on,ends_on,link').order('starts_on'),
+      /* '*' — щоб форма (EventForm, specs/055) редагувала й нові поля 0051; без міграції працює як раніше */
+      supabase.from('season_events').select('*').order('starts_on'),
       supabase.from('promo_codes').select('id,code,reward,playtime_hours,starts_on,ends_on,note').order('starts_on'),
     ]);
     /* таблиць ще немає — міграцію 0025 не запущено: гравцям просто порожньо, адміну — підказка */
@@ -56,11 +59,13 @@ export default function EventsBlock() {
 
       {tab !== 'sched' && isStaff && missing && <p className="err">Таблиць ще немає: запусти <code>supabase/migrations/0025_season_events_promos.sql</code> у Supabase → SQL Editor.</p>}
 
-      {tab === 'season' && (edit?.kind === 'season' ? <SeasonForm row={edit.row} done={() => { setEdit(null); load(); }} /> : <>
+      {tab === 'season' && <>
+        {edit?.kind === 'season' && <EventForm row={edit.row} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); }} />}
         {events === null ? <p className="empty">Завантаження…</p> : !ev.length ? <p className="empty">Зараз сезонних івентів немає. Щойно з'явиться новий — він буде тут.</p> :
           <div className="list" style={{ gap: 8 }}>{ev.map(e => (
             <article key={e.id} className={'sv' + (e.ph.kind === 'now' ? ' on' : '')}>
-              <div className="sv-top"><b>{e.title}</b><PhasePill ph={e.ph} /></div>
+              {/* назва веде на сторінку івенту у WIKI (specs/055); до міграції 0051 slug ще немає — просто текст */}
+              <div className="sv-top">{e.slug ? <Link to={`/wiki/iventy/${e.slug}`} className="sv-link"><b>{e.title}</b></Link> : <b>{e.title}</b>}<PhasePill ph={e.ph} /></div>
               <small className="sv-dates">{range(e.starts_on, e.ends_on, today)}</small>
               {e.description && <p className="sv-txt">{e.description}</p>}
               <div className="row">
@@ -68,8 +73,11 @@ export default function EventsBlock() {
                 {isStaff && <StaffActions table="season_events" id={e.id} onEdit={() => setEdit({ kind: 'season', row: e })} done={load} />}
               </div>
             </article>))}</div>}
-        {isStaff && !missing && <button type="button" className="btn ghost sm" onClick={() => setEdit({ kind: 'season', row: { starts_on: today, ends_on: today } })}><Icon name="plus" size={16} />Додати івент</button>}
-      </>)}
+        <div className="row">
+          {isStaff && !missing && <button type="button" className="btn ghost sm" onClick={() => setEdit({ kind: 'season', row: { starts_on: today, ends_on: today } })}><Icon name="plus" size={16} />Додати івент</button>}
+          <Link className="h-more" to="/wiki/iventy">Усі івенти й архів →</Link>
+        </div>
+      </>}
 
       {tab === 'promo' && (edit?.kind === 'promo' ? <PromoForm row={edit.row} done={() => { setEdit(null); load(); }} /> : <>
         {promos === null ? <p className="empty">Завантаження…</p> : !pr.length ? <p className="empty">Діючих промокодів зараз немає.</p> :
@@ -115,36 +123,6 @@ function StaffActions({ table, id, onEdit, done }: { table: 'season_events' | 'p
 
 const dateOk = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const saveErr = (m: string) => (/row-level|permission/i.test(m) ? 'Додавати можуть лише адмін і редактори.' : 'Не вдалося зберегти: ' + m);
-
-function SeasonForm({ row, done }: { row: Partial<SeasonEvent>; done: () => void }) {
-  const [f, setF] = useState({ title: row.title || '', description: row.description || '', starts_on: row.starts_on || '', ends_on: row.ends_on || '', link: row.link || '' });
-  const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF(x => ({ ...x, [k]: e.target.value }));
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!f.title.trim()) return setMsg('Вкажи назву івенту.');
-    /* дата кінця необов'язкова (specs/018): без неї івент триває, доки його не приберуть */
-    if (!dateOk(f.starts_on) || (f.ends_on && (!dateOk(f.ends_on) || f.ends_on < f.starts_on))) return setMsg('Перевір дати: кінець не раніше за початок (або залиш кінець порожнім).');
-    if (f.link.trim() && !/^https:\/\//.test(f.link.trim())) return setMsg('Посилання має починатися з https://');
-    const v = { title: f.title.trim(), description: f.description.trim(), starts_on: f.starts_on, ends_on: f.ends_on || null, link: f.link.trim() };
-    setBusy(true);
-    const { error } = row.id ? await supabase!.from('season_events').update(v).eq('id', row.id) : await supabase!.from('season_events').insert(v);
-    setBusy(false);
-    if (error) return setMsg(saveErr(error.message));
-    done();
-  }
-  return (
-    <form className="form cols svform" onSubmit={save}>
-      <label className="fld">Назва<input value={f.title} onChange={set('title')} maxLength={80} placeholder="Найттаун: Хелловін" autoFocus /></label>
-      <label className="fld">З<input type="date" value={f.starts_on} onChange={set('starts_on')} /></label>
-      <label className="fld">По (включно, необов'язково)<input type="date" value={f.ends_on} onChange={set('ends_on')} /></label>
-      <label className="fld">Посилання (необов'язково)<input value={f.link} onChange={set('link')} placeholder="https://forum.quant5.com.ua/…" /></label>
-      <label className="fld wide">Опис<textarea value={f.description} onChange={set('description')} maxLength={600} rows={3} placeholder="Що відбувається, де шукати, які нагороди" /></label>
-      <div className="row wide"><button className="btn acc" disabled={busy}>{row.id ? 'Зберегти' : 'Додати івент'}</button><button type="button" className="btn ghost" onClick={done}>Скасувати</button></div>
-      {msg && <p className="err wide" role="alert">{msg}</p>}
-    </form>
-  );
-}
 
 function PromoForm({ row, done }: { row: Partial<Promo>; done: () => void }) {
   const [f, setF] = useState({ code: row.code || '', reward: row.reward || '', playtime: row.playtime_hours == null ? '' : String(row.playtime_hours), starts_on: row.starts_on || '', ends_on: row.ends_on || '', note: row.note || '' });
