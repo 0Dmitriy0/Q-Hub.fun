@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — US3: батл пас у «Івентах» чи окремою вкладкою
+- [x] No [NEEDS CLARIFICATION] markers remain — батл пас: івент + банер угорі (власник, 2026-11-04)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
