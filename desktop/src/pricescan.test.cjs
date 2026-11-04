@@ -154,23 +154,43 @@ test('поза межами: «$» як «5» лише разом зі звич�
   assert.deepStrictEqual(pick('hide', [r(87, 9999, 400, 900)], 16e3), []);
 });
 
-test('хибні межі: та сама ціна поза межами ≥ 3 впевнені зчитки — адміну один раз, на сайт ніколи («Молоток» 64 при 76–498)', () => {
+test('хибні межі: та сама ціна поза межами ≥ 3 впевнені зчитки — адміну й голос «поза межами», один раз («Молоток» 64 при 76–498)', () => {
   const pick = pricePicker(600e3);
   const m = (price, score = 0.97) => ({ buyer_id: 'junk', item_id: 30, price, score, min: 76, max: 498 });
   assert.deepStrictEqual(pick('junk', [m(64)], 0), []);
   assert.deepStrictEqual(pick('junk', [m(64, 0.8)], 2e3), []);                  // невпевнена зчитка не рахується
   assert.deepStrictEqual(pick('junk', [m(64)], 4e3), []);
   assert.deepStrictEqual(pick.outside, []);                                       // поки двічі
-  assert.deepStrictEqual(pick('junk', [m(64)], 6e3), []);
+  /* третя — голос з позначкою «поза межами» (specs/035 US1): поточною ціну зробить база, коли те саме дасть другий акаунт */
+  assert.deepStrictEqual(pick('junk', [m(64)], 6e3), [{ buyer_id: 'junk', item_id: 30, price: 64, outside: true }]);
   assert.deepStrictEqual(pick.outside, [{ item_id: 30, price: 64, min: 76, max: 498 }]);
   assert.deepStrictEqual(pick.confirmed.has(30), false);                          // і в «прочитано N з M» не йде
-  pick('junk', [m(64)], 8e3); assert.deepStrictEqual(pick.outside, []);           // четверта — уже не повідомляє
+  assert.deepStrictEqual(pick('junk', [m(64)], 8e3), []);                         // четверта — ні звіту, ні голосу
+  assert.deepStrictEqual(pick.outside, []);
+  /* наступне відкриття вікна (після OPEN_GAP) у межах PRICES_EVERY — звіт знову, голос — ні: ту саму ціну щойно надіслано */
+  for (const t of [60e3, 62e3]) pick('junk', [m(64)], t);
+  assert.deepStrictEqual(pick('junk', [m(64)], 64e3), []);
+  assert.deepStrictEqual(pick.outside, [{ item_id: 30, price: 64, min: 76, max: 498 }]);
   /* інше число між зчитками починає лік спочатку */
   const pick2 = pricePicker(600e3);
   pick2('junk', [m(64)], 0); pick2('junk', [m(66)], 2e3); pick2('junk', [m(64)], 4e3); pick2('junk', [m(64)], 6e3);
   assert.deepStrictEqual(pick2.outside, []);
   /* звичайна ціна в межах після хибних — як завжди */
   assert.deepStrictEqual(pick2('junk', [m(120)], 8e3), [{ buyer_id: 'junk', item_id: 30, price: 120 }]);
+});
+
+test('далеко поза межами, але правдоподібно — теж «перевір межі» («Ключка для гольфу» 50 при 144–299, specs/035)', () => {
+  const pick = pricePicker(600e3);
+  const k = (price, score = 0.97) => ({ buyer_id: 'junk', item_id: 39, price, score, min: 144, max: 299 });
+  pick('junk', [k(50)], 0); pick('junk', [k(50)], 2e3);
+  assert.deepStrictEqual(pick.outside, []);
+  assert.deepStrictEqual(pick('junk', [k(50)], 4e3), []);                         // на сайт — ніколи
+  assert.deepStrictEqual(pick.outside, [{ item_id: 39, price: 50, min: 144, max: 299 }]);
+  assert.strictEqual(pick.rejected[0].why, 'далеко поза межами');                 // у журналі — як і раніше
+  /* зайва цифра (понад 5 × максимум) чи третина копійок (менше 0,2 × мінімум) — не межі, а шум: звіту немає навіть після трьох */
+  const pick2 = pricePicker(600e3);
+  for (const t of [0, 2e3, 4e3, 6e3]) pick2('junk', [k(2999), { ...k(25), item_id: 40 }], t);
+  assert.deepStrictEqual(pick2.outside, []);
 });
 
 test('надіслану в цьому відкритті ціну один кадр не змінює', () => {

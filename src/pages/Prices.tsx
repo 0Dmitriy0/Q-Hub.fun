@@ -14,6 +14,7 @@ import Leaderboard, { type Contributor } from '../components/Leaderboard';
 import { groupUpdates, who, type Update } from '../lib/updates';
 import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/priceCache';
 import { subRank, subRanks } from '../lib/subOrder';
+import { widen } from '../lib/limits';
 import { useLinks } from '../lib/brand';
 
 interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
@@ -23,7 +24,7 @@ interface Item { id: number; name: string; unit: string; image_url: string; sub?
 interface Row { buyer_id: string; item_id: number; min_price: number; max_price: number; price: number; price_at: string | null; items: Item | null }
 interface Unknown { id: number; buyer_id: string; text: string; seen_count: number; last_seen: string }
 /* «перевір межі» (specs/024, T031): ціна поза межами, яку програма впевнено прочитала тричі; на сайт вона не пішла */
-interface LimitReport { buyer_id: string; item_id: number; price: number; seen_count: number; last_seen: string }
+interface LimitReport { buyer_id: string; item_id: number; price: number; seen_count: number; last_seen: string; reporters?: string[] }
 /* «без меж» — як у програмі (desktop/src/pricescan.cjs, inLimits): без них ціна з одного кадру не приймається */
 const noLim = (r: Pick<Row, 'min_price' | 'max_price'>) => !(r.min_price > 0 && r.max_price > r.min_price);
 
@@ -91,7 +92,8 @@ export default function Prices() {
     if (!supabase || !isAdmin) return;
     const { data } = await supabase.from('buyer_unknown_items').select('id,buyer_id,text,seen_count,last_seen').order('last_seen', { ascending: false });
     setUnknown((data as Unknown[]) || []);
-    const lr = await supabase.from('buyer_limit_reports').select('buyer_id,item_id,price,seen_count,last_seen').order('last_seen', { ascending: false });
+    /* «*», а не список: reporters з'являється з міграцією 0054, а до неї запит зі стовпцем упав би цілком */
+    const lr = await supabase.from('buyer_limit_reports').select('*').order('last_seen', { ascending: false });
     setLimRep((lr.data as LimitReport[]) || []);
   }
   useEffect(() => { loadUnknown(); }, [isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,6 +104,14 @@ export default function Prices() {
   async function dropLimRep(l: LimitReport) {
     const { error } = await supabase!.from('buyer_limit_reports').delete().eq('buyer_id', l.buyer_id).eq('item_id', l.item_id);
     if (!error) setLimRep(x => x.filter(y => y !== l));
+  }
+  /* «Розширити» (specs/035 US3): межі до прочитаної ціни з запасом одним натисканням, звіт прибирається */
+  async function widenLimRep(r: Row, l: LimitReport) {
+    const w = widen(r.min_price, r.max_price, l.price);
+    const { error } = await supabase!.from('buyer_items').update({ min_price: w.min, max_price: w.max }).eq('buyer_id', r.buyer_id).eq('item_id', r.item_id);
+    if (error) { alert('Не вдалося змінити межі.'); return; }
+    await dropLimRep(l);
+    load();
   }
   /* підказка зникає сама, коли адмін виправив межі так, що прочитана ціна в них */
   const limFor = (r: Pick<Row, 'buyer_id' | 'item_id' | 'min_price' | 'max_price'>) =>
@@ -325,8 +335,11 @@ export default function Prices() {
                       </details>}
                       {lr.length > 0 && <details><summary>Перевір межі: {lr.length}</summary>
                         <ul className="list">{lr.map(({ r, l }) => (
-                          <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, межі {money(r.min_price)}–{money(r.max_price)} <small className="muted">· {l.seen_count} раз · {when(l.last_seen)}</small></span>
-                            <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)}>Прибрати</button></li>))}</ul>
+                          <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, межі {money(r.min_price)}–{money(r.max_price)} <small className="muted">· {l.seen_count} раз{l.reporters?.length ? ` · гравців: ${l.reporters.length}` : ''} · {when(l.last_seen)}</small></span>
+                            <span className="row" style={{ gap: 6 }}>
+                              {(() => { const w = widen(r.min_price, r.max_price, l.price); return <button type="button" className="btn sm acc" onClick={() => widenLimRep(r, l)} title="Межі з запасом 10 %, щоб наступна зміна цін не вийшла за них">Розширити до {money(w.min)}–{money(w.max)}</button>; })()}
+                              <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)} title="Це помилка розпізнавання — межі не змінювати">Відхилити</button>
+                            </span></li>))}</ul>
                       </details>}
                     </div>
                   );
