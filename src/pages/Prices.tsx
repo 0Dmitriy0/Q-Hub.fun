@@ -258,6 +258,14 @@ export default function Prices() {
   const calcRow = priced.find(r => r.buyer_id + ':' + r.item_id === calc.key) || priced[0];
   const calcQty = Math.max(0, Math.floor(Number(calc.qty.replace(/s/g, '')) || 0));
   const pick = (id: string) => { setQ(''); setTab(id); document.getElementById('price-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  /* посилання ззовні (повідомлення Discord-бота, specs/060): /tsiny#<скупник> відкриває цього скупника — один раз, коли скупники вже є */
+  const hashDone = useRef(false);
+  useEffect(() => {
+    if (hashDone.current || !buyers.length) return;
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id) { hashDone.current = true; return; }
+    if (buyers.some(b => b.id === id)) { hashDone.current = true; pick(id); }
+  }, [buyers]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bp">
