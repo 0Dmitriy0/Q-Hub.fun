@@ -1658,7 +1658,50 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .ev-head { display: grid; gap: 16px; }
 @media (min-width: 820px) { .ev-head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; } }
 .ev-head h1 { font-size: clamp(24px, 4vw, 36px); margin: 4px 0 8px; }
-.ev-text { display: flex; flex-direction: column; gap: 12px; max-width: 70ch; line-height: 1.6; }
+/* шапка сторінки івенту: фото на всю ширину, текст поверх з затемненням (контраст білого на будь-якому фото) */
+.ev-hero { position: relative; min-height: 340px; border-radius: var(--r); overflow: hidden; display: flex; align-items: flex-end;
+  background: var(--surface2); border: 1px solid var(--line); }
+.ev-hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ev-hero.no-pic { background: radial-gradient(ellipse 70% 90% at 85% 10%, rgba(255, 107, 0, .32), transparent 60%),
+  radial-gradient(ellipse 60% 80% at 0% 100%, rgba(124, 58, 237, .28), transparent 60%), var(--surface2); }
+.ev-hero.bp { border-color: var(--gold); }
+.ev-hero-ico { position: absolute; right: 6%; top: 50%; transform: translateY(-50%); color: var(--accent); opacity: .22; }
+.ev-hero-txt { position: relative; width: 100%; padding: 64px 28px 24px; display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, .88) 0%, rgba(0, 0, 0, .55) 55%, transparent 100%); }
+.ev-hero.no-pic .ev-hero-txt { background: none; }
+.ev-hero-txt h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.02; color: #fff; text-shadow: 0 4px 24px rgba(0, 0, 0, .45); }
+.ev-hero.no-pic .ev-hero-txt h1 { color: var(--fg); text-shadow: none; }
+.ev-hero-txt p { display: inline-flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, .88); font: 700 15px var(--mono); }
+.ev-hero.no-pic .ev-hero-txt p { color: var(--muted); }
+.ev-hero-txt .ev-tag { box-shadow: none; }
+.ev-chip { padding: 4px 12px; border-radius: 99px; font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em;
+  color: #ffb26b; background: rgba(255, 107, 0, .18); border: 1px solid rgba(255, 140, 50, .5); }
+.ev-hero.bp .ev-chip { color: #ffd772; background: rgba(245, 179, 1, .16); border-color: rgba(245, 179, 1, .5); }
+@media (max-width: 640px) { .ev-hero { min-height: 240px; } .ev-hero-txt { padding: 48px 18px 18px; } }
+/* з фото: фото повністю (16:9, на ньому вже є назва й логотипи), назва й стан — під ним, без накладання */
+.ev-hero.has-pic { display: block; min-height: 0; background: none; border: 0; overflow: visible; }
+.ev-hero.has-pic > img { position: static; display: block; aspect-ratio: 16 / 9; height: auto; border-radius: var(--r); border: 1px solid var(--line); }
+.ev-hero.bp.has-pic > img { border-color: var(--gold); }
+.ev-hero.has-pic .ev-hero-txt { background: none; padding: 18px 2px 0; }
+.ev-hero.has-pic .ev-hero-txt h1 { color: var(--fg); text-shadow: none; font-size: clamp(26px, 4vw, 40px); }
+.ev-hero.has-pic .ev-hero-txt p { color: var(--muted); }
+
+.ev-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+@media (max-width: 520px) { .ev-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .ev-stat { padding: 12px; gap: 10px; } .ev-stat .ibub { display: none; } }
+.ev-stat { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; padding: 14px 16px; text-align: left; color: inherit; text-decoration: none; font: inherit; }
+.ev-stat > div { min-width: 0; }
+button.ev-stat, a.ev-stat { cursor: pointer; transition: border-color .15s; }
+button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
+.ev-stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ev-stat small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.ev-stat b { display: block; margin-top: 2px; font-size: 16px; color: var(--fg); }
+.ev-stat b .mono { color: var(--accent-hi); }
+.ev-stat.hot b .mono { color: var(--good); }
+
+.ev-text { display: flex; flex-direction: column; gap: 12px; line-height: 1.65; padding: 22px 24px; }
+.ev-text > div { max-width: 72ch; }
+.ev-text .lead p { font-size: 18px; font-weight: 700; color: var(--fg); }
+.ev-sec.card { padding: 20px 22px; }
 .ev-text p { white-space: pre-line; }
 .ev-text p.warn { color: var(--warn); }
 .ev-text img { max-width: 100%; border-radius: 14px; margin-top: 8px; }

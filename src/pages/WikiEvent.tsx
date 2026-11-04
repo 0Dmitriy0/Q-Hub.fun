@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { kyivDay, phase, type EventLevel, type SeasonEvent } from '../lib/seasons';
+import { days, kyivDay, phase, type EventLevel, type SeasonEvent } from '../lib/seasons';
 import { mapLink } from '../lib/eventsWiki';
 import { steps } from '../lib/guide';
 import Icon from '../components/Icon';
@@ -68,28 +68,39 @@ export default function WikiEvent() {
     </div>);
 
   const ph = phase(e.starts_on, e.ends_on, today);
+  /* «Залишилось»: скільки днів до кінця / до початку / завершився */
+  const left = ph.kind === 'now' ? (ph.left == null ? { v: '∞', s: 'до оголошення' } : { v: String(ph.left), s: ph.left === 1 ? 'останній день' : days(ph.left).replace(/^\d+\s/, '') + ' до кінця' })
+    : ph.kind === 'soon' ? { v: String(ph.in), s: days(ph.in).replace(/^\d+\s/, '') + ' до початку' } : { v: '—', s: 'івент завершився' };
+  const toMap = () => document.getElementById('ev-where')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   return (
     <article className="ev-page">
       <div className="row between">{back}
         {staff && <div className="row"><button type="button" className="btn sm" onClick={() => setEditing(true)}><Icon name="edit" size={16} />Змінити</button>
           <button type="button" className="btn sm ghost" onClick={remove}><Icon name="x" size={16} />Видалити</button></div>}
       </div>
-      <header className="ev-head">
-        <div className="ev-pic big">{e.image_url ? <img src={e.image_url} alt={e.title} /> : <Icon name={e.kind === 'battlepass' ? 'trophy' : 'spark'} size={56} />}<PhaseTag ph={ph} /></div>
-        <div>
-          {e.kind === 'battlepass' && <small className="ev-kind">Батл пас</small>}
+
+      <header className={'ev-hero' + (e.image_url ? ' has-pic' : ' no-pic') + (e.kind === 'battlepass' ? ' bp' : '')}>
+        {e.image_url ? <img src={e.image_url} alt="" /> : <span className="ev-hero-ico" aria-hidden="true"><Icon name={e.kind === 'battlepass' ? 'trophy' : 'spark'} size={120} /></span>}
+        <div className="ev-hero-txt">
+          <div className="row"><span className="ev-chip">{e.kind === 'battlepass' ? 'Батл пас' : 'Сезонний івент'}</span><PhaseTag ph={ph} /></div>
           <h1>{e.title}</h1>
-          <p className="ev-meta"><span><Icon name="clock" size={16} />{dates(e, today)}</span>
-            {e.link && <a href={e.link} target="_blank" rel="noreferrer"><Icon name="ext" size={16} />Офіційне оголошення</a>}</p>
+          <p><Icon name="clock" size={18} />{dates(e, today)}</p>
         </div>
       </header>
 
-      {body.length > 0 && <section className="ev-text">{body.map((s, i) => (
-        <div key={i}>{s.text && <p className={s.warn ? 'warn' : undefined}>{s.text}</p>}{s.image && <img src={s.image} alt="" loading="lazy" />}</div>))}</section>}
+      <div className="ev-stats">
+        <div className="card ev-stat"><span className="ibub"><Icon name="clock" /></span><div><small>Дати</small><b>{dates(e, today)}</b></div></div>
+        <div className={'card ev-stat' + (ph.kind === 'now' ? ' hot' : '')}><span className="ibub"><Icon name="history" /></span><div><small>Залишилось</small><b><span className="mono">{left.v}</span> {left.s}</b></div></div>
+        {cats.length > 0 && <button type="button" className="card ev-stat" onClick={toMap}><span className="ibub"><Icon name="map" /></span><div><small>Локацій на мапі</small><b><span className="mono">{count ?? '…'}</span> — показати</b></div></button>}
+        {e.link && <a className="card ev-stat" href={e.link} target="_blank" rel="noreferrer"><span className="ibub"><Icon name="ext" /></span><div><small>Оголошення</small><b>Відкрити джерело</b></div></a>}
+      </div>
+
+      {body.length > 0 && <section className="card ev-text"><h2 className="ih"><Icon name="book" />Про івент</h2>{body.map((s, i) => (
+        <div key={i} className={i === 0 ? 'lead' : undefined}>{s.text && <p className={s.warn ? 'warn' : undefined}>{s.text}</p>}{s.image && <img src={s.image} alt="" loading="lazy" />}</div>))}</section>}
 
       {e.kind === 'battlepass' && (
-        <section className="ev-sec">
-          <h2>Нагороди за рівні</h2>
+        <section className="card ev-sec">
+          <h2 className="ih"><Icon name="trophy" />Нагороди за рівні</h2>
           {rows.length ? (
             <div className="ev-levels"><table>
               <thead><tr><th scope="col">Рівень</th><th scope="col">Безкоштовно</th>{paid && <th scope="col">Платно</th>}</tr></thead>
@@ -100,8 +111,8 @@ export default function WikiEvent() {
       )}
 
       {cats.length > 0 && (
-        <section className="ev-sec">
-          <div className="row between"><h2>Де шукати</h2>{count != null && <span className="muted mono">{count} локацій</span>}</div>
+        <section className="card ev-sec" id="ev-where">
+          <div className="row between"><h2 className="ih"><Icon name="pin" />Де шукати</h2>{count != null && <span className="muted mono">{count} локацій</span>}</div>
           <EventMap categoryIds={cats} onCount={setCount} />
           <Link className="btn acc ev-bigmap" to={mapLink(cats)}><Icon name="map" size={16} />Відкрити на великій мапі</Link>
         </section>
