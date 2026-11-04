@@ -1,6 +1,12 @@
 /* Сезонні івенти й промокоди (таблиці season_events, promo_codes): дати — дні за київським часом, кінець включно.
    Івент може бути без дати кінця (ends_on null, specs/018) — тоді він триває, доки адмін його не прибере */
-export interface SeasonEvent { id: number; title: string; description: string; starts_on: string; ends_on: string | null; link: string }
+export interface SeasonEvent {
+  id: number; title: string; description: string; starts_on: string; ends_on: string | null; link: string;
+  /* WIKI «Івенти» (specs/055, 0051): адреса /wiki/iventy/<slug>, тип, фото, повний опис, «минулого разу» */
+  slug: string; kind: 'event' | 'battlepass'; image_url: string; body: string; prev_id: number | null;
+}
+/* рівень батл пасу (season_event_levels) */
+export interface EventLevel { event_id: number; level: number; line: 'free' | 'paid'; reward: string }
 export interface Promo { id: number; code: string; reward: string; playtime_hours: number | null; starts_on: string; ends_on: string; note: string }
 
 /* сьогодні в Києві як 'YYYY-MM-DD' — так само записані дати в базі */

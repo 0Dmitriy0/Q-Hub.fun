@@ -1617,3 +1617,75 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .earn-sess .btn { margin-left: 8px; }
 .earn-note { font-size: 13px; margin-top: 12px; }
 @media (max-width: 560px) { .earn-stats { grid-template-columns: 1fr; } }
+
+/* WIKI «Івенти» (specs/055): плитки, банер батл пасу, сторінка івенту, міні-мапа, форма */
+.ev-bar { align-items: center; justify-content: space-between; margin: 4px 0 14px; }
+.ev-bar .seg { flex: 0 1 420px; }
+.ev-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 720px) { .ev-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1080px) { .ev-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.ev-tile { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; color: inherit; text-decoration: none; transition: border-color .15s; }
+.ev-tile:hover { border-color: var(--line2); }
+.ev-tile:focus-visible, .ev-banner:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ev-tile.is-past .ev-pic img { filter: grayscale(.6); opacity: .8; }
+.ev-pic { position: relative; aspect-ratio: 16 / 9; background: var(--surface2); display: grid; place-items: center; color: var(--faint); overflow: hidden; }
+.ev-pic img { width: 100%; height: 100%; object-fit: cover; }
+.ev-pic.big { border-radius: var(--r); }
+.ev-pic .ev-tag { position: absolute; left: 10px; top: 10px; }
+.ev-tag { padding: 3px 10px; border-radius: 99px; font: 700 12px var(--mono); white-space: nowrap; background: var(--surface); box-shadow: var(--shadow); }
+.ev-tag.now { color: var(--good); } .ev-tag.soon { color: var(--accent-hi); } .ev-tag.past { color: var(--muted); }
+.ev-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; min-width: 0; }
+.ev-kind { color: var(--gold); font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.ev-title { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; }
+.ev-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 13px; }
+.ev-meta span, .ev-meta a { display: inline-flex; align-items: center; gap: 6px; }
+
+.ev-banner { position: relative; display: block; aspect-ratio: 21 / 9; border-radius: var(--r); overflow: hidden; margin-bottom: 14px; background: var(--surface2); color: #fff; text-decoration: none; border: 1px solid var(--gold); }
+.ev-banner img { width: 100%; height: 100%; object-fit: cover; }
+.ev-banner-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); background: linear-gradient(135deg, var(--gold-soft), transparent); }
+/* затемнення під текстом — контраст білого тексту на будь-якому фото */
+.ev-banner-txt { position: absolute; inset: auto 0 0 0; padding: 40px 20px 18px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  background: linear-gradient(to top, rgba(0, 0, 0, .86) 0%, rgba(0, 0, 0, .6) 60%, transparent 100%); }
+.ev-banner-txt small { font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: #ffd772; }
+.ev-banner-txt h2 { font-size: clamp(20px, 3vw, 30px); color: #fff; }
+.ev-banner-txt p { color: rgba(255, 255, 255, .88); font-size: 14px; }
+.ev-banner-txt .btn { margin-top: 6px; }
+@media (max-width: 640px) { .ev-banner { aspect-ratio: 4 / 3; } }
+
+.ev-page { display: flex; flex-direction: column; gap: 18px; max-width: 960px; }
+.ev-back svg { transform: rotate(90deg); }
+.ev-head { display: grid; gap: 16px; }
+@media (min-width: 820px) { .ev-head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; } }
+.ev-head h1 { font-size: clamp(24px, 4vw, 36px); margin: 4px 0 8px; }
+.ev-text { display: flex; flex-direction: column; gap: 12px; max-width: 70ch; line-height: 1.6; }
+.ev-text p { white-space: pre-line; }
+.ev-text p.warn { color: var(--warn); }
+.ev-text img { max-width: 100%; border-radius: 14px; margin-top: 8px; }
+.ev-sec { display: flex; flex-direction: column; gap: 12px; }
+.ev-sec h2 { font-size: 20px; }
+.ev-levels { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
+.ev-levels table { width: 100%; border-collapse: collapse; min-width: 420px; }
+.ev-levels th, .ev-levels td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+.ev-levels thead th { color: var(--muted); font-size: 13px; background: var(--surface2); }
+.ev-levels tbody tr:last-child > * { border-bottom: 0; }
+.ev-map { height: 360px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: var(--ocean); }
+.ev-map.leaflet-container { background: var(--ocean); }   /* Leaflet ставить свій сірий фон поза плитками */
+@media (max-width: 520px) { .ev-map { height: 260px; } .ev-bigmap { width: 100%; justify-content: center; } }
+.ev-bigmap { align-self: flex-start; }
+.ev-prev { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+
+.ev-form-dlg { width: min(680px, calc(100vw - 32px)); }
+.ev-form-dlg .modal-box { max-height: calc(100vh - 48px); overflow-y: auto; }
+.ev-form-pic { width: 128px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
+.ev-cats { border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.ev-cats label { gap: 8px; color: var(--fg); font-size: 15px; min-height: 36px; }
+/* три вкладки WIKI (Роботи · Транспорт · Івенти) на телефоні: стискаються, а не вилазять за край екрана */
+@media (max-width: 520px) {
+  .wiki-tabs { max-width: 100%; }
+  .wiki-tabs a { flex: 1 1 0; min-width: 0; padding: 0 8px; gap: 5px; font-size: 13px; }
+  .wiki-tabs a svg { flex: none; }
+}
+@media (max-width: 400px) { .wiki-tabs .cnt { display: none; } }
+.sv-link { color: inherit; text-decoration: none; }
+.sv-link:hover b, .sv-link:focus-visible b { text-decoration: underline; }
