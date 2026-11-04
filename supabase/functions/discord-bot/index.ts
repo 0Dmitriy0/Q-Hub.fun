@@ -3,9 +3,9 @@
    Дії: tick (ціни) і drafts (чернетки новин) — лише з секретом; send, test, status — лише admin.
    Секрети функції: DISCORD_BOT_TOKEN, DISCORD_SYNC_SECRET, SUPABASE_SERVICE_ROLE_KEY. Токен не потрапляє ні в базу, ні у відповідь. */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { ANNOUNCEMENT, discord, DiscordError, type Body, type Discord } from './discord.ts';
+import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
 import { allowed, due, group, partKey, postKey, type BuyerInfo, type Ev } from './prices.ts';
-import { pricesMessage } from './format.ts';
+import { pricesMessage, TEST_MESSAGE } from './format.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -106,8 +106,53 @@ const tick: Action = async ({ db, dc }) => {
   return json({ posted, events: events.length, key });
 };
 
+/* канал для адмінки: назва, чи оголошення; помилка доступу — людським текстом (US3 AC3) */
+async function channelInfo(dc: Discord, id: string) {
+  if (!id) return null;
+  try { const c = await dc.channel(id); return { id, name: c.name, announcement: c.type === ANNOUNCEMENT, guild_id: c.guild_id ?? '' }; }
+  catch (e) { return { id, error: e instanceof DiscordError ? e.message : String(e) }; }
+}
+
+/* стан для адмінки (US3 AC1, US4 AC2): бот на зв'язку, сервери бота, канали, останні публікації */
+const status: Action = async ({ db, dc }) => {
+  const { data: bot } = await db.from('discord_bot').select('*').eq('id', true).single();
+  let online = false, name = '', guilds: { id: string; name: string }[] = [], error = '';
+  try {
+    name = (await dc.me()).username; online = true;
+    guilds = (await dc.guilds()).map(g => ({ id: g.id, name: g.name }));
+  } catch (e) { error = await markError(db, e); }
+  const [prices, news] = await Promise.all([channelInfo(dc, bot?.prices_channel_id ?? ''), channelInfo(dc, bot?.news_channel_id ?? '')]);
+  const { data: posts } = await db.from('discord_posts').select('key,channel_id,status,error,crossposted,created_at')
+    .order('created_at', { ascending: false }).limit(5);
+  const { count: queued } = await db.from('discord_outbox').select('id', { count: 'exact', head: true }).is('post_key', null);
+  if (online) await markOk(db);
+  return json({ online, bot: name, error, guilds, channels: { prices, news }, posts: posts ?? [], queued: queued ?? 0 });
+};
+
+/* пробне повідомлення в канал цін чи новин; без пересилання підписникам */
+const test: Action = async ({ db, dc, body }) => {
+  const which = body.channel === 'news' ? 'news' : 'prices';
+  const { data: bot } = await db.from('discord_bot').select('prices_channel_id,news_channel_id').eq('id', true).single();
+  const id = which === 'news' ? bot?.news_channel_id : bot?.prices_channel_id;
+  if (!id) return json({ ok: false, error: 'Спершу впиши й збережи ID каналу.' });
+  const key = `test:${new Date().toISOString()}`;
+  try {
+    await publish(db, dc, id, key, [TEST_MESSAGE], false);
+    await markOk(db);
+    return json({ ok: true });
+  } catch (e) {
+    let error = e instanceof Error ? e.message : String(e);
+    if (e instanceof DiscordError && e.kind === 'forbidden') {
+      const c = await channelInfo(dc, id);
+      error = human('forbidden', 403, c && 'name' in c ? c.name : '');
+    }
+    await markError(db, error);
+    return json({ ok: false, error });
+  }
+};
+
 const notYet: Action = async () => fail(501, 'Ця дія ще не зроблена.');
-const ACTIONS: Record<string, Action> = { tick, drafts: notYet, send: notYet, test: notYet, status: notYet };
+const ACTIONS: Record<string, Action> = { tick, drafts: notYet, send: notYet, test, status };
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
