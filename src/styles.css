@@ -1403,6 +1403,17 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .mchip:hover .mcat-edit, .mcat-edit:focus-visible { opacity: 1; }
 .mcat-edit:hover { color: var(--accent-hi); border-color: var(--accent); }
 @media (hover: none) { .mcat-edit { opacity: 1; } }
+/* «i» над плиткою категорії: опис (specs/055) — завжди видно; з олівцем і хрестиком адміна стає лівіше від них */
+.mcat-info { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--line2); background: var(--surface); color: var(--accent-hi); cursor: pointer; padding: 0;
+  font: 800 12px/1 Georgia, 'Times New Roman', serif; font-style: italic; z-index: 2; }
+.mcat-info.adm { right: 42px; }
+.mcat-info:hover, .mcat-info[aria-expanded="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.mcat-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mcat-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 200px; z-index: 30; padding: 10px 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line2); box-shadow: var(--shadow); font-size: 13px; line-height: 1.45; color: var(--fg); }
+.mcat-pop b { display: block; margin-bottom: 4px; font-size: 13px; }
+.mcat-pop p { margin: 0; color: var(--muted); }
 .mcat-prev { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: #0b1018; border: 1px solid var(--line2); }
 .mcat-prev b { font-size: 14px; } .mcat-prev small { margin-left: auto; color: var(--faint); font-size: 12px; }
 /* демо Alt+Q без верхньої плашки: рядок по центру екрана, смужка сесії внизу */
