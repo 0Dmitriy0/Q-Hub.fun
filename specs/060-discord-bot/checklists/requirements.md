@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — FR-003 (як публікувати ціни), FR-005 (що таке новина)
+- [x] No [NEEDS CLARIFICATION] markers remain — ціни новим повідомленням у канал-оголошення; новини — чернетки в адмінці (власник, 2026-11-04)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
