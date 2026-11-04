@@ -6,6 +6,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { ZMAX, toPx } from '../lib/mapGeo';
 import type { MapCategory, MapMark } from '../lib/mapData';
 import { baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { asset } from '../lib/app';
 
 /* міні-мапа на сторінці івенту (specs/055 US2): мітки прив'язаних категорій з тих самих даних, що велика мапа
    (loadMapData — гість бачить лише опубліковані партії), кадр на всі мітки один раз. Leaflet створюється лише
@@ -62,6 +63,15 @@ export default function EventMap({ categoryIds, onCount }: { categoryIds: string
     return () => { ro.disconnect(); m.remove(); };
   }, [seen, data]);
 
+  /* легенда: що саме позначено (напр. «Гарбузи з цукерками» — не квестові) і скільки */
+  const legend = data ? data.cats.filter(c => categoryIds.includes(c.id)).map(c => ({ c, n: data.marks.filter(m => m.category === c.id).length })) : [];
   if (failed) return <div className="card empty">Мапу не вдалося завантажити. Онови сторінку.</div>;
-  return <div ref={box} className="ev-map" role="region" aria-label="Мапа локацій івенту" />;
+  return (
+    <>
+      <div ref={box} className="ev-map" role="region" aria-label="Мапа локацій івенту" />
+      {legend.length > 0 && <ul className="ev-legend" aria-label="Що позначено на мапі">{legend.map(({ c, n }) => (
+        <li key={c.id}><span className="ev-legend-pin" style={{ borderColor: c.color }}><img src={asset(c.icon)} alt="" width={18} height={18} /></span>
+          <span><b>{c.name}</b>{c.description && <small className="muted"> — {c.description}</small>}</span><span className="mono muted">{n}</span></li>))}</ul>}
+    </>
+  );
 }

@@ -134,7 +134,7 @@ export default function WikiEvent() {
 
       {cats.length > 0 && (
         <section className="card ev-sec" id="ev-where">
-          <div className="row between"><h2 className="ih"><Icon name="pin" />Де шукати</h2>{count != null && <span className="muted mono">{count} локацій</span>}</div>
+          <div className="row between"><h2 className="ih"><Icon name="pin" />Мітки на мапі</h2>{count != null && <span className="muted mono">{count} локацій</span>}</div>
           <EventMap categoryIds={cats} onCount={setCount} />
           <Link className="btn acc ev-bigmap" to={mapLink(cats)}><Icon name="map" size={16} />Відкрити на великій мапі</Link>
         </section>
