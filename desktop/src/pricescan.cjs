@@ -42,12 +42,20 @@ function pricePicker(every = PRICES_EVERY) {
         } else if (r.price >= r.min * ODD_LOW && r.price <= r.max * ODD_HIGH) {
           /* близько до меж — або крива зчитка, або межі на сайті застарілі («Молоток» 64 при 76–498, «Дубова колода» 260 при
              295–449). Далеко, але в межах правдоподібного — те саме: «Ключка для гольфу» 50 при 144–299 (жива гра 2026-10-31,
-             specs/035) — справжня ціна після зміни цін, яка раніше зникала без сліду. На сайт не йде ніколи (сервер однаково
-             відхиляє ціну за межами ±10 %), але та сама впевнена зчитка ODD_TIMES разів за відкриття — адміну «перевір межі», один раз */
+             specs/035) — справжня ціна після зміни цін, яка раніше зникала без сліду. Та сама впевнена зчитка ODD_TIMES разів
+             за відкриття — адміну «перевір межі», один раз. Близька (0,5 × мін … 1,5 × макс) — ще й голос за ціну з позначкою
+             «поза межами» (specs/035 US1): поточною стане, коли те саме дасть N акаунтів; межі змінює лише admin (Q1 = Б).
+             Далека — лише звіт: як ціна вона надто схожа на зайву чи пропущену цифру (FR-004) */
           const near = r.price >= r.min * 0.5 && r.price <= r.max * 1.5;
           const sure = (r.score ?? 0) >= ODD_SURE, odds = sure ? (s?.odd === r.price ? (s.odds || 0) + 1 : 1) : 0;
           seen.set(k, { ...(s || { plain: [] }), odd: sure ? r.price : s?.odd, odds: sure ? odds : s?.odds });
-          if (odds === ODD_TIMES) odd.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max });
+          if (odds === ODD_TIMES) {
+            odd.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max });
+            if (near && !(done && done.price === r.price && now - done.at < every)) {
+              sent.set(k, { price: r.price, at: now });
+              out.push({ buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, outside: true });
+            }
+          }
           rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: near ? 'поза межами' : 'далеко поза межами' });
           continue;
         } else { rejected.push({ item_id: r.item_id, price: r.price, min: r.min, max: r.max, why: 'далеко поза межами' }); seen.delete(k); continue; }   // «51050» без виправлення, «91986» — зайва цифра, не ціна

@@ -887,7 +887,9 @@ async function autoPrices(rows) {
   const character_id = settings.character;
   let why = '';
   for (const r of rows) {
-    const { error } = await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop', character_id });
+    /* outside — голос за ціну поза межами скупника (specs/035 US1, міграція 0054): база пускає його лише в правдоподібному коридорі */
+    const row = { kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop', character_id };
+    const { error } = await sb.from('price_reports').insert(r.outside ? { ...row, out_of_limits: true } : row);
     if (!error) ok++; else if (error.code === 'P0001') why = error.message;
   }
   try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}${why ? ' — ' + why : ''}\n`); } catch { /* журнал не обов'язковий */ }

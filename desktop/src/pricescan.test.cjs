@@ -154,17 +154,23 @@ test('поза межами: «$» як «5» лише разом зі звич�
   assert.deepStrictEqual(pick('hide', [r(87, 9999, 400, 900)], 16e3), []);
 });
 
-test('хибні межі: та сама ціна поза межами ≥ 3 впевнені зчитки — адміну один раз, на сайт ніколи («Молоток» 64 при 76–498)', () => {
+test('хибні межі: та сама ціна поза межами ≥ 3 впевнені зчитки — адміну й голос «поза межами», один раз («Молоток» 64 при 76–498)', () => {
   const pick = pricePicker(600e3);
   const m = (price, score = 0.97) => ({ buyer_id: 'junk', item_id: 30, price, score, min: 76, max: 498 });
   assert.deepStrictEqual(pick('junk', [m(64)], 0), []);
   assert.deepStrictEqual(pick('junk', [m(64, 0.8)], 2e3), []);                  // невпевнена зчитка не рахується
   assert.deepStrictEqual(pick('junk', [m(64)], 4e3), []);
   assert.deepStrictEqual(pick.outside, []);                                       // поки двічі
-  assert.deepStrictEqual(pick('junk', [m(64)], 6e3), []);
+  /* третя — голос з позначкою «поза межами» (specs/035 US1): поточною ціну зробить база, коли те саме дасть другий акаунт */
+  assert.deepStrictEqual(pick('junk', [m(64)], 6e3), [{ buyer_id: 'junk', item_id: 30, price: 64, outside: true }]);
   assert.deepStrictEqual(pick.outside, [{ item_id: 30, price: 64, min: 76, max: 498 }]);
   assert.deepStrictEqual(pick.confirmed.has(30), false);                          // і в «прочитано N з M» не йде
-  pick('junk', [m(64)], 8e3); assert.deepStrictEqual(pick.outside, []);           // четверта — уже не повідомляє
+  assert.deepStrictEqual(pick('junk', [m(64)], 8e3), []);                         // четверта — ні звіту, ні голосу
+  assert.deepStrictEqual(pick.outside, []);
+  /* наступне відкриття вікна (після OPEN_GAP) у межах PRICES_EVERY — звіт знову, голос — ні: ту саму ціну щойно надіслано */
+  for (const t of [60e3, 62e3]) pick('junk', [m(64)], t);
+  assert.deepStrictEqual(pick('junk', [m(64)], 64e3), []);
+  assert.deepStrictEqual(pick.outside, [{ item_id: 30, price: 64, min: 76, max: 498 }]);
   /* інше число між зчитками починає лік спочатку */
   const pick2 = pricePicker(600e3);
   pick2('junk', [m(64)], 0); pick2('junk', [m(66)], 2e3); pick2('junk', [m(64)], 4e3); pick2('junk', [m(64)], 6e3);
