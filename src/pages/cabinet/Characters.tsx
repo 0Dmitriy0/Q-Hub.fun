@@ -11,6 +11,23 @@ export default function Characters({ first }: { first?: boolean }) {
   const [goalName, setGoalName] = useState(''); const [goal, setGoal] = useState('');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const full = characters.length >= MAX_CHARACTERS;
+  /* видалення (рішення власника 2026-11-05, і на сайті): підтвердження — Ім'я_Прізвище персонажа; разом з ним — його
+     документи, сесії й заробіток (on delete cascade), ціни для скупників лишаються (character_id → null) */
+  const [del, setDel] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState('');
+  const [delMsg, setDelMsg] = useState('');
+  const victim = characters.find(c => c.id === del);
+
+  async function remove(e: React.FormEvent) {
+    e.preventDefault();
+    if (!victim || confirm.trim() !== victim.name) return;
+    setBusy(true); setDelMsg('');
+    const { error } = await supabase!.from('characters').delete().eq('id', victim.id);
+    setBusy(false);
+    if (error) { setDelMsg('Не вдалося видалити персонажа. Перевір інтернет і спробуй ще раз.'); return; }
+    setDelMsg(`Персонажа ${victim.name} видалено.`); setDel(null); setConfirm('');
+    await reloadCharacters();
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault(); setMsg('');
@@ -30,7 +47,7 @@ export default function Characters({ first }: { first?: boolean }) {
       <section className="card">
         <h2>{first ? 'Додай свого персонажа' : 'Новий персонаж'}</h2>
         {first && <p className="muted">У кожного персонажа свої Ім’я_Прізвище, статік і документи.</p>}
-        {full ? <p className="muted">В акаунті вже {MAX_CHARACTERS} персонажі — більше не можна. Щоб додати нового, видали одного в «Скинути дані».</p> : <>
+        {full ? <p className="muted">В акаунті вже {MAX_CHARACTERS} персонажі — більше не можна. Щоб додати нового, видали одного в списку «Твої персонажі».</p> : <>
           <form className="form cols addchar" onSubmit={add}>
             <label className="fld">Ім'я_Прізвище, як у грі<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} spellCheck={false} /></label>
             <label className="fld">Статік<input value={stat} onChange={e => setStat(e.target.value)} inputMode="numeric" placeholder="162183" maxLength={12} /></label>
@@ -48,7 +65,23 @@ export default function Characters({ first }: { first?: boolean }) {
           <div className="list">{characters.map(c => (
             <div className="li" key={c.id}><div><b>{c.name}</b> <span className="mono muted">{c.static_id ? '#' + c.static_id : 'без статіку'}</span><br />
               <small>старт {money(c.start_balance)}{c.goal ? ' · ціль ' + (c.goal_name || '') + ' ' + money(c.goal) : ''}</small></div>
-              <button className="btn sm" onClick={() => setCurrent(c.id)}>Обрати</button></div>))}</div>
+              <div className="row">
+                <button type="button" className="btn sm" onClick={() => setCurrent(c.id)}>Обрати</button>
+                <button type="button" className="btn sm bad" aria-expanded={del === c.id} onClick={() => { setDel(del === c.id ? null : c.id); setConfirm(''); setDelMsg(''); }}>Видалити</button>
+              </div></div>))}</div>
+          {victim && (
+            <form className="form" onSubmit={remove}>
+              <p className="muted">Видалиться персонаж <b>{victim.name}</b> разом з його документами, сесіями гри й заробітком. Не відновити. Ціни, які ти надсилав для скупників, лишаються.</p>
+              <label className="fld">Щоб підтвердити, введи його Ім'я_Прізвище: {victim.name}
+                <input value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="off" spellCheck={false} autoFocus />
+              </label>
+              <div className="row">
+                <button className="btn bad" disabled={busy || confirm.trim() !== victim.name}>{busy ? 'Видаляю…' : `Видалити ${victim.name}`}</button>
+                <button type="button" className="btn ghost" disabled={busy} onClick={() => { setDel(null); setConfirm(''); }}>Скасувати</button>
+              </div>
+            </form>
+          )}
+          {delMsg && <p className={delMsg.startsWith('Не вдалося') ? 'err' : 'good'} role="status">{delMsg}</p>}
         </section>
       )}
     </div>

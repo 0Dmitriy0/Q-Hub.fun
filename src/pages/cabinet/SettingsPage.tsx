@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { NickForm } from '../../components/NickGate';
 import Characters from './Characters';
+import { canEdit } from '../../lib/app';
 import type { Character } from './types';
 
 /* таблиці з даними персонажа; deals першими — вони посилаються на transactions. Облік, угоди й гараж більше не показуються
@@ -57,7 +58,8 @@ export default function SettingsPage({ c }: { c: Character }) {
         {saved && <p className="good" role="status">Збережено.</p>}
       </section>
 
-      <Characters />
+      {/* на сайті персонажі — над вимкненим fieldset (Cabinet.tsx), тут лише в програмі */}
+      {canEdit && <Characters />}
 
       <section className="card danger-zone">
         <h2>Скинути дані</h2>
