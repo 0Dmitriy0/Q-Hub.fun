@@ -1,4 +1,4 @@
--- Discord-бот (0055, specs/060): таблиці бота — лише admin (anon, user, editor, moderator — ні читання, ні запису);
+-- Discord-бот (0055, 0056, specs/060): таблиці бота — лише admin (anon, user, editor, moderator — ні читання, ні запису);
 -- check-обмеження; тригер черги з price_history (лише коли prices_on). Запуск: supabase/tests/run.sh (після seed каталогу)
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
@@ -23,7 +23,7 @@ grant execute on function public.test_bot_try(text) to anon, authenticated;
 create function public.test_bot_denied() returns void language plpgsql as $$
 declare t text; q text; n int;
 begin
-  foreach t in array array['discord_bot', 'discord_outbox', 'discord_posts', 'news_drafts'] loop
+  foreach t in array array['discord_bot', 'discord_outbox', 'discord_posts', 'news_drafts', 'discord_buyer_channels'] loop
     begin
       execute format('select count(*) from public.%I', t) into n;
       assert n = 0, 'не-адмін бачить рядки ' || t;
@@ -34,7 +34,8 @@ begin
   foreach q in array array[
     'insert into public.discord_posts (key, channel_id, status) values (''test:x'', ''123456789012345678'', ''sent'')',
     'insert into public.news_drafts (source_ref, title) values (''manual:x'', ''Х'')',
-    'insert into public.discord_outbox (buyer_id, item_id, price, at) values (''hide'', 1, 1, now())'] loop
+    'insert into public.discord_outbox (buyer_id, item_id, price, at) values (''hide'', 1, 1, now())',
+    'insert into public.discord_buyer_channels (buyer_id, channel_id) values (''hide'', ''123456789012345678'')'] loop
     assert public.test_bot_try(q) = '42501', 'не-адмін вставив: ' || q;
   end loop;
   perform public.test_bot_try('update public.discord_bot set prices_on = true');
@@ -71,6 +72,9 @@ do $$ begin
   delete from public.news_drafts where source_ref = 'manual:admin';
   delete from public.discord_posts where key = 'test:admin';
   perform count(*) from public.discord_outbox;
+  insert into public.discord_buyer_channels (buyer_id, channel_id) values ('hide', '123456789012345678');
+  update public.discord_buyer_channels set channel_id = '12345678901234567' where buyer_id = 'hide';
+  delete from public.discord_buyer_channels where buyer_id = 'hide';
 end $$;
 
 -- 3) check-обмеження (як admin); функцію створює власник бази, викликає admin
@@ -98,7 +102,9 @@ begin
     'insert into public.news_drafts (source_ref, title, removed) values (''manual:t4'', ''Т'', array[repeat(''x'', 301)])',
     'insert into public.news_drafts (source_ref, title, image_url) values (''manual:t5'', ''Т'', ''http://x'')',
     'insert into public.news_drafts (source_ref, title, link) values (''manual:t6'', ''Т'', ''javascript:alert(1)'')',
-    'insert into public.news_drafts (source_ref, title, status) values (''manual:t7'', ''Т'', ''published'')'] loop
+    'insert into public.news_drafts (source_ref, title, status) values (''manual:t7'', ''Т'', ''published'')',
+    'insert into public.discord_buyer_channels (buyer_id, channel_id) values (''hide'', ''abc'')',
+    'insert into public.discord_buyer_channels (buyer_id, channel_id) values (''no_such_buyer'', ''123456789012345678'')'] loop
     assert public.test_bot_try(q) <> 'ok', 'обмеження пропустило: ' || q;
   end loop;
   insert into public.news_drafts (source_ref, title) values ('manual:dup', 'Т');

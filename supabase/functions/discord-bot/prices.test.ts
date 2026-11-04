@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowed, due, group, partKey, postKey, type BuyerInfo, type Ev } from './prices';
+import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev } from './prices';
 
 const T = (min: number) => new Date(Date.UTC(2026, 10, 4, 12, min)).toISOString();
 const ev = (id: number, buyer_id: string, item_id: number, price: number, prev_price: number | null, min: number): Ev =>
@@ -46,6 +46,21 @@ describe('групування', () => {
     const g = group([ev(1, 'gone', 9, 5, 4, 0)], buyers, items);
     expect(g[0].buyer.name).toBe('gone');
     expect(g[0].rows[0].name).toBe('Предмет #9');
+  });
+});
+
+describe('канали скупників', () => {
+  it('події розходяться по каналах своїх скупників, без каналу — orphan', () => {
+    const ch = new Map([['hide', '111111111111111111'], ['fish', '222222222222222222']]);
+    const r = route([ev(1, 'hide', 1, 1, 1, 0), ev(2, 'fish', 4, 1, 1, 0), ev(3, 'meat', 5, 1, 1, 0), ev(4, 'hide', 2, 1, 1, 0)], ch);
+    expect([...r.byChannel.keys()]).toEqual(['111111111111111111', '222222222222222222']);
+    expect(r.byChannel.get('111111111111111111')!.map(e => e.id)).toEqual([1, 4]);
+    expect(r.orphan.map(e => e.id)).toEqual([3]);
+  });
+  it('два скупники в одному каналі — разом', () => {
+    const r = route([ev(1, 'hide', 1, 1, 1, 0), ev(2, 'fish', 4, 1, 1, 0)], new Map([['hide', '1'.repeat(18)], ['fish', '1'.repeat(18)]]));
+    expect(r.byChannel.size).toBe(1);
+    expect(r.byChannel.get('1'.repeat(18))).toHaveLength(2);
   });
 });
 

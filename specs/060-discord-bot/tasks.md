@@ -216,3 +216,14 @@ T011 supabase/functions/discord-bot/format.ts
 - `supabase/functions/discord-bot/index.ts` правлять T007, T012, T015, T022 — по черзі, не паралельно
 - Комітити після кожної задачі чи логічної групи
 - Ніків тих, хто вносив ціни, ніде в повідомленнях (FR-012); токен — лише в секретах (FR-010)
+
+---
+
+## Phase 4a: Окремий канал на скупника (рішення власника 2026-11-04)
+
+Власник: у Discord окремий канал для кожного скупника; скупник без каналу — нікуди; загального зведення немає.
+
+- [X] T033 [US1] Міграція `supabase/migrations/0056_discord_buyer_channels.sql`: `discord_buyer_channels (buyer_id text pk references buyers on delete cascade on update cascade, channel_id text not null check '^[0-9]{17,20}$')`, RLS лише `is_admin()`; SQL-тест доповнено в `supabase/tests/discord_bot_test.sql`
+- [X] T034 [P] [US1] `route(events, channels)` у `supabase/functions/discord-bot/prices.ts` + тести: події по каналах скупників, без каналу — `orphan`
+- [X] T035 [US1] `tick` в `supabase/functions/discord-bot/index.ts`: по каналу — свій ліміт години, ключ і повідомлення; orphan → `post_key = 'none:<id>'`; збій одного каналу не зупиняє інші; `status` — назви всіх каналів скупників; `test { channel_id }`
+- [X] T036 [US3] `src/components/admin/AdminDiscordBot.tsx`: розділ «Канали скупників» — ID каналу біля кожного скупника, «Надіслати пробне», лічильник «з каналом N з M»; «Канал цін» прибрано
