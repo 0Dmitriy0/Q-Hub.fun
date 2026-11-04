@@ -13,6 +13,11 @@ import { asset } from './app';
 
 export const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
+/* фото мітки у спливаючому вікні (0052): натиснув — відкривається повний розмір у новій вкладці */
+export const photoHtml = (mk: { photo?: string; name?: string }) => (mk.photo && /^https:\/\/[^\s"'<>]+$/.test(mk.photo)
+  ? `<a class="mphoto" href="${esc(mk.photo)}" target="_blank" rel="noopener noreferrer" aria-label="Фото мітки${mk.name ? ' ' + esc(mk.name) : ''} у повному розмірі"><img src="${esc(mk.photo)}" alt="" loading="lazy" width="320" height="180"></a>`
+  : '');
+
 /* роботи й скупники — вбудовані категорії з даних сайту, решта — з бази (додає адмін) */
 export const BUILTIN: MapCategory[] = [
   { id: 'names', name: 'Назви місць', grp: 'Шари мапи', icon: '/icons/map/layer-names.svg', color: '#f4f1ec', sort: 1, shown: true, builtin: true },
@@ -46,7 +51,7 @@ export async function loadMapData(): Promise<MapData | null> {
   if (c.error || p.error) return null;
   return {
     cats: [...BUILTIN, ...(c.data as MapCategory[])],
-    marks: [...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false }))],
+    marks: [...BUILTIN_MARKS, ...((p.data || []) as Record<string, unknown>[]).map(r => ({ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
     areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][] })),
     owners: o.error ? null : Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string]))
