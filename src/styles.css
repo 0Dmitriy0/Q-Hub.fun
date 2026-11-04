@@ -1670,6 +1670,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .ev-levels thead th { color: var(--muted); font-size: 13px; background: var(--surface2); }
 .ev-levels tbody tr:last-child > * { border-bottom: 0; }
 .ev-map { height: 360px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: var(--ocean); }
+.ev-map.leaflet-container { background: var(--ocean); }   /* Leaflet ставить свій сірий фон поза плитками */
 @media (max-width: 520px) { .ev-map { height: 260px; } .ev-bigmap { width: 100%; justify-content: center; } }
 .ev-bigmap { align-self: flex-start; }
 .ev-prev { display: flex; align-items: center; gap: 8px; color: var(--muted); }
@@ -1679,5 +1680,12 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .ev-form-pic { width: 128px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
 .ev-cats { border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
 .ev-cats label { gap: 8px; color: var(--fg); font-size: 15px; min-height: 36px; }
+/* три вкладки WIKI (Роботи · Транспорт · Івенти) на телефоні: стискаються, а не вилазять за край екрана */
+@media (max-width: 520px) {
+  .wiki-tabs { max-width: 100%; }
+  .wiki-tabs a { flex: 1 1 0; min-width: 0; padding: 0 8px; gap: 5px; font-size: 13px; }
+  .wiki-tabs a svg { flex: none; }
+}
+@media (max-width: 400px) { .wiki-tabs .cnt { display: none; } }
 .sv-link { color: inherit; text-decoration: none; }
 .sv-link:hover b, .sv-link:focus-visible b { text-decoration: underline; }
