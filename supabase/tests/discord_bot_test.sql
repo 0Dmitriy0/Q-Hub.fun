@@ -73,7 +73,8 @@ do $$ begin
   perform count(*) from public.discord_outbox;
 end $$;
 
--- 3) check-обмеження (як admin)
+-- 3) check-обмеження (як admin); функцію створює власник бази, викликає admin
+reset role;
 create function public.test_bot_check() returns void language plpgsql as $$
 declare q text;
 begin
@@ -107,6 +108,8 @@ begin
   update public.discord_bot set guild_id = '', news_channel_id = '12345678901234567', window_min = 60, crosspost_per_hour = 50;
   update public.discord_bot set window_min = 5, crosspost_per_hour = 10, news_channel_id = '';
 end $$;
+grant execute on function public.test_bot_check() to authenticated;
+set role authenticated;
 select public.test_bot_check();
 reset role;
 
