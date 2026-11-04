@@ -4,7 +4,7 @@
    Секрети функції: DISCORD_BOT_TOKEN, DISCORD_SYNC_SECRET, SUPABASE_SERVICE_ROLE_KEY. Токен не потрапляє ні в базу, ні у відповідь. */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
-import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev } from './prices.ts';
+import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev, type Group } from './prices.ts';
 import { pricesMessage, TEST_MESSAGE } from './format.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
@@ -70,6 +70,20 @@ export async function publish(db: SupabaseClient, dc: Discord, channelId: string
 
 const SITE = 'https://q-hub.fun';
 
+/* увесь поточний прайс скупників групи — щоб повідомлення показувало весь прайс з вигідністю, а не лише змінене */
+type BiRow = { buyer_id: string; item_id: number; price: number; min_price: number; max_price: number; items: { name: string } | null };
+async function withBoard(db: SupabaseClient, groups: Group[]): Promise<Group[]> {
+  if (!groups.length) return groups;
+  const { data } = await db.from('buyer_items').select('buyer_id,item_id,price,min_price,max_price,items(name)')
+    .in('buyer_id', groups.map(g => g.buyer.id)).gt('price', 0);
+  const rows = (data ?? []) as unknown as BiRow[];
+  return groups.map(g => ({
+    ...g,
+    board: rows.filter(r => r.buyer_id === g.buyer.id)
+      .map(r => ({ item_id: r.item_id, name: r.items?.name ?? `Предмет #${r.item_id}`, price: r.price, min: r.min_price, max: r.max_price })),
+  }));
+}
+
 /* події позначаються опублікованими списком id — частинами, щоб адреса запиту не була задовгою */
 async function markPosted(db: SupabaseClient, events: Ev[], key: string, at: string) {
   const ids = events.map(e => e.id);
@@ -112,7 +126,7 @@ const tick: Action = async ({ db, dc }) => {
     if (!allowed(count ?? 0, bot.crosspost_per_hour)) { waiting += list.length; continue; }
     const key = postKey(list);
     try {
-      const groups = group(list, buyers, items);
+      const groups = await withBoard(db, group(list, buyers, items));
       if (groups.length) {
         const ch = await dc.channel(channelId);
         posted += (await publish(db, dc, channelId, key, pricesMessage(groups, { now, site: SITE }), ch.type === ANNOUNCEMENT)).length;

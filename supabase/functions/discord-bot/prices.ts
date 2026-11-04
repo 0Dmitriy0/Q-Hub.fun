@@ -5,7 +5,9 @@
 export type Ev = { id: number; buyer_id: string; item_id: number; price: number; prev_price: number | null; at: string };
 export type BuyerInfo = { id: string; name: string; sort: number; next_change_at: string | null };
 export type Row = { item_id: number; name: string; price: number; prev: number | null };
-export type Group = { buyer: BuyerInfo; rows: Row[] };
+/* увесь поточний прайс скупника (buyer_items): ціна й межі — для вигідності, як на сайті (сортування «за вигідністю») */
+export type BoardRow = { item_id: number; name: string; price: number; min: number; max: number };
+export type Group = { buyer: BuyerInfo; rows: Row[]; board?: BoardRow[] };
 
 /* публікувати, коли від найстарішої події минуло windowMin хвилин (FR-004) */
 export function due(events: Ev[], now: Date, windowMin: number): boolean {
