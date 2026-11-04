@@ -25,6 +25,14 @@ describe('discord REST', () => {
     expect(JSON.parse(calls[0].init.body as string)).toEqual({ content: 'привіт', allowed_mentions: { parse: [] } });
   });
 
+  it('send з nonce: enforce_nonce, nonce не довший за 25', async () => {
+    const { d, calls } = fake([ok({ id: '1' })]);
+    await d.send('123', { content: 'x' }, 'prices:123456789012345678901234:2');
+    const b = JSON.parse(calls[0].init.body as string);
+    expect(b.enforce_nonce).toBe(true);
+    expect(b.nonce.length).toBeLessThanOrEqual(25);
+  });
+
   it('crosspost: правильна адреса', async () => {
     const { d, calls } = fake([ok({})]);
     await d.crosspost('123', '456');

@@ -66,8 +66,12 @@ export function discord(token: string, opts: { fetch?: Fetch; sleep?: Sleep } = 
   }
 
   return {
-    send: async (channelId: string, body: Body) =>
-      (await call<{ id: string }>('POST', `/channels/${channelId}/messages`, { ...body, allowed_mentions: { parse: [] } })).id,
+    /* nonce + enforce_nonce: повтор того самого nonce за кілька хвилин Discord не публікує вдруге, а повертає те саме
+       повідомлення — захист від дубля, якщо функція впала між надсиланням і записом message_id (SC-002) */
+    send: async (channelId: string, body: Body, nonce?: string) =>
+      (await call<{ id: string }>('POST', `/channels/${channelId}/messages`, {
+        ...body, allowed_mentions: { parse: [] }, ...(nonce ? { nonce: nonce.slice(-25), enforce_nonce: true } : {}),
+      })).id,
     crosspost: (channelId: string, messageId: string) =>
       call<unknown>('POST', `/channels/${channelId}/messages/${messageId}/crosspost`),
     channel: (channelId: string) => call<Channel>('GET', `/channels/${channelId}`),
