@@ -125,14 +125,14 @@
 
 **Goal**: бот на чужому сервері нічого не читає; власник бачить список серверів бота (зроблено в T015/T016).
 
-- [ ] T028 [US4] У `specs/060-discord-bot/quickstart.md` (розділ «Підготовка») записати: у Developer Portal → Bot вимкнені `MESSAGE CONTENT INTENT` і `SERVER MEMBERS INTENT`; посилання-запрошення лише з `scope=bot` і правами Send Messages + Embed Links + Manage Messages (без Read Message History); функція не має Gateway-з'єднання, тож на чужому сервері нічого не читає (US4 AC1)
+- [X] T028 [US4] У `specs/060-discord-bot/quickstart.md` (розділ «Підготовка») записати: у Developer Portal → Bot вимкнені `MESSAGE CONTENT INTENT` і `SERVER MEMBERS INTENT`; посилання-запрошення лише з `scope=bot` і правами Send Messages + Embed Links + Manage Messages (без Read Message History); функція не має Gateway-з'єднання, тож на чужому сервері нічого не читає (US4 AC1)
 
 ---
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T029 [P] Перевірка секретів (SC-006): `npm.cmd run build`, потім пошук `DISCORD_BOT_TOKEN`, `Bot ` + довгий токен і `DISCORD_SYNC_SECRET` у `dist/` і `git grep` у репо — нічого, крім назв змінних у функції й workflow
-- [ ] T030 [P] Оновити `docs/PLAN.md`: пункт «Discord-бот: ціни в #ціни» — `[x]` після MVP, новини — окремим пунктом; «Скан Discord-ринку» лишити з приміткою, що бот уже є й потрібна функція читання
+- [X] T029 [P] Перевірка секретів (SC-006): `npm.cmd run build`, потім пошук `DISCORD_BOT_TOKEN`, `Bot ` + довгий токен і `DISCORD_SYNC_SECRET` у `dist/` і `git grep` у репо — нічого, крім назв змінних у функції й workflow
+- [X] T030 [P] Оновити `docs/PLAN.md`: пункт «Discord-бот: ціни в #ціни» — `[x]` після MVP, новини — окремим пунктом; «Скан Discord-ринку» лишити з приміткою, що бот уже є й потрібна функція читання
 - [ ] T031 Прогнати `npx.cmd vitest run` і `npx.cmd tsc --noEmit -p .` (сайт імпортує `format.ts` функції — перевірити, що збірка сайту його бере); `supabase/tests/run.sh` — у CI PR
 - [ ] T032 Пройти `specs/060-discord-bot/quickstart.md` на живому каналі: застосувати `0055` у SQL Editor (пам'ять prod-migrations-gaps — перевірити, що таблиці з'явились), `npx.cmd supabase functions deploy discord-bot`, запустити `supabase/sql/discord_cron.sql`, сценарії 1–7 і 10–11. Програму (`desktop/`) не змінюємо — запис у `src/data/changelog.json` не потрібен
 
