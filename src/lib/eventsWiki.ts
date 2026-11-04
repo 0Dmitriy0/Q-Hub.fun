@@ -61,5 +61,47 @@ export function levelsFromText(text: string): { rows: LevelRow[]; error: string 
   return { rows, error: null };
 }
 
+/* повний опис івенту → блоки (формат інструкцій: блоки через порожній рядок, «Знімок: https://…» — картинка).
+   Додатково: «## Заголовок» — підзаголовок; блок з «Порада:» — виділена порада; блок з «Квест: Назва» — картка
+   квесту з рядками «Завдання:», «Нагорода:», «Коли:», «Порада:» (порад може бути кілька; решта рядків — до завдання).
+   Квести нумеруються в порядку тексту — це і є порядок виконання */
+export type EventBlock =
+  | { k: 'p'; text: string; image: string | null }
+  | { k: 'h'; text: string }
+  | { k: 'tip'; text: string }
+  | { k: 'quest'; n: number; title: string; task: string; reward: string; when: string; tips: string[] };
+const IMG = /^\s*знімок:\s*(https:\/\/\S+)\s*$/i;
+const FIELD = /^\s*(квест|завдання|нагорода|коли|порада):\s*(.*)$/i;
+export function eventBlocks(text: string): EventBlock[] {
+  const out: EventBlock[] = []; let n = 0;
+  for (const raw of text.replace(/\r\n/g, '\n').split(/\n\s*\n/)) {
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+    const head = FIELD.exec(lines[0]);
+    if (head && head[1].toLowerCase() === 'квест') {
+      const q = { k: 'quest' as const, n: ++n, title: head[2].trim(), task: '', reward: '', when: '', tips: [] as string[] };
+      let last: 'task' | 'reward' | 'when' | 'tip' = 'task';
+      for (const l of lines.slice(1)) {
+        const m = FIELD.exec(l), key = m?.[1].toLowerCase();
+        if (key === 'завдання') { q.task = (q.task ? q.task + '\n' : '') + m![2]; last = 'task'; }
+        else if (key === 'нагорода') { q.reward = m![2]; last = 'reward'; }
+        else if (key === 'коли') { q.when = m![2]; last = 'when'; }
+        else if (key === 'порада') { q.tips.push(m![2]); last = 'tip'; }
+        else if (last === 'tip') q.tips[q.tips.length - 1] += ' ' + l;
+        else if (last === 'reward') q.reward += ' ' + l;
+        else if (last === 'when') q.when += ' ' + l;
+        else q.task = (q.task ? q.task + '\n' : '') + l;
+      }
+      out.push(q); continue;
+    }
+    if (head && head[1].toLowerCase() === 'порада') { out.push({ k: 'tip', text: [head[2], ...lines.slice(1)].join(' ').trim() }); continue; }
+    if (lines.length === 1 && lines[0].startsWith('## ')) { out.push({ k: 'h', text: lines[0].slice(3).trim() }); continue; }
+    let image: string | null = null;
+    const body = lines.filter(l => { const m = IMG.exec(l); if (m) { image = m[1]; return false; } return true; }).join('\n');
+    if (body || image) out.push({ k: 'p', text: body, image });
+  }
+  return out;
+}
+
 /* велика мапа лише з категоріями івенту — наявний ?show= (кілька id через кому, mapFilters.onlyIds) */
 export const mapLink = (categoryIds: string[]) => '/mapa?show=' + categoryIds.join(',');

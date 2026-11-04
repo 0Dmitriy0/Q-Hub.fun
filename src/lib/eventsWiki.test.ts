@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrange, filter, lastDays, levelsFromText, mapLink, suggestSlug } from './eventsWiki';
+import { arrange, eventBlocks, filter, lastDays, levelsFromText, mapLink, suggestSlug } from './eventsWiki';
 
 const T = '2026-11-04';
 type R = { id: number; kind: 'event' | 'battlepass'; starts_on: string; ends_on: string | null };
@@ -74,6 +74,25 @@ describe('івенти WIKI: адреса, рівні, мапа', () => {
     expect(levelsFromText('1; 500 $; vip').error).toBe('Рядок 1: лінія — free або paid');
     expect(levelsFromText('1;  ; free').error).toBe('Рядок 1: нагорода від 1 до 200 символів');
     expect(levelsFromText('1; A\n1; B').error).toBe('Рядок 2: рівень 1 (free) уже є');
+  });
+  it('опис івенту: абзац, підзаголовок, порада, квести з номерами за порядком', () => {
+    const b = eventBlocks([
+      'Шановні гравці!\nЗнімок: https://x.test/a.webp',
+      '## Квести',
+      'Квест: 👻 Нічні привиди\nЗавдання: Знайди 20 привидів і натисни E.\nНагорода: кошик\nПорада: спершу',
+      'Квест: 🎃 Гарбузове полювання\nЗавдання: Збери 200 гарбузів.\nбільші за звичайні\nНагорода: 300 Quant Coins\nКоли: будь-коли\nПорада: біля скупника\nна пляжі\nПорада: релог',
+      'Порада: виконуй по черзі',
+    ].join('\n\n'));
+    expect(b).toEqual([
+      { k: 'p', text: 'Шановні гравці!', image: 'https://x.test/a.webp' },
+      { k: 'h', text: 'Квести' },
+      { k: 'quest', n: 1, title: '👻 Нічні привиди', task: 'Знайди 20 привидів і натисни E.', reward: 'кошик', when: '', tips: ['спершу'] },
+      { k: 'quest', n: 2, title: '🎃 Гарбузове полювання', task: 'Збери 200 гарбузів.\nбільші за звичайні', reward: '300 Quant Coins', when: 'будь-коли', tips: ['біля скупника на пляжі', 'релог'] },
+      { k: 'tip', text: 'виконуй по черзі' },
+    ]);
+  });
+  it('звичайний текст без квестів — абзаци, як раніше', () => {
+    expect(eventBlocks('Перший\n\n\nДругий рядок\nтретій').map(x => x.k === 'p' && x.text)).toEqual(['Перший', 'Другий рядок\nтретій']);
   });
   it('посилання на велику мапу з кількома категоріями', () => {
     expect(mapLink(['harbuzy', 'pryvydy'])).toBe('/mapa?show=harbuzy,pryvydy');

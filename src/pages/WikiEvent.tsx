@@ -3,8 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { days, kyivDay, phase, type EventLevel, type SeasonEvent } from '../lib/seasons';
-import { mapLink } from '../lib/eventsWiki';
-import { steps } from '../lib/guide';
+import { eventBlocks, mapLink } from '../lib/eventsWiki';
 import Icon from '../components/Icon';
 import EventMap from '../components/EventMap';
 import EventForm from '../components/EventForm';
@@ -44,7 +43,8 @@ export default function WikiEvent() {
   useEffect(() => { setState('load'); setCount(null); load(); }, [slug]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (e) document.title = `${e.title} — івенти · Q-Hub`; }, [e]);
 
-  const body = useMemo(() => steps(e?.body || e?.description || ''), [e]);
+  const body = useMemo(() => eventBlocks(e?.body || e?.description || ''), [e]);
+  const intro = body.filter(b => b.k !== 'quest'), quests = body.filter(b => b.k === 'quest');
   const paid = levels.some(l => l.line === 'paid');
   const rows = useMemo(() => {
     const by = new Map<number, { free?: string; paid?: string }>();
@@ -95,8 +95,30 @@ export default function WikiEvent() {
         {e.link && <a className="card ev-stat" href={e.link} target="_blank" rel="noreferrer"><span className="ibub"><Icon name="ext" /></span><div><small>Оголошення</small><b>Відкрити джерело</b></div></a>}
       </div>
 
-      {body.length > 0 && <section className="card ev-text"><h2 className="ih"><Icon name="book" />Про івент</h2>{body.map((s, i) => (
-        <div key={i} className={i === 0 ? 'lead' : undefined}>{s.text && <p className={s.warn ? 'warn' : undefined}>{s.text}</p>}{s.image && <img src={s.image} alt="" loading="lazy" />}</div>))}</section>}
+      {intro.length > 0 && <section className="card ev-text"><h2 className="ih"><Icon name="book" />Про івент</h2>{intro.map((b, i) =>
+        b.k === 'h' ? <h3 key={i} className="ev-sub">{b.text}</h3>
+          : b.k === 'tip' ? <div key={i} className="ev-tip"><Icon name="spark" size={18} /><p><b>Порада.</b> {b.text}</p></div>
+            : b.k === 'p' ? <div key={i} className={i === 0 ? 'lead' : undefined}>{b.text && <p>{b.text}</p>}{b.image && <img src={b.image} alt="" loading="lazy" />}</div> : null)}
+      </section>}
+
+      {quests.length > 0 && (
+        <section className="ev-sec">
+          <h2 className="ih"><Icon name="check" />Квести{quests.length > 1 && <small className="muted ev-order">у порядку, в якому їх радимо виконувати</small>}</h2>
+          <ol className="ev-quests">{quests.map(q => q.k === 'quest' && (
+            <li key={q.n} className="card ev-quest">
+              <span className="ev-qn mono" aria-hidden="true">{q.n}</span>
+              <div className="ev-qbody">
+                <h3>{q.title}</h3>
+                {q.task && <p className="ev-qtask">{q.task}</p>}
+                {(q.reward || q.when) && <div className="ev-qmeta">
+                  {q.reward && <span><Icon name="trophy" size={15} /><b>Нагорода:</b> {q.reward}</span>}
+                  {q.when && <span><Icon name="clock" size={15} /><b>Коли:</b> {q.when}</span>}
+                </div>}
+                {q.tips.map((t, i) => <div key={i} className="ev-tip"><Icon name="spark" size={18} /><p><b>Порада.</b> {t}</p></div>)}
+              </div>
+            </li>))}</ol>
+        </section>
+      )}
 
       {e.kind === 'battlepass' && (
         <section className="card ev-sec">
