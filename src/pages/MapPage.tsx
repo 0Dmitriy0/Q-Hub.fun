@@ -125,6 +125,16 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }, [isAdmin, tools]);
   /* яку категорію відкрити у формі «Змінити категорію» (олівець на плитці категорії) */
   const [catPick, setCatPick] = useState<string | null>(null);
+  /* опис категорії — за кнопкою «i» над плиткою (під назвою лише дати); Esc чи клік повз бульбашку — закрити */
+  const [info, setInfo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!info) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as HTMLElement).closest('.mcat-info, .mcat-pop')) setInfo(null);
+    };
+    document.addEventListener('mousedown', close); document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', close); };
+  }, [info]);
   /* «Мапа для гри» — вікно по центру екрана; ?game=1 відкриває його одразу (посилання з головної) */
   const [params] = useSearchParams();
   const [game, setGame] = useState(() => params.get('game') === '1');
@@ -513,8 +523,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                       return (
                         <span key={c.id} className={'mchip' + (v ? ' on' : '')} style={{ '--c': c.color } as CSSProperties}>
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
-                            <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.description || c.starts_on || c.ends_on) && <small className="mcat-sub">{[period(c.starts_on, c.ends_on, today), c.description].filter(Boolean).join(' · ')}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
+                            <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.starts_on || c.ends_on) && <small className="mcat-sub">{period(c.starts_on, c.ends_on, today)}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
+                          {c.description && <button type="button" className={'mcat-info' + (isAdmin && !c.builtin ? ' adm' : '')} aria-expanded={info === c.id} aria-controls={'mcat-pop-' + c.id}
+                            aria-label={'Що це: ' + c.name} title="Що це" onClick={() => setInfo(i => (i === c.id ? null : c.id))}>i</button>}
+                          {info === c.id && c.description && <div id={'mcat-pop-' + c.id} className="mcat-pop" role="note"><b>{c.name}</b><p>{c.description}</p></div>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
                         </span>
