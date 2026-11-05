@@ -13,7 +13,7 @@ interface Mine {
 const KIND = { new: 'Нова сторінка', edit: 'Правка', hide: 'Прибрати сторінку' };
 const when = (s: string) => new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const link = (p: Mine) => (p.section === 'job' ? `/wiki/roboty${p.target_id ? '?job=' + p.target_id : ''}`
-  : p.section === 'map_point' && typeof p.data?.x === 'number' && typeof p.data?.y === 'number' ? '/mapa' + makeHash(p.data.x, p.data.y, 6) : '/wiki/transport');
+  : p.section === 'map_point' ? (typeof p.data?.x === 'number' && typeof p.data?.y === 'number' ? '/mapa' + makeHash(p.data.x, p.data.y, 6) : '/mapa') : '/wiki/transport');
 
 /* скільки рішень автор ще не бачив — для значка біля «Мої правки» */
 export async function unseenCount(): Promise<number> {
@@ -64,7 +64,7 @@ export default function MyEdits({ onSeen }: { onSeen?: () => void }) {
           return (
             <li key={p.id} className="adm-row">
               <div className="adm-row-main">
-                <b>{SECTION_NAME[p.section]} · {p.section === 'map_point' && p.kind === 'new' ? 'Нова мітка' : KIND[p.kind]}{p.data?.name ? ': ' + String(p.data.name) : ''}{fresh && <span className="wtag new">нове рішення</span>}</b>
+                <b>{SECTION_NAME[p.section]} · {p.section === 'map_point' ? (p.kind === 'new' ? 'Нова мітка' : 'Точка застаріла') : KIND[p.kind]}{p.data?.name ? ': ' + String(p.data.name) : ''}{fresh && <span className="wtag new">нове рішення</span>}</b>
                 <span className="muted">Надіслано {when(p.created_at)}{p.decided_at ? ' · рішення ' + when(p.decided_at) : ''}</span>
                 {p.status === 'rejected' && p.reason && <small className="err">Причина: {p.reason}</small>}
                 {p.status === 'accepted_edited' && <small className="muted">Модератор трохи підправив твою правку перед публікацією.</small>}

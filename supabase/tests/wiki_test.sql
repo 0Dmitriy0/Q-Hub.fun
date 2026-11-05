@@ -262,6 +262,70 @@ do $$ declare r jsonb; begin
 end $$;
 reset role;
 
+-- ---------- «Актуально» і «Точка застаріла» (0060) ----------
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', false) \gset
+do $$ declare r jsonb; begin
+  r := public.wiki_check('job', 'taxi');
+  r := public.wiki_check('job', 'taxi');   -- повтор тим самим акаунтом нічого не додає
+  assert (r ->> 'n')::int = 1, 'повторне «Актуально» додало голос';
+  begin perform public.wiki_check('job', 'немає-такої'); raise exception 'підтверджено неіснуючу сторінку';
+  exception when sqlstate 'QH014' then null; end;
+  -- «Точка застаріла» без причини — ні
+  begin insert into public.wiki_proposals (section, target_id, kind, source)
+    select 'map_point', id::text, 'hide', 'game' from public.map_points where name = 'Грибне місце';
+    raise exception 'точку застаріла без причини прийнято';
+  exception when sqlstate 'QH003' then null; end;
+end $$;
+insert into public.wiki_proposals (id, section, target_id, kind, source, source_note)
+  select 'e1000000-0000-0000-0000-000000000007', 'map_point', id::text, 'hide', 'game', 'гриби там більше не ростуть'
+  from public.map_points where name = 'Грибне місце';
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e2', false) \gset
+do $$ declare r jsonb; begin
+  r := public.wiki_check('job', 'taxi');
+  assert (r ->> 'n')::int = 2, 'голос другого гравця не врахувався';
+end $$;
+reset role;
+
+set role anon;
+select set_config('request.jwt.claim.sub', '', false) \gset
+do $$ begin
+  assert (select n from public.wiki_check_counts where section = 'job' and target_id = 'taxi') = 2, 'гість не бачить лічильник «Актуально»';
+  begin perform public.wiki_check('job', 'taxi'); raise exception 'гість підтвердив';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e4', false) \gset
+do $$ declare pid text; begin
+  perform public.wiki_decide('e1000000-0000-0000-0000-000000000007', 'accept');
+  select id::text into pid from public.map_points where name = 'Грибне місце';
+  assert (select hidden from public.map_points where id::text = pid), 'застарілу мітку не сховано';
+  assert (select count(*) from public.wiki_versions where section = 'map_point' and target_id = pid) = 2, 'історія мітки: немає версії «прибрано»';
+end $$;
+reset role;
+
+set role anon;
+select set_config('request.jwt.claim.sub', '', false) \gset
+do $$ begin
+  assert (select count(*) from public.map_points where name = 'Грибне місце') = 0, 'схована мітка видна гостю';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e4', false) \gset
+do $$ declare pid text; begin
+  select id::text into pid from public.map_points where name = 'Грибне місце';
+  assert pid is not null, 'модератор не бачить сховану мітку';
+  perform public.wiki_unhide('map_point', pid, 'гриби повернулись');
+  assert not (select hidden from public.map_points where id::text = pid), 'мітку не повернуто';
+end $$;
+reset role;
+
 -- ---------- admin напряму пише ----------
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e5', false) \gset

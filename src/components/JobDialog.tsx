@@ -8,6 +8,7 @@ import Profit from './Profit';
 import PageMeta from './wiki/PageMeta';
 import type { JobRow } from '../lib/jobsData';
 import HistoryDialog from './wiki/HistoryDialog';
+import WikiChecks from './wiki/WikiChecks';
 
 /* нова робота від гравців може бути ще без своєї іконки — тоді загальна */
 export const jobIcon = (e: React.SyntheticEvent<HTMLImageElement>) => { const i = e.currentTarget; if (!i.src.endsWith('/icons/map/jobs.svg')) i.src = '/icons/map/jobs.svg'; };
@@ -43,6 +44,7 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <section className="jd-sec wdlg-box" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
         ))}</div>
         <PageMeta createdBy={job.created_by} updatedBy={job.updated_by} createdAt={job.created_at} updatedAt={job.updated_at} version={job.version} hidden={job.hidden} onHistory={job.version !== undefined ? () => setHist(true) : undefined} />
+        {!job.hidden && <WikiChecks section="job" target={job.id} version={job.version} changedAt={job.updated_at ?? job.created_at} onPropose={onPropose} />}
         <HistoryDialog section="job" target={job.id} title={job.name} hidden={job.hidden} open={hist} onClose={() => setHist(false)} onChanged={onChanged} />
         <div className="wdlg-f">
           {job.forum ? <p className="muted jd-src">Джерело: <a href={FORUM_FAQ} target="_blank" rel="noopener noreferrer">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></p> : <span />}

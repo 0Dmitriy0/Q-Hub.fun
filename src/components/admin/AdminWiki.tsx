@@ -18,7 +18,7 @@ interface Proposal {
 }
 type Filter = 'all' | Section;
 const KIND: Record<Proposal['kind'], string> = { new: 'нова сторінка', edit: 'правка', hide: 'прибрати сторінку' };
-const kindOf = (p: { section: Section; kind: Proposal['kind'] }) => (p.section === 'map_point' && p.kind === 'new' ? 'нова мітка' : KIND[p.kind]);
+const kindOf = (p: { section: Section; kind: Proposal['kind'] }) => (p.section === 'map_point' ? (p.kind === 'new' ? 'нова мітка' : 'точка застаріла') : KIND[p.kind]);
 const age = (s: string) => {
   const h = Math.floor((Date.now() - new Date(s).getTime()) / 3_600_000);
   return h < 1 ? 'щойно' : h < 24 ? `${h} год тому` : `${Math.floor(h / 24)} дн тому`;
@@ -51,7 +51,9 @@ export default function AdminWiki() {
   async function openOne(p: Proposal) {
     setOpen(p); setCur(null); setProof(''); setEdit(null); setReason(''); setMsg(''); setNeedForce(p.status === 'conflict'); setBanOpen(false); setBanReason('');
     if (p.target_id) {
-      const t = p.section === 'job' ? supabase!.from('jobs').select('*').eq('id', p.target_id) : supabase!.from('vehicles').select('*').eq('id', Number(p.target_id));
+      const t = p.section === 'job' ? supabase!.from('jobs').select('*').eq('id', p.target_id)
+        : p.section === 'map_point' ? supabase!.from('map_points').select('*').eq('id', Number(p.target_id))
+        : supabase!.from('vehicles').select('*').eq('id', Number(p.target_id));
       const { data } = await t.maybeSingle();
       if (data) setCur({ data: data as Data, version: Number((data as Data).version ?? 1) });
     }
@@ -128,7 +130,9 @@ export default function AdminWiki() {
       {open && (
         <AdminSection title={`${SECTION_NAME[open.section]} · ${kindOf(open)}${cur?.data.name ? ': ' + String(cur.data.name) : ''}`}
           hint={`Автор: ${open.who?.nick || open.who?.name || 'гравець'} · джерело: ${SOURCES.find(s => s[0] === open.source)?.[1]}${open.source_note ? ' — ' + open.source_note : ''}`}>
-          {open.kind === 'hide' ? <p className="warn">Сторінку буде сховано з публічних списків. Її можна повернути, історія лишається.</p>
+          {open.kind === 'hide' ? <p className="warn">{open.section === 'map_point'
+              ? <>Гравець каже, що точка застаріла: «{open.source_note}». Мітку «{String(cur?.data.name ?? '')}» буде сховано з мапи — її можна повернути, історія лишається.</>
+              : 'Сторінку буде сховано з публічних списків. Її можна повернути, історія лишається.'}</p>
             : open.kind === 'new' ? (
               <div className="wdiff"><dl>{FIELDS[open.section].filter(f => f.key in open.data).map(f => (
                 <div key={f.key} className="wdiff-row"><dt>{f.label}</dt><dd><span className="wdiff-add">{show(field(open.section, f.key), open.data[f.key])}</span></dd></div>))}
@@ -139,7 +143,7 @@ export default function AdminWiki() {
             ) : <DiffView section={open.section} old={data} changes={changes} stale={needForce || (cur !== null && open.base_version !== cur.version)} />}
           {open.section === 'map_point' && (() => {
             /* точка — з правок модератора, якщо він її підправив */
-            const d = edit ?? open.data;
+            const d = open.kind === 'hide' ? (cur?.data ?? {}) : edit ?? open.data;
             return typeof d.x === 'number' && typeof d.y === 'number' ? <PointPreview x={d.x} y={d.y} category={String(d.category_id ?? '')} /> : null;
           })()}
           {proof && <a href={proof} target="_blank" rel="noopener noreferrer"><img className="wproof" src={proof} alt="Скрін-доказ від автора" /></a>}
