@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abbrsOf, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
+import { abbrsOf, isRuleRef, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 
 const topics: RuleTopic[] = [
@@ -72,6 +72,10 @@ describe('закони штату в пошуку (specs/010)', () => {
     expect(top('КК вбивство').every(x => /Кримінальний кодекс/.test(x.topic))).toBe(true);
     expect(top('ПКС').every(x => x.topic === 'Загальні правила Кримінальних структур')).toBe(true);
     expect(top('тк', 1)[0].topic).toBe('Загальні правила');   // TK (Team Kill) — як і раніше, не лише Трудовий кодекс
+  });
+  it('«1.8 кк» — посилання на статтю, а не сума «1,8 мільйона» для обліку', () => {
+    for (const q of ['1.8 кк', '1.8 КК', 'ЗП 6.9', '1.1.1 пкс']) expect(isRuleRef(t, q), q).toBe(true);
+    for (const q of ['1,5кк машина', '500к зарплата', '1.8 машина', 'кк вбивство']) expect(isRuleRef(t, q), q).toBe(false);
   });
   it('уривок для помічника: тип джерела й «ст.» у законах', () => {
     const hits = searchRules(t, 'КК 6.5', 1);
