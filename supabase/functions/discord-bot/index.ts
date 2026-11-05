@@ -5,7 +5,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
 import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev, type Group } from './prices.ts';
-import { pricesMessage, TEST_MESSAGE } from './format.ts';
+import { newsMessage, newsTooLong, pricesMessage, TEST_MESSAGE } from './format.ts';
+import { toDraft, type DraftIn, type Entry } from './changelog.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -232,8 +233,39 @@ const board: Action = async ({ db, dc, body }) => {
   return json({ posted, failed });
 };
 
-const notYet: Action = async () => fail(501, 'Ця дія ще не зроблена.');
-const ACTIONS: Record<string, Action> = { tick, board, drafts: notYet, send: notYet, test, status };
+/* чернетки новин з CI після деплою (US2 AC1–2): верхній запис журналу програми й сайту → news_drafts.
+   Наявна чернетка (той самий source_ref) не чіпається — повторний деплой нічого не дублює й не затирає правки */
+const drafts: Action = async ({ db, body }) => {
+  const list = [toDraft(body.changelog as Entry, 'changelog'), toDraft(body.site as Entry, 'site')].filter((d): d is DraftIn => !!d);
+  if (!list.length) return json({ created: [], skipped: [] });
+  const { data, error } = await db.from('news_drafts').upsert(list, { onConflict: 'source_ref', ignoreDuplicates: true }).select('source_ref');
+  if (error) return fail(500, 'Не вдалося записати чернетки: ' + error.message);
+  const created = (data ?? []).map((r: { source_ref: string }) => r.source_ref);
+  return json({ created, skipped: list.map(d => d.source_ref).filter(r => !created.includes(r)) });
+};
+
+/* надіслати чернетку в канал новин (US2 AC4, AC8): ключ news:<id> — вдруге не дублюється; збій — чернетка лишається,
+   кнопка дає повторити, а вже надіслане Discord-повідомлення не повториться (publish за ключем) */
+const send: Action = async ({ db, dc, body }) => {
+  const id = Number(body.draft_id);
+  if (!Number.isInteger(id) || id <= 0) return fail(400, 'Вкажи draft_id.');
+  const { data: d } = await db.from('news_drafts').select('*').eq('id', id).maybeSingle();
+  if (!d) return fail(404, 'Чернетку не знайдено.');
+  if (d.status === 'sent') return json({ already: true });
+  if (d.status !== 'draft') return fail(400, 'Ця чернетка не для публікації (об\'єднана чи «Не публікувати»).');
+  const { data: bot } = await db.from('discord_bot').select('news_on,news_channel_id').eq('id', true).single();
+  if (!bot?.news_on) return fail(400, 'Публікацію новин вимкнено: Discord-бот → «Публікувати новини».');
+  if (!bot.news_channel_id) return fail(400, 'Не вказано канал новин: Discord-бот → «Канал новин».');
+  const over = newsTooLong(d);
+  if (over) return fail(400, `Новина задовга на ${over} символів — скороти пункти.`);
+  const ch = await dc.channel(bot.news_channel_id);
+  const [mid] = await publish(db, dc, bot.news_channel_id, `news:${id}`, [newsMessage(d)], ch.type === ANNOUNCEMENT);
+  await db.from('news_drafts').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id);
+  await markOk(db);
+  return json({ message_id: mid, channel: ch.name });
+};
+
+const ACTIONS: Record<string, Action> = { tick, board, drafts, send, test, status };
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });

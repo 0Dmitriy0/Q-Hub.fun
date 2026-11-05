@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kyivTime, money, nextChange, pricesMessage, profit, tier } from './format';
+import { kyivTime, money, newsDescription, newsMessage, newsTooLong, nextChange, pricesMessage, profit, tier } from './format';
 import type { BoardRow, Group } from './prices';
 
 const SITE = 'https://q-hub.fun';
@@ -131,5 +131,27 @@ describe('повідомлення цін — увесь прайс скупни
   it('розмітка в назвах не ламає повідомлення', () => {
     const [m] = pricesMessage([g('hide', [{ item_id: 1, name: 'Риба *золота*_x', price: 1, prev: 2 }])], { now: winter, site: SITE });
     expect(m.embeds![0].fields![0].value).toContain('Риба \\*золота\\*\\_x');
+  });
+});
+
+describe('новина з чернетки', () => {
+  const d = { title: 'Програма Q-Hub 0.8.0 — що нового', added: ['Нове'], changed: ['Інше', ' '], removed: [] };
+  it('групи з «• », порожні не показуються, footer', () => {
+    const m = newsMessage(d);
+    expect(m.content).toBe('📣 Програма Q-Hub 0.8.0 — що нового');
+    const e = m.embeds![0];
+    expect(e.description).toBe('**✨ Додано**\n• Нове\n\n**🔧 Змінено**\n• Інше');
+    expect(e.footer!.text).toBe('Q-Hub · q-hub.fun');
+    expect(e.url).toBeUndefined(); expect(e.image).toBeUndefined();
+  });
+  it('посилання й картинка — лише якщо задані', () => {
+    const e = newsMessage({ ...d, link: 'https://q-hub.fun/mapa', image_url: 'https://x/y.webp' }).embeds![0];
+    expect(e.url).toBe('https://q-hub.fun/mapa'); expect(e.image).toEqual({ url: 'https://x/y.webp' });
+  });
+  it('задовге — на скільки перевищено 4096', () => {
+    expect(newsTooLong(d)).toBe(0);
+    const big = { ...d, added: Array.from({ length: 20 }, () => 'я'.repeat(300)) };
+    expect(newsTooLong(big)).toBe(newsDescription(big).length - 4096);
+    expect(newsTooLong(big)).toBeGreaterThan(0);
   });
 });

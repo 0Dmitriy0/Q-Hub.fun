@@ -238,7 +238,7 @@ export default function AdminDiscordBot() {
                 onChange={v => set('news_channel_id', v)} info={st?.channels.news ?? undefined}
                 onTest={() => test('news', bot!.news_channel_id)} testMsg={testMsg.news ?? ''} busy={busy !== ''} />
             </ul>
-            <label className="mcheck"><input type="checkbox" checked={form.news_on} onChange={e => set('news_on', e.target.checked)} /> Публікувати новини (з чернеток — наступний реліз)</label>
+            <label className="mcheck"><input type="checkbox" checked={form.news_on} onChange={e => set('news_on', e.target.checked)} /> Публікувати новини (надсилаєш сам кнопкою у вкладці «Новини»)</label>
             <div className="row">
               <button className="btn acc" disabled={busy !== '' || !dirty}>Зберегти налаштування бота</button>
               {msg && <p className={msg === 'Збережено.' ? 'good' : 'err'} role="status">{msg}</p>}
