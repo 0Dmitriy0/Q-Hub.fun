@@ -4,6 +4,7 @@ import { toAccelerator } from './hotkey';
 import type { Prefs } from './Bar';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 import { FAMILY } from '../lib/brand';
+import { HOTKEY_GROUPS } from '../lib/hotkeys';
 
 /* Налаштування плашки — як у помічників для RP-серверів: ліворуч профіль, розділи й версія програми,
    праворуч картки з рядками «назва — перемикач». Зберігає головний процес (barPrefs у desktop/src/main.cjs). */
@@ -133,11 +134,11 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
           </div>
           <p className="muted">Зір працює, лише коли запущена гра.</p>
         </>}
-        {sec === 'keys' && <div className="scard">
-          {([['Показати чи сховати плашку', prefs.hotkey], ['Пошук у правилах і на мапі', 'Enter'], ['Спитати ШІ', 'Shift+Enter'], ['Пошук ↔ Ціни', 'Tab'],
-            ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'], ['Мапа Q-Hub поверх гри', prefs.mapKey || 'Alt+M'], ['«Де я?» — з відкритою великою картою гри', prefs.mapKey || 'Alt+M'],
-            ...(user ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
-        </div>}
+        {sec === 'keys' && HOTKEY_GROUPS.map(([g, sub, list]) => (
+          <section key={g} className="sfaq">
+            <h4>{g} · {sub}</h4>
+            <div className="scard">{list.filter(h => user || !h.login).map(h => <Row key={h.t} t={h.t} d={h.d}><Keys k={(h.pref && prefs[h.pref]) || h.key} /></Row>)}</div>
+          </section>))}
         {sec === 'changes' && <>
           <p className="muted">Що змінилось у програмі — найновіше зверху. Зараз у тебе {version ? `v${version}` : 'ця версія'}.</p>
           {CHANGES.map((e, i) => (

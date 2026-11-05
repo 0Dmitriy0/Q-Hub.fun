@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
+import { abbrsOf, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 
 const topics: RuleTopic[] = [
@@ -58,6 +58,20 @@ describe('закони штату в пошуку (specs/010)', () => {
     expect(top('КК 6.5', 1)[0].topic).toMatch(/Кримінальний/);
     expect(top('ак штраф').some(x => /Адміністративний/.test(x.topic))).toBe(true);
     expect(top('пдр обгін').some(x => /Дорожній/.test(x.topic))).toBe(true);
+  });
+  it('скорочення назви за першими літерами: «ЗП 1.8», «1.1.1 ПКС», «КК вбивство», «ПКС»', () => {
+    expect(abbrsOf('Загальні правила')).toEqual(['зп']);
+    expect(abbrsOf('Загальні правила Кримінальних структур')).toEqual(expect.arrayContaining(['зпкс', 'пкс']));
+    expect(abbrsOf('Кримінальний кодекс штату Quant')).toEqual(['кк']);
+    expect(abbrsOf('Закон "Про федеральне бюро розслідувань" [FIB]')).toEqual(expect.arrayContaining(['фбр', 'fib']));
+    expect(abbrsOf('Закон "Про Прокуратуру штату Quant"')).not.toContain('зп');   // інакше збігається із Загальними правилами
+    expect(top('ЗП 1.8', 1)[0]).toMatchObject({ topic: 'Загальні правила', n: '1.8' });
+    expect(top('1.8 КК', 1)[0]).toMatchObject({ n: '1.8', kind: 'law' });
+    expect(top('1.8 КК', 1)[0].topic).toMatch(/Кримінальний/);
+    expect(top('1.1.1 ПКС', 1)[0]).toMatchObject({ topic: 'Загальні правила Кримінальних структур', n: '1.1.1' });
+    expect(top('КК вбивство').every(x => /Кримінальний кодекс/.test(x.topic))).toBe(true);
+    expect(top('ПКС').every(x => x.topic === 'Загальні правила Кримінальних структур')).toBe(true);
+    expect(top('тк', 1)[0].topic).toBe('Загальні правила');   // TK (Team Kill) — як і раніше, не лише Трудовий кодекс
   });
   it('уривок для помічника: тип джерела й «ст.» у законах', () => {
     const hits = searchRules(t, 'КК 6.5', 1);

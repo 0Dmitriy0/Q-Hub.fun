@@ -39,14 +39,38 @@ const PENALTY = /^(покаран|покарат|караєт|карают)/;
 /* «скільки», «коли», «о котрій» — відповідь з числом: пункти з цифрами трохи вище */
 const NUMQ = /(^|\s)(скільки|коли|котрій|кількість|термін)(\s|$)/u, QTY = /кількіст|мінімальн|максимальн|не більше|не менше|щонайменше/;
 
+/* скорочення назви документа за першими літерами: «Загальні правила» → ЗП, «Кримінальний кодекс штату Quant» → КК,
+   «Загальні правила Кримінальних структур» → ЗПКС і ПКС, «Закон "Про федеральне бюро розслідувань" [FIB]» → ФБР і FIB.
+   Службові слова й «штату Quant» не рахуються; перше «Загальні», «Правила» можна пропустити, «Закон» — пропускається завжди;
+   слова великими (FIB, ВЗГ) — самі скорочення. Нові документи з rules-sync отримують скорочення самі, вписувати нічого не треба */
+const ABBR_SKIP = new Set('штату штат quant про та і й для в у на за з із міста округу'.split(' '));
+const ABBR_LEAD = new Set(['загальні', 'загальна', 'правила', 'закон']);
+export function abbrsOf(title: string): string[] {
+  const ws = words(title.replace(/\[[^\]]*\]/g, ' ')).filter(w => !ABBR_SKIP.has(w));
+  const init = (a: string[]) => a.map(w => w[0]).join('');
+  /* «Закон про …» з «З» на початку не скорочують — інакше «ЗП» Загальних правил збігається з «Законом про Прокуратуру» */
+  const out = ws[0] === 'закон' ? [] : [init(ws)];
+  for (let i = 0; i < ws.length - 1 && ABBR_LEAD.has(ws[i]); i++) out.push(init(ws.slice(i + 1)));
+  for (const w of title.match(/[\p{L}]+/gu) ?? []) if (w.length >= 2 && w === w.toUpperCase() && w !== w.toLowerCase()) out.push(norm(w));
+  return [...new Set(out.filter(a => a.length >= 2))];
+}
+/* скорочення → документи. Скорочення розділу («ПКО» — Правила кримінальних організацій) — лише коли жоден документ так не скорочується */
+function abbrIndex(topics: RuleTopic[]) {
+  const own = new Map<string, Set<RuleTopic>>(), sec = new Map<string, Set<RuleTopic>>();
+  const add = (m: Map<string, Set<RuleTopic>>, a: string, t: RuleTopic) => { if (!m.has(a)) m.set(a, new Set()); m.get(a)!.add(t); };
+  for (const t of topics) { for (const a of abbrsOf(t.title)) add(own, a, t); for (const a of abbrsOf(t.section)) add(sec, a, t); }
+  for (const [a, ts] of sec) if (!own.has(a)) own.set(a, ts);
+  return own;
+}
+
 interface Doc { topic: RuleTopic; item: RuleItem; low: string; words: string[]; lead: string[]; head: string[] }
-let cache: { src: RuleTopic[]; docs: Doc[]; vocab: string[] } | null = null;
+let cache: { src: RuleTopic[]; docs: Doc[]; vocab: string[]; abbr: Map<string, Set<RuleTopic>> } | null = null;
 function index(topics: RuleTopic[]) {
   if (cache?.src === topics) return cache;
   const docs = topics.flatMap(topic => topic.items.map(item => ({ topic, item, low: norm(item.s), words: [...new Set(words(item.s))], lead: words(item.s).slice(0, 4), head: words(`${topic.title} ${item.h}`) })));
   /* усі різні слова бази: збіг слова запиту рахується по них один раз, а не в кожному пункті (SC-006) */
   const vocab = [...new Set(docs.flatMap(d => [...d.words, ...d.head]))];
-  cache = { src: topics, docs, vocab };
+  cache = { src: topics, docs, vocab, abbr: abbrIndex(topics) };
   return cache;
 }
 
@@ -57,9 +81,14 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
   const seen = new Set<string>();
   const all = words(q.replace(/\d+(?:\.\d+)+/g, ' '));
   const penalty = all.some(w => PENALTY.test(w)), numq = NUMQ.test(norm(q));
-  const terms = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w)).map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);
+  const qw = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w));
+  const terms = qw.map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);
   if (!terms.length && !nums.size) return [];
-  const { docs, vocab } = index(topics);
+  const { docs, vocab, abbr } = index(topics);
+  /* слово запиту — скорочення документа («ЗП», «ПКС»): пункти цього документа рахуються так, ніби слово є в назві */
+  const abbrOf = qw.map(w => abbr.get(w));
+  /* слово в назві документа; для скорочення — лише сам документ («КК вбивство» — не «Правила … Кримінальних Структур») */
+  const inHeadOf = (d: Doc, i: number) => (abbrOf[i] ? abbrOf[i].has(d.topic) : has(d.head, i));
   /* «грабувати» — і «пограбування», «почати» — і «розпочати»: основа після префікса (від 4 літер — інакше шуму забагато) */
   const fits = (w: string, t: string[]) => t.some(x => w.startsWith(x) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x))));
   const match = terms.map(t => new Set(vocab.filter(w => fits(w, t))));
@@ -74,14 +103,14 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
   for (const d of docs) {
     let score = 0, got = 0;
     terms.forEach((_, i) => {
-      const inText = has(d.words, i), inHead = has(d.head, i);
+      const inText = has(d.words, i), inHead = inHeadOf(d, i);
       /* слово на початку пункту («Заборонено DM…») чи з розшифровкою («DM (DeathMatch)») — пункт саме про нього */
       const about = (has(d.lead, i) ? 0.5 : 0) + (inText && defs[i].test(d.low) ? 0.5 : 0);
       if (inText || inHead) { got++; score += idf[i] * ((inText ? 1 : 0.6) + (inHead ? 0.4 : 0) + about); }
     });
     const num = nums.has(d.item.n);
     /* «КК 4.1»: стаття з таким номером; кодекс названо в назві документа — вище, ніж лише згадано в тексті */
-    if (num && got === terms.length) score += terms.every((_, i) => has(d.head, i)) ? 10 : 4;
+    if (num && got === terms.length) score += terms.every((_, i) => inHeadOf(d, i)) ? 10 : 4;
     else if (!got || !terms.some((_, i) => has(d.words, i) && idf[i] > 0)) continue;
     else score *= got / terms.length * (d.item.n || d.topic.kind === 'info' ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів (у довідці номерів немає взагалі)
     if (penalty && d.topic.kind === 'law') score *= 1.5;
@@ -89,6 +118,10 @@ export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[
     if (without.some(re => re.test(d.low))) score *= 1.5;
     hits.push({ topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score });
   }
+  /* лише скорочення («ПКС») і нічого не знайшлося — початок документа по порядку */
+  if (!hits.length && !nums.size && abbrOf.every(Boolean))
+    return docs.filter(d => abbrOf.every(s => s!.has(d.topic))).slice(0, limit)
+      .map(d => ({ topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score: 0 }));
   return hits.sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);
 }
 

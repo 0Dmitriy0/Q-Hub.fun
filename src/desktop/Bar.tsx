@@ -229,7 +229,9 @@ export default function Bar() {
           <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
           <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки й питання до ШІ" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
           <button className={'bico' + (mapOn ? ' on' : '')} title={`Мапа Q-Hub · ${prefs?.mapKey || 'Alt+M'}`} aria-label="Мапа Q-Hub" aria-pressed={mapOn} onClick={toggleMap}><Icon name="map" size={17} /></button>
-          <button className={'bico' + (view === 'settings' ? ' on' : '')} title="Налаштування плашки" onClick={() => { setSetStart('main'); setView(x => (x === 'settings' ? 'main' : 'settings')); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
+          {/* «?» — комбінації клавіш (Налаштування → Клавіші, список — src/lib/hotkeys.ts); повторний клік закриває */}
+          <button className={'bico' + (view === 'settings' && setStart === 'keys' ? ' on' : '')} title="Комбінації клавіш" aria-label="Комбінації клавіш" onClick={() => { const open = view === 'settings' && setStart === 'keys'; setSetStart('keys'); setView(open ? 'main' : 'settings'); }}><Icon name="help" size={17} /></button>
+          <button className={'bico' + (view === 'settings' && setStart !== 'keys' ? ' on' : '')} title="Налаштування плашки" onClick={() => { const open = view === 'settings' && setStart !== 'keys'; setSetStart('main'); setView(open ? 'main' : 'settings'); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
         {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
