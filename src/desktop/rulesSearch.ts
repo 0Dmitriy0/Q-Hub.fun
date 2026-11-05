@@ -74,6 +74,14 @@ function index(topics: RuleTopic[]) {
   return cache;
 }
 
+/* «1.8 кк», «ЗП 6.9» — посилання на пункт: номер з крапкою й скорочення документа. Без цього «1.8 кк» схоже на суму
+   «1,8 мільйона» і плашка відповідала б про облік (src/desktop/recordLike.ts) замість статті кодексу */
+export function isRuleRef(topics: RuleTopic[], q: string): boolean {
+  if (!/\d+(?:\.\d+)+/.test(q)) return false;
+  const { abbr } = index(topics);
+  return words(q.replace(/\d+(?:\.\d+)+/g, ' ')).some(w => abbr.has(w));
+}
+
 export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[] {
   /* номер пункту чи статті в запиті («КК 4.1») — окремо: такий пункт угорі, а цифри не шукаються як слова */
   const nums = new Set(q.match(/\d+(?:\.\d+)+/g) ?? []);

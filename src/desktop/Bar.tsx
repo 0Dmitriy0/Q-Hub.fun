@@ -10,7 +10,7 @@ import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import History, { type HistPick } from './History';
 import { matchCats } from './catMatch';
-import { KIND, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import { KIND, isRuleRef, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isRecordLike, RECORD_REPLY } from './recordLike';
@@ -145,7 +145,7 @@ export default function Bar() {
   function recordNote(text: string) { setAsks(a => [{ q: text, reply: RECORD_REPLY, local: true }, ...a].slice(0, 30)); setSel(0); setNote(null); }
   async function ask() {
     const text = q.trim(); if (!text || busy) return;
-    if (isRecordLike(text)) { recordNote(text); return; }
+    if (isRecordLike(text) && !isRuleRef(TOPICS, text)) { recordNote(text); return; }
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
     const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
@@ -157,7 +157,7 @@ export default function Bar() {
   /* Enter без ШІ: пошук у правилах, законах і місцях мапи */
   function plain() {
     const text = q.trim(); if (!text || busy) return;
-    if (isRecordLike(text)) { recordNote(text); return; }
+    if (isRecordLike(text) && !isRuleRef(TOPICS, text)) { recordNote(text); return; }
     setAsks(a => [askRules(text), ...a].slice(0, 30));
     setSel(0); setNote(null); api.histAdd({ kind: 'search', q: text });
   }
