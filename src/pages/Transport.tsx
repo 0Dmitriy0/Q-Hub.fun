@@ -184,6 +184,7 @@ export default function Transport() {
       )}
       <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin}
         onPropose={wiki ? () => { const v = list.find(x => x.id === openId); if (v) { setOpenId(null); propose(v, 'edit'); } } : undefined}
+        onChanged={load}
         onHide={wiki ? () => { const v = list.find(x => x.id === openId); if (v) { setOpenId(null); propose(v, 'hide'); } } : undefined}
         onSaved={nv => setList(l => l.map(x => (x.id === nv.id ? nv : x)))} />
       {loaded && list.length > 0 && !shown.length && <div className="card empty wiki-none"><b>Нічого не знайдено</b><span className="muted">Спробуй іншу назву або тип.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); setFuel('all'); setCur('all'); }}>Скинути фільтри</button></div>}
