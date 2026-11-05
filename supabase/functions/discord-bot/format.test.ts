@@ -55,9 +55,9 @@ describe('повідомлення цін — увесь прайс скупни
 
   it('заголовок, зведення змін і наступна зміна вгорі, розділи за вигідністю, найвигідніше зверху', () => {
     const [m] = pricesMessage([g('mush', rows, '2026-11-04T15:10:00Z', board)], { now: winter, site: SITE });
-    expect(m.content).toBe('🍄 Гриби — нові ціни · 14:32');
+    expect(m.content).toBeUndefined();
     const e = m.embeds![0];
-    expect(e.title).toBe('🍄 Гриби — ціни скупника');
+    expect(e.title).toBe('🍄 Гриби — нові ціни');
     expect(e.url).toBe(SITE + '/tsiny#mush');
     expect(e.description).toBe('**Змінилось 3 з 4:** ▲ 1 · ▼ 1 · ● 1 нове\n⏰ Наступна зміна: **сьогодні о 17:10**');
     expect(e.fields).toEqual([
@@ -82,7 +82,7 @@ describe('повідомлення цін — увесь прайс скупни
 
   it('прайс без змін — «Поточні ціни», без ▲/▼', () => {
     const [m] = pricesMessage([g('mush', [], '2026-11-04T15:10:00Z', board)], { now: winter, site: SITE });
-    expect(m.content).toBe('🍄 Гриби — поточні ціни · 14:32');
+    expect(m.embeds![0].title).toBe('🍄 Гриби — поточні ціни');
     expect(m.embeds![0].description).toBe('**Поточні ціни** · 4 предмети\n⏰ Наступна зміна: **сьогодні о 17:10**');
     expect(m.embeds![0].fields!.map(f => f.value).join('\n')).not.toMatch(/[▲▼●]/);
   });
@@ -97,14 +97,13 @@ describe('повідомлення цін — увесь прайс скупни
     expect(m.embeds![0].fields).toEqual([{ name: '⚪ Без меж · 1', value: 'А — **1 $** ▼ −1' }]);
   });
 
-  it('кілька скупників в одному каналі — загальний текст, більше 10 — частини (1/2), (2/2)', () => {
+  it('кілька скупників в одному каналі — більше 10 карток ділиться на повідомлення', () => {
     const many = Array.from({ length: 12 }, (_, i) => g('b' + i, [{ item_id: i, name: 'П' + i, price: 10, prev: 5 }]));
     const ms = pricesMessage(many, { now: winter, site: SITE });
     expect(ms).toHaveLength(2);
     expect(ms[0].embeds).toHaveLength(10);
     expect(ms[1].embeds).toHaveLength(2);
-    expect(ms[0].content).toBe('🛒 Нові ціни скупників · 14:32 (1/2)');
-    expect(ms[1].content).toBe('🛒 Нові ціни скупників · 14:32 (2/2)');
+    expect(ms.every(x => x.content === undefined)).toBe(true);
   });
 
   it('довгий прайс ділиться, а не обрізається; ліміти Discord дотримано', () => {
@@ -138,7 +137,8 @@ describe('новина з чернетки', () => {
   const d = { title: 'Програма Q-Hub 0.8.0 — що нового', added: ['Нове'], changed: ['Інше', ' '], removed: [] };
   it('групи з «• », порожні не показуються, footer', () => {
     const m = newsMessage(d);
-    expect(m.content).toBe('📣 Програма Q-Hub 0.8.0 — що нового');
+    expect(m.content).toBeUndefined();
+    expect(m.embeds![0].title).toBe('Програма Q-Hub 0.8.0 — що нового');
     const e = m.embeds![0];
     expect(e.description).toBe('**✨ Додано**\n• Нове\n\n**🔧 Змінено**\n• Інше');
     expect(e.footer!.text).toBe('Q-Hub · q-hub.fun');
