@@ -144,9 +144,12 @@ describe('новина з чернетки', () => {
     expect(e.footer!.text).toBe('Q-Hub · q-hub.fun');
     expect(e.url).toBeUndefined(); expect(e.image).toBeUndefined();
   });
-  it('посилання й картинка — лише якщо задані', () => {
-    const e = newsMessage({ ...d, link: 'https://q-hub.fun/mapa', image_url: 'https://x/y.webp' }).embeds![0];
-    expect(e.url).toBe('https://q-hub.fun/mapa'); expect(e.image).toEqual({ url: 'https://x/y.webp' });
+  it('посилання й банер — лише якщо задані; банер окремою карткою зверху', () => {
+    const [banner, e] = newsMessage({ ...d, link: 'https://q-hub.fun/mapa', image_url: 'https://x/y.webp' }).embeds!;
+    expect(banner).toEqual({ color: 0xff6b00, image: { url: 'https://x/y.webp' } });
+    expect(e.url).toBe('https://q-hub.fun/mapa'); expect(e.image).toBeUndefined();
+    expect(e.title).toBe(d.title);
+    expect(newsMessage(d).embeds).toHaveLength(1);
   });
   it('задовге — на скільки перевищено 4096', () => {
     expect(newsTooLong(d)).toBe(0);

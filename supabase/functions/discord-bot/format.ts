@@ -149,8 +149,9 @@ export function newsDescription(d: NewsDraft): string {
 export function newsMessage(d: NewsDraft): Body {
   const e: Embed = { title: d.title.trim(), description: newsDescription(d), color: COLOR, footer: { text: 'Q-Hub · q-hub.fun' } };
   if (d.link) e.url = d.link;
-  if (d.image_url) e.image = { url: d.image_url };
-  return { embeds: [e] };
+  /* банер — окремою карткою над текстом: в одній картці Discord ставить картинку лише внизу (рішення власника 2026-11-05).
+     Без url у банера — інакше Discord зливає картки з однаковим url в одну галерею */
+  return { embeds: d.image_url ? [{ color: COLOR, image: { url: d.image_url } }, e] : [e] };
 }
 
 /* на скільки символів опис довший за дозволене; 0 — влазить */
