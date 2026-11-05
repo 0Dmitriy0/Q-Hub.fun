@@ -83,3 +83,4 @@ $P -f supabase/tests/session_money_test.sql
 $P -f supabase/tests/map_photos_test.sql
 $P -f supabase/tests/season_events_wiki_test.sql
 $P -f supabase/tests/discord_bot_test.sql
+$P -f supabase/tests/wiki_test.sql

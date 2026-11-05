@@ -29,3 +29,18 @@ export async function uploadCatalogImage(file: File, path: string, frame: { w: n
   const { data } = supabase.storage.from('catalog').getPublicUrl(path);
   return data.publicUrl + '?v=' + Date.now();   // нова версія одразу, без старого кешу
 }
+
+/* скрін-доказ правки довідника (specs/043): без обрізання, до 1600 px по довшій стороні, у приватне сховище wiki-proof.
+   Шлях — <uid>/<id пропозиції>.webp (база пускає лише у свою теку); повертає шлях, а не адресу — читати можна лише за підписаним посиланням */
+export async function uploadProof(file: File, path: string): Promise<string> {
+  if (!supabase) throw new Error('немає бази');
+  if (!file.type.startsWith('image/')) throw new Error('Це не картинка');
+  const bmp = await decode(file);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const ctx = c.getContext('2d')!; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob: Blob = await new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('не вдалося стиснути'))), 'image/webp', 0.85));
+  const { error } = await supabase.storage.from('wiki-proof').upload(path, blob, { upsert: true, contentType: blob.type || 'image/png' });
+  if (error) throw error;
+  return path;
+}

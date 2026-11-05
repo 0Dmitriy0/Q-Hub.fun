@@ -5,6 +5,11 @@ import { POINTS } from '../data/mapPoints';
 import { makeHash } from '../lib/mapGeo';
 import Icon from './Icon';
 import Profit from './Profit';
+import PageMeta from './wiki/PageMeta';
+import type { JobRow } from '../lib/jobsData';
+
+/* нова робота від гравців може бути ще без своєї іконки — тоді загальна */
+export const jobIcon = (e: React.SyntheticEvent<HTMLImageElement>) => { const i = e.currentTarget; if (!i.src.endsWith('/icons/map/jobs.svg')) i.src = '/icons/map/jobs.svg'; };
 
 /* вікно роботи (design/stitch/wikiclickjob.html): показує лише заповнені розділи; опис, заробіток і поради з'являться, коли їх допишемо */
 const SECTIONS: [keyof Job, string][] = [
@@ -12,7 +17,7 @@ const SECTIONS: [keyof Job, string][] = [
   ['skills', 'Рівні навички'], ['progress', 'Прокачка навички'], ['controls', 'Керування'], ['tips', 'Поради']
 ];
 
-export default function JobDialog({ job, onClose }: { job: Job | null; onClose: () => void }) {
+export default function JobDialog({ job, onClose, onPropose, onHide }: { job: JobRow | null; onClose: () => void; onPropose?: () => void; onHide?: () => void }) {
   const dlg = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
   if (!job) return <dialog ref={dlg} className="modal jmodal" onClose={onClose} />;
@@ -24,7 +29,7 @@ export default function JobDialog({ job, onClose }: { job: Job | null; onClose: 
     <dialog ref={dlg} className="modal jmodal wdlg" aria-labelledby="jd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
       <div className="modal-box">
         <div className="wdlg-h">
-          <span className={'wdlg-ico' + (job.legal ? '' : ' ill')}><img src={`/icons/jobs/${job.id}.svg`} alt="" width={52} height={52} /></span>
+          <span className={'wdlg-ico' + (job.legal ? '' : ' ill')}><img src={`/icons/jobs/${job.id}.svg`} alt="" width={52} height={52} onError={jobIcon} /></span>
           <div className="wdlg-t"><h2 id="jd-title">{job.name}</h2>
             <div className="jd-tags"><span className={'jtag' + (job.legal ? '' : ' ill')}>{job.legal ? 'Легальна' : 'Нелегальна'}</span>
               <span className="jtag lvl"><Icon name="trophy" size={13} />з {job.level} рівня</span><Profit n={job.profit} /></div></div>
@@ -35,9 +40,14 @@ export default function JobDialog({ job, onClose }: { job: Job | null; onClose: 
         <div className="jd-cols">{SECTIONS.filter(([k]) => list(k).length).map(([k, t]) => (
           <section className="jd-sec wdlg-box" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
         ))}</div>
+        <PageMeta createdBy={job.created_by} updatedBy={job.updated_by} createdAt={job.created_at} updatedAt={job.updated_at} version={job.version} />
         <div className="wdlg-f">
           {job.forum ? <p className="muted jd-src">Джерело: <a href={FORUM_FAQ} target="_blank" rel="noopener noreferrer">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></p> : <span />}
-          {pt && <Link className="btn acc sm" to={'/mapa' + makeHash(pt.x, pt.y, 5)}><Icon name="map" size={16} />Мітка на мапі</Link>}
+          <div className="row">
+            {onPropose && <button type="button" className="btn ghost sm" onClick={onPropose}><Icon name="tag" size={15} />Запропонувати правку</button>}
+            {onHide && <button type="button" className="btn ghost sm" onClick={onHide} title="Наприклад, роботу прибрали з гри">Прибрати сторінку</button>}
+            {pt && <Link className="btn acc sm" to={'/mapa' + makeHash(pt.x, pt.y, 5)}><Icon name="map" size={16} />Мітка на мапі</Link>}
+          </div>
         </div>
       </div>
     </dialog>
