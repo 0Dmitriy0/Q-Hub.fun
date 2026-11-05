@@ -7,6 +7,7 @@ import { resetNames } from '../wiki/PageMeta';
 import DiffView from '../wiki/DiffView';
 import AdminSection from './AdminSection';
 import { makeHash } from '../../lib/mapGeo';
+import PointPreview from '../wiki/PointPreview';
 
 /* «Довідник» (specs/043 US1/US3): одна черга пропозицій з усіх розділів; прийняти, прийняти з правками, відхилити з причиною.
    Рішення — лише функція бази wiki_decide (admin, moderator). Скрін-доказ після рішення видаляється (FR-024) */
@@ -136,6 +137,11 @@ export default function AdminWiki() {
                   <div className="wdiff-row"><dt>На мапі</dt><dd><a href={'/mapa' + makeHash(open.data.x, open.data.y, 6)} target="_blank" rel="noopener noreferrer">Показати точку на мапі ↗</a></dd></div>)}
               </dl></div>
             ) : <DiffView section={open.section} old={data} changes={changes} stale={needForce || (cur !== null && open.base_version !== cur.version)} />}
+          {open.section === 'map_point' && (() => {
+            /* точка — з правок модератора, якщо він її підправив */
+            const d = edit ?? open.data;
+            return typeof d.x === 'number' && typeof d.y === 'number' ? <PointPreview x={d.x} y={d.y} category={String(d.category_id ?? '')} /> : null;
+          })()}
           {proof && <a href={proof} target="_blank" rel="noopener noreferrer"><img className="wproof" src={proof} alt="Скрін-доказ від автора" /></a>}
           {open.kind !== 'hide' && (edit === null
             ? <button type="button" className="btn ghost sm" onClick={() => setEdit({ ...open.data })}>Підправити перед публікацією</button>
