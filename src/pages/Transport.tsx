@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import PicUpload from '../components/PicUpload';
+import Leaderboard from '../components/Leaderboard';
 import VehicleDialog, { FuelTag, KIND_ICON, type VehicleFull } from '../components/VehicleDialog';
 import Select from '../components/Select';
 import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
@@ -152,7 +153,7 @@ export default function Transport() {
       {!session && list.length > 0 && <div className="card row between"><span>Увійди через Discord, щоб оцінювати транспорт.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}
       {loaded && !err && !list.length && <div className="card empty">Каталог транспорту ще порожній — його саме заповнюємо.</div>}
       {list.length > 0 && <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span>
-        {wiki && <button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати транспорт</button>}</div>}
+        {wiki && <span className="row"><Leaderboard /><button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати транспорт</button></span>}</div>}
       {shown.length > 0 && (
         <div className="vgrid">{shown.map(v => {
           const sc = scores[v.id];

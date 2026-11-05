@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import NotFound from './NotFound';
 import AdminQueues from '../components/admin/AdminQueues';
 import AdminAccounts from '../components/admin/AdminAccounts';
+import WikiAuthors from '../components/admin/WikiAuthors';
 import AdminAppState from '../components/admin/AdminAppState';
 import AdminShots from '../components/admin/AdminShots';
 import AdminLinks from '../components/admin/AdminLinks';
@@ -53,7 +54,7 @@ export default function Admin() {
       </div>
       <div role="tabpanel">
         {tab === 'queues' && <AdminQueues onChange={loadTotal} />}
-        {tab === 'accounts' && <AdminAccounts />}
+        {tab === 'accounts' && <><WikiAuthors /><AdminAccounts /></>}
         {tab === 'app' && <AdminAppState />}
         {tab === 'shots' && <AdminShots />}
         {tab === 'discord' && <AdminDiscordBot />}
