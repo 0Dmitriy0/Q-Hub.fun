@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { desktop } from '../../lib/app';
 import { supabase } from '../../lib/supabase';
 import { uploadProof } from '../../lib/images';
 import { dbError, diff, FIELDS, parseInput, similar, slugFromName, SOURCES, toInput, validate, type Data, type Section } from '../../lib/wiki';
@@ -106,7 +107,9 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
           </div>
         ) : done ? (
           <div className="wp-done" role="status">
-            <p><b>Надіслано на розгляд.</b> Картка зміниться, коли модератор прийме правку. Статус — у <Link to="/kabinet/pravky" onClick={onClose}>кабінеті → «Мої правки»</Link>.</p>
+            <p><b>Надіслано на розгляд.</b> {target.section === 'map_point' ? "Мітка з'явиться на мапі, коли модератор її прийме." : 'Картка зміниться, коли модератор прийме правку.'} Статус — {desktop
+              ? <>на сайті q-hub.fun → «Кабінет» → «Мої правки».</>
+              : <>у <Link to="/kabinet/pravky" onClick={onClose}>кабінеті → «Мої правки»</Link>.</>}</p>
             <button type="button" className="btn acc" onClick={onClose}>Готово</button>
           </div>
         ) : ban ? (

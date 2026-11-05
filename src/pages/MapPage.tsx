@@ -62,9 +62,10 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
   const draftMarker = useRef<L.Marker | null>(null);
   const pickFor = useRef<'mark' | 'draft' | 'propose'>('mark');
-  /* мітка від гравця (specs/043 US5, 0059): клік на мапі → форма довідника → черга модерації. Лише на сайті */
+  /* мітка від гравця (specs/043 US5, 0059): клік на мапі → форма довідника → черга модерації. І на сайті, і в програмі
+     (рішення власника 2026-11-05) — мапу це не змінює: мітку публікує модератор */
   const [wiki, setWiki] = useState(false);
-  useEffect(() => { if (!embed) wikiReady().then(setWiki); }, [embed]);
+  useEffect(() => { wikiReady().then(setWiki); }, []);
   const [propose, setPropose] = useState<ProposeTarget | null>(null);
   /* зони (0021): багатокутники в шарах своїх категорій; адмін малює нову кліками по мапі */
   const [areas, setAreas] = useState<MapArea[]>([]);
@@ -495,7 +496,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             </div>
             {wide && !embed && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
             {wide && !embed && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
-            {wide && !embed && wiki && <button type="button" className="hud mmod" aria-pressed={picking && pickFor.current === 'propose'} onClick={() => pick(!(picking && pickFor.current === 'propose'), 'propose')} title="Знаєш місце, якого немає на мапі? Постав точку — модератор перевірить"><Icon name="plus" size={18} /><span>Запропонувати мітку</span></button>}
+            {wide && wiki && <button type="button" className="hud mmod" aria-pressed={picking && pickFor.current === 'propose'} onClick={() => pick(!(picking && pickFor.current === 'propose'), 'propose')} title="Знаєш місце, якого немає на мапі? Постав точку — модератор перевірить"><Icon name="plus" size={18} /><span>Запропонувати мітку</span></button>}
           </div>
         </div>
         {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
@@ -511,7 +512,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {!wide && search}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
-          {!wide && !embed && wiki && <button type="button" className="btn ghost mmod-m" onClick={() => pick(true, 'propose')}><Icon name="plus" size={18} />Запропонувати мітку</button>}
+          {!wide && wiki && <button type="button" className="btn ghost mmod-m" onClick={() => pick(true, 'propose')}><Icon name="plus" size={18} />Запропонувати мітку</button>}
           {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
           <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
@@ -598,8 +599,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {shotOpen && <MapShot marks={marks} areas={areas} catById={catById} isOn={isOn} />}
         </div>
       </dialog>
-      {!embed && <ProposeForm target={propose} mode="new" onClose={() => setPropose(null)}
-        options={{ category_id: cats.filter(c => !c.builtin).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />}
+      <ProposeForm target={propose} mode="new" onClose={() => setPropose(null)}
+        options={{ category_id: cats.filter(c => !c.builtin).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />
     </div>
   );
 }
