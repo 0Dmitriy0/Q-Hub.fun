@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { dbError, SECTION_NAME, STATUS, type Section } from '../../lib/wiki';
+import { makeHash } from '../../lib/mapGeo';
 
 /* «Мої правки» (specs/043 FR-017, FR-018): свої пропозиції до довідника зі статусом і причиною; відкриття вкладки
    позначає рішення побаченими (wiki_seen) — значок у кабінеті зникає */
@@ -11,7 +12,8 @@ interface Mine {
 }
 const KIND = { new: 'Нова сторінка', edit: 'Правка', hide: 'Прибрати сторінку' };
 const when = (s: string) => new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const link = (p: Mine) => (p.section === 'job' ? `/wiki/roboty${p.target_id ? '?job=' + p.target_id : ''}` : '/wiki/transport');
+const link = (p: Mine) => (p.section === 'job' ? `/wiki/roboty${p.target_id ? '?job=' + p.target_id : ''}`
+  : p.section === 'map_point' && typeof p.data?.x === 'number' && typeof p.data?.y === 'number' ? '/mapa' + makeHash(p.data.x, p.data.y, 6) : '/wiki/transport');
 
 /* скільки рішень автор ще не бачив — для значка біля «Мої правки» */
 export async function unseenCount(): Promise<number> {
@@ -62,7 +64,7 @@ export default function MyEdits({ onSeen }: { onSeen?: () => void }) {
           return (
             <li key={p.id} className="adm-row">
               <div className="adm-row-main">
-                <b>{SECTION_NAME[p.section]} · {KIND[p.kind]}{p.data?.name ? ': ' + String(p.data.name) : ''}{fresh && <span className="wtag new">нове рішення</span>}</b>
+                <b>{SECTION_NAME[p.section]} · {p.section === 'map_point' && p.kind === 'new' ? 'Нова мітка' : KIND[p.kind]}{p.data?.name ? ': ' + String(p.data.name) : ''}{fresh && <span className="wtag new">нове рішення</span>}</b>
                 <span className="muted">Надіслано {when(p.created_at)}{p.decided_at ? ' · рішення ' + when(p.decided_at) : ''}</span>
                 {p.status === 'rejected' && p.reason && <small className="err">Причина: {p.reason}</small>}
                 {p.status === 'accepted_edited' && <small className="muted">Модератор трохи підправив твою правку перед публікацією.</small>}
@@ -71,7 +73,7 @@ export default function MyEdits({ onSeen }: { onSeen?: () => void }) {
               <span className={'pill ' + tone}>{label}</span>
               <div className="adm-row-act">
                 {p.status === 'pending' && <button type="button" className="btn ghost sm" onClick={() => withdraw(p.id)}>Відкликати</button>}
-                {(p.target_id || p.status.startsWith('accepted')) && <Link className="btn ghost sm" to={link(p)}>Відкрити розділ</Link>}
+                {(p.target_id || p.status.startsWith('accepted')) && <Link className="btn ghost sm" to={link(p)}>{p.section === 'map_point' ? 'Показати на мапі' : 'Відкрити розділ'}</Link>}
               </div>
             </li>
           );

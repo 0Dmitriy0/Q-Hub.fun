@@ -227,6 +227,41 @@ do $$ begin
 end $$;
 reset role;
 
+-- ---------- мітки на мапі від гравців (0059, US5) ----------
+insert into public.map_categories (id, name) values ('wiki-test-cat', 'Тест довідника') on conflict (id) do nothing;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', false) \gset
+insert into public.wiki_proposals (id, section, kind, data, source)
+  values ('e1000000-0000-0000-0000-000000000006', 'map_point', 'new', '{"category_id":"wiki-test-cat","name":"Грибне місце","note":"біля озера","x":100,"y":200}', 'game');
+do $$ begin
+  begin insert into public.wiki_proposals (section, kind, data, source) values ('map_point', 'new', '{"category_id":"немає-такої","name":"X","x":1,"y":1}', 'game');
+    raise exception 'мітку в неіснуючій категорії прийнято';
+  exception when sqlstate 'QH003' then null; end;
+  begin insert into public.wiki_proposals (section, kind, data, source) values ('map_point', 'new', '{"category_id":"wiki-test-cat","name":"X","x":99999,"y":1}', 'game');
+    raise exception 'мітку поза мапою прийнято';
+  exception when sqlstate 'QH003' then null; end;
+  begin insert into public.wiki_proposals (section, kind, data, source) values ('map_point', 'new', '{"category_id":"wiki-test-cat","name":"X"}', 'game');
+    raise exception 'мітку без точки прийнято';
+  exception when sqlstate 'QH003' then null; end;
+  begin insert into public.wiki_proposals (section, target_id, kind, data, source)
+    select 'map_point', id::text, 'edit', '{"name":"Інше"}', 'game' from public.map_points limit 1;
+    raise exception 'правку наявної мітки прийнято';
+  exception when sqlstate 'QH003' then null; end;
+  begin insert into public.map_points (category_id, name, x, y) values ('wiki-test-cat', 'Напряму', 1, 1); raise exception 'гравець поставив мітку напряму';
+  exception when insufficient_privilege then null; end;
+  assert (select count(*) from public.map_points where name = 'Грибне місце') = 0, 'мітка з''явилась без рішення';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e4', false) \gset
+do $$ declare r jsonb; begin
+  r := public.wiki_decide('e1000000-0000-0000-0000-000000000006', 'accept');
+  assert (select category_id = 'wiki-test-cat' and x = 100 and y = 200 and created_by = '00000000-0000-0000-0000-0000000000e1'
+    from public.map_points where name = 'Грибне місце'), 'мітку не створено або автор не записався';
+  assert (select count(*) from public.wiki_versions where section = 'map_point' and target_id = r ->> 'target_id') = 1, 'версії мітки немає';
+end $$;
+reset role;
+
 -- ---------- admin напряму пише ----------
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e5', false) \gset
