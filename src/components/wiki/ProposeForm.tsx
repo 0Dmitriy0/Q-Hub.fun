@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { desktop } from '../../lib/app';
 import { supabase } from '../../lib/supabase';
 import { uploadProof } from '../../lib/images';
 import { dbError, diff, FIELDS, parseInput, similar, slugFromName, SOURCES, toInput, validate, type Data, type Section } from '../../lib/wiki';
@@ -25,8 +26,10 @@ export function takeIntent(section: Section): { id: string | null; mode: 'edit' 
   } catch { return null; }
 }
 
-export default function ProposeForm({ target, mode, list, onClose }: {
+/* options — варіанти списків, яких немає в FIELDS (категорії мапи); для нової сторінки початкові значення — target.data */
+export default function ProposeForm({ target, mode, list, onClose, options }: {
   target: ProposeTarget | null; mode: 'edit' | 'new' | 'hide'; list?: { id: string | number; name: string }[]; onClose: () => void;
+  options?: Record<string, [string, string][]>;
 }) {
   const { session, signIn } = useAuth();
   const { pathname, search } = useLocation();
@@ -39,14 +42,14 @@ export default function ProposeForm({ target, mode, list, onClose }: {
   const [msg, setMsg] = useState(''); const [done, setDone] = useState(false); const [busy, setBusy] = useState(false);
   const [ban, setBan] = useState('');
   const section = target?.section ?? 'job';
-  const fields = FIELDS[section];
+  const fields = useMemo(() => FIELDS[section].map(f => (options?.[f.key] ? { ...f, options: options[f.key] } : f)), [section, options]);
 
   useEffect(() => {
     if (!target) { dlg.current?.close(); return; }
     const f: Record<string, string | boolean> = {};
-    for (const x of fields) f[x.key] = toInput(x, mode === 'new' ? undefined : target.data[x.key]);
+    for (const x of fields) f[x.key] = toInput(x, target.data[x.key]);
     /* нова сторінка: у списках — перший варіант, а не порожнє значення, якого немає серед варіантів */
-    if (mode === 'new') for (const x of fields) if (x.type === 'select') f[x.key] = x.options![0][0];
+    if (mode === 'new') for (const x of fields) if (x.type === 'select' && !target.data[x.key] && x.options?.length) f[x.key] = x.options[0][0];
     setForm(f); setSlug(''); setSlugTouched(false); setSource(''); setNote(''); setProof(null); setTouched({}); setMsg(''); setDone(false);
     dlg.current?.showModal();
     /* заборона (FR-013): пояснення замість форми */
@@ -104,7 +107,9 @@ export default function ProposeForm({ target, mode, list, onClose }: {
           </div>
         ) : done ? (
           <div className="wp-done" role="status">
-            <p><b>Надіслано на розгляд.</b> Картка зміниться, коли модератор прийме правку. Статус — у <Link to="/kabinet/pravky" onClick={onClose}>кабінеті → «Мої правки»</Link>.</p>
+            <p><b>Надіслано на розгляд.</b> {target.section === 'map_point' ? "Мітка з'явиться на мапі, коли модератор її прийме." : 'Картка зміниться, коли модератор прийме правку.'} Статус — {desktop
+              ? <>на сайті q-hub.fun → «Кабінет» → «Мої правки».</>
+              : <>у <Link to="/kabinet/pravky" onClick={onClose}>кабінеті → «Мої правки»</Link>.</>}</p>
             <button type="button" className="btn acc" onClick={onClose}>Готово</button>
           </div>
         ) : ban ? (

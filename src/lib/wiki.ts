@@ -1,7 +1,7 @@
 /* Довідник від гравців (specs/043): поля розділів, «було → стало», схожі назви, адреса з назви, перевірка форми.
    Білий список полів — той самий, що в базі (wiki_clean, 0057): що тут не описано, база не прийме. */
 
-export type Section = 'job' | 'vehicle';
+export type Section = 'job' | 'vehicle' | 'map_point';
 export type FieldType = 'text' | 'longtext' | 'list' | 'int' | 'bool' | 'select';
 export type Field = {
   key: string; label: string; type: FieldType; required?: boolean;
@@ -43,9 +43,17 @@ export const FIELDS: Record<Section, Field[]> = {
     { key: 'exclusive', label: 'Ексклюзив', type: 'bool' },
     { key: 'vinyl', label: 'Вініл', type: 'bool' },
   ],
+  /* мітка на мапі (US5, 0059): поки лише нова; варіанти категорії підставляє мапа (categoryOptions) */
+  map_point: [
+    { key: 'category_id', label: 'Категорія', type: 'select', required: true, options: [] },
+    { key: 'name', label: 'Назва', type: 'text', required: true, maxLen: 160 },
+    { key: 'note', label: 'Опис', type: 'longtext', maxLen: 600, hint: 'Що тут: час появи, що потрібно, підказка, як знайти.' },
+    { key: 'x', label: 'Точка X', type: 'int', required: true, min: -6000, max: 6800 },
+    { key: 'y', label: 'Точка Y', type: 'int', required: true, min: -4400, max: 8500 },
+  ],
 };
 
-export const SECTION_NAME: Record<Section, string> = { job: 'Роботи', vehicle: 'Транспорт' };
+export const SECTION_NAME: Record<Section, string> = { job: 'Роботи', vehicle: 'Транспорт', map_point: 'Мапа' };
 export const SOURCES: [string, string][] = [['game', 'У грі'], ['discord', 'Discord'], ['forum', 'Форум QuantRP'], ['own', 'Власний досвід']];
 export const REJECT_REASONS = ['Копія з іншого сайту', 'Немає джерела', 'Неправильні дані', 'Дубль', 'Порожня або образлива правка'];
 export const STATUS: Record<string, [string, 'good' | 'warn' | 'bad' | '']> = {

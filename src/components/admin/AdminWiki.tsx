@@ -6,6 +6,7 @@ import FieldsEditor from '../wiki/FieldsEditor';
 import { resetNames } from '../wiki/PageMeta';
 import DiffView from '../wiki/DiffView';
 import AdminSection from './AdminSection';
+import { makeHash } from '../../lib/mapGeo';
 
 /* «Довідник» (specs/043 US1/US3): одна черга пропозицій з усіх розділів; прийняти, прийняти з правками, відхилити з причиною.
    Рішення — лише функція бази wiki_decide (admin, moderator). Скрін-доказ після рішення видаляється (FR-024) */
@@ -16,6 +17,7 @@ interface Proposal {
 }
 type Filter = 'all' | Section;
 const KIND: Record<Proposal['kind'], string> = { new: 'нова сторінка', edit: 'правка', hide: 'прибрати сторінку' };
+const kindOf = (p: { section: Section; kind: Proposal['kind'] }) => (p.section === 'map_point' && p.kind === 'new' ? 'нова мітка' : KIND[p.kind]);
 const age = (s: string) => {
   const h = Math.floor((Date.now() - new Date(s).getTime()) / 3_600_000);
   return h < 1 ? 'щойно' : h < 24 ? `${h} год тому` : `${Math.floor(h / 24)} дн тому`;
@@ -100,7 +102,7 @@ export default function AdminWiki() {
       <AdminSection title="Пропозиції довідника" error={err} onRetry={load} loading={!list && !err}
         hint={list ? `Чекають: ${list.length}${oldest ? ` · найстаріша — ${age(oldest)}` : ''}. Без рішення модератора картки не змінюються.` : undefined}
         actions={<div className="seg" role="tablist" aria-label="Розділ">
-          {(['all', 'job', 'vehicle'] as Filter[]).map(k => (
+          {(['all', 'job', 'vehicle', 'map_point'] as Filter[]).map(k => (
             <button key={k} type="button" role="tab" aria-selected={filter === k} onClick={() => setFilter(k)}>
               {k === 'all' ? 'Усі' : SECTION_NAME[k]} · {(list ?? []).filter(p => k === 'all' || p.section === k).length}
             </button>))}
@@ -111,7 +113,7 @@ export default function AdminWiki() {
             {shown.map(p => (
               <li key={p.id} className={'adm-row' + (open?.id === p.id ? ' news-open' : '')}>
                 <div className="adm-row-main">
-                  <b>{SECTION_NAME[p.section]} · {KIND[p.kind]}{p.kind === 'new' ? ': ' + String(p.data.name ?? '') : ''}</b>
+                  <b>{SECTION_NAME[p.section]} · {kindOf(p)}{p.kind === 'new' ? ': ' + String(p.data.name ?? '') : ''}</b>
                   <span className="muted">{p.who?.nick || p.who?.name || 'гравець'} · {age(p.created_at)} · {SOURCES.find(s => s[0] === p.source)?.[1]}{p.proof_path ? ' · є скрін' : ''}</span>
                 </div>
                 {p.status === 'conflict' && <span className="pill warn">{STATUS.conflict[0]}</span>}
@@ -123,13 +125,15 @@ export default function AdminWiki() {
       </AdminSection>
 
       {open && (
-        <AdminSection title={`${SECTION_NAME[open.section]} · ${KIND[open.kind]}${cur?.data.name ? ': ' + String(cur.data.name) : ''}`}
+        <AdminSection title={`${SECTION_NAME[open.section]} · ${kindOf(open)}${cur?.data.name ? ': ' + String(cur.data.name) : ''}`}
           hint={`Автор: ${open.who?.nick || open.who?.name || 'гравець'} · джерело: ${SOURCES.find(s => s[0] === open.source)?.[1]}${open.source_note ? ' — ' + open.source_note : ''}`}>
           {open.kind === 'hide' ? <p className="warn">Сторінку буде сховано з публічних списків. Її можна повернути, історія лишається.</p>
             : open.kind === 'new' ? (
               <div className="wdiff"><dl>{FIELDS[open.section].filter(f => f.key in open.data).map(f => (
                 <div key={f.key} className="wdiff-row"><dt>{f.label}</dt><dd><span className="wdiff-add">{show(field(open.section, f.key), open.data[f.key])}</span></dd></div>))}
                 {'id' in open.data && <div className="wdiff-row"><dt>Адреса</dt><dd className="mono">{String(open.data.id)}</dd></div>}
+                {open.section === 'map_point' && typeof open.data.x === 'number' && typeof open.data.y === 'number' && (
+                  <div className="wdiff-row"><dt>На мапі</dt><dd><a href={'/mapa' + makeHash(open.data.x, open.data.y, 6)} target="_blank" rel="noopener noreferrer">Показати точку на мапі ↗</a></dd></div>)}
               </dl></div>
             ) : <DiffView section={open.section} old={data} changes={changes} stale={needForce || (cur !== null && open.base_version !== cur.version)} />}
           {proof && <a href={proof} target="_blank" rel="noopener noreferrer"><img className="wproof" src={proof} alt="Скрін-доказ від автора" /></a>}

@@ -24,6 +24,8 @@ import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
 import MapWhere, { type Where } from '../desktop/MapWhere';
 import { nearest } from '../lib/mapNear';
 import { asOf, readCopy, saveCopy, stale } from '../desktop/mapCache';
+import ProposeForm, { type ProposeTarget } from '../components/wiki/ProposeForm';
+import { wikiReady } from '../lib/jobsData';
 
 const ON_KEY = 'qhub:map:on';
 const CLUSTER_MIN = 200;   // від скількох міток категорії групувати їх на віддаленні
@@ -59,7 +61,12 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* точка відкритої чернетки: маркер на мапі (адмін його перетягує); клік у режимі «поставити» ставить її сюди */
   const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
   const draftMarker = useRef<L.Marker | null>(null);
-  const pickFor = useRef<'mark' | 'draft'>('mark');
+  const pickFor = useRef<'mark' | 'draft' | 'propose'>('mark');
+  /* мітка від гравця (specs/043 US5, 0059): клік на мапі → форма довідника → черга модерації. І на сайті, і в програмі
+     (рішення власника 2026-11-05) — мапу це не змінює: мітку публікує модератор */
+  const [wiki, setWiki] = useState(false);
+  useEffect(() => { wikiReady().then(setWiki); }, []);
+  const [propose, setPropose] = useState<ProposeTarget | null>(null);
   /* зони (0021): багатокутники в шарах своїх категорій; адмін малює нову кліками по мапі */
   const [areas, setAreas] = useState<MapArea[]>([]);
   const [ring, setRing] = useState<[number, number][]>([]);
@@ -210,6 +217,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       if (!pickRef.current) return;
       const g = game(e);
       if (pickFor.current === 'draft') { setDraftPt(g); pickRef.current = false; setPicking(false); return; }
+      if (pickFor.current === 'propose') {
+        pickRef.current = false; setPicking(false);
+        setPropose({ section: 'map_point', id: null, data: { x: Math.round(g[0]), y: Math.round(g[1]) }, title: 'мітка на мапі' });
+        return;
+      }
       setPicked(g);
       pickMarker.current?.remove();
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
@@ -395,7 +407,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   function setMany(ids: string[], v: boolean) {
     if (only) setOnly(null);
     setOn(o => { const n = toggled(cats, { only, on: o, saved }, ids, v); saveOn(n); return n; }); }
-  function pick(v: boolean, forDraft = false) { pickFor.current = forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+  function pick(v: boolean, forDraft: boolean | 'propose' = false) { pickFor.current = forDraft === 'propose' ? 'propose' : forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
     const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
@@ -457,7 +469,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
         {embed && offline !== null && <span className="mpick">{offline ? `Немає зв'язку — мітки ${asOf(offline)}` : `Немає зв'язку — мітки з'являться, щойно буде інтернет`}</span>}
-        {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
+        {picking && <span className="mpick">{pickFor.current === 'propose' ? 'Клікни на мапі туди, де має бути мітка' : 'Клікни на мапі, щоб взяти координати'}</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
         <span className="mbrand"><img src={asset('/brand/q-hub-logo.svg') + '?v=2'} alt="" width="22" height="22" />Q-Hub</span>
@@ -484,6 +496,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             </div>
             {wide && !embed && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
             {wide && !embed && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
+            {wide && wiki && <button type="button" className="hud mmod" aria-pressed={picking && pickFor.current === 'propose'} onClick={() => pick(!(picking && pickFor.current === 'propose'), 'propose')} title="Знаєш місце, якого немає на мапі? Постав точку — модератор перевірить"><Icon name="plus" size={18} /><span>Запропонувати мітку</span></button>}
           </div>
         </div>
         {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
@@ -499,6 +512,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {!wide && search}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
+          {!wide && wiki && <button type="button" className="btn ghost mmod-m" onClick={() => pick(true, 'propose')}><Icon name="plus" size={18} />Запропонувати мітку</button>}
           {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
           <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
@@ -585,6 +599,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {shotOpen && <MapShot marks={marks} areas={areas} catById={catById} isOn={isOn} />}
         </div>
       </dialog>
+      <ProposeForm target={propose} mode="new" onClose={() => setPropose(null)}
+        options={{ category_id: cats.filter(c => !c.builtin).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />
     </div>
   );
 }
