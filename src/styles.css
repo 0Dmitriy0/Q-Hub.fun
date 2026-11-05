@@ -1794,3 +1794,35 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .dcp-desc b { color: #f2f3f5; }
 .dcp-img { max-width: 100%; border-radius: 4px; }
 .dcp-foot { font-size: 12px; color: #b5bac1; }
+
+/* довідник від гравців (specs/043): форма пропозиції, «було → стало», автор на картці */
+.modal.wmodal { width: min(760px, calc(100vw - 24px)); }
+.wp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px 14px; }
+.wp-form .wide, .wp-form > .row { grid-column: 1 / -1; }
+.wp-form textarea { resize: vertical; }
+.wp-h { font-size: 15px; margin: 4px 0 8px; }
+.wp-src { border: 1px solid var(--line2); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.wp-src legend { padding: 0 6px; font-weight: 700; }
+.wp-src .seg { flex-wrap: wrap; align-self: flex-start; }
+.wp-src .seg button.on { background: var(--accent); color: var(--accent-fg); }
+.wp-proof { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.wp-rule { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 0; }
+.wp-login, .wp-done { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.wp-login p, .wp-done p { margin: 0; }
+.wdiff dl { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.wdiff-row { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 4px 12px; padding: 8px 10px; border-radius: 10px; background: var(--surface2); }
+@media (max-width: 520px) { .wdiff-row { grid-template-columns: 1fr; } }
+.wdiff-row dt { font-weight: 700; font-size: 13px; }
+.wdiff-row dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; overflow-wrap: anywhere; }
+.wdiff-del { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 1px; }
+.wdiff-add { color: var(--good); }
+.wdiff-row dd .wdiff-del, .wdiff-row dd .wdiff-add { display: inline; }
+.wdiff-row dd:has(> .wdiff-add + .wdiff-add), .wdiff-row dd:has(> .wdiff-del + .wdiff-del) { flex-direction: column; align-items: flex-start; }
+.wdiff-stale { background: var(--warn-soft); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; }
+.wmeta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; margin: 0; }
+.wtag { display: inline-flex; padding: 2px 8px; border-radius: 999px; font: 700 11.5px var(--sans); margin-left: 6px; }
+.wtag.new { background: var(--good-soft); color: var(--good); }
+.wtag.upd { background: var(--warn-soft); color: var(--warn); }
+.wproof { max-width: min(100%, 520px); border-radius: 10px; border: 1px solid var(--line2); }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; min-height: 0; }
+.wdiff .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

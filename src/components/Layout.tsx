@@ -48,6 +48,7 @@ export default function Layout() {
         <div className="who">
           <ThemeToggle />
           {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
+          {role === 'moderator' && <NavLink to="/admin?tab=wiki" className="btn ghost sm" title="Пропозиції правок довідника від гравців"><Icon name="shield" size={16} />Модерація</NavLink>}
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}

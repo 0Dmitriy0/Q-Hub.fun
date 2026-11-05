@@ -20,7 +20,8 @@ interface Auth {
   current: Character | null;
   setCurrent: (id: string) => void;
   reloadCharacters: () => Promise<void>;
-  signIn: () => Promise<void>;
+  /** to — куди повернутись після входу (за замовчуванням /kabinet) */
+  signIn: (to?: unknown) => Promise<void>;
   signOut: () => Promise<void>;
 }
 const Ctx = createContext<Auth | null>(null);
@@ -96,11 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role, nick, nickChangedAt, saveNick, isStaff: role === 'editor' || role === 'moderator' || role === 'admin',
     name: String(meta.full_name || meta.name || meta.custom_claims?.global_name || ''),
     avatar: String(meta.avatar_url || ''),
-    signIn: async () => {
+    signIn: async (to?: unknown) => {
       /* у програмі вхід — на її власному екрані */
       if (desktop) { await desktop.logout(); return; }
       if (!supabase) return;
-      await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + '/kabinet' } });
+      await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: window.location.origin + (typeof to === 'string' && to.startsWith('/') ? to : '/kabinet') } });
     },
     signOut: async () => {
       /* у програмі виходить сама програма (анулює свою сесію й повертає на екран входу) */

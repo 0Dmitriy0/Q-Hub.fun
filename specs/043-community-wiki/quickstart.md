@@ -5,7 +5,7 @@
 1. Застосувати `supabase/migrations/0057_community_wiki.sql` у Supabase → SQL Editor (SQL — у буфер з файлу, не з чату; пам'ять discord-bot-ops).
 2. Перевірити, що міграція справді на базі (пам'ять prod-migrations-gaps):
    `select count(*) from public.jobs;` — стільки ж, скільки робіт у `src/data/jobs.ts`;
-   `select count(*) from public.wiki_versions where kind = 'seed';` — те саме число;
+   (`wiki_versions` спершу порожня: початкова версія картки записується сама при першій прийнятій правці);
    `select policyname from pg_policies where tablename = 'vehicles';` — запис лише admin.
 3. Тести бази: `bash supabase/tests/run.sh` (новий `wiki_test.sql`); сайт: `npx.cmd vitest run`, `npx.cmd tsc --noEmit -p .`.
 4. Локально з робочою базою: `npx.cmd vite --mode production` (пам'ять dev-server-needs-production-mode).

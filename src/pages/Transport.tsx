@@ -7,6 +7,9 @@ import VehicleDialog, { FuelTag, KIND_ICON, type VehicleFull } from '../componen
 import Select from '../components/Select';
 import { priceKind, priceSortKey, salonLabel, type PriceKind } from '../lib/vehiclePrice';
 import { withSitePhotos } from '../lib/carMatch';
+import ProposeForm, { takeIntent, type ProposeTarget } from '../components/wiki/ProposeForm';
+import type { Data } from '../lib/wiki';
+import { wikiReady } from '../lib/jobsData';
 
 type Kind = VehicleFull['kind'];
 type Vehicle = VehicleFull;
@@ -52,6 +55,12 @@ function MyStars({ mine, onRate }: { mine: number; onRate: (n: number) => void }
 export default function Transport() {
   const { session, signIn, role } = useAuth();
   const isAdmin = role === 'admin';
+  /* правки довідника (specs/043): напряму змінює лише admin, решта — пропозицією в чергу модерації */
+  const [wiki, setWiki] = useState(false);
+  useEffect(() => { wikiReady().then(setWiki); }, []);
+  const [prop, setProp] = useState<{ t: ProposeTarget; mode: 'edit' | 'new' | 'hide' } | null>(null);
+  const propose = (v: Vehicle | null, mode: 'edit' | 'new' | 'hide') =>
+    setProp({ mode, t: { section: 'vehicle', id: v ? String(v.id) : null, data: (v ?? {}) as unknown as Data, version: v?.version, title: v?.name ?? 'новий транспорт' } });
   const [list, setList] = useState<Vehicle[]>([]);
   const [scores, setScores] = useState<Record<number, Score>>({});
   const [mine, setMine] = useState<Record<number, number>>({});
@@ -76,6 +85,12 @@ export default function Transport() {
     setScores(Object.fromEntries(((s.data || []) as Score[]).map(x => [x.vehicle_id, { ...x, avg: Number(x.avg), votes: Number(x.votes) }])));
   }
   useEffect(() => { load(); }, []);
+  /* після входу через Discord — та сама форма (FR-007) */
+  useEffect(() => {
+    if (!session || !loaded || !wiki) return;
+    const it = takeIntent('vehicle'); if (!it) return;
+    if (it.mode === 'new') propose(null, 'new'); else { const v = list.find(x => String(x.id) === it.id); if (v) propose(v, it.mode); }
+  }, [session, loaded, wiki]);
   useEffect(() => {
     if (!supabase || !session) { setMine({}); return; }
     supabase.from('vehicle_ratings').select('vehicle_id,stars').then(({ data }) => setMine(Object.fromEntries((data || []).map(r => [r.vehicle_id, r.stars]))));
@@ -136,7 +151,8 @@ export default function Transport() {
       </div>
       {!session && list.length > 0 && <div className="card row between"><span>Увійди через Discord, щоб оцінювати транспорт.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}
       {loaded && !err && !list.length && <div className="card empty">Каталог транспорту ще порожній — його саме заповнюємо.</div>}
-      {list.length > 0 && <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span></div>}
+      {list.length > 0 && <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span>
+        {wiki && <button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати транспорт</button>}</div>}
       {shown.length > 0 && (
         <div className="vgrid">{shown.map(v => {
           const sc = scores[v.id];
@@ -166,12 +182,15 @@ export default function Transport() {
             </article>);
         })}</div>
       )}
-      <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin || role === 'editor'}
+      <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin}
+        onPropose={wiki ? () => { const v = list.find(x => x.id === openId); if (v) { setOpenId(null); propose(v, 'edit'); } } : undefined}
+        onHide={wiki ? () => { const v = list.find(x => x.id === openId); if (v) { setOpenId(null); propose(v, 'hide'); } } : undefined}
         onSaved={nv => setList(l => l.map(x => (x.id === nv.id ? nv : x)))} />
       {loaded && list.length > 0 && !shown.length && <div className="card empty wiki-none"><b>Нічого не знайдено</b><span className="muted">Спробуй іншу назву або тип.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); setFuel('all'); setCur('all'); }}>Скинути фільтри</button></div>}
       {list.length > 0 && <div className="wiki-tiles one">
         <div className="card"><span className="ibub"><Icon name="speed" /></span><div><b>Калькулятор тюнінгу у вікні кожного авто</b><p className="muted">Відміть потрібні елементи — побачиш суму тюнінгу й ціну разом з авто, а також швидкість з чіпами Stage 1–4.</p></div></div>
       </div>}
+      <ProposeForm target={prop?.t ?? null} mode={prop?.mode ?? 'edit'} list={list} onClose={() => setProp(null)} />
     </>
   );
 }

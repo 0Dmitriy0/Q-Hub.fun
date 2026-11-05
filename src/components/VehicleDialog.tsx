@@ -5,6 +5,7 @@ import Icon from './Icon';
 import { priceKind, salonLabel } from '../lib/vehiclePrice';
 import VehicleEdit from './VehicleEdit';
 import TuningPicker from './TuningPicker';
+import PageMeta from './wiki/PageMeta';
 
 /* двигун (0044): дизель — fuelType 3 з configvehicle гри; електро — поле electric */
 export const FUEL_WORD = { petrol: 'пальне', diesel: 'дизель', electric: 'електро' } as const;
@@ -17,13 +18,15 @@ export interface VehicleFull {
   id: number; kind: 'auto' | 'moto' | 'avia' | 'boat'; name: string; brand: string; salon: string; price: number;
   speed: number | null; trunk: number | null; tank: number | null; seats: number | null; image_url: string;
   real_name?: string; min_level?: number | null; salon_price?: number | null; exclusive?: boolean; vinyl?: boolean; fuel?: 'petrol' | 'diesel' | 'electric'; ua_plate?: boolean | null; currency?: 'game' | 'donate'; model?: string | null;
+  /* довідник від гравців (0057) */
+  version?: number; hidden?: boolean; created_by?: string | null; updated_by?: string | null; created_at?: string; updated_at?: string | null;
 }
 
 export const KIND_ICON: Record<VehicleFull['kind'], string> = { auto: 'car', moto: 'moto', avia: 'plane', boat: 'boat' };
 
 /* вікно транспорту як у грі: фото, тюнінг з калькулятором і характеристики.
    Тюнінг рахується від держ. вартості; ціну чіпа STAGE і ксенону гравець вписує сам (їх купують у гравців) */
-export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: VehicleFull | null; onClose: () => void; canEdit?: boolean; onSaved?: (v: VehicleFull) => void }) {
+export default function VehicleDialog({ v, onClose, canEdit, onSaved, onPropose, onHide }: { v: VehicleFull | null; onClose: () => void; canEdit?: boolean; onSaved?: (v: VehicleFull) => void; onPropose?: () => void; onHide?: () => void }) {
   const [edit, setEdit] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
   const [tune, setTune] = useState<TuneState>(emptyTune);
@@ -49,8 +52,11 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved }: { v: Veh
           <div className="wdlg-t"><h2 id="vd-title">{v.name}{v.real_name ? <span className="muted vd-real"> ({v.real_name})</span> : null}</h2>
             <div className="jd-tags">{v.brand && <span className="jtag lvl">{v.brand}{v.salon ? ' · ' + v.salon : ''}</span>}{v.exclusive && <span className="excl-badge inline"><Icon name="star" size={14} />Ексклюзив</span>}</div></div>
           {canEdit && !edit && <button type="button" className="btn sm" onClick={() => setEdit(true)}><Icon name="tag" size={15} />Редагувати</button>}
+          {!canEdit && onPropose && <button type="button" className="btn ghost sm" onClick={onPropose}><Icon name="tag" size={15} />Запропонувати правку</button>}
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
+        <PageMeta createdBy={v.created_by} updatedBy={v.updated_by} createdAt={v.created_at} updatedAt={v.updated_at} version={v.version} />
+        {!canEdit && onHide && <p className="muted wmeta"><button type="button" className="linkish" onClick={onHide}>Цього транспорту вже немає в грі? Запропонуй прибрати сторінку</button></p>}
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
         <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={KIND_ICON[v.kind]} size={56} />}
           {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {FUEL_WORD[v.fuel || 'petrol']}</span>}</div>
