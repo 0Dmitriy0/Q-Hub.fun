@@ -41,8 +41,9 @@ interface BarApi {
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
 }
 interface Shot { name: string; preview: string; black: boolean }
-interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null }
-interface PinHint { category: string; note: string }
+/* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
+interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null; player?: boolean }
+interface PinHint { category: string; note: string; name?: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
 /* правила й закони для пошуку: знімок rules-sync з програми (specs/010 US4), поки не прийшов — вбудована копія */
@@ -340,6 +341,7 @@ function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n: number
    Точку знайдено — надіслати з точкою; не знайдено — надіслати без точки (поставить адмін) чи ні */
 function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: PinHint) => void }) {
   const [text, setText] = useState(''); const [pick, setPick] = useState(0); const [note, setNote] = useState('');
+  const [name, setName] = useState(''); const [miss, setMiss] = useState('');
   const first = useRef<HTMLInputElement>(null), box = useRef<HTMLDivElement>(null);
   const found = useMemo(() => matchCats(ask.cats, text), [ask.cats, text]);
   const chosen = found[Math.min(pick, found.length - 1)];
@@ -348,7 +350,11 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
     const f = () => { if (!box.current?.contains(document.activeElement)) first.current?.focus(); };
     f(); window.addEventListener('focus', f); return () => window.removeEventListener('focus', f);
   }, []);
-  const send = (yes: boolean) => decide(yes, yes ? { category: chosen?.id || '', note } : undefined);
+  const send = (yes: boolean) => {
+    /* гравцю без категорії й назви — не надсилати, а сказати, чого бракує */
+    if (yes && ask.player && (!chosen || !text.trim() || !name.trim())) { setMiss(!chosen || !text.trim() ? 'Вибери категорію зі списку.' : 'Напиши назву місця.'); return; }
+    decide(yes, yes ? { category: chosen?.id || '', note, name } : undefined);
+  };
   /* Enter — надіслати, Esc — не надсилати, ↑↓ — інша категорія зі збігів; не пускати ці клавіші далі в плашку */
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); send(e.key === 'Enter'); return; }
@@ -357,26 +363,31 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
   return <>
     <div className="bleft bshot"><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
     <div className="bright" ref={box} onKeyDown={onKey}>
-      {ask.point
+      {ask.player && ask.point
+        ? <><h3>Нова мітка на мапі</h3>
+            <p className="muted">X <b className="mono">{ask.point.x}</b> · Y <b className="mono">{ask.point.y}</b>. Вибери категорію й назви місце — модератор перевірить, і мітку побачать усі. Знімок бачить лише модератор.</p></>
+        : ask.point
         ? <><h3>Точку знайдено</h3>
             <p className="muted">X <b className="mono">{ask.point.x}</b> · Y <b className="mono">{ask.point.y}</b>. Вибери категорію — адміну буде простіше опублікувати мітку. Повернешся в гру, нічого не вибравши, — точка піде без категорії.</p></>
         : <><h3>Точку не знайдено</h3>
             <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p></>}
-      <label className="bnote">Категорія (необов’язково)
+      <label className="bnote">{ask.player ? 'Категорія' : 'Категорія (необов’язково)'}
         <input ref={first} value={text} onChange={e => { setText(e.target.value); setPick(0); }} placeholder="почни писати: бак, заправка, 24/7…"
           role="combobox" aria-expanded={found.length > 0} aria-controls="pin-cats" aria-activedescendant={chosen ? 'pin-cat-' + chosen.id : undefined} /></label>
       {text.trim() && <div className="bcats" id="pin-cats" role="listbox" aria-label="Категорії">
         {found.length ? found.map(c => (
           <button key={c.id} id={'pin-cat-' + c.id} role="option" aria-selected={c === chosen} className={c === chosen ? 'on' : ''} tabIndex={-1}
             onMouseDown={e => e.preventDefault()} onClick={() => setPick(found.indexOf(c))}>{c.name}<small>{c.grp}</small></button>))
-          : <span className="muted">Такої категорії немає — адмін вибере сам</span>}
+          : <span className="muted">{ask.player ? 'Такої категорії немає — спробуй інше слово' : 'Такої категорії немає — адмін вибере сам'}</span>}
       </div>}
+      {ask.player && <label className="bnote">Назва<input value={name} onChange={e => { setName(e.target.value); setMiss(''); }} maxLength={160} placeholder="напр. Бак біля 24/7 на Гроув-стріт" /></label>}
       <label className="bnote">Опис (необов’язково)<input value={note} onChange={e => setNote(e.target.value)} maxLength={600} placeholder="напр. бак за магазином 24/7, біля входу" /></label>
       <div className="row">
-        <button className="btn acc" onClick={() => send(true)}>{ask.point ? 'Надіслати точку' : 'Надіслати без точки'}</button>
+        <button className="btn acc" onClick={() => send(true)}>{ask.player ? 'Надіслати мітку' : ask.point ? 'Надіслати точку' : 'Надіслати без точки'}</button>
         <button className="btn" onClick={() => send(false)}>Не надсилати</button>
       </div>
-      <small className="muted"><kbd>↑↓</kbd> інша категорія · <kbd>Tab</kbd> до опису · <kbd>Enter</kbd> надіслати · <kbd>Esc</kbd> не надсилати</small>
+      {miss && <small className="err" role="alert">{miss}</small>}
+      <small className="muted"><kbd>↑↓</kbd> інша категорія · <kbd>Tab</kbd> далі · <kbd>Enter</kbd> надіслати · <kbd>Esc</kbd> не надсилати</small>
     </div>
   </>;
 }
