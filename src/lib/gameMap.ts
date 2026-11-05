@@ -1,7 +1,8 @@
 import { OCEAN, mapUrl } from './mapGeo';
 import { triPath } from './mapChunk';
 import { recolorMesh, themed, type GameTheme } from './gameTheme';
-/* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>.png, 2x3 тайли),
+import { ytd, type YtdFormat } from './ytd';
+/* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
 
@@ -10,7 +11,7 @@ export const gamePx = (x: number, y: number, size: number): [number, number] =>
   [(x - GAME.x0) * size / GAME.tile, (GAME.yt - y) * size / GAME.tile];
 
 
-export const tileName = (row: number, col: number, prefix = 'minimap_') => `${prefix}${row}_${col}.png`;
+export const tileName = (row: number, col: number, prefix = 'minimap_') => `${prefix}${row}_${col}`;
 
 /* CRC-32 для zip */
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -240,29 +241,37 @@ function drawPins(ctx: CanvasRenderingContext2D, size: number, pins: GamePin[], 
 const png = (c: HTMLCanvasElement) => new Promise<Blob>((res, rej) => c.toBlob(x => (x ? res(x) : rej(new Error('PNG'))), 'image/png'))
   .then(async b => new Uint8Array(await b.arrayBuffer()));
 
-async function tiles(cv: HTMLCanvasElement, size: number, prefix: string): Promise<ZipEntry[]> {
+/* текстура -> готовий .ytd (стиснутий сам, тож у zip — як є); між тайлами віддаємо хід, щоб сторінка не завмирала */
+async function ytdEntry(c: HTMLCanvasElement, name: string, fmt: YtdFormat): Promise<ZipEntry> {
+  const px = c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, c.width, c.height).data;
+  await new Promise(r => setTimeout(r));
+  return { name: `textures/${name}.ytd`, data: await ytd(name, px, c.width, c.height, fmt) };
+}
+
+async function tiles(cv: HTMLCanvasElement, size: number, prefix: string, fmt: YtdFormat): Promise<ZipEntry[]> {
   const files: ZipEntry[] = [];
-  const t = document.createElement('canvas'); t.width = t.height = size; const tc = t.getContext('2d')!;
+  const t = document.createElement('canvas'); t.width = t.height = size; const tc = t.getContext('2d', { willReadFrequently: true })!;
   for (let row = 0; row < GAME.rows; row++) for (let c = 0; c < GAME.cols; c++) {
     tc.clearRect(0, 0, size, size); tc.drawImage(cv, c * size, row * size, size, size, 0, 0, size, size);
-    files.push({ name: 'textures/' + tileName(row, c, prefix), data: await png(t) });
+    files.push(await ytdEntry(t, tileName(row, c, prefix), fmt));
   }
   return files;
 }
 
 /* текстури як у грі: minimap_R_C 512 px (море з глибиною, назви, зони й мітки), minimap_sea_R_C 1024 px (те саме у вдвічі більшому розмірі,
    як на мапі сайту),
-   minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро */
+   minimap_lod_128 — уся мапа одним квадратом 128 px, навколо прозоро.
+   Формати — як у самій грі (src/lib/ytd.ts): DXT1 для minimap_R_C і lod, DXT5 для sea */
 const TEX = 512, SEA = 1024, LOD = 128;
 const SEA_SHORE = 1, SEA_DEEP = 0;
 async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], theme: GameTheme = 'dark'): Promise<ZipEntry[]> {
-  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true, theme), TEX, 'minimap_');
+  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true, theme), TEX, 'minimap_', 'DXT1');
   const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true, theme);
-  files.push(...await tiles(sea, SEA, 'minimap_sea_'));
-  const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d')!;
+  files.push(...await tiles(sea, SEA, 'minimap_sea_', 'DXT5'));
+  const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d', { willReadFrequently: true })!;
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
   lc.imageSmoothingQuality = 'high'; lc.drawImage(sea, (LOD - w) / 2, (LOD - h) / 2, w, h);
-  files.push({ name: 'textures/minimap_lod_128.png', data: await png(l) });
+  files.push(await ytdEntry(l, 'minimap_lod_128', 'DXT1'));
   return files;
 }
 
