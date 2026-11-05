@@ -12,6 +12,9 @@ insert into auth.users (id, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000e5', '{"full_name":"Admin"}')
   on conflict (id) do nothing;
 update public.profiles set role = 'user' where id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2');
+-- нік змінюють раз на 30 днів (0038) — у тесті відсуваємо попередню зміну
+update public.profiles set nick_changed_at = now() - interval '1 year' where id = '00000000-0000-0000-0000-0000000000e1';
+update public.profiles set nick = 'Gravets_Nick' where id = '00000000-0000-0000-0000-0000000000e1';
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-0000000000e3';
 update public.profiles set role = 'moderator' where id = '00000000-0000-0000-0000-0000000000e4';
 update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000e5';
@@ -209,6 +212,8 @@ select set_config('request.jwt.claim.sub', '', false) \gset
 do $$ begin
   assert (select count(*) from public.jobs where id = 'pilot') = 0, 'прибрана сторінка видна гостю';
   assert (select accepted_pages from public.wiki_contributors where id = '00000000-0000-0000-0000-0000000000e1') = 1, 'рейтинг не рахує нову сторінку';
+  -- рейтинг показує нік у Q-Hub, а не ім'я Discord (0058)
+  assert (select name from public.wiki_contributors where id = '00000000-0000-0000-0000-0000000000e1') = 'Gravets_Nick', 'у рейтингу ім''я Discord замість ніка';
   begin perform public.wiki_snapshot('job', 'pilot'); raise exception 'гість прочитав знімок прихованої сторінки';
   exception when insufficient_privilege then null; end;
 end $$;

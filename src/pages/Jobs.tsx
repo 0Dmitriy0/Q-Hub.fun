@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import Select from '../components/Select';
 import JobDialog from '../components/JobDialog';
 import Profit from '../components/Profit';
+import Leaderboard from '../components/Leaderboard';
 import { jobIcon } from '../components/JobDialog';
 import ProposeForm, { takeIntent, type ProposeTarget } from '../components/wiki/ProposeForm';
 import { useJobs, type JobRow } from '../lib/jobsData';
@@ -62,7 +63,7 @@ export default function Jobs() {
         </div>
       </div>
       <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {counts.all} робіт</span><span className="muted">Натисни на картку — відкриється опис</span>
-        {fromDb && <button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати роботу</button>}</div>
+        {fromDb && <span className="row"><Leaderboard /><button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати роботу</button></span>}</div>
       {!shown.length && <div className="card empty wiki-none"><b>Робіт не знайдено</b><span className="muted">Зміни фільтр або очисти пошук.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); }}>Скинути пошук</button></div>}
       <div className="jgrid">{shown.map(j => (
         <button type="button" key={j.id} className={'card jcard' + (j.legal ? '' : ' ill')} onClick={() => setOpenId(j.id)} aria-haspopup="dialog">
