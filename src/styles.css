@@ -1146,7 +1146,36 @@ fieldset .static-form .btn { align-self: end; }
 .p-log-g ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; line-height: 1.5; }
 .p-log-more { justify-self: center; margin-top: 12px; }
 #onovlennya { scroll-margin-top: 90px; display: grid; }
-@media (max-width: 1000px) { .p-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .p-req, .p-bottom { grid-template-columns: 1fr; } }
+/* комбінації клавіш (src/lib/hotkeys.ts — той самий список, що в програмі: Налаштування → Клавіші) */
+#klavishi { scroll-margin-top: 90px; }
+.p-keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.p-keys .card { gap: 4px; }
+.p-keys h3 { font-size: 16px; margin: 0; }
+.p-keys .card > small { margin-bottom: 6px; }
+.p-keys dl { margin: 0; display: grid; }
+.p-key { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 4px 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.p-key dt { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
+.p-key dd { margin: 0; font-size: 14px; line-height: 21px; }
+.p-key dd b { display: block; }
+.p-key dd span { color: var(--muted); }
+.p-keys-note { margin-top: 12px; font-size: 14px; }
+@media (max-width: 1000px) { .p-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .p-req, .p-bottom, .p-keys { grid-template-columns: 1fr; } }
+/* «Інструкція» програми (src/pages/AppGuide.tsx) — на розмітці «Як поставити мапу» (.guide), розділи з якорями */
+.ag-sec { scroll-margin-top: 88px; padding-top: 8px; border-top: 1px solid var(--line); }
+.ag-sec h2 { display: flex; align-items: center; gap: 10px; }
+.ag-sec p { line-height: 1.6; margin: 0 0 10px; }
+.ag-n { color: var(--faint); font-size: 14px; }
+.ag-sec kbd, .ag-keys kbd { padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line2); background: var(--surface2); color: var(--fg); font: 700 .85em var(--mono); }
+.ag-keys { display: inline-flex; gap: 3px; vertical-align: baseline; }
+.ag-list { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 8px; line-height: 1.6; }
+.ag-tip { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.ag-tip svg { flex: none; margin-top: 4px; color: var(--accent-hi); }
+.ag-faq { margin: 0; display: grid; gap: 4px; }
+.ag-faq dt { font-weight: 700; margin-top: 10px; }
+.ag-faq dt:first-child { margin-top: 0; }
+.ag-faq dd { margin: 0; color: var(--muted); line-height: 1.6; }
+.ag-sec .p-keys { grid-template-columns: 1fr; }
+@media (max-width: 560px) { .p-key { grid-template-columns: 1fr; gap: 6px; } }
 @media (max-width: 560px) {
   .prog { gap: 40px; }
   .p-hero { padding: 20px; }

@@ -15,7 +15,7 @@ const NAV: [string, string, string][] = [
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/kabinet': 'Кабінет', '/admin': 'Адмінка',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/programa/instruktsiya': 'Інструкція до програми', '/kabinet': 'Кабінет', '/admin': 'Адмінка',
 };
 
 export default function Layout() {
@@ -32,7 +32,7 @@ export default function Layout() {
   }, [menu]);
   useEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
-    document.title = key === '/' ? 'Q-Hub — ціни, мапа й правила для QuantRP' : TITLES[key] ? `${TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
+    document.title = key === '/' ? 'Q-Hub — ціни, мапа й правила для QuantRP' : (TITLES[pathname] || TITLES[key]) ? `${TITLES[pathname] || TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
   }, [pathname]);
   return (
     <div className="app">

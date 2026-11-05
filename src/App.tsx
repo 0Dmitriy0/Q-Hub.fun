@@ -14,6 +14,7 @@ const WikiEvent = lazy(() => import('./pages/WikiEvent'));
 const MapPage = lazy(() => import('./pages/MapPage'));
 const GameMapGuide = lazy(() => import('./pages/GameMapGuide'));
 const Download = lazy(() => import('./pages/Download'));
+const AppGuide = lazy(() => import('./pages/AppGuide'));
 const Cabinet = lazy(() => import('./pages/cabinet/Cabinet'));
 const RulesAdmin = lazy(() => import('./pages/RulesAdmin'));
 const Admin = lazy(() => import('./pages/Admin'));
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="mapa" element={<MapPage />} />
         <Route path="mapa/v-gru" element={<GameMapGuide />} />
         <Route path="programa" element={<Download />} />
+        <Route path="programa/instruktsiya" element={<AppGuide />} />
         <Route path="kabinet/*" element={<Cabinet />} />
         <Route path="admin" element={<Admin />} />
         <Route path="admin/pravyla" element={<RulesAdmin />} />
