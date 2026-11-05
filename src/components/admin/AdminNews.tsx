@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import AdminSection from './AdminSection';
 import DiscordPreview from './DiscordPreview';
+import { uploadCatalogImage } from '../../lib/images';
+import { COVER, coverBlob, coverKind, coverVersion, drawCover } from '../../lib/newsCover';
 import { newsMessage, newsTooLong, NEWS_MAX, newsDescription } from '../../../supabase/functions/discord-bot/format';
 
 /* «Новини» (specs/060 US2): чернетки з журналу програми (changelog:…), новин сайту (site:…), вручну (manual:…) чи
@@ -119,6 +121,22 @@ export default function AdminNews() {
     if (!chName) call<{ channels: { news: { name?: string } | null } }>('status', {}).then(r => setChName(r.channels.news?.name ?? '')).catch(() => {});
   }
 
+  /* обкладинка за шаблоном Q-Hub (src/lib/newsCover.ts) → сховище catalog → адреса в «Картинка»; зберігає власник кнопкою */
+  async function makeCover() {
+    if (!cur || !form) return;
+    setBusy('cover'); setMsg('');
+    try {
+      const title = form.title.trim() || cur.title;
+      const cv = await drawCover({ kind: coverKind(cur.source_ref), title, version: coverVersion(title),
+        date: new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }) });
+      const file = new File([await coverBlob(cv)], 'cover.webp', { type: 'image/webp' });
+      const url = await uploadCatalogImage(file, `news/cover-${cur.id}-${Date.now().toString(36)}.webp`, COVER);
+      setForm(x => (x ? { ...x, image_url: url } : x));
+      setMsg('Обкладинку зроблено — подивись у перегляді й натисни «Зберегти».');
+    } catch (e) { setMsg('Не вдалося зробити обкладинку: ' + ((e as Error).message || e)); }
+    setBusy('');
+  }
+
   async function create() {
     setBusy('new');
     const { data, error } = await supabase!.from('news_drafts')
@@ -195,7 +213,13 @@ export default function AdminNews() {
               {f('added', 'Додано', 4)}
               {f('changed', 'Змінено', 4, 'Сюди ж — виправлене.')}
               {f('removed', 'Прибрано', 2)}
-              {f('image_url', 'Картинка', 0, 'Необов\'язково. Велика картинка під текстом.')}
+              {f('image_url', 'Картинка', 0, 'Необов\'язково. Велика картинка під текстом — своя адреса або обкладинка Q-Hub кнопкою нижче.')}
+              {cur.status !== 'sent' && (
+                <div className="row">
+                  <button type="button" className="btn ghost sm" disabled={busy !== ''} onClick={makeCover}>{busy === 'cover' ? 'Малюю…' : form.image_url ? 'Зробити нову обкладинку' : 'Зробити обкладинку'}</button>
+                  {form.image_url && <button type="button" className="btn ghost sm" disabled={busy !== ''} onClick={() => setForm({ ...form, image_url: '' })}>Прибрати картинку</button>}
+                </div>
+              )}
               {f('link', 'Посилання', 0, 'Необов\'язково. Заголовок у Discord стане посиланням.')}
               <small className={over ? 'err' : 'muted'}>Символів у тексті: {newsDescription(preview).length} з {NEWS_MAX}{over ? ` — задовге на ${over}, скороти пункти` : ''}</small>
               {cur.status === 'sent' ? <p className="muted">Надіслано {when(cur.sent_at)}. Зміни тут уже не потраплять у Discord.</p> : (
@@ -217,7 +241,7 @@ export default function AdminNews() {
                   </div>
                 </div>
               )}
-              {msg && <p className={/^(Збережено|Надіслано|Сховано|Повернуто|Цю новину)/.test(msg) ? 'good' : 'err'} role="status">{msg}</p>}
+              {msg && <p className={/^(Збережено|Надіслано|Сховано|Повернуто|Цю новину|Обкладинку)/.test(msg) ? 'good' : 'err'} role="status">{msg}</p>}
             </div>
             <DiscordPreview body={newsMessage(preview)} />
           </div>
