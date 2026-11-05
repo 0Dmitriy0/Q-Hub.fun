@@ -12,6 +12,8 @@ insert into auth.users (id, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000e5', '{"full_name":"Admin"}')
   on conflict (id) do nothing;
 update public.profiles set role = 'user' where id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2');
+-- нік змінюють раз на 30 днів (0038) — у тесті відсуваємо попередню зміну
+update public.profiles set nick_changed_at = now() - interval '1 year' where id = '00000000-0000-0000-0000-0000000000e1';
 update public.profiles set nick = 'Gravets_Nick' where id = '00000000-0000-0000-0000-0000000000e1';
 update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-0000000000e3';
 update public.profiles set role = 'moderator' where id = '00000000-0000-0000-0000-0000000000e4';
