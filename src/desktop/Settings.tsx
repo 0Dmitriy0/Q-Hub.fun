@@ -126,7 +126,7 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
           <div className="scard">
             <Row t="Навчальні знімки" d={<><Keys k={shots?.key ?? 'Alt+S'} /> у грі · зібрано {shots?.n ?? 0}</>}><button className="btn sm" onClick={() => api.shotsOpen()}>Відкрити папку</button></Row>
             <Row t="Ділитися знімками" d="Допомагають навчити програму читати екран"><Toggle on={prefs.shareShots} set={v => save({ shareShots: v })} label="Ділитися знімками" /></Row>
-            {staff && <Row t="Мітка з гри" d="На великій карті — знімок іде чернеткою на сайт. Клавіші без Alt/Ctrl гра забирає собі">
+            {user && <Row t="Мітка з гри" d={staff ? 'На великій карті — знімок іде чернеткою на сайт. Клавіші без Alt/Ctrl гра забирає собі' : 'На великій карті гри — нова мітка на розгляд модератору. Клавіші без Alt/Ctrl гра забирає собі'}>
               <span className="row">{PIN_KEYS.map(k => <button key={k} className={'skrec' + (prefs.pinKey === k ? ' on' : '')} aria-pressed={prefs.pinKey === k} onClick={() => save({ pinKey: k })}><Keys k={k} /></button>)}
                 {!PIN_KEYS.includes(prefs.pinKey || '') && <KeyRec value={prefs.pinKey || 'Alt+F9'} set={k => save({ pinKey: k })} />}</span>
             </Row>}
@@ -136,7 +136,7 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
         {sec === 'keys' && <div className="scard">
           {([['Показати чи сховати плашку', prefs.hotkey], ['Пошук у правилах і на мапі', 'Enter'], ['Спитати ШІ', 'Shift+Enter'], ['Пошук ↔ Ціни', 'Tab'],
             ['Вибрати пункт у списку', '↑+↓'], ['Очистити рядок → закрити → сховати', 'Esc'], ['Навчальний знімок гри', 'Alt+S'], ['Мапа Q-Hub поверх гри', prefs.mapKey || 'Alt+M'], ['«Де я?» — з відкритою великою картою гри', prefs.mapKey || 'Alt+M'],
-            ...(staff ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
+            ...(user ? [['Мітка на мапі з гри', prefs.pinKey || 'Alt+F9']] : [])] as [string, string][]).map(([t, k]) => <Row key={t} t={t}><Keys k={k} /></Row>)}
         </div>}
         {sec === 'changes' && <>
           <p className="muted">Що змінилось у програмі — найновіше зверху. Зараз у тебе {version ? `v${version}` : 'ця версія'}.</p>
