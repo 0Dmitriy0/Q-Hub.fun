@@ -15,7 +15,7 @@ const KINDS: [JobKind, string][] = [['all', 'Усі'], ['legal', 'Легальн
 const SORTS: [JobSort, string, string][] = [['name', 'За назвою', 'tag'], ['profit', 'За прибутковістю', 'coin'], ['level', 'За доступністю', 'trophy']];
 
 export default function Jobs() {
-  const { jobs: JOBS, fromDb } = useJobs();
+  const { jobs: JOBS, fromDb, reload } = useJobs();
   const { session } = useAuth();
   /* пропозиція правки (specs/043): правити можна, коли роботи вже з бази — інакше немає версії картки */
   const [prop, setProp] = useState<{ t: ProposeTarget; mode: 'edit' | 'new' | 'hide' } | null>(null);
@@ -79,6 +79,7 @@ export default function Jobs() {
       </div>
       <JobDialog job={JOBS.find(j => j.id === openId) || null} onClose={() => setOpenId('')}
         onPropose={fromDb ? () => { const j = JOBS.find(x => x.id === openId); if (j) { setOpenId(''); propose(j, 'edit'); } } : undefined}
+        onChanged={reload}
         onHide={fromDb ? () => { const j = JOBS.find(x => x.id === openId); if (j) { setOpenId(''); propose(j, 'hide'); } } : undefined} />
       <ProposeForm target={prop?.t ?? null} mode={prop?.mode ?? 'edit'} list={JOBS} onClose={() => setProp(null)} />
     </>
