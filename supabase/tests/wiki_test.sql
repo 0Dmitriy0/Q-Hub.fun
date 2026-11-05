@@ -312,8 +312,6 @@ reset role;
 set role anon;
 select set_config('request.jwt.claim.sub', '', false) \gset
 do $$ begin
-  raise warning 'DIAG2 %', (select json_agg(json_build_object('name', policyname, 'cmd', cmd, 'roles', roles, 'qual', qual, 'permissive', permissive)) from pg_policies where tablename = 'map_points');
-  raise warning 'DIAG role=% uid=% mod=% rows=%', public.my_role(), auth.uid(), public.is_wiki_mod(), (select json_agg(json_build_object('id', id, 'hidden', hidden, 'batch', batch_id)) from public.map_points where name = 'Грибне місце');
   assert (select count(*) from public.map_points where name = 'Грибне місце') = 0, 'схована мітка видна гостю';
 end $$;
 reset role;
