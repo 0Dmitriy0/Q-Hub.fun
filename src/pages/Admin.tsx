@@ -9,11 +9,12 @@ import AdminAppState from '../components/admin/AdminAppState';
 import AdminShots from '../components/admin/AdminShots';
 import AdminLinks from '../components/admin/AdminLinks';
 import AdminDiscordBot from '../components/admin/AdminDiscordBot';
+import AdminNews from '../components/admin/AdminNews';
 
 /* Адмін-панель для розробників (specs/039): лише роль admin — решта (і гість) бачить звичайне «Не знайдено» (FR-001).
    Це лише показ: кожне читання й дію перевіряє база (0046, конституція II) */
 const TABS = [
-  ['queues', 'Черги'], ['accounts', 'Гравці'], ['app', 'Програма'], ['shots', 'Знімки'], ['discord', 'Discord-бот'], ['links', 'Налаштування'],
+  ['queues', 'Черги'], ['accounts', 'Гравці'], ['app', 'Програма'], ['shots', 'Знімки'], ['discord', 'Discord-бот'], ['news', 'Новини'], ['links', 'Налаштування'],
 ] as const;
 type Tab = typeof TABS[number][0];
 
@@ -52,6 +53,7 @@ export default function Admin() {
         {tab === 'app' && <AdminAppState />}
         {tab === 'shots' && <AdminShots />}
         {tab === 'discord' && <AdminDiscordBot />}
+        {tab === 'news' && <AdminNews />}
         {tab === 'links' && <AdminLinks />}
       </div>
     </div>

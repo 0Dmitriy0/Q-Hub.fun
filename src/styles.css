@@ -1770,3 +1770,27 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 @media (max-width: 400px) { .wiki-tabs .cnt { display: none; } }
 .sv-link { color: inherit; text-decoration: none; }
 .sv-link:hover b, .sv-link:focus-visible b { text-decoration: underline; }
+
+/* «Новини» в адмінці (specs/060 US2): редактор чернетки й перегляд як у Discord */
+.news-edit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .news-edit { grid-template-columns: 1fr; } }
+.news-edit .form { display: flex; flex-direction: column; gap: 12px; }
+.news-edit textarea { resize: vertical; }
+.adm-row.news-open { background: var(--surface2); border-radius: 12px; padding-left: 10px; padding-right: 10px; }
+.news-confirm { border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.news-confirm p { margin: 0; }
+/* перегляд — кольори Discord (темна тема) незалежно від теми сайту */
+.dcp { display: flex; gap: 14px; padding: 16px; border-radius: 12px; background: #313338; color: #dbdee1; font: 15px/1.375 system-ui, sans-serif; position: sticky; top: 16px; min-width: 0; }
+.dcp-ava { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #ff6b00; color: #fff; font-weight: 800; }
+.dcp-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.dcp-who { display: flex; align-items: center; gap: 6px; }
+.dcp-who b { color: #f2f3f5; }
+.dcp-bot { font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: #5865f2; color: #fff; }
+.dcp-content, .dcp-desc, .dcp-title, .dcp-foot { margin: 0; overflow-wrap: anywhere; }
+.dcp-embed { background: #2b2d31; border-left: 4px solid; border-radius: 4px; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.dcp-title { font-weight: 700; color: #f2f3f5; }
+.dcp-title a { color: #00a8fc; }
+.dcp-desc { font-size: 14px; }
+.dcp-desc b { color: #f2f3f5; }
+.dcp-img { max-width: 100%; border-radius: 4px; }
+.dcp-foot { font-size: 12px; color: #b5bac1; }

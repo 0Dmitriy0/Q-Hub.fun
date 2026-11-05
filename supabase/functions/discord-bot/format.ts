@@ -136,4 +136,27 @@ export function pricesMessage(groups: Group[], opt: { now: Date; site: string })
   return packs.map((p, i) => ({ content: packs.length > 1 ? `${head} (${i + 1}/${packs.length})` : head, embeds: p }));
 }
 
-export const TEST_MESSAGE: Body = { content: 'Пробне повідомлення Q-Hub — бот бачить цей канал і може писати.' };
+/* ---- новина з чернетки (US2, contracts/messages.md) ---- */
+export type NewsDraft = { title: string; added: string[]; changed: string[]; removed: string[]; image_url?: string; link?: string };
+export const NEWS_MAX = 4096;   // ліміт опису embed у Discord
+
+const NEWS_GROUPS = [['added', '✨ Додано'], ['changed', '🔧 Змінено'], ['removed', '🗑️ Прибрано']] as const;
+export function newsDescription(d: NewsDraft): string {
+  return NEWS_GROUPS.map(([k, name]) => {
+    const items = (d[k] ?? []).map(s => s.trim()).filter(Boolean);
+    return items.length ? `**${name}**\n${items.map(s => '• ' + s).join('\n')}` : '';
+  }).filter(Boolean).join('\n\n');
+}
+
+/* текст над карткою — для сповіщення на телефоні; картинка й посилання — лише якщо задані */
+export function newsMessage(d: NewsDraft): Body {
+  const e: Embed = { title: d.title.trim(), description: newsDescription(d), color: COLOR, footer: { text: 'Q-Hub · q-hub.fun' } };
+  if (d.link) e.url = d.link;
+  if (d.image_url) e.image = { url: d.image_url };
+  return { content: `📣 ${d.title.trim()}`, embeds: [e] };
+}
+
+/* на скільки символів опис довший за дозволене; 0 — влазить */
+export const newsTooLong = (d: NewsDraft) => Math.max(0, newsDescription(d).length - NEWS_MAX);
+
+export const TEST_MESSAGE: Body ={ content: 'Пробне повідомлення Q-Hub — бот бачить цей канал і може писати.' };

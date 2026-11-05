@@ -55,6 +55,25 @@ jobs:
           protocol: ftps
           local-dir: ./dist/
           server-dir: ${{ secrets.FTP_DIR || vars.FTP_DIR || './' }}
+      # Новини в Discord (specs/060 US2): верхній запис журналу програми й новин сайту → чернетки в адмінці «Новини».
+      # Нічого не публікує — лише чернетки; наявні не чіпає. Збій тут не валить деплой.
+      - name: Discord news drafts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          SECRET: ${{ secrets.DISCORD_SYNC_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "::warning::Немає секрету DISCORD_SYNC_SECRET — чернетки новин не створено. Кроки: specs/060-discord-bot/quickstart.md"
+            exit 0
+          fi
+          URL=$(node -p "require('./desktop/src/config.json').url")
+          node -e "const r=f=>JSON.parse(require('fs').readFileSync(f,'utf8')).entries[0]||null;
+            process.stdout.write(JSON.stringify({action:'drafts',changelog:r('src/data/changelog.json'),site:r('src/data/sitenews.json')}))" > drafts.json
+          code=$(curl -sS -o out.json -w '%{http_code}' -X POST "$URL/functions/v1/discord-bot" \
+            -H "x-sync-secret: $SECRET" -H 'Content-Type: application/json' --data-binary @drafts.json --max-time 60)
+          echo "HTTP $code"; cat out.json; echo
+          [ "$code" = 200 ]
       # Розвідка: яка папка на FTP справді є коренем сайту (там лежить index.html, який зараз віддає q-hub.fun).
       # Пароль бере з Secrets і в лог не потрапляє.
       - name: Find the site folder on FTP
