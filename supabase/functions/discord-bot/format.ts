@@ -108,7 +108,7 @@ export function pricesMessage(groups: Group[], opt: { now: Date; site: string })
         fields.push({ name: i === 0 ? `${s.name} · ${items.length}` : '​', value }));
     }
     const description = [summary(g.rows, board.length), next ? `⏰ Наступна зміна: **${next}**` : ''].filter(Boolean).join('\n');
-    const title = `${buyerIcon(g.buyer.id)} ${escape(g.buyer.name)} — ціни скупника`;
+    const title = `${buyerIcon(g.buyer.id)} ${escape(g.buyer.name)} — ${g.rows.length ? 'нові' : 'поточні'} ціни`;
     const base = { url: `${opt.site}/tsiny#${encodeURIComponent(g.buyer.id)}`, color: COLOR, timestamp: opt.now.toISOString(),
       footer: { text: 'Відсоток — де ціна між мінімумом і максимумом скупника · Q-Hub · q-hub.fun' } };
     /* поля по embed: ≤ 25 і ≤ ~5000 символів, щоб кілька embed влазили в повідомлення */
@@ -129,11 +129,8 @@ export function pricesMessage(groups: Group[], opt: { now: Date; site: string })
     cur.push(e); total += size(e);
   }
   if (cur.length) packs.push(cur);
-  /* текст над карткою — для сповіщення на телефоні: «🍄 Гриби — нові ціни · 14:32» */
-  const head = groups.length === 1
-    ? `${buyerIcon(groups[0].buyer.id)} ${escape(groups[0].buyer.name)} — ${groups[0].rows.length ? 'нові' : 'поточні'} ціни · ${kyivTime(opt.now)}`
-    : `🛒 Нові ціни скупників · ${kyivTime(opt.now)}`;
-  return packs.map((p, i) => ({ content: packs.length > 1 ? `${head} (${i + 1}/${packs.length})` : head, embeds: p }));
+  /* без тексту над карткою: він повторював заголовок (рішення власника 2026-11-05); час — у timestamp картки */
+  return packs.map(p => ({ embeds: p }));
 }
 
 /* ---- новина з чернетки (US2, contracts/messages.md) ---- */
@@ -148,12 +145,13 @@ export function newsDescription(d: NewsDraft): string {
   }).filter(Boolean).join('\n\n');
 }
 
-/* текст над карткою — для сповіщення на телефоні; картинка й посилання — лише якщо задані */
+/* лише картка, без тексту над нею (він дублював заголовок); картинка й посилання — лише якщо задані */
 export function newsMessage(d: NewsDraft): Body {
   const e: Embed = { title: d.title.trim(), description: newsDescription(d), color: COLOR, footer: { text: 'Q-Hub · q-hub.fun' } };
   if (d.link) e.url = d.link;
-  if (d.image_url) e.image = { url: d.image_url };
-  return { content: `📣 ${d.title.trim()}`, embeds: [e] };
+  /* банер — окремою карткою над текстом: в одній картці Discord ставить картинку лише внизу (рішення власника 2026-11-05).
+     Без url у банера — інакше Discord зливає картки з однаковим url в одну галерею */
+  return { embeds: d.image_url ? [{ color: COLOR, image: { url: d.image_url } }, e] : [e] };
 }
 
 /* на скільки символів опис довший за дозволене; 0 — влазить */

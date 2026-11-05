@@ -10,3 +10,4 @@
 - [Discord-бот: експлуатація](discord-bot-ops.md) — секрети, розклад pg_cron, деплой з --yes; SQL власнику — через буфер, не з чату
 - [Новини сайту — sitenews.json](site-news-sitenews-json.md) — зміни лише сайту → sitenews.json; після деплою — чернетки Discord в адмінці «Новини»
 - [Довідник — лише через wiki_decide](wiki-publish-via-rpc.md) — роботи в jobs, правки через пропозиції; новий розділ — section + wiki_clean + FIELDS
+- [PR ще відкритий перед push](check-pr-open-before-push.md) — у злиту гілку не пушити: нова гілка від main + cherry-pick
