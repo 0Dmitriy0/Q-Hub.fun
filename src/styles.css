@@ -1834,3 +1834,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .whist-h .muted { font-size: 13px; }
 .whist-v .wdiff { align-self: stretch; }
 .wedit { display: flex; flex-direction: column; gap: 10px; border: 1px dashed var(--line2); border-radius: 12px; padding: 12px; }
+/* міні-мапа пропозиції мітки в черзі (specs/043 US5) */
+.wpoint { display: flex; flex-direction: column; gap: 6px; }
+.wpoint-map { height: 320px; border-radius: 12px; border: 1px solid var(--line2); overflow: hidden; background: var(--bg); }
+@media (max-width: 520px) { .wpoint-map { height: 240px; } }
