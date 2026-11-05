@@ -70,7 +70,7 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
   const dupes = mode === 'new' && list ? similar(String(next.name ?? ''), list) : [];
 
   if (!target) return <dialog ref={dlg} className="modal wmodal" onClose={onClose} />;
-  const title = mode === 'new' ? `Додати: ${target.title}` : mode === 'hide' ? `Прибрати сторінку «${target.title}»` : `Правка: ${target.title}`;
+  const title = mode === 'new' ? `Додати: ${target.title}` : mode === 'hide' ? (section === 'map_point' ? `Точка застаріла: «${target.title}»` : `Прибрати сторінку «${target.title}»`) : `Правка: ${target.title}`;
 
   async function send() {
     setTouched(Object.fromEntries(fields.map(f => [f.key, true])));
@@ -147,7 +147,7 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
             {mode === 'edit' && Object.keys(changes).length > 0 && <div className="wide"><h3 className="wp-h">Що зміниться</h3><DiffView section={section} old={target.data} changes={changes} /></div>}
             <fieldset className="fld wide wp-src"><legend>Звідки знаєш? *</legend>
               <div className="seg">{SOURCES.map(([k, l]) => <button key={k} type="button" aria-pressed={source === k} className={source === k ? 'on' : ''} onClick={() => setSource(k)}>{l}</button>)}</div>
-              <input aria-label="Посилання чи пояснення" placeholder={mode === 'hide' ? 'Чому прибрати (наприклад: роботу прибрали з гри в патчі 02.11)' : 'Посилання чи пояснення — необов\'язково (наприклад: перевірив у грі 05.11)'}
+              <input aria-label="Посилання чи пояснення" placeholder={mode === 'hide' ? (section === 'map_point' ? 'Що змінилось (наприклад: бізнес закрили, точку прибрали в патчі 02.11)' : 'Чому прибрати (наприклад: роботу прибрали з гри в патчі 02.11)') : 'Посилання чи пояснення — необов\'язково (наприклад: перевірив у грі 05.11)'}
                 value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
               <label className="wp-proof">Скрін-доказ — необов'язково. Бачать лише ти й модератори, після рішення його видаляють.
                 <input type="file" accept="image/*" onChange={e => setProof(e.target.files?.[0] ?? null)} /></label>
@@ -155,7 +155,7 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
             <p className="muted wide wp-rule"><Icon name="shield" size={14} />Лише з гри, Discord чи власного досвіду. Не копіюй з інших фан-сайтів — таку правку відхилять.</p>
             {msg && <p className="err wide" role="alert">{msg}</p>}
             <div className="row wide">
-              <button className="btn acc" disabled={busy}>{busy ? 'Надсилаю…' : mode === 'hide' ? 'Запропонувати прибрати' : 'Надіслати на розгляд'}</button>
+              <button className="btn acc" disabled={busy}>{busy ? 'Надсилаю…' : mode === 'hide' ? (section === 'map_point' ? 'Повідомити модератору' : 'Запропонувати прибрати') : 'Надіслати на розгляд'}</button>
               <button type="button" className="btn ghost" onClick={onClose}>Скасувати</button>
             </div>
           </form>

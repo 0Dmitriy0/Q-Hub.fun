@@ -1838,3 +1838,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .wpoint { display: flex; flex-direction: column; gap: 6px; }
 .wpoint-map { height: 320px; border-radius: 12px; border: 1px solid var(--line2); overflow: hidden; background: var(--bg); }
 @media (max-width: 520px) { .wpoint-map { height: 240px; } }
+/* «Актуально» й «Може бути застарілим» на картці (specs/043 US6) */
+.wcheck { display: flex; flex-direction: column; gap: 6px; }
+.wcheck .row { align-items: center; gap: 8px 12px; }
+.wcheck-old { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }

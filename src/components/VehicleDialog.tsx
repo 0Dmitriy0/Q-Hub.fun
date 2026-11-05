@@ -7,6 +7,7 @@ import VehicleEdit from './VehicleEdit';
 import TuningPicker from './TuningPicker';
 import PageMeta from './wiki/PageMeta';
 import HistoryDialog from './wiki/HistoryDialog';
+import WikiChecks from './wiki/WikiChecks';
 
 /* двигун (0044): дизель — fuelType 3 з configvehicle гри; електро — поле electric */
 export const FUEL_WORD = { petrol: 'пальне', diesel: 'дизель', electric: 'електро' } as const;
@@ -58,6 +59,7 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved, onPropose,
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
         <PageMeta createdBy={v.created_by} updatedBy={v.updated_by} createdAt={v.created_at} updatedAt={v.updated_at} version={v.version} hidden={v.hidden} onHistory={v.version !== undefined ? () => setHist(true) : undefined} />
+        {!v.hidden && <WikiChecks section="vehicle" target={String(v.id)} version={v.version} changedAt={v.updated_at ?? v.created_at} onPropose={onPropose} />}
         <HistoryDialog section="vehicle" target={String(v.id)} title={v.name} hidden={v.hidden} open={hist} onClose={() => setHist(false)} onChanged={onChanged} />
         {!canEdit && onHide && <p className="muted wmeta"><button type="button" className="linkish" onClick={onHide}>Цього транспорту вже немає в грі? Запропонуй прибрати сторінку</button></p>}
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
