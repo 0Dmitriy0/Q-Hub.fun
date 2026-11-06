@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
 import HalloweenBanner from '../components/HalloweenBanner';
 import SitePromo from '../components/SitePromo';
+import TeamBlock from '../components/TeamBlock';
 import { useAuth } from '../lib/auth';
 import { fmt, money } from '../lib/format';
 import { supabase } from '../lib/supabase';
@@ -167,6 +168,9 @@ export default function Home() {
           </li>
         </ol>
       </section>
+
+      {/* 7. команда (0062) — склад з бази; порожньо — блоку немає */}
+      <TeamBlock />
     </div>
   );
 }

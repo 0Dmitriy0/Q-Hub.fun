@@ -1962,3 +1962,15 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
   .foot-by, .wiki-crumbs a, .h-more { padding-block: 15px; margin-block: -15px; }
   .h-cards .card p a { padding-block: 14px; }
 }
+
+/* «Команда Q-Hub» на головній (0062) */
+.team-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.team-card { display: flex; flex-direction: row; gap: 14px; align-items: flex-start; }
+.team-ava { width: 56px; height: 56px; border-radius: 16px; flex: none; object-fit: cover; display: grid; place-items: center;
+  background: var(--surface2); color: var(--accent-hi); font-weight: 800; font-size: 22px; }
+.team-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.team-who b { font-size: 16px; overflow-wrap: anywhere; }
+.team-role { font-size: 13px; font-weight: 700; color: var(--accent-hi); }
+.team-chars { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.team-join { align-self: flex-start; }
+.adm-team { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border-top: 1px solid var(--line); padding-top: 10px; }
