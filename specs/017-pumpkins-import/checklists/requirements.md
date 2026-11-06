@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Імпорт гарбузів набором і координати мапи партнерів
+# Specification Quality Checklist: Імпорт гарбузів набором і координати Open Hydra Map
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-29
@@ -32,5 +32,5 @@
 ## Notes
 
 - Залежить від specs/012: категорія «Гарбузи», іконка, доказ згоди (FR-009b).
-- сайт партнерів 2026-10-29 відповів 406 на автоматичний запит; обхід захисту не робився — звідси FR-002.
-- Q1 закрито: сайт = мапа партнерів, згода діє (FR-001).
+- gtav.fanwiki.top 2026-10-29 відповів 406 на автоматичний запит; обхід захисту не робився — звідси FR-002.
+- Q1 закрито: gtav.fanwiki.top = Open Hydra Map, згода діє (FR-001).

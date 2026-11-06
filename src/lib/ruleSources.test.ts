@@ -10,7 +10,7 @@ describe('адреса джерела правил', () => {
     expect(normalizeSourceUrl('https://forum.quant5.com.ua/index.php?/topic/7-kk/#comment-5')).toEqual({ url: 'https://forum.quant5.com.ua/index.php?/topic/7-kk/' });
   });
   it('чужий сайт, http, профіль, підробка домену — відмова', () => {
-    for (const s of ['https://fansite.example.com.ua/index.php?/forum/1-x/', 'http://forum.quant5.com.ua/index.php?/forum/1-x/',
+    for (const s of ['https://quantfun.com.ua/index.php?/forum/1-x/', 'http://forum.quant5.com.ua/index.php?/forum/1-x/',
       'https://forum.quant5.com.ua/index.php?/profile/1-x/', 'https://forumXquant5.com.ua/index.php?/topic/1-x/', 'не посилання'])
       expect(normalizeSourceUrl(s)).toHaveProperty('error');
   });

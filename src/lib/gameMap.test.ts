@@ -21,8 +21,8 @@ describe('карта для гри', () => {
 
 import { IconMesh, iconRuns, meshText, oddText, odrText, readZip, supertileOf } from './gameMap';
 
-describe('значки міток як в експорті мінікарти', () => {
-  it('частина мапи за координатами (графіті з експорту мінікарти лежить у minimap_3_4)', () => {
+describe('значки міток як у Hydra', () => {
+  it('частина мапи за координатами (графіті з експорту Hydra лежить у minimap_3_4)', () => {
     expect(supertileOf(177, 1210)).toEqual([3, 4]);
     expect(supertileOf(-900, 7000)).toEqual([3, 0]);
     expect(supertileOf(1400, -3200)).toEqual([5, 8]);
@@ -34,7 +34,7 @@ describe('значки міток як в експорті мінікарти', 
     expect(r[0]).toMatchObject({ x0: -0.5, x1: 0.5, y0: 0.5, y1: 0 });
     expect(r[1]).toMatchObject({ x0: 0, x1: 0.5 });
   });
-  it('файли .mesh і .odr у форматі OpenFormats, як в експорті мінікарти', () => {
+  it('файли .mesh і .odr у форматі OpenFormats, як пише Hydra', () => {
     const m = new IconMesh(); m.add(177, 1210, 12, '#ff6a1f', [{ x0: -0.5, x1: 0.5, y0: 0.5, y1: -0.5, c: [255, 255, 255] }]);
     const { mesh, min, max } = meshText(m);
     expect(mesh.startsWith('Version 165 32\n{\n\tLocked false')).toBe(true);
@@ -44,7 +44,7 @@ describe('значки міток як в експорті мінікарти', 
     expect(min[2]).toBe(17); expect(max[2]).toBeCloseTo(17.6);
     const odr = odrText('supertile_fore_3_4_tile_2_2', [171.2558899, 1204.4276123, 17], [182.7873993, 1216.895752, 17.6000004]);
     expect(odr).toContain('supertile_fore_3_4_tile_2_2\\supertile_fore_3_4_tile_2_2_high.mesh 0');
-    expect(odr).toContain('Radius 8.49691');   // те саме число, що в експорті мінікарти
+    expect(odr).toContain('Radius 8.49691');   // те саме число, що записала Hydra
   });
   it('zip читається назад без розпакування', () => {
     const z = makeZip([{ name: 'a/', data: new Uint8Array() }, { name: 'a/b.txt', data: new Uint8Array([1, 2, 3]), method: 8, crc: 7, size: 9 }]);
@@ -52,7 +52,7 @@ describe('значки міток як в експорті мінікарти', 
     expect(r.map(e => e.name)).toEqual(['a/', 'a/b.txt']);
     expect(r[1]).toMatchObject({ method: 8, crc: 7, size: 9 }); expect([...r[1].data]).toEqual([1, 2, 3]);
   });
-  it('.odd частини мапи — точнісінько як в експорті мінікарти після додавання значка', () => {
+  it('.odd частини мапи — точнісінько як у Hydra після додавання значка', () => {
     expect(oddText('3_4', ['supertile_sea_3_4.odr', 'supertile_back_3_4.odr', 'supertile_fore_3_4_tile_0_0.odr', 'supertile_fore_3_4_tile_2_2.odr']))
       .toBe('Version 165 32\n{\n\tminimap_3_4\\supertile_back_3_4.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_0_0.odr\n\tminimap_3_4\\supertile_fore_3_4_tile_2_2.odr\n\tminimap_3_4\\supertile_sea_3_4.odr\n}');
   });

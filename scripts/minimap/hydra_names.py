@@ -1,9 +1,9 @@
-# Назви з експорту мінікарти як є (без перемальовування) + виправлення бази.
-# Запуск у папці, де new/ — розпакований експорт мінікарти з назвами (minimap_export_2.zip),
+# Назви з експорту Hydra як є (без перемальовування) + виправлення бази.
+# Запуск у папці, де new/ — розпакований експорт Hydra з назвами (OpenHydra_Custom_2.zip),
 # base/ — розпакований public/map/game/base.zip; поруч comps.pkl-генератор не потрібен — компоненти рахуються тут.
-#  - names.zip: лише текст експорту (висота z >= 20: літери й тінь), без значків експорті (z 17-18) і зон
+#  - names.zip: лише текст Hydra (висота z >= 20: літери й тінь), без значків Hydra (z 17-18) і зон
 #  - base.zip: у tile_2_2 нових локацій (військова база z 29-30) висота знижується до рівня Деморгану (13-14),
-#    щоб назви (20+) і наші значки (17-17.6) лежали над нею; червоний трикутник-залишок експорту прибирається
+#    щоб назви (20+) і наші значки (17-17.6) лежали над нею; червоний трикутник-залишок Hydra прибирається
 #  - names.bin: ті самі трикутники назв для текстур гри й мапи сайту (формат як export.bin, порядок — за висотою)
 import re, glob, os, sys, math, zipfile, shutil, numpy as np, json
 sys.path.insert(0, os.path.dirname(__file__))
@@ -39,7 +39,7 @@ def mesh_odr(tile, tris):
            f'\t\tMed 9998.0\n\t\tLow 9998.0\n\t\tVlow 9998.0\n\t\tAABBMin {" ".join(map(f7, mn))}\n\t\tAABBMax {" ".join(map(f7, mx))}\n\t\tRadius {r:.5f}\n\t\tCenter {" ".join(map(f7, c))}\n\t}}\n\tLight null\n\tBound null\n\tJoints null\n}}')
     return mesh, odr
 
-def write_zip(name, files):   # files: {path: text}; папки — окремими записами, як в експорті мінікарти
+def write_zip(name, files):   # files: {path: text}; папки — окремими записами, як у Hydra
     dirs = sorted({p.rsplit('/', 1)[0] + '/' for p in files} | {p.split('/')[0] + '/' for p in files})
     with zipfile.ZipFile(name, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for d in dirs: z.writestr(zipfile.ZipInfo(d), '')
@@ -69,7 +69,7 @@ def comps(T):   # зв'язні шматки за спільними верши�
     root = np.array([find(a) for a in ids[:, 0]])
     return [np.where(root == r)[0] for r in np.unique(root)]
 
-# ---- логотип Q-Hub під «ГОРА "ЧІЛІАД"» (public/brand/q-hub-logo.svg): скруглений квадрат і «Q», з тінню як у тексту експорту ----
+# ---- логотип Q-Hub під «ГОРА "ЧІЛІАД"» (public/brand/q-hub-logo.svg): скруглений квадрат і «Q», з тінню як у тексту Hydra ----
 import mapbox_earcut as earcut
 from shapely.geometry import box
 LOGO_X, LOGO_Y, LOGO_M = 675.0, 5478.0, 64.0   # центр і розмір, м; назва «"ЧІЛІАД"» — y 5537, висота 35 м

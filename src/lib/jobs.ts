@@ -1,5 +1,5 @@
 import type { Job } from '../data/jobs';
-/* фільтр і сортування робіт: за назвою, прибутковістю або доступністю (рівнем) */
+/* фільтр і сортування робіт, як на сторінці QuantFun: за назвою, прибутковістю або доступністю (рівнем) */
 export type JobKind = 'all' | 'legal' | 'illegal';
 export type JobSort = 'name' | 'profit' | 'level';
 

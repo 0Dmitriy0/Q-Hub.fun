@@ -20,7 +20,7 @@ export const IN_GAME_GROUPS = new Set(['Магазини', 'Структури',
 const inGame = (c: MapCategory) => IN_GAME_GROUPS.has(c.grp);
 const SIZES = [5, 7, 12, 20];
 
-/* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі мінікарти гри (вектор мінікарти + значки + 6 текстур).
+/* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур).
    specs/026: зліва (на телефоні — зверху) перегляд того, що буде на мінікарті, справа вибір, кнопка «Скачати» з підсумком завжди видно */
 export default function GameMapExport({ groups, marks, areas, catById, isOn, loading = false }: {
   groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; areas: MapArea[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean; loading?: boolean;

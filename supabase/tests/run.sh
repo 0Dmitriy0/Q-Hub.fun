@@ -51,6 +51,9 @@ echo 'Транспорт з маркетплейсу ok'
 $P -f supabase/seed/vehicles_marketplace_2.sql >/dev/null; $P -f supabase/seed/vehicles_marketplace_2.sql >/dev/null   # друга партія маркетплейсу: повтор без дублів
 $P -c "do \$\$ begin assert (select count(*) from public.vehicles) = 129, 'друга партія маркетплейсу дублюється'; assert (select kind = 'boat' and brand = 'Shitzu' from public.vehicles where name = 'Shitzu Squalo'), 'човен не записався'; end \$\$;"
 echo 'Друга партія маркетплейсу ok'
+$P -f supabase/seed/map_quantfun.sql >/dev/null; $P -f supabase/seed/map_quantfun.sql >/dev/null   # мітки з QuantFun: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.map_points where created_by is null) = 2149, 'мітки з QuantFun дублюються або не всі'; assert (select icon from public.map_points where name = 'Odesa Mafia') = '/icons/map/mafia-odesa.svg', 'іконка мафії не записалась'; assert not (select bool_or(show_label) from public.map_points where category_id = 'bombs'), 'масові мітки з підписами'; end \$\$;"
+echo 'Мітки з QuantFun ok'
 $P -f supabase/tests/map_drafts_test.sql
 $P -f supabase/tests/map_areas_test.sql
 $P -f supabase/seed/map_hunting_fields.sql; $P -f supabase/seed/map_hunting_fields.sql   # поля полювання: повтор без дублів
@@ -66,6 +69,9 @@ $P -f supabase/tests/site_promo_test.sql
 $P -f supabase/tests/site_links_test.sql
 $P -f supabase/tests/site_stats_test.sql
 $P -f supabase/tests/map_batches_test.sql
+$P -f supabase/seed/map_pumpkins_ohm.sql >/dev/null; $P -f supabase/seed/map_pumpkins_ohm.sql >/dev/null   # гарбузи: повтор без дублів
+$P -c "do \$\$ begin assert (select count(*) from public.map_points where category_id = 'harbuzy' and source = 'ohm') = 790, 'гарбузів не 790 або дублюються'; assert (select count(*) = 1 and not bool_or(published) from public.map_batches where source = 'ohm'), 'партія гарбузів не одна або вже опублікована'; end \$\$;"
+echo 'Гарбузи ok'
 $P -f supabase/tests/guides_test.sql
 $P -f supabase/tests/account_nick_test.sql
 $P -f supabase/tests/rule_sources_test.sql

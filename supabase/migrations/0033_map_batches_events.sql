@@ -1,5 +1,5 @@
 -- Q-Hub: папка «Івенти» на мапі й мітки партіями (specs/017). Привиди переїжджають з «Міні-ігри, квести й контракти»
--- в «Івенти», там же — «Гарбузи» (Хелловін, мітки від партнерів за згодою авторів, specs/012 FR-009).
+-- в «Івенти», там же — «Гарбузи» (Хелловін, мітки з Open Hydra Map за згодою авторів, specs/012 FR-009).
 -- Партія — мітки одного імпорту: джерело, категорія, кількість. Гравці бачать партію лише після позначки «перевірено»;
 -- відкат — видалити партію (її мітки йдуть разом з нею). Імпорт — лише через import_map_batch(), лише admin.
 -- Файл можна запускати повторно.
@@ -11,14 +11,14 @@ insert into public.map_categories (id, name, grp, icon, color, sort, shown)
 create table if not exists public.map_batches (
   id bigint generated always as identity primary key,
   category_id text not null references public.map_categories (id) on delete cascade on update cascade,
-  source text not null check (source in ('partner', 'import', 'game')),
+  source text not null check (source in ('ohm', 'quantfun', 'game')),
   count integer not null default 0 check (count >= 0),
   published boolean not null default false,
   created_by uuid default auth.uid(),
   created_at timestamptz not null default now()
 );
 alter table public.map_points add column if not exists batch_id bigint references public.map_batches (id) on delete cascade;
-alter table public.map_points add column if not exists source text check (source is null or source in ('partner', 'import', 'game'));
+alter table public.map_points add column if not exists source text check (source is null or source in ('ohm', 'quantfun', 'game'));
 create index if not exists map_points_batch on public.map_points (batch_id);
 
 alter table public.map_batches enable row level security;

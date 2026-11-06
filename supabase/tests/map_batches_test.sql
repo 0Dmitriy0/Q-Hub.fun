@@ -17,7 +17,7 @@ insert into public.map_points (category_id, name, x, y) values ('harbuzy', 'Ок
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f9', false) \gset
 do $$ begin
-  begin perform public.import_map_batch('harbuzy', 'partner', '[{"x":1,"y":1}]'); raise exception 'редактор імпортував партію';
+  begin perform public.import_map_batch('harbuzy', 'ohm', '[{"x":1,"y":1}]'); raise exception 'редактор імпортував партію';
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
@@ -25,13 +25,13 @@ reset role;
 -- адмін: 5 точок — дубль іншої з цього ж списку (4 м), за 5 м від наявної, поза мапою; додаються 2
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000fa', false) \gset
-select set_config('test.r', public.import_map_batch('harbuzy', 'partner',
+select set_config('test.r', public.import_map_batch('harbuzy', 'ohm',
   '[{"x":-323,"y":959,"name":"Гарбуз"},{"x":-323,"y":963},{"x":103,"y":104},{"x":9000,"y":0},{"x":500,"y":500}]')::text, false) as r \gset
 reset role;
 do $$ declare r jsonb := current_setting('test.r')::jsonb; b bigint := (r ->> 'batch')::bigint; begin
   assert (r ->> 'added')::int = 2 and (r ->> 'skipped')::int = 2 and (r ->> 'outside')::int = 1, 'підсумок імпорту не 2/2/1: ' || r::text;
   assert (select count = 2 from public.map_batches where id = b), 'у партії не 2 мітки';
-  assert (select count(*) from public.map_points where batch_id = b and source = 'partner') = 2, 'мітки без партії чи без джерела';
+  assert (select count(*) from public.map_points where batch_id = b and source = 'ohm') = 2, 'мітки без партії чи без джерела';
   perform set_config('test.batch', b::text, false);
 end $$;
 

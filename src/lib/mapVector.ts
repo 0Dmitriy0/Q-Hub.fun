@@ -48,7 +48,7 @@ export function vectorLayer(zmax: number, pxPerM: number, maxZoom: number, bound
   return followTheme(new (Layer as unknown as new (o: L.GridLayerOptions) => L.GridLayer)({ minZoom: VZ, maxZoom, tileSize: 256, noWrap: true, bounds, keepBuffer: 1 }));
 }
 
-/* Назви місць — трикутники тексту з експорту мінікарти (public/map/game/names.bin, ті самі, що в «Карті для гри»):
+/* Назви місць — трикутники тексту з експорту Hydra (public/map/game/names.bin, ті самі, що в «Карті для гри»):
    частина мапи, а не HTML поверх неї, тож на кожному наближенні виглядають як у грі. Окрема панель 'names' — над зеленими зонами, під мітками.
    Координати — чверті метра від кута текстур гри (-4140, 8400); порядок у файлі — за висотою (тінь під літерами). */
 const NQ = 4, NOX = -4140 + 5996, NOY = 8470 - 8400, NB = 1024;   // NOX/NOY — зсув кута текстур від кута мапи сайту, м; NB — клітинка 256 м
@@ -91,7 +91,7 @@ export function namesLayer(zmax: number, pxPerM: number, maxZoom: number, bounds
         const { xy, c, pal } = nm, m = 2 / s;   // лише трикутники, що зачіпають тайл (з запасом у 2 px)
         const vis = ids.filter(i => {
           const o = i * 6, a = Math.min(xy[o], xy[o + 2], xy[o + 4]), b = Math.max(xy[o], xy[o + 2], xy[o + 4]);
-          /* сплющені трикутники (у тексті експорту їх багато): гра їх не малює, а обводка робила з них рисочки */
+          /* сплющені трикутники (у тексті Hydra їх багато): гра їх не малює, а обводка робила з них рисочки */
           if (Math.abs((xy[o + 2] - xy[o]) * (xy[o + 5] - xy[o + 1]) - (xy[o + 4] - xy[o]) * (xy[o + 3] - xy[o + 1])) < 0.5) return false;
           if (b < u0 - m || a > u1 + m) return false;
           const e = Math.min(xy[o + 1], xy[o + 3], xy[o + 5]), f = Math.max(xy[o + 1], xy[o + 3], xy[o + 5]);
