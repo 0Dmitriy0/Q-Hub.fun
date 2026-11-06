@@ -56,7 +56,7 @@ do $$ begin
   insert into public.rule_sources (url, kind) values ('https://forum.quant5.com.ua/index.php?/forum/3-новини-та-інформація/', 'info');
   delete from public.rule_sources where kind = 'info';
   -- інший сайт, http, розділ без «/forum/» чи «/topic/», лапки — відмова
-  assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('https://quantfun.com.ua/index.php?/forum/1-x/', 'rules')$q$) like '23514%', 'прийнято чужий сайт';
+  assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('https://fansite.example.com.ua/index.php?/forum/1-x/', 'rules')$q$) like '23514%', 'прийнято чужий сайт';
   assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('http://forum.quant5.com.ua/index.php?/forum/1-x/', 'rules')$q$) like '23514%', 'прийнято http';
   assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('https://forum.quant5.com.ua/index.php?/profile/1-x/', 'rules')$q$) like '23514%', 'прийнято профіль замість розділу';
   assert public.test_rules_err($q$insert into public.rule_sources (url, kind) values ('https://forum.quant5.com.ua/index.php?/topic/1-x"onerror/', 'rules')$q$) like '23514%', 'прийнято адресу з лапками';

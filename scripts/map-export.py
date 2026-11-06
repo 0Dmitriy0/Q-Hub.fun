@@ -1,8 +1,8 @@
 # Дані для «Карти для гри» у проєкції текстур гри: лівий верхній кут (-4140, 8400), 2x3 тайли по 4500 м.
-# export.bin — трикутники суші (без моря, як у паку Hydra, де океан прозорий); sea.bin — шар моря з рівнями глибини
+# export.bin — трикутники суші (без моря, як у паку мінікарти, де океан прозорий); sea.bin — шар моря з рівнями глибини
 # (для minimap_sea). Формат обох: u32 n, n*6 u16 координат у чвертях метра від кута (x вправо, y вниз), n u8 кольорів;
 # кольори — у export.json (palette і seaPalette).
-# Запуск (у папці з tris.pkl з експорту OpenHydra): python3 scripts/map-export.py public/map/game
+# Запуск (у папці з tris.pkl з експорту мінікарти): python3 scripts/map-export.py public/map/game
 import pickle, numpy as np, os, sys, json
 GX0, GYT, W, H, Q = -4140.0, 8400.0, 9000.0, 13500.0, 4
 OUT = sys.argv[1]; os.makedirs(OUT, exist_ok=True)
@@ -22,6 +22,6 @@ def dump(tris, name):
 
 land = dump([t for t in ALL if t[0] != 0], 'export.bin')   # 0 — море
 sea = dump([t for t in ALL if t[0] == 0], 'sea.bin')
-meta = json.load(open(f'{OUT}/export.json')) if os.path.exists(f'{OUT}/export.json') else {}   # namesPalette пише minimap/hydra_names.py
+meta = json.load(open(f'{OUT}/export.json')) if os.path.exists(f'{OUT}/export.json') else {}   # namesPalette пише minimap/names_layer.py
 meta.update({'x0': GX0, 'yt': GYT, 'tile': 4500, 'cols': 2, 'rows': 3, 'q': Q, 'palette': land, 'seaPalette': sea})
 json.dump(meta, open(f'{OUT}/export.json', 'w'), separators=(',', ':'))

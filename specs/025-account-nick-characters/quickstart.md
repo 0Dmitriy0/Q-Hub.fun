@@ -51,4 +51,4 @@ select count(*) as без_ніка from public.profiles where nick is null;
 ```
 
 Локально (Windows, без psql і Docker) SQL-тести проганялись у PGlite 0.2.17 — копія `supabase/tests/run.sh` на Node;
-відома відмінність від справжнього Postgres: перевірка сиду міток QuantFun (2149 шт.) там дає 0 рядків, у CI — ні.
+відома відмінність від справжнього Postgres: перевірка одного з сидів міток там дає 0 рядків, у CI — ні.

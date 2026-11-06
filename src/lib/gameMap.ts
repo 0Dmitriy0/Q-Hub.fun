@@ -2,7 +2,7 @@ import { OCEAN, mapUrl } from './mapGeo';
 import { triPath } from './mapChunk';
 import { recolorMesh, themed, type GameTheme } from './gameTheme';
 import { ytd, type YtdFormat } from './ytd';
-/* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
+/* «Карта для гри»: ті самі 6 текстур, що дає експорт мінікарти (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
 
@@ -41,7 +41,7 @@ export function makeZip(files: ZipEntry[]): Uint8Array {
   return out;
 }
 
-/* записи zip як є (без розпакування) — щоб переложити файли експорту Hydra в новий архів */
+/* записи zip як є (без розпакування) — щоб переложити файли експорту мінікарти в новий архів */
 export function readZip(buf: Uint8Array): ZipEntry[] {
   const v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength), dec = new TextDecoder();
   let e = buf.length - 22; while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
@@ -58,7 +58,7 @@ export function readZip(buf: Uint8Array): ZipEntry[] {
   return out;
 }
 
-/* ---- значки міток геометрією, як це робить Hydra (supertile_fore_C_R_tile_2_2) ---- */
+/* ---- значки міток геометрією, як в експорті мінікарти (supertile_fore_C_R_tile_2_2) ---- */
 /* сітка частин мінікарти: стовпці по 1175 м від X -4500, рядки по 1388 м від Y 8000; папка minimap_<стовпець>_<рядок> */
 export const supertileOf = (x: number, y: number): [number, number] => [Math.floor((x + 4500) / 1175), Math.floor((8000 - y) / 1388)];
 
@@ -201,7 +201,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     sx.putImageData(img, 0, 0); ctx.drawImage(sc, 0, 0);
   }
   await drawTris(ctx, size, mapUrl('/map/game/export.bin'), meta.palette, meta.q);
-  /* шари на текстурі, як у Hydra: зелені зони — легкий відтінок з контуром, назви — текст Hydra */
+  /* шари на текстурі, як в експорті мінікарти: зелені зони — легкий відтінок з контуром, назви — текст експорту */
   if (layers.includes('zones')) {
     const zones = (await import('../data/mapZones.json')).default as number[][][][];
     ctx.fillStyle = 'rgba(60, 200, 90, .2)'; ctx.strokeStyle = 'rgba(140, 230, 150, .7)'; ctx.lineWidth = 0.6;
@@ -218,7 +218,7 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, .28)`; ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, .9)`; ctx.lineWidth = Math.max(0.8, size / 640);
     ctx.fill('evenodd'); ctx.stroke();
   }
-  /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
+  /* назви — ті самі трикутники тексту експорту, що й у векторі мінікарти (names.bin) */
   if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
@@ -361,7 +361,7 @@ async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntr
   return out;
 }
 
-/* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
+/* повний пак для гри: чиста мапа з експорту мінікарти + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
 export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[]; theme?: GameTheme }, step?: (s: string) => void): Promise<Blob> {
   const areas = opt.areas ?? [], theme = opt.theme ?? 'dark';
   step?.('Завантажую мапу…');

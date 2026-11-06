@@ -1,5 +1,5 @@
 # Векторні шматки мапи для чіткого наближення (z7+): трикутники мінікарти, поділені на клітинки 800x800 м.
-# Запуск: python3 scripts/map-chunks.py public/map/v  (у папці з tris.pkl — трикутниками з експорту OpenHydra)
+# Запуск: python3 scripts/map-chunks.py public/map/v  (у папці з tris.pkl — трикутниками з експорту мінікарти)
 # Файл клітинки: u32 n, n*6 u16 координат у чвертях метра від (X0, YT) (x вправо, y вниз), n u8 індексів кольору.
 import pickle, numpy as np, os, sys, json
 X0, YT, SIZE, CELL, Q = -5996.0, 8470.0, 12800.0, 800.0, 4

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
 import { MAP_ICONS } from '../data/mapIcons';
-import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 
@@ -140,19 +139,8 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [mIcon, setMIcon] = useState<string | null>(null); const [mLabel, setMLabel] = useState(true);
   const [bulk, setBulk] = useState('');
-  /* звідки координати: з гри (як у нас), пікселі з мапи QuantFun чи координати редактора Open Hydra Map (specs/017) —
-     тоді переводимо самі; з Open Hydra Map мітки йдуть партією: видно гравцям лише після «Опублікувати», відкат — одною дією */
-  const [src, setSrc] = useState<'game' | 'qf' | 'ohm'>('game');
-  const conv = src === 'qf' ? fromQuantFun : src === 'ohm' ? fromOpenHydra : undefined;
-  /* файл експорту Open Hydra Map (.json: objects[].position) — у поле рядками «X, Y» */
-  async function ohmFile(file: File) {
-    try {
-      const objs = (JSON.parse(await file.text()) as { objects?: { position?: { x: number; y: number } }[] }).objects || [];
-      const rows = objs.filter(o => Number.isFinite(o.position?.x) && Number.isFinite(o.position?.y)).map(o => `${o.position!.x}, ${o.position!.y}`);
-      if (!rows.length) return setMsg('У файлі немає об\'єктів з координатами — це точно експорт Open Hydra Map?');
-      setBulk(rows.join('\n')); setMsg(`З файлу взято ${rows.length} точок — перевір попередній перегляд нижче.`);
-    } catch { setMsg('Не вдалося прочитати файл — потрібен .json з Open Hydra Map.'); }
-  }
+  /* «Партією» (specs/017): мітки видно гравцям лише після «Опублікувати», відкат — одною дією */
+  const [batch, setBatch] = useState(false);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const [cName, setCName] = useState(''); const [cGrp, setCGrp] = useState('Міні-ігри, квести й контракти');
   const [cColor, setCColor] = useState('#ff6a1f'); const [cIcon, setCIcon] = useState(MAP_ICONS[0]);
@@ -175,23 +163,23 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
     const x0 = parseFloat(x.replace(',', '.')), y0 = parseFloat(y.replace(',', '.'));
     if (!cat) return setMsg('Вибери категорію.');
     if (!Number.isFinite(x0) || !Number.isFinite(y0)) return setMsg('Впиши X і Y або візьми їх кліком по мапі.');
-    const [xv, yv] = conv ? conv(x0, y0) : [x0, y0];
-    if (xv < -6000 || xv > 6800 || yv < -4400 || yv > 8500) return setMsg(`Точка X ${xv}, Y ${yv} поза мапою — перевір, чи правильно вибрано «${src === 'qf' ? 'QuantFun' : 'З гри'}».`);
+    const [xv, yv] = [x0, y0];
+    if (xv < -6000 || xv > 6800 || yv < -4400 || yv > 8500) return setMsg(`Точка X ${xv}, Y ${yv} поза мапою — перевір координати.`);
     const st = owner.trim() ? Number(owner.trim().replace('#', '')) : null;
     if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
-    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }) }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
+    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }) }])) { setName(''); setNote(''); setOwner(''); }
   }
   /* попередній перегляд набору: рядки, помилки (зокрема поза мапою) і дублі — ближче 10 м до наявної мітки категорії */
-  const pre = parseBulk(bulk, conv);
+  const pre = parseBulk(bulk);
   const dups = pre.ok.filter(p => marks.some(m => m.category === cat && (m.x - p.x) ** 2 + (m.y - p.y) ** 2 < 100)).length;
   async function addBulk() {
     if (!cat) return setMsg('Вибери категорію.');
     const r = pre;
-    if (r.bad.length && src !== 'ohm') return setMsg(`Не зрозумів рядки: ${r.bad.join(', ')}. Формат: X, Y, назва (назву можна не писати).`);
+    if (r.bad.length && !batch) return setMsg(`Не зрозумів рядки: ${r.bad.join(', ')}. Формат: X, Y, назва (назву можна не писати).`);
     if (!r.ok.length) return setMsg('Немає жодного рядка з координатами.');
-    if (src !== 'ohm') { if (await insert(r.ok.map(p => ({ category_id: cat, name: p.name, note: '', x: p.x, y: p.y })))) setBulk(''); return; }
+    if (!batch) { if (await insert(r.ok.map(p => ({ category_id: cat, name: p.name, note: '', x: p.x, y: p.y })))) setBulk(''); return; }
     setBusy(true); setMsg('');
-    const { data, error } = await supabase!.rpc('import_map_batch', { p_category: cat, p_source: 'ohm', p_points: r.ok });
+    const { data, error } = await supabase!.rpc('import_map_batch', { p_category: cat, p_source: 'partner', p_points: r.ok });
     setBusy(false);
     if (error) return setMsg(/import_map_batch/.test(error.message) ? 'Партій ще немає: запусти supabase/migrations/0033_map_batches_events.sql у Supabase → SQL Editor.' : dbErr(error.message));
     const d = data as { added: number; skipped: number; outside: number };
@@ -221,29 +209,22 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
         <input className="min mono" inputMode="numeric" placeholder="Статік власника бізнесу (необов'язково)" value={owner} onChange={e => setOwner(e.target.value)} aria-label="Статік власника" />
         <details className="mic-pick"><summary>Іконка мітки: {mIcon ? <img src={mIcon} alt="своя" width={20} height={20} /> : 'як у категорії'}</summary>
           <IconGrid value={mIcon} onChange={setMIcon} catIcon={own.find(c => c.id === cat)?.icon || ''} label="Іконка нової мітки" /></details>
-        <div className="mseg" role="radiogroup" aria-label="Звідки координати">
-          <button type="button" role="radio" aria-checked={src === 'game'} onClick={() => setSrc('game')}>З гри / Q-Hub</button>
-          <button type="button" role="radio" aria-checked={src === 'qf'} onClick={() => setSrc('qf')}>Пікселі QuantFun</button>
-          <button type="button" role="radio" aria-checked={src === 'ohm'} onClick={() => setSrc('ohm')}>Open Hydra Map</button>
-        </div>
-        {src === 'ohm' && <p className="muted">Координати редактора Open Hydra Map (X і Y з «Панелі трансформації») — переведу в координати гри сам (похибка ~1–3 м). Найпростіше — файл експорту в «Багато міток одразу». Згода авторів — specs/012-halloween-banner.</p>}
-        {src === 'qf' && <p className="muted">Впиши числа з мапи QuantFun як є — переведу в координати гри сам (похибка ~3 м). Для «Взяти з мапи» перемкни назад на «З гри».</p>}
         <div className="mrow">
           <input className="min mono" inputMode="decimal" placeholder="X" value={x} onChange={e => setX(e.target.value)} aria-label="X" />
           <input className="min mono" inputMode="decimal" placeholder="Y" value={y} onChange={e => setY(e.target.value)} aria-label="Y" />
         </div>
         <div className="mrow">
-          <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => { setSrc('game'); onPick(!picking); }} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : 'Взяти з мапи'}</button>
+          <button type="button" className={'btn sm' + (picking ? ' acc' : ' ghost')} onClick={() => onPick(!picking)} aria-pressed={picking}>{picking ? 'Клікни на мапі…' : 'Взяти з мапи'}</button>
           <button type="button" className="btn sm acc" disabled={busy} onClick={addOne}>Додати мітку</button>
         </div>
       </section>
       <section>
         <h4>Багато міток одразу</h4>
-        <p className="muted">У категорію <b>«{own.find(c => c.id === cat)?.name || '—'}»</b> (вибирається вгорі, у «Нова мітка»){src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
-        {src === 'ohm' && <label className="mrow"><span className="muted">Файл з Open Hydra Map (.json):</span><input type="file" accept=".json,application/json" onChange={e => { const fl = e.target.files?.[0]; if (fl) ohmFile(fl); e.target.value = ''; }} /></label>}
+        <p className="muted">У категорію <b>«{own.find(c => c.id === cat)?.name || '—'}»</b> (вибирається вгорі, у «Нова мітка»){batch ? ', партією' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        <label className="mcheck"><input type="checkbox" checked={batch} onChange={e => setBatch(e.target.checked)} /> Партією — гравці побачать після «Опублікувати»</label>
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
         {bulk.trim() && <p className="muted" role="status">Рядків з координатами: {pre.ok.length}{pre.bad.length > 0 && <> · не зрозумів або поза мапою: {pre.bad.length} (рядки {pre.bad.slice(0, 8).join(', ')}{pre.bad.length > 8 ? '…' : ''})</>}{dups > 0 && <> · дублів (ближче 10 м): {dups} — їх пропущу</>}</p>}
-        <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію в «${own.find(c => c.id === cat)?.name || '—'}»: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
+        <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{batch ? `Завантажити партію в «${own.find(c => c.id === cat)?.name || '—'}»: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
       </section>
       <Batches cats={cats} onReload={onReload} setMsg={setMsg} />
       <section>
@@ -265,7 +246,7 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
 
 /* партії імпорту (specs/017): гравці бачать партію лише після «Опублікувати»; «Відкотити» прибирає всі її мітки (друге натискання — підтвердження) */
 type Batch = { id: number; category_id: string; source: string; count: number; published: boolean; created_at: string };
-const SRC_NAME: Record<string, string> = { ohm: 'Open Hydra Map', quantfun: 'QuantFun', game: 'з гри' };
+const SRC_NAME: Record<string, string> = { partner: 'від партнерів', import: 'імпорт', game: 'з гри' };
 function Batches({ cats, onReload, setMsg }: { cats: MapCategory[]; onReload: () => void; setMsg: (m: string) => void }) {
   const [list, setList] = useState<Batch[] | null>(null);
   const [sure, setSure] = useState<number | null>(null);

@@ -1,7 +1,7 @@
 // Світлі плитки мапи сайту (specs/019): ті самі трикутники, що й темні (public/map/v — мапа, public/map/game/names.bin — назви),
 // пофарбовані за таблицею src/data/mapLight.json. Пише public/map/light/{z}/{x}/{y}.webp (z0–6, той самий набір, що й темні
 // public/map/{z}) і public/map/n-light/ (назви z3–6, той самий набір, що й public/map/n — список спільний, public/map/n/index.json). Python не потрібен — малює Chromium з Electron програми.
-// Запуск (після кожної перебудови мапи з Hydra): desktop/node_modules/.bin/electron scripts/map-light-tiles.cjs public/map
+// Запуск (після кожної перебудови мапи з експорту): desktop/node_modules/.bin/electron scripts/map-light-tiles.cjs public/map
 // Перевірка генератора на темній палітрі (має збігатися з public/map/6): ... public/map --dark <тека> [--only 6/30/40,...]
 const fs = require('fs'), path = require('path');
 const TS = 256, ZMAX = 6, PXM = 1.28, X0 = -5996, YT = 8470;

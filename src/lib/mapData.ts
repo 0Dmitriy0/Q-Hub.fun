@@ -1,13 +1,13 @@
 /* Дані мапи: категорії й мітки з бази плюс вбудовані (роботи, скупники) з даних сайту. */
 export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean; description?: string; starts_on?: string | null; ends_on?: string | null }
-export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; icon?: string; label?: boolean; photo?: string; link?: { href: string; label: string } }
+export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; credit?: { name: string; url: string }; icon?: string; label?: boolean; photo?: string; link?: { href: string; label: string } }
 
 /* «Нік #статік» власника; ніка може не бути, якщо гравець не зареєстрований на сайті */
 export const ownerLabel = (st: number, names: Record<number, string>) => (names[st] ? `${names[st]} #${st}` : `#${st}`);
 
 export const GROUP_ORDER = ['Шари мапи', 'Івенти', 'Магазини', 'Структури', 'Транспорт', 'Розваги', 'Заробіток', 'Вендингові апарати', 'Міні-ігри, квести й контракти'];
 
-/* групи в порядку QuantFun; нові групи адміна — після них, за найменшим sort їхніх категорій */
+/* групи в усталеному порядку; нові групи адміна — після них, за найменшим sort їхніх категорій */
 export function groupCategories(cats: MapCategory[]): { grp: string; cats: MapCategory[] }[] {
   const by = new Map<string, MapCategory[]>();
   for (const c of [...cats].sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'uk'))) {

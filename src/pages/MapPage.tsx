@@ -257,8 +257,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
-        /* specs/012 FR-009a: мітки з Open Hydra Map — з підписом джерела */
-        + (mk.source === 'ohm' ? '<small class="msrc">Координати — за даними <a href="https://gtav.fanwiki.top/" target="_blank" rel="noopener noreferrer">Open Hydra Map</a></small>' : '')
+        /* specs/012 FR-009a: мітки, отримані від партнерів, — з підписом джерела (назва й посилання — у базі, map_points.credit, 0061) */
+        + (mk.credit ? `<small class="msrc">Координати — за даними ${/^https:\/\//.test(mk.credit.url) ? `<a href="${esc(mk.credit.url)}" target="_blank" rel="noopener noreferrer">${esc(mk.credit.name)}</a>` : esc(mk.credit.name)}</small>` : '')
         + (mk.link ? `<a class="mgo" data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
         /* «Точка застаріла?» (0060) — гравцям і модераторам; адмін і так прибирає мітку сам */
         + (!isAdmin && wiki && staleOk && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-stale="${mk.dbId}">Точка застаріла?</button></span>` : '')
@@ -275,10 +275,10 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         + (isAdmin ? `<span class="mrow"><button type="button" class="medit" data-edit-area="${ar.dbId}">Змінити / перенести</button><button type="button" class="mdel" data-del-area="${ar.dbId}">Видалити зону</button></span>` : '') + '</div>';
       L.polygon(ar.ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), { color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.28 }).bindPopup(html).addTo(layers.current[c.id]);
     }
-    /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
+    /* шари мапи: зелені зони й назви місць (дані з експорту мінікарти, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
     if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
-    /* назви — трикутники тексту Hydra частиною мапи, як у грі (namesLayer) */
+    /* назви — трикутники тексту експорту частиною мапи, як у грі (namesLayer) */
     if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
     m.fire('zoomend');

@@ -40,8 +40,8 @@ def pack(T, tilerow, zipname):
             else: z.write(f'{OUT}/{n}',n)
     print(zipname,'verts',total,'bytes',os.path.getsize(zipname))
 P='/home/user/q-hub.fun/public/map/game/'
-shutil.copy('/root/.claude/uploads/0a8c9e87-27f5-5478-8b37-62979dd18bf0/495ff268-OpenHydra_Custom.zip',P+'base.zip'); os.chmod(P+'base.zip',0o644)
-# назви місць: наші перемальовані + малі підписи й кільця з експорту Hydra
+shutil.copy('/root/.claude/uploads/0a8c9e87-27f5-5478-8b37-62979dd18bf0/495ff268-minimap_export.zip',P+'base.zip'); os.chmod(P+'base.zip',0o644)
+# назви місць: наші перемальовані + малі підписи й кільця з експорту мінікарти
 leftover=[c['tris'] for c,k in zip(comps,kind) if k in ('keep','ring')]
 pack(np.concatenate(leftover+[pickle.load(open('name_tris.pkl','rb'))]),3,P+'names.zip')
 pack(pickle.load(open('zone_tris.pkl','rb')),4,P+'zones.zip')

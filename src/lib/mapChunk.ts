@@ -13,7 +13,7 @@ export function parseChunk(buf: ArrayBuffer): Chunk {
 }
 
 /* трикутник у спільний шлях завжди в один бік обходу: трикутники з протилежним обходом, що перекриваються,
-   при заливці одним шляхом (правило nonzero) взаємно гасяться — у тексті Hydra від цього були дірки-сітка */
+   при заливці одним шляхом (правило nonzero) взаємно гасяться — у тексті експорту від цього були дірки-сітка */
 export function triPath(ctx: CanvasRenderingContext2D, xy: ArrayLike<number>, o: number) {
   const ax = xy[o], ay = xy[o + 1], bx = xy[o + 2], by = xy[o + 3], cx = xy[o + 4], cy = xy[o + 5];
   ctx.moveTo(ax, ay);
