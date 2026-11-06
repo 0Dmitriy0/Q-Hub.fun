@@ -13,7 +13,7 @@ import { isRuleRef, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } fr
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isRecordLike, RECORD_REPLY } from './recordLike';
-import { cites, Prices, RuleCard } from './barParts';
+import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -269,17 +269,18 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
       {a.hits ? <>
         {a.places && a.places.length > 0 && <>
-          <div className="bkind"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub</div>
+          <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
             <img src={asset(h.icon)} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></button></li>)}</ul>
         </>}
-        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}</div>}
+        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}
+          {a.hits.length > 1 && <CopyBtn text={rulesText(a.hits)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
       </> : <>
         {a.local ? <div className="bkind"><Icon name="chart" size={14} />Q-Hub</div> : <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>}
-        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}</div>}
+        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}<CopyBtn icon text={a.reply} label="Копіювати відповідь" /></div>}
         {!a.error && !a.local && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>

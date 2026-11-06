@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { loadMapData } from '../lib/mapMarks';
 import { buyers, places, type BarPrice, type PlaceHit } from '../desktop/barSearch';
 import { searchRules, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
-import { Prices, RuleCard } from '../desktop/barParts';
+import { CopyBtn, placesText, Prices, RuleCard, rulesText } from '../desktop/barParts';
 import RULES from '../data/rules.json';
 import '../desktop/bar.css';
 
@@ -118,11 +118,12 @@ export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'pr
               <div className="bans">{a.reply}</div>
             </> : <>
               {a.places && a.places.length > 0 && <>
-                <div className="bkind"><Icon name="map" size={14} />Місця на мапі · у програмі клік показує мітку на мапі поверх гри</div>
+                <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · у програмі клік показує мітку на мапі поверх гри<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
                 <ul className="bplaces">{a.places.map(h => <li key={h.id}><span className="brow item">
                   <img src={h.icon} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></span></li>)}</ul>
               </>}
-              {(a.hits!.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits!.length ? ` · ${a.hits!.length} збігів` : ''} · станом на {rulesDay}</div>}
+              {(a.hits!.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits!.length ? ` · ${a.hits!.length} збігів` : ''} · станом на {rulesDay}
+                {a.hits!.length > 1 && <CopyBtn text={rulesText(a.hits!)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
               {a.reply && <p className="bnone">{a.reply}</p>}
               {a.hits!.length > 0 && <ul className="brules">{a.hits!.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
               <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
