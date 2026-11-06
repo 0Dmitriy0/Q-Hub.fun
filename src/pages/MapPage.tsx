@@ -256,6 +256,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       /* картка точки як у макеті: мітка-категорія кольору категорії, назва, примітка, смужка координат, дія */
       const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
+        /* хто запропонував мітку (0061) — лише нік у Q-Hub */
+        + (mk.author ? `<span class="mowner">Додав: <b>${esc(mk.author)}</b></span>` : '')
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         /* specs/012 FR-009a: мітки з Open Hydra Map — з підписом джерела */
         + (mk.source === 'ohm' ? '<small class="msrc">Координати — за даними <a href="https://gtav.fanwiki.top/" target="_blank" rel="noopener noreferrer">Open Hydra Map</a></small>' : '')

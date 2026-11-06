@@ -48,14 +48,24 @@ export async function loadMapData(): Promise<MapData | null> {
       all.push(...(r.data || [])); if (!r.data || r.data.length < 1000) return { data: all, error: null };
     }
   };
-  const [c, p, o, a] = await Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name'), supabase.from('map_areas').select('*').order('id')]);
+  /* автори міток від гравців (0061): лише нік у Q-Hub; до міграції — просто без підпису */
+  const authors = async () => {
+    const m = new Map<number, string>();
+    for (let from = 0; ; from += 1000) {
+      const r = await supabase!.from('map_point_authors').select('point_id,name').order('point_id').range(from, from + 999);
+      if (r.error) return m;
+      for (const x of r.data || []) m.set(x.point_id as number, x.name as string);
+      if (!r.data || r.data.length < 1000) return m;
+    }
+  };
+  const [c, p, o, a, au] = await Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name'), supabase.from('map_areas').select('*').order('id'), authors()]);
   if (c.error || p.error) return null;
   const rows = (p.data || []) as Record<string, unknown>[];
   return {
     staleOk: rows.some(r => 'hidden' in r),
     cats: [...BUILTIN, ...(c.data as MapCategory[])],
     marks: [...BUILTIN_MARKS, ...rows.filter(r => !r.hidden).map(r => ({   // сховані («Точка застаріла», 0060) модератор бачить лише в черзі й історії
- id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined }))],
+ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number) }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
     areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][] })),
     owners: o.error ? null : Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string]))
