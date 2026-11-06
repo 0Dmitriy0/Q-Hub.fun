@@ -6,12 +6,13 @@ import AdminSection from './AdminSection';
    Налаштування — discord_bot і discord_buyer_channels (лише admin, RLS); стан і пробне — функція discord-bot (токен лише там). */
 interface Bot {
   news_channel_id: string; prices_on: boolean; news_on: boolean;
+  marks_channel_id?: string; marks_on?: boolean;   // мітки від гравців (0061); до міграції полів немає
   window_min: number; crosspost_per_hour: number; last_ok_at: string | null; last_error: string;
 }
 type Ch = { id: string; name?: string; announcement?: boolean; error?: string } | null;
 interface Status {
   online: boolean; bot: string; error: string; guilds: { id: string; name: string }[];
-  channels: { news: Ch; byId: Record<string, Ch> }; queued: number;
+  channels: { news: Ch; marks?: Ch; byId: Record<string, Ch> }; queued: number;
   posts: { key: string; channel_id: string; status: string; error: string; crossposted: boolean; created_at: string }[];
 }
 type Buyer = { id: string; name: string };
@@ -19,7 +20,7 @@ type Buyer = { id: string; name: string };
 const ID = /^\d{17,20}$/;
 const idErr = (v: string) => (v === '' || ID.test(v) ? '' : 'ID каналу — 17–20 цифр. ПКМ по каналу → «Копіювати ID каналу».');
 const when = (s: string | null) => (s ? new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
-const KIND: Record<string, string> = { prices: 'Ціни', news: 'Новина', test: 'Пробне' };
+const KIND: Record<string, string> = { prices: 'Ціни', news: 'Новина', marks: 'Мітки', test: 'Пробне' };
 const STATE: Record<string, [string, string]> = { sent: ['надіслано', 'good'], sending: ['надсилаю', 'warn'], failed: ['помилка', 'bad'] };
 
 async function call<T>(action: string, extra: Record<string, unknown> = {}): Promise<T> {
@@ -81,11 +82,16 @@ export default function AdminDiscordBot() {
   const [chMsg, setChMsg] = useState('');
   const [busy, setBusy] = useState('');
   const [testMsg, setTestMsg] = useState<Record<string, string>>({});
+  const [marksOk, setMarksOk] = useState(true);
 
   async function load() {
     setLoadErr('');
+    /* поля міток (0061) — окремим запитом, щоб без міграції решта адмінки працювала */
+    const cols = 'news_channel_id,prices_on,news_on,window_min,crosspost_per_hour,last_ok_at,last_error';
+    const withMarks = await supabase!.from('discord_bot').select(cols + ',marks_channel_id,marks_on').maybeSingle();
+    setMarksOk(!withMarks.error);
     const [b, list, map] = await Promise.all([
-      supabase!.from('discord_bot').select('news_channel_id,prices_on,news_on,window_min,crosspost_per_hour,last_ok_at,last_error').maybeSingle(),
+      withMarks.error ? supabase!.from('discord_bot').select(cols).maybeSingle() : Promise.resolve(withMarks),
       supabase!.from('buyers').select('id,name').order('sort'),
       supabase!.from('discord_buyer_channels').select('buyer_id,channel_id'),
     ]);
@@ -120,11 +126,21 @@ export default function AdminDiscordBot() {
   async function save(e: React.FormEvent) {
     e.preventDefault(); if (!form) return; setMsg('');
     if (idErr(form.news_channel_id)) { setMsg('ID каналу новин — 17–20 цифр.'); return; }
+    if (idErr(form.marks_channel_id ?? '')) { setMsg('ID каналу міток — 17–20 цифр.'); return; }
     if (!(form.window_min >= 1 && form.window_min <= 60)) { setMsg('Вікно збирання — від 1 до 60 хв.'); return; }
     if (!(form.crosspost_per_hour >= 1 && form.crosspost_per_hour <= 50)) { setMsg('Пересилань на годину — від 1 до 50.'); return; }
     setBusy('save');
-    const { news_channel_id, prices_on, news_on, window_min, crosspost_per_hour } = form;
-    const { error } = await supabase!.from('discord_bot').update({ news_channel_id, prices_on, news_on, window_min, crosspost_per_hour }).eq('id', true);
+    const { news_channel_id, prices_on, news_on, window_min, crosspost_per_hour, marks_channel_id, marks_on } = form;
+    const row: Record<string, unknown> = { news_channel_id, prices_on, news_on, window_min, crosspost_per_hour };
+    if (marksOk) {
+      Object.assign(row, { marks_channel_id: marks_channel_id ?? '', marks_on: !!marks_on });
+      /* щойно увімкнено — оголошувати лише нові мітки, а не всі, що вже є на мапі */
+      if (marks_on && !bot?.marks_on) {
+        const { data: last } = await supabase!.from('map_points').select('id').order('id', { ascending: false }).limit(1).maybeSingle();
+        row.marks_after = (last?.id as number | undefined) ?? 0;
+      }
+    }
+    const { error } = await supabase!.from('discord_bot').update(row).eq('id', true);
     setBusy('');
     if (error) { setMsg('Не вдалося зберегти — перевір, що в тебе роль admin.'); return; }
     setBot(form); setMsg('Збережено.'); loadStatus();
@@ -239,6 +255,14 @@ export default function AdminDiscordBot() {
                 onTest={() => test('news', bot!.news_channel_id)} testMsg={testMsg.news ?? ''} busy={busy !== ''} />
             </ul>
             <label className="mcheck"><input type="checkbox" checked={form.news_on} onChange={e => set('news_on', e.target.checked)} /> Публікувати новини (надсилаєш сам кнопкою у вкладці «Новини»)</label>
+            {marksOk ? <>
+              <ul className="adm-list">
+                <ChannelField id="dc-marks" label="Канал «Мітки від гравців»" value={form.marks_channel_id ?? ''} saved={bot?.marks_channel_id ?? ''}
+                  onChange={v => set('marks_channel_id', v)} info={st?.channels.marks ?? undefined}
+                  onTest={() => test('marks', bot!.marks_channel_id ?? '')} testMsg={testMsg.marks ?? ''} busy={busy !== ''} />
+              </ul>
+              <label className="mcheck"><input type="checkbox" checked={!!form.marks_on} onChange={e => set('marks_on', e.target.checked)} /> Оголошувати нові мітки від гравців (хто додав і посилання на мапу; лише гравці з ніком у Q-Hub)</label>
+            </> : <p className="muted">Канал міток від гравців з'явиться після міграції 0061_map_point_authors.sql.</p>}
             <div className="row">
               <button className="btn acc" disabled={busy !== '' || !dirty}>Зберегти налаштування бота</button>
               {msg && <p className={msg === 'Збережено.' ? 'good' : 'err'} role="status">{msg}</p>}

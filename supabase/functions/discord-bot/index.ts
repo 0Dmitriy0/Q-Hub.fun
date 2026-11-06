@@ -1,12 +1,13 @@
 /* Discord-бот Q-Hub (specs/060, contracts/discord-bot-function.md): публікує ціни скупників і новини в Discord.
    Хто кличе: pg_cron щохвилини й CI після деплою (x-sync-secret) або адмін з адмін-панелі (сесія admin).
-   Дії: tick (ціни) і drafts (чернетки новин) — лише з секретом; send, test, status — лише admin.
+   Дії: tick (ціни й мітки від гравців, 0061) і drafts (чернетки новин) — лише з секретом; send, test, status — лише admin.
    Секрети функції: DISCORD_BOT_TOKEN, DISCORD_SYNC_SECRET, SUPABASE_SERVICE_ROLE_KEY. Токен не потрапляє ні в базу, ні у відповідь. */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
 import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev, type Group } from './prices.ts';
 import { newsMessage, newsTooLong, pricesMessage, TEST_MESSAGE } from './format.ts';
 import { toDraft, type DraftIn, type Entry } from './changelog.ts';
+import { marksMessage, type NewMark } from './marks.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -93,17 +94,56 @@ async function markPosted(db: SupabaseClient, events: Ev[], key: string, at: str
   }
 }
 
+/* мітки від гравців (0061): нові мітки з автором після marks_after — одним повідомленням, не частіше за вікно збирання.
+   Ключ — діапазон id: повтор після збою не дублює; курсор пересувається лише після вдалого надсилання */
+type Bot = { marks_on?: boolean; marks_channel_id?: string; marks_after?: number; window_min: number };
+async function marksTick(db: SupabaseClient, dc: Discord, bot: Bot): Promise<{ marks: number; error?: string }> {
+  if (!bot.marks_on || !bot.marks_channel_id) return { marks: 0 };
+  const since = new Date(Date.now() - bot.window_min * 60_000).toISOString();
+  const { count } = await db.from('discord_posts').select('key', { count: 'exact', head: true })
+    .like('key', 'marks:%').eq('status', 'sent').gte('created_at', since);
+  if ((count ?? 0) > 0) return { marks: 0 };
+  const { data: au, error } = await db.from('map_point_authors').select('point_id,name')
+    .gt('point_id', bot.marks_after ?? 0).order('point_id').limit(100);
+  if (error) return { marks: 0, error: 'Мітки: ' + error.message };
+  if (!au?.length) return { marks: 0 };
+  const ids = au.map((a: { point_id: number }) => a.point_id);
+  const { data: pts } = await db.from('map_points').select('id,name,x,y,category_id').in('id', ids);
+  const points = new Map((pts ?? []).map((p: { id: number; name: string; x: number; y: number; category_id: string }) => [p.id, p]));
+  const { data: cats } = await db.from('map_categories').select('id,name').in('id', [...new Set([...points.values()].map(p => p.category_id))]);
+  const catName = new Map((cats ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
+  const list: NewMark[] = au.flatMap((a: { point_id: number; name: string }) => {
+    const p = points.get(a.point_id);
+    return p ? [{ id: p.id, author: a.name, category: catName.get(p.category_id) ?? 'Мітка', name: p.name, x: p.x, y: p.y }] : [];
+  });
+  const last = Math.max(...ids);
+  try {
+    if (list.length) {
+      const ch = await dc.channel(bot.marks_channel_id);
+      await publish(db, dc, bot.marks_channel_id, `marks:${ids[0]}-${last}`, [marksMessage(list, SITE)], ch.type === ANNOUNCEMENT);
+    }
+    await db.from('discord_bot').update({ marks_after: last }).eq('id', true);
+    return { marks: list.length };
+  } catch (e) {
+    return { marks: 0, error: 'Мітки: ' + (e instanceof Error ? e.message : String(e)) };
+  }
+}
+
 /* ціни (US1 + 0056): черга → вікно збирання → по каналах скупників → у кожному каналі ліміт години й одне нове
    повідомлення (чи кілька частин). Скупник без каналу — нікуди. Збій одного каналу не зупиняє інші */
 const tick: Action = async ({ db, dc }) => {
   const { data: bot } = await db.from('discord_bot').select('*').eq('id', true).single();
-  if (!bot?.prices_on) return json({ posted: 0, reason: 'вимкнено' });
+  const mk = bot ? await marksTick(db, dc, bot) : { marks: 0 };
+  if (!bot?.prices_on) {
+    if (mk.error) await markError(db, mk.error); else if (mk.marks) await markOk(db);
+    return json({ posted: 0, reason: 'вимкнено', marks: mk.marks });
+  }
   const { data: evs, error } = await db.from('discord_outbox').select('id,buyer_id,item_id,price,prev_price,at')
     .is('post_key', null).order('id').limit(2000);
   if (error) return fail(500, 'Не вдалося прочитати чергу цін.');
   const events = (evs ?? []) as Ev[];
   const now = new Date(), at = now.toISOString();
-  if (!due(events, now, bot.window_min)) return json({ posted: 0, waiting: events.length });
+  if (!due(events, now, bot.window_min)) { if (mk.error) await markError(db, mk.error); return json({ posted: 0, waiting: events.length, marks: mk.marks }); }
 
   const { data: map } = await db.from('discord_buyer_channels').select('buyer_id,channel_id');
   const { byChannel, orphan } = route(events, new Map((map ?? []).map((r: { buyer_id: string; channel_id: string }) => [r.buyer_id, r.channel_id])));
@@ -119,7 +159,7 @@ const tick: Action = async ({ db, dc }) => {
   const hourAgo = new Date(now.getTime() - 3_600_000).toISOString();
 
   let posted = 0, waiting = 0;
-  const errors: string[] = [];
+  const errors: string[] = mk.error ? [mk.error] : [];
   for (const [channelId, list] of byChannel) {
     const { count } = await db.from('discord_posts').select('key', { count: 'exact', head: true })
       .eq('channel_id', channelId).like('key', 'prices:%').eq('status', 'sent').gte('created_at', hourAgo);
@@ -140,7 +180,7 @@ const tick: Action = async ({ db, dc }) => {
     }
   }
   if (errors.length) await markError(db, errors.join(' · ')); else await markOk(db);
-  return json({ posted, waiting, skipped: orphan.length, errors });
+  return json({ posted, waiting, skipped: orphan.length, errors, marks: mk.marks });
 };
 
 /* канал для адмінки: назва, чи оголошення; помилка доступу — людським текстом (US3 AC3) */
@@ -160,7 +200,7 @@ const status: Action = async ({ db, dc }) => {
   } catch (e) { error = await markError(db, e); }
   /* канали скупників (0056): назва й чи оголошення — для кожного вписаного; однаковий канал питаємо раз */
   const { data: map } = await db.from('discord_buyer_channels').select('buyer_id,channel_id');
-  const ids = [...new Set([...(map ?? []).map((r: { channel_id: string }) => r.channel_id), bot?.news_channel_id ?? ''].filter(Boolean))];
+  const ids = [...new Set([...(map ?? []).map((r: { channel_id: string }) => r.channel_id), bot?.news_channel_id ?? '', bot?.marks_channel_id ?? ''].filter(Boolean))];
   const infos = new Map(await Promise.all(ids.map(async id => [id, await channelInfo(dc, id)] as const)));
   const { data: posts } = await db.from('discord_posts').select('key,channel_id,status,error,crossposted,created_at')
     .order('created_at', { ascending: false }).limit(5);
@@ -168,7 +208,7 @@ const status: Action = async ({ db, dc }) => {
   if (online) await markOk(db);
   return json({
     online, bot: name, error, guilds,
-    channels: { news: infos.get(bot?.news_channel_id ?? '') ?? null, byId: Object.fromEntries(infos) },
+    channels: { news: infos.get(bot?.news_channel_id ?? '') ?? null, marks: infos.get(bot?.marks_channel_id ?? '') ?? null, byId: Object.fromEntries(infos) },
     posts: posts ?? [], queued: queued ?? 0,
   });
 };
@@ -176,9 +216,9 @@ const status: Action = async ({ db, dc }) => {
 /* пробне повідомлення: { channel_id } — канал одного зі скупників або новин; без пересилання підписникам */
 const test: Action = async ({ db, dc, body }) => {
   const want = String(body.channel_id ?? '');
-  const { data: bot } = await db.from('discord_bot').select('news_channel_id').eq('id', true).single();
+  const { data: bot } = await db.from('discord_bot').select('news_channel_id,marks_channel_id').eq('id', true).single();
   const { data: map } = await db.from('discord_buyer_channels').select('channel_id').eq('channel_id', want).limit(1);
-  const id = want && (want === bot?.news_channel_id || (map ?? []).length) ? want : '';
+  const id = want && (want === bot?.news_channel_id || want === bot?.marks_channel_id || (map ?? []).length) ? want : '';
   if (!id) return json({ ok: false, error: 'Спершу впиши й збережи ID каналу.' });
   const key = `test:${new Date().toISOString()}`;
   try {
