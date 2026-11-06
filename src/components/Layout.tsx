@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { FAMILY, useLinks } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
@@ -15,7 +16,7 @@ const NAV: [string, string, string][] = [
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/programa/instruktsiya': 'Інструкція до програми', '/kabinet': 'Кабінет', '/admin': 'Адмінка',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/programa/instruktsiya': 'Інструкція до програми', '/kabinet': 'Кабінет', '/admin': 'Адмінка', '/panel': 'Панель',
 };
 
 export default function Layout() {
@@ -25,6 +26,13 @@ export default function Layout() {
   const [menu, setMenu] = useState(false);
   const [{ family_url: family }] = useLinks();
   useEffect(() => setMenu(false), [pathname]);
+  /* модератору — скільки пропозицій від гравців чекає (specs/061); оновлюється при переході між сторінками */
+  const [waiting, setWaiting] = useState(0);
+  useEffect(() => {
+    if (role !== 'moderator' || !supabase) { setWaiting(0); return; }
+    supabase.from('wiki_proposals').select('id', { count: 'exact', head: true }).in('status', ['pending', 'conflict'])
+      .then(({ count }) => setWaiting(count ?? 0));
+  }, [role, pathname]);
   useEffect(() => {
     if (!menu) return;
     const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
@@ -48,7 +56,7 @@ export default function Layout() {
         <div className="who">
           <ThemeToggle />
           {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
-          {role === 'moderator' && <NavLink to="/admin?tab=wiki" className="btn ghost sm" title="Пропозиції правок довідника від гравців"><Icon name="shield" size={16} />Модерація</NavLink>}
+          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Панель помічника: розбір пропозицій і твої інструменти"><Icon name="shield" size={16} />Панель{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}

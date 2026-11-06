@@ -1871,3 +1871,52 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .wcheck { display: flex; flex-direction: column; gap: 6px; }
 .wcheck .row { align-items: center; gap: 8px 12px; }
 .wcheck-old { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+
+/* панель модераторів (specs/061): розбір — список ліворуч, пропозиція праворуч; до 720 px — по черзі */
+.rq { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rq-list, .rq-open { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.rq-filt { display: flex; flex-wrap: wrap; gap: 6px; }
+.rq-filt .btn.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.rq-row { padding: 0; }
+.rq-pick { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 10px 10px; border-radius: 10px; }
+.rq-pick b { overflow-wrap: anywhere; }
+.rq-pick .muted { font-size: 13px; }
+.rq-pick .pill { align-self: flex-start; }
+.rq-pick:hover { background: var(--surface2); }
+.rq-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rq-row.on .rq-pick { background: var(--surface2); box-shadow: inset 3px 0 0 var(--accent); }
+.rq-hint { padding: 24px 0; text-align: center; }
+.pv { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pv-h { display: flex; flex-direction: column; gap: 6px; }
+.pv-h h2 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.pv-back { display: none; align-self: flex-start; }
+.pv-part { margin: 0; }
+.pv-who { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 12px; background: var(--surface2); }
+.pv-who .muted { font-size: 13px; }
+.pv-act { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+.pv-ban { margin-left: auto; }
+@media (max-width: 720px) {
+  .rq { grid-template-columns: minmax(0, 1fr); }
+  .rq.has-open .rq-list { display: none; }
+  .rq:not(.has-open) .rq-open { display: none; }
+  .pv-back { display: inline-flex; }
+  .pv-ban { margin-left: 0; }
+  .pv-act .btn { flex: 1 1 auto; }
+}
+/* головна панелі */
+.pnl-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+.pnl-head h1 { margin: 0 0 4px; }
+.pnl-head p { margin: 0; }
+.pnl-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.pnl-wait, .pnl-tools { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pnl-wait a, .pnl-tools a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface2); color: inherit; text-decoration: none; }
+.pnl-wait a:hover, .pnl-tools a:hover { box-shadow: inset 0 0 0 1px var(--accent); }
+.pnl-wait a:focus-visible, .pnl-tools a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pnl-wait b.num { font: 800 22px var(--sans); min-width: 2ch; text-align: right; color: var(--accent); }
+.pnl-wait span, .pnl-tools span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pnl-wait small, .pnl-tools small { font-size: 13px; }
+.pnl-wait .warn-row b.num { color: var(--warn, var(--accent)); }
+.nav-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font: 800 12px var(--sans); }
+.seg a { display: inline-flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); text-decoration: none; font: 700 13px var(--sans); padding: 9px 6px; border-radius: 999px; min-height: 40px; }
+.seg a.on { background: var(--accent); color: var(--accent-fg); }
+.seg a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

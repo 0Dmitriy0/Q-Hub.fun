@@ -18,6 +18,7 @@ const AppGuide = lazy(() => import('./pages/AppGuide'));
 const Cabinet = lazy(() => import('./pages/cabinet/Cabinet'));
 const RulesAdmin = lazy(() => import('./pages/RulesAdmin'));
 const Admin = lazy(() => import('./pages/Admin'));
+const Panel = lazy(() => import('./pages/Panel'));
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="kabinet/*" element={<Cabinet />} />
         <Route path="admin" element={<Admin />} />
         <Route path="admin/pravyla" element={<RulesAdmin />} />
+        <Route path="panel/*" element={<Panel />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
