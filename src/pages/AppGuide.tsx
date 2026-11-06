@@ -17,7 +17,7 @@ const Tip = ({ children }: { children: ReactNode }) => <p className="ag-tip"><Ic
 const SECTIONS: [string, string, string, ReactNode][] = [
   ['vstanovlennya', 'Встановлення', 'download', <>
     <ol className="guide-steps">
-      <li><p><a href={SETUP}>Завантаж інсталятор</a> (Windows 10 або 11, 64-біт) і запусти його.</p></li>
+      <li><p><a href={SETUP} data-umami-event="Завантажити програму" data-umami-event-where="instruktsiya">Завантаж інсталятор</a> (Windows 10 або 11, 64-біт) і запусти його.</p></li>
       <li><p>Windows покаже «Захистив ваш ПК» — інсталятор ще не підписаний сертифікатом. Натисни «Докладніше» → «Виконати все одно».</p></li>
       <li><p>У GTA V постав режим екрана <b>«Вікно без рамки»</b> (Borderless) — у налаштуваннях графіки гри. У повноекранному режимі Windows не дає показувати вікна поверх гри, і програма не бачить HUD.</p></li>
     </ol>

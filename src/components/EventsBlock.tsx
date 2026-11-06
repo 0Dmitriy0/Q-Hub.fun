@@ -95,7 +95,7 @@ function PromoCard({ p, today, staff, onEdit, done }: { p: Promo & { ph: Phase }
   return (
     <article className={'sv promo' + (p.ph.kind === 'now' ? ' on' : '')}>
       <div className="sv-top">
-        <button type="button" className="pcode" onClick={copy} disabled={soon} title={soon ? 'Код ще не діє' : 'Скопіювати код'}>
+        <button type="button" className="pcode" onClick={copy} data-umami-event="Скопіював промокод" disabled={soon} title={soon ? 'Код ще не діє' : 'Скопіювати код'}>
           <span className="mono">{p.code}</span><Icon name={copied ? 'check' : 'copy'} size={15} /><span className="vh">{copied ? 'скопійовано' : 'скопіювати'}</span>
         </button>
         <PhasePill ph={p.ph} />

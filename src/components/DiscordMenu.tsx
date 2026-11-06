@@ -37,7 +37,7 @@ export default function DiscordMenu() {
           <ul>
             {list.map(([k, name, sub]) => (
               <li key={k}>
-                <a href={links[k]} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
+                <a href={links[k]} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} data-umami-event="Discord" data-umami-event-server={k}>
                   <span className="dmenu-ico"><DiscordMark size={20} /></span>
                   <span><b>{name}</b><small>{sub}</small></span>
                   <span className="vh"> (відкриється в новій вкладці)</span>
