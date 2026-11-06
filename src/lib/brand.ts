@@ -4,6 +4,11 @@ import { supabase } from './supabase';
 /* Хто робить Q-Hub і де питати (specs/033, 037) — одне місце для сайту й програми.
    Назву сім'ї міняють тут; посилання Discord — адмін на сайті (public.site_links), без релізу. */
 export const FAMILY = 'CORE';
+/* Discord сім'ї від власника 2026-11-02 (0050). «by CORE» веде сюди, поки в базі порожньо або ще стоїть стартове запрошення
+   0045, яке 0048 переніс у «сім'ю» (тобто міграцію 0050 ще не застосовано) */
+export const FAMILY_DISCORD = 'https://discord.gg/U4SZvvRueT';
+const STARTER = 'https://discord.gg/RxUk5mGgy';
+export const familyLink = (u: string) => (!u || u.replace(/\/$/, '') === STARTER ? FAMILY_DISCORD : u);
 
 /* лише безстрокові запрошення Discord — так само, як перевірка в 0045/0048 (і DISCORD_RE у desktop/src/main.cjs) */
 export const DISCORD_RE = /^https:\/\/(discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]{2,64}\/?$/;

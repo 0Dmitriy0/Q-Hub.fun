@@ -1949,3 +1949,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
   .adm-side { display: none; }
   .adm-pick { display: block; }
 }
+
+/* «Ціни»: кнопки скупників компактніші; на комп'ютері — у кілька рядків, щоб видно було всіх (на телефоні — прокрутка) */
+.bp-tabs a.tabpic { gap: 6px; padding: 4px 11px 4px 4px; font-size: 13px; }
+@media (min-width: 861px) { .bp-tabs { flex-wrap: wrap; overflow: visible; row-gap: 6px; } }

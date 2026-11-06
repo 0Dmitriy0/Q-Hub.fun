@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /kabinet
 Disallow: /admin
+Disallow: /panel
 
 Sitemap: https://q-hub.fun/sitemap.xml

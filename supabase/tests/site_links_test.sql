@@ -11,8 +11,8 @@ update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00
 
 do $$ begin
   assert (select count(*) from public.site_links) = 1, 'посилань не один рядок';
-  /* 0048: стартове запрошення (сервер CORE) перенесено в «сім'ю», Discord сайту — порожній */
-  assert (select family_url = 'https://discord.gg/RxUk5mGgy' and discord_url = '' from public.site_links), 'посилання CORE не перенесено в сім''ю';
+  /* 0048 переніс стартове запрошення в «сім'ю», 0050 поставив запрошення власника: сайт, сім'я, майданчик */
+  assert (select discord_url = 'https://discord.gg/RMHEtGC8gJ' and family_url = 'https://discord.gg/U4SZvvRueT' and market_url = 'https://discord.gg/KcCRVzpVAR' from public.site_links), 'запрошення власника (0050) не стоять';
 end $$;
 -- далі — перевірки прав на discord_url, як до 0048
 update public.site_links set discord_url = 'https://discord.gg/RxUk5mGgy';
@@ -60,5 +60,5 @@ reset role;
 \i supabase/migrations/0045_site_links.sql
 do $$ begin assert (select count(*) = 1 and bool_and(discord_url = 'https://discord.gg/RxUk5mGgy') from public.site_links), 'повторний запуск міграції дублює чи перезаписує посилання'; end $$;
 \i supabase/migrations/0048_site_links_family_market.sql
-do $$ begin assert (select discord_url = 'https://discord.gg/RxUk5mGgy' and family_url = 'https://discord.gg/RxUk5mGgy' from public.site_links), 'повторний запуск 0048 знову переніс посилання'; end $$;
+do $$ begin assert (select discord_url = 'https://discord.gg/RxUk5mGgy' and family_url = 'https://discord.gg/U4SZvvRueT' from public.site_links), 'повторний запуск 0048 знову переніс посилання'; end $$;
 \echo 'Посилання сайту ok'
