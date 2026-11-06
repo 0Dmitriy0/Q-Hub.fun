@@ -16,8 +16,21 @@ const NAV: [string, string, string][] = [
 
 /* назва вкладки браузера для кожного розділу (у закладках і історії видно, що це за сторінка) */
 const TITLES: Record<string, string> = {
-  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/transport': 'Транспорт', '/roboty': 'Роботи', '/mapa': 'Мапа штату', '/programa': 'Програма поверх гри', '/programa/instruktsiya': 'Інструкція до програми', '/kabinet': 'Кабінет', '/admin': 'Адмінка', '/panel': 'Панель',
+  '/tsiny': 'Ціни скупників', '/wiki': 'WIKI', '/wiki/roboty': 'Роботи', '/wiki/transport': 'Транспорт', '/wiki/iventy': 'Івенти', '/transport': 'Транспорт', '/roboty': 'Роботи',
+  '/mapa': 'Мапа штату', '/mapa/v-gru': 'Як поставити мапу в гру', '/programa': 'Програма поверх гри', '/programa/instruktsiya': 'Інструкція до програми', '/kabinet': 'Кабінет', '/admin': 'Адмінка', '/panel': 'Панель',
 };
+/* опис сторінки для пошуку (Google бере його з уже відмальованої сторінки); решта — загальний з index.html */
+const DESCRIPTIONS: Record<string, string> = {
+  '/tsiny': 'Ціни скупників Quant RP від гравців: хто зараз дає більше, межі цін, коли зміниться ціна, історія й калькулятор.',
+  '/wiki/roboty': 'Усі роботи Quant RP: з якого рівня, де влаштуватися, оплата, рівні навички й точка на мапі.',
+  '/wiki/transport': 'Транспорт Quant RP: ціни в салоні, характеристики, калькулятор тюнінгу, рейтинг гравців.',
+  '/wiki/iventy': 'Івенти Quant RP: розклад щогодинних івентів і сезонні події.',
+  '/mapa': 'Мапа штату Quant RP: магазини, роботи, скупники, банди, зелені зони, сезонні мітки — і та сама мапа прямо в GTA V.',
+  '/mapa/v-gru': 'Як поставити мапу Q-Hub у GTA V: що потрібно, покрокова інструкція й як повернути як було.',
+  '/programa': 'Q-Hub для Windows: рядок поверх гри за Alt+Q — облік грошей, ціни скупників, правила сервера й помічник.',
+  '/programa/instruktsiya': 'Інструкція до програми Q-Hub: встановлення, вхід, пошук у правилах, ціни, мапа в грі, гарячі клавіші.',
+};
+const BASE_DESCRIPTION = typeof document !== 'undefined' ? document.querySelector('meta[name="description"]')?.getAttribute('content') || '' : '';
 
 export default function Layout() {
   const { session, name, avatar, signIn, role } = useAuth();
@@ -42,6 +55,7 @@ export default function Layout() {
   useEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
     document.title = key === '/' ? 'Q-Hub — ціни, мапа й правила для QuantRP' : (TITLES[pathname] || TITLES[key]) ? `${TITLES[pathname] || TITLES[key]} · Q-Hub` : 'Сторінки немає · Q-Hub';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', DESCRIPTIONS[pathname] || DESCRIPTIONS[key] || BASE_DESCRIPTION);
   }, [pathname]);
   return (
     <div className="app">
