@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { dbError } from '../../lib/wiki';
 import { useAuth } from '../../lib/auth';
 import AdminSection from './AdminSection';
-import ReviewQueue from '../panel/ReviewQueue';
-import { Bans, Hidden } from '../panel/HiddenAndBans';
 
-/* «Довідник» в адмінці (specs/043): розбір черги, прибрані сторінки й заборони — спільні з панеллю модераторів (specs/061);
-   тут лише налаштування довідника, які бачить тільки admin */
-export default function AdminWiki() {
-  const [bansKey, setBansKey] = useState(0);
+/* «Довідник» в адмінці (specs/043): розбір пропозицій, прибрані сторінки й заборони — в одному місці, у панелі /panel (specs/061).
+   Тут — скільки чекає, переходи в панель і налаштування довідника, які бачить тільки admin (рішення власника 2026-11-06) */
+export default function AdminWiki({ pending }: { pending: number | null }) {
   return (
     <>
-      <ReviewQueue onBanned={() => setBansKey(k => k + 1)} />
-      <Hidden />
-      <Bans key={bansKey} />
+      <AdminSection title="Пропозиції від гравців" hint="Розбір, прибрані сторінки й заборони — у панелі модераторів: там те саме бачать і модератори.">
+        <div className="row">
+          <Link to="/panel/rozbir" className="btn acc sm">{pending ? `Розібрати (${pending})` : 'Відкрити розбір'}</Link>
+          <Link to="/panel/rishennia" className="btn ghost sm">Мої рішення</Link>
+          <Link to="/panel/prybrani" className="btn ghost sm">Прибрані й заборони</Link>
+        </div>
+      </AdminSection>
       <Settings />
     </>
   );

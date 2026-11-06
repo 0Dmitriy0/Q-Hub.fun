@@ -1920,3 +1920,32 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .seg a { display: inline-flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); text-decoration: none; font: 700 13px var(--sans); padding: 9px 6px; border-radius: 999px; min-height: 40px; }
 .seg a.on { background: var(--accent); color: var(--accent-fg); }
 .seg a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* адмінка: бічне меню з групами (2026-11-06); до 900 px — випадний список зверху */
+.adm-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; }
+.adm-side { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 14px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.adm-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.adm-group-t { margin: 0 0 6px; padding: 0 10px; font: 800 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.adm-link { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 10px; color: var(--muted); font: 700 14px var(--sans); }
+.adm-link span:not(.nav-count) { flex: 1; min-width: 0; }
+.adm-link:hover { background: var(--surface2); color: var(--fg); }
+.adm-link.on { background: var(--accent); color: var(--accent-fg); }
+.adm-link.on .nav-count { background: var(--accent-fg); color: var(--accent); }
+.adm-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.adm-pick { display: none; }
+.adm-pick .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.adm-pick select { width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 12px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); font: 700 15px var(--sans); }
+.adm-tile-go { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 14px; background: var(--surface2); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+.adm-tile-go:hover { border-color: var(--accent); }
+.adm-tile-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-tile-go b { font-size: 26px; }
+.adm-tile-go small { font-size: 12.5px; }
+.pnl-wait button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface2); }
+.pnl-wait button:hover { box-shadow: inset 0 0 0 1px var(--accent); }
+.pnl-wait button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 900px) {
+  .adm-shell { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .adm-side { display: none; }
+  .adm-pick { display: block; }
+}
