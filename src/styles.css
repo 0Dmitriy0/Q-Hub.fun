@@ -1953,3 +1953,12 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 /* «Ціни»: кнопки скупників компактніші; на комп'ютері — у кілька рядків, щоб видно було всіх (на телефоні — прокрутка) */
 .bp-tabs a.tabpic { gap: 6px; padding: 4px 11px 4px 4px; font-size: 13px; }
 @media (min-width: 861px) { .bp-tabs { flex-wrap: wrap; overflow: visible; row-gap: 6px; } }
+
+/* сенсорні екрани: дрібні посилання — зона натискання ≥44 px, а вигляд і розкладка ті самі
+   (відступ компенсує від'ємний margin; у рядковому посиланні відступ рядок не розсуває) */
+@media (pointer: coarse) {
+  .foot-nav { row-gap: 0; }
+  .foot-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .foot-by, .wiki-crumbs a, .h-more { padding-block: 15px; margin-block: -15px; }
+  .h-cards .card p a { padding-block: 14px; }
+}
