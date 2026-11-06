@@ -1,11 +1,27 @@
 import { useState } from 'react';
+import Icon from '../components/Icon';
 import { asset } from '../lib/app';
 import { money, when } from '../lib/format';
-import { pos, type BuyerHit } from './barSearch';
+import { pos, type BuyerHit, type PlaceHit } from './barSearch';
 import { KIND, numLabel, type RuleHit } from './rulesSearch';
 
 /* частини плашки Alt+Q, спільні для програми (Bar.tsx) і демо на сайті (components/BarDemo.tsx) —
    щоб на сторінці «Програма» було видно рівно те, що в грі */
+
+/* «Копіювати»: пункт правил, відповідь ШІ чи ціни скупника — у буфер, щоб вставити в гру, Discord чи документ */
+/* icon — лише значок (на кожному пункті й відповіді ШІ): назва — у підказці, стан — значком ✓ і для читача екрана */
+export function CopyBtn({ text, label = 'Копіювати', short = 'Копіювати', icon }: { text: string; label?: string; short?: string; icon?: boolean }) {
+  const [st, setSt] = useState<'' | 'ok' | 'fail'>('');
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setSt('ok'); } catch { setSt('fail'); }
+    setTimeout(() => setSt(''), 1600);
+  };
+  const msg = st === 'ok' ? 'Скопійовано' : st === 'fail' ? 'Не вийшло — виділи текст і Ctrl+C' : short;
+  return <button type="button" className={'bcopy' + (icon ? ' only' : '') + (st ? ' ' + st : '')} onClick={copy}
+    title={icon && st ? msg : label} aria-label={label}>
+    <Icon name={st === 'ok' ? 'check' : 'copy'} size={icon ? 15 : 14} /><span className={icon ? 'vh' : undefined} aria-live="polite">{icon && !st ? '' : msg}</span>
+  </button>;
+}
 
 /* «Заборонено … | Деморган 60 хв. Примітка: …» — покарання окремо, щоб його було видно одразу; примітки й винятки — після нього */
 export function splitPenalty(t: string) {
@@ -16,16 +32,29 @@ export function splitPenalty(t: string) {
   return { body: t.slice(0, i).trim(), pen: j < 0 ? tail : tail.slice(0, j).trim(), more: j < 0 ? '' : tail.slice(j).trim() };
 }
 
+/* текст для буфера: «Кримінальний кодекс, ст. 6.5» + текст + покарання — щоб у вставленому було видно, звідки пункт */
+export function ruleText(h: RuleHit) {
+  const { body, pen, more } = splitPenalty(h.s);
+  return [h.topic + (h.n ? ', ' + numLabel(h.kind, h.n) : ''), body, pen, more].filter(Boolean).join('\n');
+}
+/* «Копіювати все»: усі знайдені пункти через порожній рядок */
+export const rulesText = (hits: RuleHit[]) => hits.map(ruleText).join('\n\n');
+/* місця з мапи: «Заправка №3 — Заправки, X 120 · Y -340» */
+export const placesText = (pl: PlaceHit[]) => pl.map(p => `${p.name} — ${p.cat}, X ${Math.round(p.x)} · Y ${Math.round(p.y)}`).join('\n');
+
 export function RuleCard({ h }: { h: RuleHit }) {
   const [open, setOpen] = useState(false);
   const { body, pen, more } = splitPenalty(h.s);
   const long = body.length > 260 || body.split('\n').length > 4;
+  /* «Кримінальний кодекс, ст. 6.5» + текст + покарання — щоб у вставленому було видно, звідки пункт */
+  const text = ruleText(h);
   return <li className="brule">
     <div className="brule-top">
       {/* правила сервера карає адміністрація, закони штату — гра: гравцю важливо бачити, що саме порушує (specs/010 FR-005) */}
       <span className={'bkindtag ' + h.kind}>{KIND[h.kind]}</span>
       {h.n && <span className="bpunkt">{numLabel(h.kind, h.n)}</span>}
       <a href={h.url} target="_blank" rel="noreferrer" title="Відкрити тему на форумі">{h.topic}</a>
+      <CopyBtn icon text={text} label="Копіювати пункт" />
     </div>
     <p className={long && !open ? 'clamp' : ''}>{body}</p>
     {long && <button className="bmore" onClick={() => setOpen(o => !o)}>{open ? 'Згорнути' : 'Показати повністю'}</button>}
@@ -48,7 +77,8 @@ export function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n:
         <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}</small></span>
       </button>))}</div>
     <div className="bright">
-      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div></div>
+      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div>
+        <CopyBtn label="Копіювати ціни скупника" text={[cur.buyer + ':', ...cur.items.filter(x => x.price).map(x => `${x.item} — ${money(x.price)}/${x.unit}`)].join('\n')} /></div>
       <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
         <div key={x.item} className="bbuy">
           {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
