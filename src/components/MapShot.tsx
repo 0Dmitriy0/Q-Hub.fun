@@ -35,15 +35,15 @@ export default function MapShot({ marks, areas, catById, isOn }: { marks: MapMar
       <div className="mseg" role="group" aria-label="Розмір міток">
         {SIZES.map(([v, l]) => <button key={v} type="button" aria-pressed={pinPx === v} onClick={() => { setPinPx(v); setShot(null); }}>{l} · {v} px</button>)}
       </div>
-      {!shot && <button type="button" className="btn acc" disabled={!!busy} onClick={make}><Icon name="camera" size={18} />{busy || 'Зробити скрін'}</button>}
+      {!shot && <button type="button" className="btn acc" disabled={!!busy} onClick={make} data-umami-event="Скрін мапи"><Icon name="camera" size={18} />{busy || 'Зробити скрін'}</button>}
       {picked.length === 0 && !shot && <p className="muted">Жодна мітка не увімкнена — на знімку буде лише мапа.</p>}
       {shot && <>
         <a className="mshot-prev" href={shot.png} target="_blank" rel="noopener noreferrer" title="Відкрити в повному розмірі">
           <img src={shot.png} alt={`Мапа штату з ${picked.length} мітками`} width={shot.w} height={shot.h} />
         </a>
         <div className="row">
-          <button type="button" className="btn acc" onClick={() => save(shot.png, `q-hub-mapa-${day}.png`)}><Icon name="download" size={18} />PNG · {shot.kb > 1024 ? (shot.kb / 1024).toFixed(1) + ' МБ' : shot.kb + ' КБ'}</button>
-          <button type="button" className="btn ghost" onClick={() => save(shot.svg, `q-hub-mapa-${day}.svg`)}><Icon name="download" size={18} />SVG</button>
+          <button type="button" className="btn acc" onClick={() => save(shot.png, `q-hub-mapa-${day}.png`)} data-umami-event="Скрін мапи: зберегти" data-umami-event-format="png"><Icon name="download" size={18} />PNG · {shot.kb > 1024 ? (shot.kb / 1024).toFixed(1) + ' МБ' : shot.kb + ' КБ'}</button>
+          <button type="button" className="btn ghost" onClick={() => save(shot.svg, `q-hub-mapa-${day}.svg`)} data-umami-event="Скрін мапи: зберегти" data-umami-event-format="svg"><Icon name="download" size={18} />SVG</button>
           <button type="button" className="btn ghost" onClick={() => setShot(null)}>Ще раз</button>
         </div>
         <small className="muted">{shot.w}×{shot.h} px. PNG — щоб кинути в Discord чи Telegram; SVG — мітки чіткі при будь-якому збільшенні, але месенджери не показують його картинкою.</small>

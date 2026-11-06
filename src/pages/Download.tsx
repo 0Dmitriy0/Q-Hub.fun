@@ -60,7 +60,7 @@ export default function Download() {
           <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться.</span></div>
         </div>
         <div className="row">
-          <a className="btn acc" href={SETUP} onClick={countDownload}><Icon name="download" />Завантажити для Windows</a>
+          <a className="btn acc" href={SETUP} onClick={countDownload} data-umami-event="Завантажити програму" data-umami-event-where="programa"><Icon name="download" />Завантажити для Windows</a>
           <Link className="btn ghost" to="/programa/instruktsiya"><Icon name="book" />Інструкція</Link>
           <a className="btn ghost" href="#onovlennya" onClick={() => setLogAll(false)}><Icon name="history" />Що нового в збірці</a>
         </div>
