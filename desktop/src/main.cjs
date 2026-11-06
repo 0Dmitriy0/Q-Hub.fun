@@ -135,7 +135,9 @@ function createBar() {
   bar.on('hide', () => {
     if (!pinAsk) return;
     const a = pinAsk; pinAsk = null;
-    if (a.pt) { pinLog('F9 з точкою — плашку закрито, надсилаю без категорії'); sendPin(a.draft, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); }
+    /* гравцю без категорії й назви нема чого надсилати — пропозиція без них не пройде модерацію */
+    if (a.player) pinLog('Alt+F9 гравця — плашку закрито без категорії й назви, не надіслано');
+    else if (a.pt) { pinLog('F9 з точкою — плашку закрито, надсилаю без категорії'); sendPin(a.draft, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); }
     else pinLog('F9 без точки — не надіслано (плашку закрито)');
   });
   /* нижня смужка сесії живе разом з плашкою */
@@ -573,7 +575,9 @@ async function captureScreen() {
 
 /* ---------- мітка з гри (F9): знімок великої карти → чернетка на сайт, публікує адмін (specs/001-map-pin-drafts) ----------
    Поки без розпізнавання карти: чернетка йде як «точку не визначено», точку ставить адмін, дивлячись на знімок.
-   Клавіша реєструється лише для editor / moderator / admin — гравцям F9 лишається в грі. */
+   Клавіша — для всіх, хто увійшов: editor / moderator / admin шлють чернетку адміну (map_drafts), звичайний гравець —
+   пропозицію мітки в довідник (wiki_proposals, розділ map_point, specs/043 US5): категорія й назва обов'язкові,
+   знімок — приватний доказ для модератора, публікують admin і moderator. */
 const STAFF = ['editor', 'moderator', 'admin'];
 let myRole = null, pinKeyReg = null, pinAt = 0, drafts = null, pinTimer = null;
 async function refreshRole() {
@@ -656,7 +660,7 @@ async function locatePin(img) {
 let pinKeyState = '';
 function registerPinKey(key) {
   if (pinKeyReg) { globalShortcut.unregister(pinKeyReg); pinKeyReg = null; }
-  if (!STAFF.includes(myRole)) return true;
+  if (!myRole) return true;   // без входу клавішу не займаємо — нікуди надсилати
   const ok = globalShortcut.register(key, () => { pinLog(`${key} натиснуто`); pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); });
   if (ok) pinKeyReg = key;
   const st = `${key}:${ok}`;
@@ -695,16 +699,19 @@ async function pinShot() {
   try { loc = await locatePin(img); } catch (e) { pinLog('locate ' + (e?.stack || e)); loc = { kind: 'error' }; }
   pinLog('F9 ' + JSON.stringify(loc));
   const pt = loc.kind === 'point';
+  const player = !STAFF.includes(myRole);
+  /* гравцю без точки нема чого надсилати: модератор не ставить точку за знімком — підказати, як інакше */
+  if (player && !pt) return showPin(`Точку не знайдено: ${WHY[loc.kind] || loc.kind}. Відкрий велику карту й віддали її, або постав мітку на мапі програми — ${prefs().mapKey || 'Alt+M'}.`, true);
   const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
   const draft = { taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
     match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } };
   /* і з точкою, і без — спершу форма з категорією й описом (підказка адміну). Точку знайдено: Enter — надіслати з категорією,
      закрив плашку — надсилається без категорії. Не знайдено: на знімку може бути не гра (чат, Discord) — без «так» не надсилаємо */
   const what = pt ? `Точка під хрестиком: X ${Math.round(loc.x)} · Y ${Math.round(loc.y)}` : 'Без точки — поставить адмін';
-  pinAsk = { draft, jpeg: img.toJPEG(80), pt, what };
+  pinAsk = { draft, jpeg: img.toJPEG(80), pt, what, player };
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
-  bar.webContents.send('pin-ask', { reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null });
+  bar.webContents.send('pin-ask', { reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null, player });
 }
 /* категорії мапи для вікна «точку не знайдено» — раз на 30 хв */
 let catsAt = 0, catsCache = [];
@@ -717,24 +724,33 @@ async function pinCats() {
 let pinAsk = null;   // знімок без точки, що чекає на рішення: Enter — надіслати, Esc чи закрита плашка — ні
 async function sendPin(draft, jpeg, what) {
   draftBox().put(draft, jpeg);
+  denyText = '';
   const r = await draftBox().flush();
-  if (r.denied) showPin('Немає прав на чернетки міток.', true);
+  const sent = draft.kind === 'proposal' ? 'Мітку надіслано на розгляд — статус на сайті: «Кабінет» → «Мої правки».' : 'Чернетку надіслано.';
+  if (r.denied) showPin(denyText || 'Немає прав на чернетки міток.', true);
   else if (r.left) showPin(what + '. Відправлю, щойно буде інтернет.');
-  else showPin(what + '. Чернетку надіслано.');
+  else showPin(what + '. ' + sent);
 }
+let denyText = '';   // чому база відхилила пропозицію гравця (заборона, ліміт) — показати замість загального тексту
 /* hint — підказка редактора адміну: { category, note } */
 function pinDecide(send, hint = {}) {
   const a = pinAsk; pinAsk = null;
   if (!a) return;
   const category_id = typeof hint.category === 'string' && hint.category ? hint.category : null;
   const note = typeof hint.note === 'string' ? hint.note.trim().slice(0, 600) : '';
-  if (send) sendPin({ ...a.draft, category_id, note }, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
-  else showPin('Не надіслано.');
+  const name = typeof hint.name === 'string' ? hint.name.trim().slice(0, 160) : '';
+  if (!send) return showPin('Не надіслано.');
+  if (a.player) {
+    if (!category_id || !name || !a.pt) return showPin('Потрібні категорія й назва — мітку не надіслано.', true);
+    return sendPin({ ...a.draft, kind: 'proposal', category_id, name, note }, a.jpeg, a.what).catch(e => showPin('Не вдалося надіслати мітку: ' + (e?.message || e), true));
+  }
+  sendPin({ ...a.draft, category_id, note }, a.jpeg, a.what).catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true));
 }
 /* знімок у закрите сховище, потім рядок; повтор (файл чи рядок уже є) — це успіх, а не помилка */
 async function sendDraft(draft, jpeg) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return 'retry';
+  if (draft.kind === 'proposal') return sendProposal(session, draft, jpeg);
   const shot = `${session.user.id}/${draft.id}.jpg`;
   const up = await sb.storage.from('map-drafts').upload(shot, jpeg, { contentType: 'image/jpeg', upsert: false });
   if (up.error) {
@@ -750,6 +766,25 @@ async function sendDraft(draft, jpeg) {
   if (!error || error.code === '23505') return 'ok';
   return error.code === '42501' ? 'denied' : 'retry';
 }
+/* пропозиція мітки від гравця (0059): знімок — приватний доказ у wiki-proof (своя тека), рядок — wiki_proposals з тим самим id,
+   тож повторна відправка з черги не дає дубля. Заборона, ліміт чи неправильні дані (QH0xx) — не повторювати, а сказати чому */
+async function sendProposal(session, draft, jpeg) {
+  const proof = `${session.user.id}/${draft.id}.jpg`;
+  const up = await sb.storage.from('wiki-proof').upload(proof, jpeg, { contentType: 'image/jpeg', upsert: false });
+  if (up.error && !/409|exists|duplicate/i.test(`${up.error.statusCode || ''} ${up.error.message}`)) {
+    if (/403|row-level|security|unauthori/i.test(`${up.error.statusCode || ''} ${up.error.message}`)) { denyText = 'Немає прав надсилати мітки — увійди в програму наново.'; return 'denied'; }
+    return 'retry';
+  }
+  const { error } = await sb.from('wiki_proposals').insert({
+    id: draft.id, section: 'map_point', kind: 'new', source: 'game', source_note: 'Alt+F9 з програми', proof_path: proof,
+    data: { category_id: draft.category_id, name: draft.name, note: draft.note || '', x: Math.round(draft.x), y: Math.round(draft.y) },
+  });
+  if (!error || error.code === '23505') return 'ok';
+  if (/^QH0\d\d$/.test(error.code || '')) { denyText = error.message; sb.storage.from('wiki-proof').remove([proof]).catch(() => {}); return 'denied'; }
+  if (error.code === '42501' || error.code === '23514') { denyText = 'Мітки від гравців ще не ввімкнено на сайті.'; return 'denied'; }
+  return 'retry';
+}
+
 /* «онлайн програми» в шапці сайту: раз на хвилину «я тут» (supabase/migrations/0023).
    Без входу або на старій базі без функції — тихо нічого: лічильник не варто того, щоб заважати */
 function startOnline() {
@@ -887,7 +922,9 @@ async function autoPrices(rows) {
   const character_id = settings.character;
   let why = '';
   for (const r of rows) {
-    const { error } = await sb.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop', character_id });
+    /* outside — голос за ціну поза межами скупника (specs/035 US1, міграція 0054): база пускає його лише в правдоподібному коридорі */
+    const row = { kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, source: 'desktop', character_id };
+    const { error } = await sb.from('price_reports').insert(r.outside ? { ...row, out_of_limits: true } : row);
     if (!error) ok++; else if (error.code === 'P0001') why = error.message;
   }
   try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} prices sent ${ok}/${rows.length}${why ? ' — ' + why : ''}\n`); } catch { /* журнал не обов'язковий */ }

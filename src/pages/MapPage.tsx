@@ -8,7 +8,7 @@ import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, readView, saveView, toGame, 
 import { asset } from '../lib/app';
 import { namesLayer } from '../lib/mapVector';
 import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
-import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, pinIcon } from '../lib/mapMarks';
+import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import LABELS from '../data/mapLabels.json';
@@ -24,6 +24,8 @@ import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
 import MapWhere, { type Where } from '../desktop/MapWhere';
 import { nearest } from '../lib/mapNear';
 import { asOf, readCopy, saveCopy, stale } from '../desktop/mapCache';
+import ProposeForm, { type ProposeTarget } from '../components/wiki/ProposeForm';
+import { wikiReady } from '../lib/jobsData';
 
 const ON_KEY = 'qhub:map:on';
 const CLUSTER_MIN = 200;   // від скількох міток категорії групувати їх на віддаленні
@@ -59,7 +61,14 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* точка відкритої чернетки: маркер на мапі (адмін його перетягує); клік у режимі «поставити» ставить її сюди */
   const [draftPt, setDraftPt] = useState<[number, number] | null>(null);
   const draftMarker = useRef<L.Marker | null>(null);
-  const pickFor = useRef<'mark' | 'draft'>('mark');
+  const pickFor = useRef<'mark' | 'draft' | 'propose'>('mark');
+  /* мітка від гравця (specs/043 US5, 0059): клік на мапі → форма довідника → черга модерації. І на сайті, і в програмі
+     (рішення власника 2026-11-05) — мапу це не змінює: мітку публікує модератор */
+  const [wiki, setWiki] = useState(false);
+  useEffect(() => { wikiReady().then(setWiki); }, []);
+  const [propose, setPropose] = useState<ProposeTarget | null>(null);
+  const [proposeMode, setProposeMode] = useState<'new' | 'hide'>('new');
+  const [staleOk, setStaleOk] = useState(false);
   /* зони (0021): багатокутники в шарах своїх категорій; адмін малює нову кліками по мапі */
   const [areas, setAreas] = useState<MapArea[]>([]);
   const [ring, setRing] = useState<[number, number][]>([]);
@@ -125,6 +134,16 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }, [isAdmin, tools]);
   /* яку категорію відкрити у формі «Змінити категорію» (олівець на плитці категорії) */
   const [catPick, setCatPick] = useState<string | null>(null);
+  /* опис категорії — за кнопкою «i» над плиткою (під назвою лише дати); Esc чи клік повз бульбашку — закрити */
+  const [info, setInfo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!info) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as HTMLElement).closest('.mcat-info, .mcat-pop')) setInfo(null);
+    };
+    document.addEventListener('mousedown', close); document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', close); };
+  }, [info]);
   /* «Мапа для гри» — вікно по центру екрана; ?game=1 відкриває його одразу (посилання з головної) */
   const [params] = useSearchParams();
   const [game, setGame] = useState(() => params.get('game') === '1');
@@ -179,6 +198,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       setMapReady(true);
       if (!d && embed) { const c = readCopy(); setOffline(c ? c.at : ''); return; }
       if (!d) { setDbMissing(true); setOnly(null); return; }
+      setStaleOk(!!d.staleOk);
       if (embed) { saveCopy(d); loadedAt.current = Date.now(); setOffline(null); }
       apply(d);
       setOnly(o => (o && d.marks.some(mk => onlyIds(o).includes(mk.category)) ? o : null));
@@ -200,6 +220,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       if (!pickRef.current) return;
       const g = game(e);
       if (pickFor.current === 'draft') { setDraftPt(g); pickRef.current = false; setPicking(false); return; }
+      if (pickFor.current === 'propose') {
+        pickRef.current = false; setPicking(false);
+        setProposeMode('new'); setPropose({ section: 'map_point', id: null, data: { x: Math.round(g[0]), y: Math.round(g[1]) }, title: 'мітка на мапі' });
+        return;
+      }
       setPicked(g);
       pickMarker.current?.remove();
       pickMarker.current = L.circleMarker(e.latlng, { radius: 9, color: '#fff', weight: 3, fillColor: '#ff6a1f', fillOpacity: 1 }).addTo(m);
@@ -229,12 +254,14 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       const c = catById[mk.category]; if (!c) continue;
       const icon = pinIcon(c, mk.icon);
       /* картка точки як у макеті: мітка-категорія кольору категорії, назва, примітка, смужка координат, дія */
-      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
+      const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span>${photoHtml(mk)}<b>${esc(mk.name || c.name)}</b>${mk.note ? `<span>${esc(mk.note)}</span>` : ''}`
         + (mk.owner ? `<span class="mowner">Власник: <b>${esc(ownerLabel(mk.owner, owners))}</b></span>` : '')
         + `<span class="mono mxy"><i>Координати</i>X ${Math.round(mk.x)} · Y ${Math.round(mk.y)}</span>`
         /* specs/012 FR-009a: мітки з Open Hydra Map — з підписом джерела */
         + (mk.source === 'ohm' ? '<small class="msrc">Координати — за даними <a href="https://gtav.fanwiki.top/" target="_blank" rel="noopener noreferrer">Open Hydra Map</a></small>' : '')
         + (mk.link ? `<a class="mgo" data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
+        /* «Точка застаріла?» (0060) — гравцям і модераторам; адмін і так прибирає мітку сам */
+        + (!isAdmin && wiki && staleOk && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-stale="${mk.dbId}">Точка застаріла?</button></span>` : '')
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
       /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
@@ -255,7 +282,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
     m.fire('zoomend');
-  }, [cats, marks, areas, isAdmin, owners, edArea]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cats, marks, areas, isAdmin, owners, edArea, wiki, staleOk]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current; if (!m) return;
@@ -385,7 +412,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   function setMany(ids: string[], v: boolean) {
     if (only) setOnly(null);
     setOn(o => { const n = toggled(cats, { only, on: o, saved }, ids, v); saveOn(n); return n; }); }
-  function pick(v: boolean, forDraft = false) { pickFor.current = forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+  function pick(v: boolean, forDraft: boolean | 'propose' = false) { pickFor.current = forDraft === 'propose' ? 'propose' : forDraft ? 'draft' : 'mark'; pickRef.current = v; setPicking(v); if (v) { box.current?.focus(); if (!wide) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
   function go(mk: MapMark) {
     const m = map.current; if (!m) return;
     const c = catById[mk.category]; if (c && !isOn(c)) setMany([c.id], true);
@@ -411,6 +438,14 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     map.current?.closePopup(); setMarks(ms => ms.map(x => (x.dbId === id ? { ...x, owner: st } : x)));
     const o = await supabase!.from('map_owners').select('static_id,game_name');
     if (!o.error) setOwners(Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string])));
+  }
+  /* «Точка застаріла?» — запит прибрати мітку з причиною, у ту саму чергу модерації (0060) */
+  function staleMark(id: number) {
+    const mk = marks.find(x => x.dbId === id); if (!mk) return;
+    map.current?.closePopup();
+    const c = cats.find(x => x.id === mk.category);
+    setProposeMode('hide');
+    setPropose({ section: 'map_point', id: String(id), data: { name: mk.name || c?.name || '', category_id: mk.category, x: mk.x, y: mk.y }, title: mk.name || c?.name || 'мітка' });
   }
   function startEdit(id: number) {
     const mk = marks.find(x => x.dbId === id); if (!mk) return;
@@ -444,10 +479,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           const ea = t.closest('button[data-edit-area]'); if (ea) startAreaEdit(Number(ea.getAttribute('data-edit-area')));
           const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
           const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
+          const st = t.closest('button[data-stale]'); if (st) staleMark(Number(st.getAttribute('data-stale')));
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
         {embed && offline !== null && <span className="mpick">{offline ? `Немає зв'язку — мітки ${asOf(offline)}` : `Немає зв'язку — мітки з'являться, щойно буде інтернет`}</span>}
-        {picking && <span className="mpick">Клікни на мапі, щоб взяти координати</span>}
+        {picking && <span className="mpick">{pickFor.current === 'propose' ? 'Клікни на мапі туди, де має бути мітка' : 'Клікни на мапі, щоб взяти координати'}</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
         <span className="mbrand"><img src={asset('/brand/q-hub-logo.svg') + '?v=2'} alt="" width="22" height="22" />Q-Hub</span>
@@ -474,6 +510,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             </div>
             {wide && !embed && <button type="button" className="hud mmod mshot-b" onClick={() => setShotOpen(true)} title="Скрін усієї мапи з увімкненими мітками"><Icon name="camera" size={18} /><span>Скрін</span></button>}
             {wide && !embed && <button type="button" className="hud mmod" onClick={() => setGame(true)}><Icon name="download" size={18} /><span>Мапа для гри</span></button>}
+            {wide && wiki && <button type="button" className="hud mmod" aria-pressed={picking && pickFor.current === 'propose'} onClick={() => pick(!(picking && pickFor.current === 'propose'), 'propose')} title="Знаєш місце, якого немає на мапі? Постав точку — модератор перевірить"><Icon name="plus" size={18} /><span>Запропонувати мітку</span></button>}
           </div>
         </div>
         {(isStaff || isAdmin) && !tools && <button type="button" className="hud mtools-b" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }} aria-expanded={false} aria-controls="map-tools">
@@ -489,6 +526,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {!wide && search}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setShotOpen(true)}><Icon name="camera" size={18} />Скрін мапи з мітками</button>}
           {!wide && !embed && <button type="button" className="btn ghost mmod-m" onClick={() => setGame(true)}><Icon name="download" size={18} />Мапа для гри</button>}
+          {!wide && wiki && <button type="button" className="btn ghost mmod-m" onClick={() => pick(true, 'propose')}><Icon name="plus" size={18} />Запропонувати мітку</button>}
           {!wide && (isStaff || isAdmin) && !tools && <button type="button" className="btn ghost mmod-m" onClick={() => { setTools(true); if (!isAdmin) setTab('drafts'); }}><Icon name="gear" size={18} />{isAdmin ? 'Інструменти адміна' : 'Чернетки'}</button>}
           <section className="mfilters" aria-label="Фільтри">
             <div className="mseg" role="group" aria-label="Усі категорії">
@@ -513,8 +551,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                       return (
                         <span key={c.id} className={'mchip' + (v ? ' on' : '')} style={{ '--c': c.color } as CSSProperties}>
                           <button type="button" className="mchip-b" aria-pressed={v} onClick={() => setMany([c.id], !v)}>
-                            <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.description || c.starts_on || c.ends_on) && <small className="mcat-sub">{[period(c.starts_on, c.ends_on, today), c.description].filter(Boolean).join(' · ')}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
+                            <img src={asset(c.icon)} alt="" width={22} height={22} loading="lazy" /><span className="mcat-n">{c.name}{(c.starts_on || c.ends_on) && <small className="mcat-sub">{period(c.starts_on, c.ends_on, today)}</small>}</span><span className="cnt">{count[c.id] || 0}</span>
                           </button>
+                          {c.description && <button type="button" className={'mcat-info' + (isAdmin && !c.builtin ? ' mcat-info-adm' : '')} aria-expanded={info === c.id} aria-controls={'mcat-pop-' + c.id}
+                            aria-label={'Що це: ' + c.name} title="Що це" onClick={() => setInfo(i => (i === c.id ? null : c.id))}>i</button>}
+                          {info === c.id && c.description && <div id={'mcat-pop-' + c.id} className="mcat-pop" role="note"><b>{c.name}</b><p>{c.description}</p></div>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
                         </span>
@@ -572,6 +613,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           {shotOpen && <MapShot marks={marks} areas={areas} catById={catById} isOn={isOn} />}
         </div>
       </dialog>
+      <ProposeForm target={propose} mode={proposeMode} onClose={() => setPropose(null)}
+        options={{ category_id: cats.filter(c => !c.builtin).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />
     </div>
   );
 }

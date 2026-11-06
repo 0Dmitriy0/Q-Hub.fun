@@ -1,0 +1,32 @@
+# Discord-бот (specs/060 US1): запасний запуск публікації цін, якщо pg_cron не ввімкнено (supabase/sql/discord_cron.sql).
+# Основний шлях — pg_cron щохвилини; GitHub Actions cron не частіше 5 хв і часто запізнюється, тож schedule закоментовано,
+# щоб не дублювати pg_cron. Увімкнути — розкоментувати schedule. Вручну — Actions → Discord tick → Run workflow.
+# Секрет DISCORD_SYNC_SECRET — той самий, що в секретах функції discord-bot.
+name: Discord tick
+
+on:
+  # schedule:
+  #   - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Опублікувати ціни
+        env:
+          SECRET: ${{ secrets.DISCORD_SYNC_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "::warning::Немає секрету DISCORD_SYNC_SECRET (GitHub → Settings → Secrets → Actions) — ціни не опубліковано. Кроки: specs/060-discord-bot/quickstart.md"
+            exit 0
+          fi
+          URL=$(node -p "require('./desktop/src/config.json').url")
+          code=$(curl -sS -o out.json -w '%{http_code}' -X POST "$URL/functions/v1/discord-bot" \
+            -H "x-sync-secret: $SECRET" -H 'Content-Type: application/json' -d '{"action":"tick"}' --max-time 120)
+          echo "HTTP $code"; cat out.json; echo
+          [ "$code" = 200 ]

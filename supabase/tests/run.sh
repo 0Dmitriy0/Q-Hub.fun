@@ -64,6 +64,7 @@ $P -f supabase/tests/buyer_unknown_items_test.sql
 $P -f supabase/tests/buyer_limit_reports_test.sql
 $P -f supabase/tests/desktop_price_limits_test.sql
 $P -f supabase/tests/price_confirm_test.sql
+$P -f supabase/tests/price_outside_limits_test.sql
 $P -f supabase/tests/site_promo_test.sql
 $P -f supabase/tests/site_links_test.sql
 $P -f supabase/tests/site_stats_test.sql
@@ -79,3 +80,7 @@ $P -f supabase/tests/admin_panel_test.sql
 $P -f supabase/tests/admin_accounts_test.sql
 $P -f supabase/tests/site_links_family_market_test.sql
 $P -f supabase/tests/session_money_test.sql
+$P -f supabase/tests/map_photos_test.sql
+$P -f supabase/tests/season_events_wiki_test.sql
+$P -f supabase/tests/discord_bot_test.sql
+$P -f supabase/tests/wiki_test.sql

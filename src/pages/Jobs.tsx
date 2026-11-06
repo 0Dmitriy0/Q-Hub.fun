@@ -1,16 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { JOBS } from '../data/jobs';
 import { filterJobs, type JobKind, type JobSort } from '../lib/jobs';
 import Icon from '../components/Icon';
 import Select from '../components/Select';
 import JobDialog from '../components/JobDialog';
 import Profit from '../components/Profit';
+import Leaderboard from '../components/Leaderboard';
+import { jobIcon } from '../components/JobDialog';
+import ProposeForm, { takeIntent, type ProposeTarget } from '../components/wiki/ProposeForm';
+import { useJobs, type JobRow } from '../lib/jobsData';
+import { useAuth } from '../lib/auth';
+import type { Data } from '../lib/wiki';
 
 const KINDS: [JobKind, string][] = [['all', 'Усі'], ['legal', 'Легальні'], ['illegal', 'Нелегальні']];
 const SORTS: [JobSort, string, string][] = [['name', 'За назвою', 'tag'], ['profit', 'За прибутковістю', 'coin'], ['level', 'За доступністю', 'trophy']];
 
 export default function Jobs() {
+  const { jobs: JOBS, fromDb, reload } = useJobs();
+  const { session } = useAuth();
+  /* пропозиція правки (specs/043): правити можна, коли роботи вже з бази — інакше немає версії картки */
+  const [prop, setProp] = useState<{ t: ProposeTarget; mode: 'edit' | 'new' | 'hide' } | null>(null);
+  const propose = (j: JobRow | null, mode: 'edit' | 'new' | 'hide') =>
+    setProp({ mode, t: { section: 'job', id: j?.id ?? null, data: (j ?? {}) as unknown as Data, version: j?.version, title: j?.name ?? 'нова робота' } });
+  /* після входу через Discord — та сама форма (FR-007) */
+  useEffect(() => {
+    if (!session || !fromDb) return;
+    const it = takeIntent('job'); if (!it) return;
+    if (it.mode === 'new') propose(null, 'new'); else { const j = JOBS.find(x => x.id === it.id); if (j) propose(j, it.mode); }
+  }, [session, fromDb]);
   const [kind, setKind] = useState<JobKind>('all');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<JobSort>('name');
@@ -18,8 +35,8 @@ export default function Jobs() {
   const [params, setParams] = useSearchParams();
   const [openId, setOpenIdRaw] = useState(() => params.get('job') || '');
   const setOpenId = (id: string) => { setOpenIdRaw(id); if (!id && params.has('job')) { params.delete('job'); setParams(params, { replace: true }); } };
-  const counts = useMemo(() => ({ all: JOBS.length, legal: JOBS.filter(j => j.legal).length, illegal: JOBS.filter(j => !j.legal).length }), []);
-  const shown = useMemo(() => filterJobs(JOBS, kind, q, sort), [kind, q, sort]);
+  const counts = useMemo(() => ({ all: JOBS.length, legal: JOBS.filter(j => j.legal).length, illegal: JOBS.filter(j => !j.legal).length }), [JOBS]);
+  const shown = useMemo(() => filterJobs(JOBS, kind, q, sort), [JOBS, kind, q, sort]);
 
   return (
     <>
@@ -45,11 +62,12 @@ export default function Jobs() {
           <div className="fld sortf"><Select label="Сортування" value={sort} onChange={setSort} options={SORTS.map(([v, l, i]) => ({ value: v, label: l, icon: i }))} /></div>
         </div>
       </div>
-      <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {counts.all} робіт</span><span className="muted">Натисни на картку — відкриється опис</span></div>
+      <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {counts.all} робіт</span><span className="muted">Натисни на картку — відкриється опис</span>
+        {fromDb && <span className="row"><Leaderboard /><button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати роботу</button></span>}</div>
       {!shown.length && <div className="card empty wiki-none"><b>Робіт не знайдено</b><span className="muted">Зміни фільтр або очисти пошук.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); }}>Скинути пошук</button></div>}
       <div className="jgrid">{shown.map(j => (
         <button type="button" key={j.id} className={'card jcard' + (j.legal ? '' : ' ill')} onClick={() => setOpenId(j.id)} aria-haspopup="dialog">
-          <img className="jico" src={`/icons/jobs/${j.id}.svg`} alt="" width={64} height={64} loading="lazy" />
+          <img className="jico" src={`/icons/jobs/${j.id}.svg`} alt="" width={64} height={64} loading="lazy" onError={jobIcon} />
           <span className="jname">{j.name}</span>
           <span className="jmeta"><span className="jtag lvl"><Icon name="trophy" size={13} />{j.level} рів.</span><Profit n={j.profit} /></span>
           {!j.legal && <span className="jtag ill jcorner">Нелегальна</span>}
@@ -60,7 +78,11 @@ export default function Jobs() {
         <div className="card"><span className="ibub"><Icon name="shield" /></span><div><b>Нелегальні роботи</b><p className="muted">Позначені червоним. Перед тим як братися, прочитай вимоги й поради в описі.</p></div></div>
         <div className="card"><span className="ibub"><Icon name="map" /></span><div><b>Точки на мапі</b><p className="muted">Кнопка «Мітка на мапі» в описі роботи відкриває мапу штату одразу на місці влаштування.</p></div></div>
       </div>
-      <JobDialog job={JOBS.find(j => j.id === openId) || null} onClose={() => setOpenId('')} />
+      <JobDialog job={JOBS.find(j => j.id === openId) || null} onClose={() => setOpenId('')}
+        onPropose={fromDb ? () => { const j = JOBS.find(x => x.id === openId); if (j) { setOpenId(''); propose(j, 'edit'); } } : undefined}
+        onChanged={reload}
+        onHide={fromDb ? () => { const j = JOBS.find(x => x.id === openId); if (j) { setOpenId(''); propose(j, 'hide'); } } : undefined} />
+      <ProposeForm target={prop?.t ?? null} mode={prop?.mode ?? 'edit'} list={JOBS} onClose={() => setProp(null)} />
     </>
   );
 }

@@ -4,12 +4,13 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { money } from '../../lib/format';
 import { adminError, when } from '../../lib/admin';
+import { widen } from '../../lib/limits';
 import AdminSection from './AdminSection';
 
 /* Черги від програми (specs/039 US1): невідомі назви, ціни поза межами, непідтверджені ціни, чернетки міток.
    Кожна дія — одна функція бази, рядок черги видаляється першим: другий адмін побачить «уже розібрано» (FR-010) */
 type Unknown = { id: number; buyer_id: string; text: string; seen_count: number; last_seen: string; buyers: { name: string } | null };
-type Limit = { buyer_id: string; item_id: number; price: number; seen_count: number; last_seen: string; buyer_items: { min_price: number; max_price: number; items: { name: string } | null; buyers: { name: string } | null } | null };
+type Limit = { buyer_id: string; item_id: number; price: number; seen_count: number; last_seen: string; reporters?: string[]; buyer_items: { min_price: number; max_price: number; items: { name: string } | null; buyers: { name: string } | null } | null };
 type Pending = { buyer_id: string; item_id: number; item: string; price: number; votes: number; need: number; last_at: string; reporters: string[] };
 type Counts = { unknown: number; limits: number; pending: number; drafts: number };
 type Item = { id: number; name: string };
@@ -166,7 +167,8 @@ function LimitQueue({ onDone }: { onDone: () => void }) {
   const [msg, setMsg] = useState<Record<string, string>>({});
   const load = () => {
     setErr('');
-    supabase!.from('buyer_limit_reports').select('buyer_id,item_id,price,seen_count,last_seen,buyer_items(min_price,max_price,items(name),buyers(name))')
+    /* «*»: reporters з'являється з міграцією 0054, а до неї запит зі стовпцем упав би цілком */
+    supabase!.from('buyer_limit_reports').select('*,buyer_items(min_price,max_price,items(name),buyers(name))')
       .order('seen_count', { ascending: false }).limit(200)
       .then(({ data, error }) => { if (error) setErr(adminError(error)); else setRows(data as unknown as Limit[]); });
   };
@@ -187,7 +189,7 @@ function LimitQueue({ onDone }: { onDone: () => void }) {
             <li key={key(r)} className="adm-row">
               <div className="adm-row-main">
                 <b>{bi?.items?.name || '#' + r.item_id} — {money(r.price)}</b>
-                <span className="muted">{bi?.buyers?.name || r.buyer_id} · межі {money(bi?.min_price || 0)}–{money(bi?.max_price || 0)} · бачили {r.seen_count} · {when(r.last_seen)}</span>
+                <span className="muted">{bi?.buyers?.name || r.buyer_id} · межі {money(bi?.min_price || 0)}–{money(bi?.max_price || 0)} · бачили {r.seen_count}{r.reporters?.length ? ` · гравців: ${r.reporters.length}` : ''} · {when(r.last_seen)}</span>
               </div>
               <div className="adm-row-act">
                 <button type="button" className="btn acc sm" onClick={() => setEdit(key(r))}>Поправити межі</button>
@@ -205,8 +207,10 @@ function LimitQueue({ onDone }: { onDone: () => void }) {
 
 function LimitForm({ r, onCancel, onSubmit }: { r: Limit; onCancel: () => void; onSubmit: (min: number, max: number) => void }) {
   const cur = r.buyer_items;
-  const [min, setMin] = useState(String(Math.min(cur?.min_price || r.price, r.price)));
-  const [max, setMax] = useState(String(Math.max(cur?.max_price || r.price, r.price)));
+  /* одразу з запасом 10 %, як «Розширити» на сторінці цін (specs/035 US3): адмін лише підтверджує */
+  const w = widen(cur?.min_price || 0, cur?.max_price || 0, r.price);
+  const [min, setMin] = useState(String(Math.min(w.min || r.price, r.price)));
+  const [max, setMax] = useState(String(Math.max(w.max || r.price, r.price)));
   const lo = Number(min), hi = Number(max), bad = !(lo > 0 && hi > lo);
   return (
     <form className="adm-form adm-form-row" onSubmit={e => { e.preventDefault(); if (!bad) onSubmit(lo, hi); }}>

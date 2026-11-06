@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -8,6 +8,8 @@ import DocumentsPage from './DocumentsPage';
 import Earnings from './Earnings';
 import Characters from './Characters';
 import SettingsPage from './SettingsPage';
+import MyEdits, { unseenCount } from './MyEdits';
+import { wikiReady } from '../../lib/jobsData';
 import Select from '../../components/Select';
 import Icon from '../../components/Icon';
 
@@ -23,11 +25,18 @@ const TABS: [string, string, string, string][] = [
   ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
   ['zarobitok', 'Заробіток', 'За годину й по днях', 'chart'],
   ['nalashtuvannya', 'Налаштування', 'Персонажі, нік і статік', 'user'],
+  /* правки довідника (specs/043) — лише на сайті: програма в першій черзі не змінюється */
+  ...(desktop ? [] : [['pravky', 'Мої правки', 'Пропозиції до довідника', 'tag'] as [string, string, string, string]]),
 ];
 
 export default function Cabinet() {
   const { ready, session, signIn, signOut, characters, current, setCurrent, name, avatar, nick } = useAuth();
   const { pathname } = useLocation();
+  /* значок нових рішень по своїх правках (FR-018) */
+  const [unseen, setUnseen] = useState(0);
+  const [wiki, setWiki] = useState(false);
+  useEffect(() => { if (!desktop) wikiReady().then(setWiki); }, []);
+  useEffect(() => { if (session && wiki) unseenCount().then(setUnseen); }, [session, wiki]);
   if (!supabase) return <div className="card empty">Кабінет запрацює після підключення Supabase (див. README).</div>;
   if (!ready) return <div className="card empty">Завантаження…</div>;
   if (!session) return (
@@ -52,8 +61,10 @@ export default function Cabinet() {
     <label className="fld" style={{ minWidth: 200 }}><span>Персонаж</span>
       <Select value={current?.id || ''} onChange={setCurrent} options={characters.map(c => ({ value: c.id, label: c.name, icon: 'user' }))} />
     </label>);
-  const body = !current ? (canEdit ? <Characters first /> : <div className="card empty">Персонажів ще немає. Додай першого в програмі Q-Hub.</div>) : (
-    /* на сайті всі поля й кнопки кабінету вимкнено, форми додавання сховано (.ro у styles.css) */
+  /* персонажів можна створювати й видаляти й на сайті (рішення власника 2026-11-05); решта кабінету на сайті — лише перегляд */
+  const body = seg === 'pravky' && !desktop ? <MyEdits onSeen={() => setUnseen(0)} /> : !current ? <Characters first /> : (<>
+    {!canEdit && seg === 'nalashtuvannya' && <Characters />}
+    {/* на сайті всі поля й кнопки кабінету вимкнено, форми додавання сховано (.ro у styles.css) */}
     <fieldset className={canEdit ? 'rw' : 'ro'} disabled={!canEdit}>
     <Routes>
       <Route index element={<Dashboard c={current} />} />
@@ -67,7 +78,7 @@ export default function Cabinet() {
       <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
     </Routes>
     </fieldset>
-  );
+  </>);
 
   /* програма: кабінет — головна плашки Alt+Q (рядок пошуку, персонаж і кнопки — у самій плашці, src/desktop/Bar.tsx) */
   if (desktop) return <Deck tab={tab} home={seg === ''} body={body} />;
@@ -87,9 +98,9 @@ export default function Cabinet() {
         </div>
         {avatar && <img className="cab-ava" src={avatar} alt="" width={72} height={72} />}
       </section>
-      <nav className="wiki-tabs cab-tabs" aria-label="Кабінет">{TABS.map(([p, l, , ico]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={16} />{l}</NavLink>)}</nav>
+      <nav className="wiki-tabs cab-tabs" aria-label="Кабінет">{TABS.filter(t => t[0] !== 'pravky' || wiki).map(([p, l, , ico]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={16} />{l}{p === 'pravky' && unseen > 0 && <span className="cnt" aria-label={`нових рішень: ${unseen}`}>{unseen}</span>}</NavLink>)}</nav>
       {!canEdit && (
-        <p className="card note" role="note">На сайті кабінет лише для перегляду. Персонажів і документи змінюй у програмі Q-Hub для Windows.</p>
+        <p className="card note" role="note">Персонажів можна додавати й видаляти тут, у <Link to="/kabinet/nalashtuvannya">Налаштуваннях</Link>. Решта кабінету на сайті — лише для перегляду: документи змінюй у програмі Q-Hub для Windows.</p>
       )}
       {body}
     </div>

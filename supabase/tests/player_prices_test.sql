@@ -134,7 +134,7 @@ end $$;
 reset role;
 \echo 'Час наступної зміни ok: вписує гравець з ніком і статіком, видно хто; гість і минулий час — ні'
 
--- транспорт: читають усі, пишуть редактори; оцінка — одна від гравця, середню бачать усі
+-- транспорт: читають усі, пишуть лише адміни (0057; редактори — пропозиціями); оцінка — одна від гравця, середню бачать усі
 insert into public.vehicles (kind, name, brand, price) values ('auto', 'Test Car', 'Test', 100000), ('moto', 'Test Bike', 'Test', 5000);
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
@@ -156,7 +156,7 @@ do $$ begin
 end $$;
 reset role;
 delete from public.vehicles where name like 'Test %';
-\echo 'Транспорт ok: читають усі, пишуть редактори; одна оцінка від гравця (змінюється), середню бачать усі'
+\echo 'Транспорт ok: читають усі, пишуть лише адміни; одна оцінка від гравця (змінюється), середню бачать усі'
 
 -- фото транспорту: редактор не ставить, адмін ставить
 insert into public.vehicles (kind, name) values ('auto', 'Pic Car');
@@ -164,8 +164,9 @@ update public.profiles set role = 'editor' where id = '00000000-0000-0000-0000-0
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false) \gset
 do $$ begin
-  begin update public.vehicles set image_url = 'x' where name = 'Pic Car'; raise exception 'редактор поставив фото транспорту';
-  exception when raise_exception then if sqlerrm <> 'Картинки змінює лише адмін.' then raise; end if; end;
+  -- з 0057 (specs/043) редактор транспорт напряму не змінює взагалі — RLS лишає рядок як був
+  update public.vehicles set image_url = 'x' where name = 'Pic Car';
+  assert (select image_url from public.vehicles where name = 'Pic Car') = '', 'редактор поставив фото транспорту';
 end $$;
 reset role;
 update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-00000000000b';

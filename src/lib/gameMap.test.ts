@@ -5,8 +5,8 @@ describe('карта для гри', () => {
   it('межі текстур гри: кут (-4140, 8400), 4500 м на тайл', () => {
     expect(gamePx(-4140, 8400, 512)).toEqual([0, 0]);
     expect(gamePx(-4140 + 9000, 8400 - 13500, 512)).toEqual([1024, 1536]);
-    expect(tileName(2, 1)).toBe('minimap_2_1.png');
-    expect(tileName(0, 1, 'minimap_sea_')).toBe('minimap_sea_0_1.png');
+    expect(tileName(2, 1)).toBe('minimap_2_1');
+    expect(tileName(0, 1, 'minimap_sea_')).toBe('minimap_sea_0_1');
   });
   it('CRC-32 і zip без стиснення', () => {
     expect(crc32(new TextEncoder().encode('123456789'))).toBe(0xcbf43926);

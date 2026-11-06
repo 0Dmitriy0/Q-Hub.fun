@@ -5,6 +5,8 @@ import { useAuth } from '../lib/auth';
 import { FAMILY, useDiscord } from '../lib/brand';
 import DiscordForm from '../components/DiscordForm';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
+import { Link } from 'react-router-dom';
+import HotkeysTable from '../components/HotkeysTable';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
    і викладає в реліз «desktop-latest» — посилання завжди веде на останню збірку з main.
@@ -59,6 +61,7 @@ export default function Download() {
         </div>
         <div className="row">
           <a className="btn acc" href={SETUP} onClick={countDownload}><Icon name="download" />Завантажити для Windows</a>
+          <Link className="btn ghost" to="/programa/instruktsiya"><Icon name="book" />Інструкція</Link>
           <a className="btn ghost" href="#onovlennya" onClick={() => setLogAll(false)}><Icon name="history" />Що нового в збірці</a>
         </div>
         <small className="p-sign"><Icon name="shield" size={16} />Інсталятор ще не підписаний сертифікатом: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».</small>
@@ -93,6 +96,13 @@ export default function Download() {
         <div className="p-feats">
           {FEATURES.map(([ico, t, p]) => <div key={t} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{t}</h3><p className="muted">{p}</p></div>)}
         </div>
+      </section>
+
+      {/* 3а. комбінації клавіш — той самий список, що в програмі (кнопка «?» у плашці), src/lib/hotkeys.ts */}
+      <section className="h-sec" id="klavishi">
+        <div className="h-head"><span className="h-kicker"><Icon name="help" size={16} />Інструкція</span><h2>Комбінації клавіш</h2></div>
+        <HotkeysTable />
+        <p className="muted p-keys-note">Це типові клавіші. Alt+Q, Alt+M і Alt+F9 можна перепризначити в програмі: шестірня в плашці → «Основне» чи «Зір програми». Список у будь-який момент — кнопка <b>?</b> поруч із шестірнею. Як користуватися програмою крок за кроком — <Link to="/programa/instruktsiya">інструкція</Link>.</p>
       </section>
 
       {/* 4. вимоги */}
