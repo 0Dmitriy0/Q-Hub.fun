@@ -7,21 +7,15 @@ import DiscordForm from '../components/DiscordForm';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 import { Link } from 'react-router-dom';
 import HotkeysTable from '../components/HotkeysTable';
+import BarDemo, { EXAMPLES } from '../components/BarDemo';
 
 /* Сторінка «Програма»: завантаження Q-Hub Desktop. Інсталятор збирає GitHub Actions (.github/workflows/desktop.yml)
    і викладає в реліз «desktop-latest» — посилання завжди веде на останню збірку з main.
-   Вигляд — за макетом Stitch (design/stitch/programs.html); вигадані цифри макета (версії, мс, % CPU) не перенесено */
+   Вигляд — за макетом Stitch (design/stitch/programs.html); демо Alt+Q — справжня плашка програми (components/BarDemo.tsx) */
 const SETUP = 'https://github.com/0Dmitriy0/Q-Hub.fun/releases/download/desktop-latest/Q-Hub-Setup.exe';
 const LOG_FEW = 3;   // скільки оновлень видно без «Показати всі»
 /* лічильник «Завантажень програми» на головній (specs/011, 0032): +1 за клік; сторінка лишається відкритою, тож запит встигає */
 const countDownload = () => { supabase?.rpc('count_download').then(() => { /* без бази — просто не рахуємо */ }); };
-
-/* демо рядка Alt+Q: що плашка показала б на запит (приклади, не справжні дані) */
-const DEMO = [
-  { text: 'глива', sum: '1 500 $/шт', what: 'Скупник «Гриби» · межі 900–1 800 $', good: true },
-  { text: 'вимагання грошей', sum: 'КК ст. 6.5', what: 'Кримінальний кодекс — пункт і покарання з форуму', good: true },
-  { text: 'де заправка?', sum: 'Мапа', what: 'Найближчі заправки на мапі Q-Hub поверх гри', good: true }
-];
 
 const FEATURES: [string, string, string][] = [
   ['spark', 'Alt+Q — рядок поверх гри', 'Пошук у правилах сервера, законах штату й на мапі без ШІ, а Shift+Enter — питання ШІ-помічнику своїми словами.'],
@@ -38,8 +32,7 @@ const FAQ: [string, string][] = [
 ];
 
 export default function Download() {
-  const [d, setD] = useState(0);
-  const demo = DEMO[d];
+  const [pick, setPick] = useState<{ q: string; mode: 'ai' | 'prices'; n: number }>();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
   const [discord, reloadDiscord] = useDiscord();
@@ -70,23 +63,14 @@ export default function Download() {
       {/* 2. як це виглядає в грі — демо */}
       <section className="h-sec">
         <div className="h-head row between">
-          <div><span className="h-kicker"><Icon name="bolt" size={16} />Демо</span><h2>Як виглядає рядок Alt+Q у грі</h2></div>
+          <div><span className="h-kicker"><Icon name="bolt" size={16} />Демо</span><h2>Спробуй плашку Alt+Q прямо тут</h2></div>
         </div>
-        <div className="p-screen">
-          <div className="p-prompt">
-            <div className="p-prompt-h"><span><kbd>Alt+Q</kbd> Плашка Q-Hub</span><span className="p-ready"><span className="mdot good" aria-hidden="true" />Готовий</span></div>
-            <form className="p-prompt-in" onSubmit={e => { e.preventDefault(); setD((d + 1) % DEMO.length); }}>
-              <Icon name="search" />
-              <input value={demo.text} readOnly aria-label="Приклад запиту до помічника" />
-              <button type="submit" className="btn acc sm">Enter</button>
-            </form>
-            <div className="p-prompt-out">
-              <span className="h-lbl">Плашка покаже:</span>
-              <b className={'mono ' + (demo.good ? 'good' : 'bad')}>{demo.sum}</b>
-              <span>{demo.what}</span>
-            </div>
-          </div>
-          <div className="p-hud-bot mono"><span><Icon name="clock" size={14} />Сесія: 02:45</span><span>Режим гри: вікно без рамки</span></div>
+        <p className="muted p-bar-lead">Це справжня плашка програми — той самий вигляд і той самий пошук у правилах, законах і цінах. Впиши запит і натисни <kbd>Enter</kbd> або обери приклад. Питання до ШІ, історія й мапа поверх гри працюють лише в програмі.</p>
+        <div className="p-bar-ex" role="group" aria-label="Приклади запитів">
+          {EXAMPLES.map(([t, m], i) => <button key={t} type="button" className="chip" onClick={() => setPick({ q: t, mode: m, n: i + Date.now() })}>{m === 'prices' ? <Icon name="tag" size={14} /> : <Icon name="search" size={14} />}{t}</button>)}
+        </div>
+        <div className="p-screen p-bar-screen">
+          <BarDemo pick={pick} />
         </div>
       </section>
 

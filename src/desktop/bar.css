@@ -1,5 +1,5 @@
 /* Плашка Alt+Q: вікно прозоре, видно лише панель; поля навколо — під тінь */
-html, body.in-bar { background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
+html:has(> body.in-bar), body.in-bar { background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
 body.in-bar input { user-select: text; }
 /* вікно прозоре: поля довкола плашки — рівно під тінь, щоб її не обрізав край вікна */
 .bwrap { padding: 4px 14px 22px; display: flex; flex-direction: column; align-items: center; }

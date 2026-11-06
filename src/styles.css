@@ -1962,3 +1962,31 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
   .foot-by, .wiki-crumbs a, .h-more { padding-block: 15px; margin-block: -15px; }
   .h-cards .card p a { padding-block: 14px; }
 }
+
+/* «Програма»: справжня плашка Alt+Q (components/BarDemo.tsx, стилі — desktop/bar.css).
+   Плашка в програмі завжди темна — і на світлій темі сайту лишається такою */
+.p-bar-lead { margin: -4px 0 12px; max-width: 760px; }
+.p-bar-ex { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.p-bar-ex button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surface); color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
+.p-bar-ex button:hover { border-color: var(--accent); }
+.p-bar-ex button .ico { color: var(--accent); }
+.p-bar-screen { min-height: 0; justify-content: center; padding: 28px 20px; }
+.p-bar { padding: 0; width: 100%; max-width: 1120px; margin: 0 auto;
+  --bg: #10141a; --surface: #141b24; --surface2: #1a2330; --line: rgba(38, 51, 68, .8); --line2: #263344;
+  --fg: #f4f7fb; --muted: #8b9bb0; --faint: #7a8ba1; --accent-hi: #ff7a1a;
+  --good: #10b981; --good-soft: rgba(16, 185, 129, .12); --warn: #f59e0b; --bad: #ef4444; --bad-soft: rgba(239, 68, 68, .12);
+  color: var(--fg); text-align: left; }
+.p-bar .bbox { box-shadow: 0 16px 40px -8px rgba(0, 0, 0, .8); }
+.p-bar .bpanes { height: 460px; }
+@media (max-width: 760px) {
+  .p-bar-screen { padding: 12px 8px; }
+  .p-bar .p-bar-x { display: none !important; }
+  .p-bar .bbar { flex-wrap: wrap; }
+  .p-bar .bbar input { flex-basis: 140px; }
+  .p-bar .bpanes { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .p-bar .bleft { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .p-bar .bright { max-height: 460px; }
+  .p-bar .bkeys { display: none; }
+  .p-bar .bbuy { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .p-bar .bbuy .brange { display: none; }
+}
