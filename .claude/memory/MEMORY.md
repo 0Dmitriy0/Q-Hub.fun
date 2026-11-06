@@ -12,3 +12,4 @@
 - [Довідник — лише через wiki_decide](wiki-publish-via-rpc.md) — роботи в jobs, правки через пропозиції; новий розділ — section + wiki_clean + FIELDS
 - [PR ще відкритий перед push](check-pr-open-before-push.md) — у злиту гілку не пушити: нова гілка від main + cherry-pick
 - [Тести без node:fs](tests-no-node-fs.md) — CI-tsc не знає типів Node; файли в тестах читати через import.meta.glob ?raw
+- [НЕЗРОБЛЕНЕ: деплой бота міток](pending-marks-bot-deploy.md) — власнику на ПК: deploy discord-bot + канал «Мітки від гравців» в адмінці
