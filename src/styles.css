@@ -2079,3 +2079,58 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
   .mpin { width: 28px; height: 28px; border-width: 2px; }
   .mpin img { width: 18px; height: 18px; }
 }
+
+/* ---------- гайди від гравців (0065): конструктор блоків, вибір іконки, «було → стало» тексту, «Написати гайд» ---------- */
+.modal.wmodal:has(.bed) { width: min(980px, calc(100vw - 24px)); }
+.ico.up { transform: rotate(180deg); }
+.fld-l { font-weight: 700; font-size: 14px; }
+.bed { display: flex; flex-direction: column; gap: 10px; }
+.bed-empty { margin: 0; }
+.bed-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bed-b { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-radius: 14px; background: var(--surface2); border: 1px solid var(--line); border-left: 3px solid var(--line2); }
+.bed-b.k-h { border-left-color: var(--fg); }
+.bed-b.k-tip { border-left-color: var(--accent); }
+.bed-b.k-warn { border-left-color: var(--warn); }
+.bed-b.k-table, .bed-b.k-links, .bed-b.k-list { border-left-color: var(--muted); }
+.bed-h { display: flex; align-items: center; gap: 8px; }
+.bed-h b { flex: 1; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.bed-tools { display: flex; gap: 2px; }
+.bed-b input, .bed-b textarea { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 10px; padding: 9px 11px; font: 500 15px var(--sans); }
+.bed-b textarea { resize: vertical; line-height: 1.5; }
+.bed-b.k-h input { font-weight: 700; }
+.bed-b input:focus, .bed-b textarea:focus { border-color: var(--accent); outline: 0; }
+.bed-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.bed-row small { flex: 1 1 220px; }
+.bed-tbl { overflow-x: auto; }
+.bed-tbl table { border-collapse: separate; border-spacing: 4px; min-width: 100%; }
+.bed-tbl th, .bed-tbl td { padding: 0; min-width: 120px; }
+.bed-tbl th:last-child, .bed-tbl td:last-child { min-width: 0; width: 32px; }
+.bed-tbl th input { font-weight: 700; }
+.bed-links { display: flex; flex-direction: column; gap: 6px; }
+.bed-link { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: 6px; align-items: center; }
+.bed-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-top: 2px; }
+@media (max-width: 640px) { .bed-link { grid-template-columns: minmax(0, 1fr) auto; } .bed-link input.mono { grid-column: 1; } }
+.icpick { display: flex; flex-wrap: wrap; gap: 6px; }
+.icpick button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface2); color: var(--muted); cursor: pointer; }
+.icpick button:hover { color: var(--fg); }
+.icpick button.on { color: var(--accent); border-color: var(--accent); background: rgba(255, 107, 0, .12); }
+.icpick button:focus-visible, .bed .hud-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wp-prev .gd-text { padding: 16px; }
+.wdiff-blocks { grid-template-columns: 1fr; }
+.wdiff-blocks dd { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; align-items: start; }
+.wdiff-blocks section { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface); min-width: 0; }
+.wdiff-blocks section > b { text-decoration: none; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
+.wdiff-new-blocks { grid-template-columns: 1fr; }
+.wdiff-new-blocks dd { display: block; }
+.wdiff .gd-text { gap: 10px; font-size: 14px; padding: 0; }
+.gd-write { flex-direction: row; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gd-write > div { flex: 1 1 260px; }
+.gd-write b { font-size: 16px; }
+.gd-write p { margin: 4px 0 0; font-size: 14px; }
+.gd-act { flex-wrap: wrap; gap: 8px; }
+.gd-hidden { opacity: .6; }
+.bed-b input[type="checkbox"] { width: 16px; height: 16px; min-height: 0; padding: 0; flex: none; }
+.bed-row .mcheck { white-space: nowrap; }
+/* у сітці форми блоки не мають розпирати колонку ширше за екран (таблиця прокручується всередині) */
+.wp-form > .fld, .bed, .bed-list, .bed-b, .bed-tbl, .wdiff-blocks dd { min-width: 0; }
+.bed-tbl { max-width: 100%; }

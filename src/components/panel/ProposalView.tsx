@@ -6,6 +6,10 @@ import FieldsEditor from '../wiki/FieldsEditor';
 import { resetNames } from '../wiki/PageMeta';
 import DiffView from '../wiki/DiffView';
 import PointPreview from '../wiki/PointPreview';
+import GuideBody from '../wiki/GuideBody';
+import Icon from '../Icon';
+import { tidyBlocks } from '../../lib/guideBlocks';
+import type { GuideBlock } from '../../data/guides';
 import { makeHash } from '../../lib/mapGeo';
 
 /* одна пропозиція довідника на одному екрані (specs/061 US2): що змінюється → автор → джерело й скрін → дії.
@@ -38,6 +42,7 @@ export default function ProposalView({ p, onDecided, onBanned, onClose }: {
     (async () => {
       if (p.target_id) {
         const t = p.section === 'job' ? supabase!.from('jobs').select('*').eq('id', p.target_id)
+          : p.section === 'guide' ? supabase!.from('wiki_guides').select('*').eq('id', p.target_id)
           : p.section === 'map_point' ? supabase!.from('map_points').select('*').eq('id', Number(p.target_id))
           : supabase!.from('vehicles').select('*').eq('id', Number(p.target_id));
         const { data } = await t.maybeSingle();
@@ -76,7 +81,9 @@ export default function ProposalView({ p, onDecided, onBanned, onClose }: {
 
   async function decide(action: 'accept' | 'reject', force = false) {
     if (action === 'reject' && !reason.trim()) { setGood(false); setMsg('Вибери причину — її побачить автор.'); return; }
-    const p_data: Data | null = action === 'accept' && edit !== null ? edit : null;
+    /* блоки гайду з конструктора — без порожніх пунктів і пробілів по краях, як надсилає й автор */
+    const p_data: Data | null = action === 'accept' && edit !== null
+      ? (Array.isArray(edit.blocks) ? { ...edit, blocks: tidyBlocks(edit.blocks as GuideBlock[]) } : edit) : null;
     if (p_data) { const first = Object.values(validate(p.section, p_data, p.kind === 'new'))[0]; if (first) { setGood(false); setMsg(first); return; } }
     setBusy(true); setMsg('');
     const { error } = await supabase!.rpc('wiki_decide', { p_id: p.id, p_action: action, p_data, p_reason: reason.trim(), p_force: force });
@@ -119,7 +126,10 @@ export default function ProposalView({ p, onDecided, onBanned, onClose }: {
             : 'Сторінку буде сховано зі списків. Її можна повернути, історія лишається.'}</p>
           : p.kind === 'new' ? (
             <div className="wdiff"><dl>{FIELDS[p.section].filter(f => f.key in p.data).map(f => (
-              <div key={f.key} className="wdiff-row"><dt>{f.label}</dt><dd><span className="wdiff-add">{show(field(p.section, f.key), p.data[f.key])}</span></dd></div>))}
+              <div key={f.key} className={'wdiff-row' + (f.type === 'blocks' ? ' wdiff-new-blocks' : '')}><dt>{f.label}</dt><dd>{
+                f.type === 'blocks' ? <GuideBody blocks={(p.data[f.key] as GuideBlock[]) ?? []} />
+                : f.type === 'icon' ? <Icon name={String(p.data[f.key])} />
+                : <span className="wdiff-add">{show(field(p.section, f.key), p.data[f.key])}</span>}</dd></div>))}
               {'id' in p.data && <div className="wdiff-row"><dt>Адреса</dt><dd className="mono">{String(p.data.id)}</dd></div>}
               {p.section === 'map_point' && typeof p.data.x === 'number' && typeof p.data.y === 'number' && (
                 <div className="wdiff-row"><dt>На мапі</dt><dd><a href={'/mapa' + makeHash(p.data.x, p.data.y, 6)} target="_blank" rel="noopener noreferrer">Показати точку на мапі ↗</a></dd></div>)}
