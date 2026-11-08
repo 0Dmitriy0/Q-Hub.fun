@@ -50,7 +50,11 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
   const layer = JOB_LAYER[job.id];
   const setIcon = async (icon: string) => {
     const { error } = await supabase!.from('jobs').update({ icon }).eq('id', job.id);
-    if (error) setErr(dbError(error)); else { setErr(''); onChanged?.(); }
+    /* стара перевірка з 0062 пускала лише https — без 0063 готові іконки мапи (/icons/…) база не приймає */
+    if (error) setErr(/jobs_icon_url/.test(error.message)
+      ? (icon.startsWith('/') ? 'База ще не приймає іконки з мапи: запусти supabase/migrations/0063_job_icon_local.sql у Supabase → SQL Editor.' : 'Така адреса іконки не підходить.')
+      : dbError(error));
+    else { setErr(''); onChanged?.(); }
   };
   const purge = async () => {
     if (!confirm(`Видалити «${job.name}» назавжди? Зникнуть сторінка, її історія й усі пропозиції по ній. Повернути не вийде.`)) return;
