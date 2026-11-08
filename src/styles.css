@@ -749,7 +749,7 @@ fieldset.ro, fieldset.rw { border: 0; padding: 0; margin: 0; min-width: 0; displ
 .ico.tl { transform: rotate(90deg); }
 .ico.tr { transform: rotate(-90deg); }
 /* плитки розділів: іконка в підсвіченому квадраті, назва, підпис, стрілка; відкритий розділ — помаранчева рамка */
-.dtiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.dtiles { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
 .dtiles a { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-decoration: none; transition: border-color .15s, background .15s; }
 .dtiles a:hover { background: var(--surface2); }
 .dtiles a.active { border-color: rgba(255, 107, 0, .55); background: linear-gradient(180deg, rgba(255, 107, 0, .08), transparent), var(--surface); }
@@ -768,6 +768,30 @@ fieldset.ro, fieldset.rw { border: 0; padding: 0; margin: 0; min-width: 0; displ
 .dsite b { font-size: 15px; }
 .dsite small { color: var(--muted); font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .dtiles a { transition: none; } }
+/* плитка з лічильником нового (вкладка «Правила») */
+.dtiles .cnt { flex: none; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font: 700 11.5px var(--sans); text-align: center; }
+
+/* вкладка «Правила» в програмі (src/pages/cabinet/RulesPage.tsx): зміни правил по днях, усередині — по документах */
+.rch { display: flex; flex-direction: column; gap: 16px; }
+.rch-day { display: flex; flex-direction: column; gap: 10px; }
+.rch-day h2 { display: flex; align-items: center; gap: 8px; }
+.pill.acc { background: rgba(255, 107, 0, .14); color: var(--accent); font-family: var(--sans); font-size: 11.5px; padding: 2px 9px; }
+.rch-doc { padding: 14px 16px; gap: 10px; }
+.rch-doc header { display: flex; align-items: center; gap: 12px; }
+.rch-doc header > span { flex: 1; min-width: 0; }
+.rch-doc header b { display: block; font-size: 15px; }
+.rch-doc header small { color: var(--muted); font-size: 12px; }
+.rch-doc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rch-doc li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.rch-doc li .pill { justify-content: center; font-family: var(--sans); font-size: 11.5px; padding: 3px 8px; }
+.rch-doc li .pill.good { color: var(--good); } .rch-doc li .pill.warn { color: var(--warn); } .rch-doc li .pill.bad { color: var(--bad); }
+.rch-doc li p { margin: 2px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: 14px; user-select: text; }
+.rch-doc li small { display: block; font: 600 12px var(--mono); }
+.rch-doc .gone { color: var(--muted); padding-left: 10px; border-left: 2px solid var(--bad-soft); }
+.rch-doc details { margin-top: 6px; }
+.rch-doc summary { cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600; width: max-content; }
+.rch-doc summary:hover { color: var(--fg); }
+.rch-doc summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 /* розкладки сторінок */
 .dash, .stockg { display: grid; gap: 16px; align-items: start; }
