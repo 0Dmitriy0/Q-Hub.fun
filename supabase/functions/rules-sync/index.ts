@@ -78,7 +78,7 @@ Deno.serve(async req => {
   /* журнал змін: збій тут не зриває оновлення — правила вже записано, пропаде лише цей запис журналу */
   const ok = new Set([...results].filter(([, r]) => !r.error).map(([id]) => id));
   const cs = changes(prev, topics, ok);
-  let logged = 0;
+  let logged = 0, logError: string | null = null;
   if (cs.length) try {
     let log: Log | null = null;
     const was = await db.storage.from('rules').download('rules-changes.json');
@@ -86,9 +86,9 @@ Deno.serve(async req => {
     const next = append(log, fetched, cs);
     if (next) {
       const w = await db.storage.from('rules').upload('rules-changes.json', new Blob([JSON.stringify(next)], { type: 'application/json' }), { upsert: true, cacheControl: '300', contentType: 'application/json' });
-      if (!w.error) logged = cs.length;
+      if (w.error) logError = 'журнал змін не записано: ' + w.error.message; else logged = next.entries[0].changes.length;
     }
-  } catch { /* журнал — не критично */ }
+  } catch (e) { logError = 'журнал змін не записано: ' + (e instanceof Error ? e.message : String(e)); }
 
   const out = [];
   for (const s of sources) {
@@ -97,5 +97,5 @@ Deno.serve(async req => {
     await db.from('rule_sources').update(patch).eq('id', s.id);
     out.push({ id: s.id, title: titles.get(s.id) ?? null, items: r.items, error: r.error, diff: r.diff });
   }
-  return json({ fetched, changes: logged, topics: topics.length, items: topics.reduce((n, t) => n + t.items.length, 0), sources: out });
+  return json({ fetched, changes: logged, changes_error: logError, topics: topics.length, items: topics.reduce((n, t) => n + t.items.length, 0), sources: out });
 });

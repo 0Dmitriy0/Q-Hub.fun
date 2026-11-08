@@ -13,7 +13,8 @@ type ItemChange = Doc & Item & ({ type: 'added' } | { type: 'removed' } | { type
 type DocChange = Doc & ({ type: 'doc-added'; items: number } | { type: 'doc-removed'; items: number } | { type: 'doc-rewritten'; added: number; changed: number; removed: number });
 export type Change = ItemChange | DocChange;
 const isDoc = (c: Change): c is DocChange => c.type.startsWith('doc-');
-interface Entry { at: string; changes: Change[] }
+/* more — скільки змін того дня не влізло в журнал (сервер обмежує розмір файлу) */
+interface Entry { at: string; changes: Change[]; more?: number }
 interface Log { updated: string; entries: Entry[] }
 
 const URL_ = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? '';
@@ -96,6 +97,7 @@ function Day({ e, fresh }: { e: Entry; fresh: boolean }) {
           </header>
           <ul>{cs.map((c, i) => <Row key={i} c={c} />)}</ul>
         </article>))}
+      {!!e.more && <p className="muted note">Того дня змін було більше — ще {e.more} не вмістилося сюди. Повний текст документів — на форумі.</p>}
     </section>
   );
 }

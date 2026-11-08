@@ -15,11 +15,16 @@ export type Change = Doc & (
   | { type: 'changed'; n: string; h: string; s: string; old: string }
   | { type: 'doc-added' | 'doc-removed'; items: number }
   | { type: 'doc-rewritten'; added: number; changed: number; removed: number });
-export interface Entry { at: string; changes: Change[] }
+/* more — скільки змін того дня не влізло в журнал (див. append) */
+export interface Entry { at: string; changes: Change[]; more?: number }
 export interface Log { updated: string; entries: Entry[] }
 
-/* скільки тримати: 120 днів, але не більше 80 записів (оновлення щоночі — близько 4 місяців) */
-export const KEEP_DAYS = 120, KEEP_ENTRIES = 80;
+/* скільки тримати: 120 днів, але не більше 80 записів (оновлення щоночі — близько 4 місяців) і не більше MAX_BYTES:
+   бакет приймає до 5 МБ, а файл, що не влазить, не записався б ніколи — журнал тихо замерз би назавжди */
+export const KEEP_DAYS = 120, KEEP_ENTRIES = 80, MAX_BYTES = 1_500_000;
+/* текст пункту в журналі — до MAX_TEXT символів: повний є на форумі за посиланням */
+export const MAX_TEXT = 1500;
+const cut = (s: string) => (s.length > MAX_TEXT ? s.slice(0, MAX_TEXT - 1).trimEnd() + '…' : s);
 
 const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\d]+/gu) ?? []);
 /* схожість текстів за спільними словами (Жаккар): ≥ 0,5 — той самий пункт, переписаний */
@@ -75,18 +80,31 @@ export function changes(prev: SnapTopic[], next: SnapTopic[], ok: Set<number>): 
       continue;
     }
     for (const c of cs) {
-      const it = { n: c.it.n, h: c.it.h, s: c.it.s };
-      out.push(c.type === 'changed' ? { ...doc(t), type: 'changed', ...it, old: c.old } : { ...doc(t), type: c.type, ...it });
+      const it = { n: c.it.n, h: c.it.h, s: cut(c.it.s) };
+      out.push(c.type === 'changed' ? { ...doc(t), type: 'changed', ...it, old: cut(c.old) } : { ...doc(t), type: c.type, ...it });
     }
   }
   for (const [k, t] of old) if (!now.has(k) && t.src !== undefined && ok.has(t.src)) out.push({ ...doc(t), type: 'doc-removed', items: t.items.length });
   return out;
 }
 
-/* дописати запис зверху й прибрати старі; немає змін — журнал той самий (null — нічого не записувати) */
-export function append(log: Log | null, at: string, cs: Change[]): Log | null {
+const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;
+
+/* дописати запис зверху й прибрати старі; немає змін — журнал той самий (null — нічого не записувати).
+   Не влазить у MAX_BYTES — викидаємо найстаріші записи; не влазить і сам новий — у ньому лишаються перші зміни
+   (у порядку документів) і рядок, скільки ще не показано */
+export function append(log: Log | null, at: string, cs: Change[], max = MAX_BYTES): Log | null {
   if (!cs.length) return null;
   const since = Date.parse(at) - KEEP_DAYS * 864e5;
   const kept = (log?.entries ?? []).filter(e => Date.parse(e.at) >= since);
-  return { updated: at, entries: [{ at, changes: cs }, ...kept].slice(0, KEEP_ENTRIES) };
+  let entry: Entry = { at, changes: cs };
+  if (bytes({ updated: at, entries: [entry] }) > max) {
+    let lo = 0, hi = cs.length;   // скільки змін влазить разом з підсумком — двійковим пошуком
+    const fit = (k: number) => ({ at, changes: cs.slice(0, k), more: cs.length - k });
+    while (lo < hi) { const m = Math.ceil((lo + hi) / 2); if (bytes({ updated: at, entries: [fit(m)] }) <= max) lo = m; else hi = m - 1; }
+    entry = fit(lo);
+  }
+  const entries = [entry, ...kept].slice(0, KEEP_ENTRIES);
+  while (entries.length > 1 && bytes({ updated: at, entries }) > max) entries.pop();
+  return { updated: at, entries };
 }

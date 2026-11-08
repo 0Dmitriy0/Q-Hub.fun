@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { append, changes, itemChanges, similar, KEEP_ENTRIES } from './changes';
+import { append, changes, itemChanges, similar, KEEP_ENTRIES, MAX_TEXT } from './changes';
 import type { SnapTopic } from './merge';
 
 const F = 'https://forum.quant5.com.ua/index.php?/topic/';
@@ -62,6 +62,25 @@ describe('append: журнал', () => {
   it('не більше KEEP_ENTRIES записів', () => {
     const log = { updated: '', entries: Array.from({ length: 100 }, (_, i) => ({ at: new Date(Date.parse('2026-11-07T00:00:00Z') - i * 36e5).toISOString(), changes: c })) };
     expect(append(log, '2026-11-08T01:00:00Z', c)!.entries).toHaveLength(KEEP_ENTRIES);
+  });
+  it('не влазить у ліміт розміру — викидаються найстаріші записи', () => {
+    const big = changes([t(1, [['1', 'a']])], [t(1, [['1', 'b '.repeat(700)]])], new Set([1]));
+    const log = { updated: '', entries: Array.from({ length: 20 }, (_, i) => ({ at: new Date(Date.parse('2026-11-07T00:00:00Z') - i * 864e5).toISOString(), changes: big })) };
+    const next = append(log, '2026-11-08T01:00:00Z', big, 10_000)!;
+    expect(new TextEncoder().encode(JSON.stringify(next)).length).toBeLessThanOrEqual(10_000);
+    expect(next.entries[0].at).toBe('2026-11-08T01:00:00Z');
+    expect(next.entries.length).toBeLessThan(21);
+  });
+  it('сам новий запис завеликий — лишаються перші зміни й лічильник решти', () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ ...c[0], n: String(i) }));
+    const e = append(null, '2026-11-08T01:00:00Z', many, 8_000)!.entries[0];
+    expect(e.changes.length).toBeGreaterThan(0);
+    expect(e.changes.length + e.more!).toBe(200);
+    expect(new TextEncoder().encode(JSON.stringify({ updated: '', entries: [e] })).length).toBeLessThanOrEqual(8_000);
+  });
+  it('довгий текст пункту обрізається до MAX_TEXT', () => {
+    const cs = changes([t(1, [['1', 'a']])], [t(1, [['1', 'a'], ['2', 'х'.repeat(5000)]])], new Set([1]));
+    expect((cs[0] as { s: string }).s.length).toBe(MAX_TEXT);
   });
   it('similar: однакові — 1, різні — 0', () => { expect(similar('a b', 'b a')).toBe(1); expect(similar('a', 'b')).toBe(0); });
 });

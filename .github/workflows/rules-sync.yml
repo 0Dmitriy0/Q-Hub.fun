@@ -29,5 +29,5 @@ jobs:
           code=$(curl -sS -o out.json -w '%{http_code}' -X POST "$URL/functions/v1/rules-sync" \
             -H "x-sync-secret: $SECRET" -H 'Content-Type: application/json' -d '{}' --max-time 600)
           echo "HTTP $code"
-          node -e "const r=require('./out.json'); console.log(r.error || ('тем ' + r.topics + ', пунктів ' + r.items + ', змін у журналі ' + (r.changes ?? 0))); for (const s of r.sources || []) console.log((s.error ? '✗ ' : '✓ ') + (s.title || s.id) + ': ' + (s.error || s.items + ' пунктів'))" || cat out.json
+          node -e "const r=require('./out.json'); console.log(r.error || ('тем ' + r.topics + ', пунктів ' + r.items + ', змін у журналі ' + (r.changes ?? 0))); for (const s of r.sources || []) console.log((s.error ? '✗ ' : '✓ ') + (s.title || s.id) + ': ' + (s.error || s.items + ' пунктів')); if (r.changes_error) console.log('::warning::' + r.changes_error)" || cat out.json
           [ "$code" = 200 ]
