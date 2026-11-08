@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { money, parseMoney } from '../../lib/format';
@@ -6,7 +6,8 @@ import { MAX_CHARACTERS, parseCharacter } from '../../lib/character';
 
 /* персонажі акаунта: у кожного свої Ім'я_Прізвище і статік (specs/025), не більше трьох; статік видно лише власнику */
 export default function Characters({ first }: { first?: boolean }) {
-  const { characters, reloadCharacters, setCurrent } = useAuth();
+  const { characters, reloadCharacters, setCurrent, session } = useAuth();
+  const pub = useTeamChars(session?.user.id, characters.length);
   const [name, setName] = useState(''); const [stat, setStat] = useState(''); const [start, setStart] = useState('');
   const [goalName, setGoalName] = useState(''); const [goal, setGoal] = useState('');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
@@ -64,7 +65,8 @@ export default function Characters({ first }: { first?: boolean }) {
           <h2>Твої персонажі</h2>
           <div className="list">{characters.map(c => (
             <div className="li" key={c.id}><div><b>{c.name}</b> <span className="mono muted">{c.static_id ? '#' + c.static_id : 'без статіку'}</span><br />
-              <small>старт {money(c.start_balance)}{c.goal ? ' · ціль ' + (c.goal_name || '') + ' ' + money(c.goal) : ''}</small></div>
+              <small>старт {money(c.start_balance)}{c.goal ? ' · ціль ' + (c.goal_name || '') + ' ' + money(c.goal) : ''}</small>
+              {pub.inTeam && <label className="mcheck"><input type="checkbox" checked={!!pub.on[c.id]} disabled={pub.busy} onChange={e => pub.set(c.id, e.target.checked)} /> Показувати в «Команді» на головній (Ім'я_Прізвище й статік)</label>}</div>
               <div className="row">
                 <button type="button" className="btn sm" onClick={() => setCurrent(c.id)}>Обрати</button>
                 <button type="button" className="btn sm bad" aria-expanded={del === c.id} onClick={() => { setDel(del === c.id ? null : c.id); setConfirm(''); setDelMsg(''); }}>Видалити</button>
@@ -86,4 +88,26 @@ export default function Characters({ first }: { first?: boolean }) {
       )}
     </div>
   );
+}
+
+/* «Команда Q-Hub» (0064): якщо адмін додав тебе в команду — сам вирішуєш, яких персонажів показати; за замовчуванням нікого */
+function useTeamChars(me: string | undefined, n: number) {
+  const [inTeam, setInTeam] = useState(false);
+  const [on, setOn] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!me || !supabase) return;
+    supabase.from('team_members').select('user_id').eq('user_id', me).maybeSingle().then(({ data, error }) => {
+      if (error || !data) { setInTeam(false); return; }
+      setInTeam(true);
+      supabase!.from('characters').select('id,team_public').then(r => { if (!r.error) setOn(Object.fromEntries((r.data || []).map(x => [x.id as string, !!x.team_public]))); });
+    });
+  }, [me, n]);
+  async function set(id: string, v: boolean) {
+    setBusy(true); setOn(o => ({ ...o, [id]: v }));
+    const { error } = await supabase!.from('characters').update({ team_public: v }).eq('id', id);
+    setBusy(false);
+    if (error) setOn(o => ({ ...o, [id]: !v }));
+  }
+  return { inTeam, on, busy, set };
 }

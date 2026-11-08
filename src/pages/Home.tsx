@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import EventsBlock from '../components/EventsBlock';
 import HalloweenBanner from '../components/HalloweenBanner';
 import SitePromo from '../components/SitePromo';
+import TeamBlock from '../components/TeamBlock';
 import { useAuth } from '../lib/auth';
 import { fmt, money } from '../lib/format';
 import { supabase } from '../lib/supabase';
-import { useAppOnline } from '../lib/useAppOnline';
 import Icon from '../components/Icon';
 import { readGameTheme, recolor, saveGameTheme, type GameTheme } from '../lib/gameTheme';
 import { OCEAN, mapUrl } from '../lib/mapGeo';
@@ -32,16 +32,26 @@ export default function Home() {
   useEffect(() => { fetch('/snapshot/prices.json').then(r => (r.ok ? r.json() : null)).then(setSnap).catch(() => { /* без знімка — блоки з цінами просто порожні */ }); }, []);
   const buyerName = (id: string) => snap?.buyers.find(b => b.id === id)?.name || id;
   const fresh = (snap?.rows || []).filter(r => r.price && r.price_at).sort((a, b) => Date.parse(b.price_at!) - Date.parse(a.price_at!)).slice(0, 5);
-  const online = useAppOnline();
   const [site, setSite] = useState<SiteStats | null>(null);
   useEffect(() => { supabase?.rpc('site_stats').then(({ data, error }) => { if (!error && data) setSite(data as SiteStats); }); }, []);
+  /* скільки даних у довіднику (транспорт і роботи — без схованих сторінок); помилка — «—» */
+  const [wiki, setWiki] = useState<{ vehicles: number | null; jobs: number | null; buyers: number | null }>({ vehicles: null, jobs: null, buyers: null });
+  useEffect(() => {
+    if (!supabase) return;
+    const count = (t: string, hidden = true) => {
+      const q = supabase!.from(t).select('id', { count: 'exact', head: true });
+      return (hidden ? q.not('hidden', 'is', true) : q).then(r => (r.error ? null : r.count));
+    };
+    Promise.all([count('vehicles'), count('jobs'), count('buyers', false)]).then(([vehicles, jobs, buyers]) => setWiki({ vehicles, jobs, buyers }));
+  }, []);
   const n = (v: number | null | undefined) => (v == null ? '—' : fmt(v));
-  /* плитки про сам Q-Hub, а не про гру (specs/011); поки число не відоме — «—» */
+  /* плитки — скільки вже є на Q-Hub (рішення власника 2026-11-08: поки не показувати, скільки гравців, завантажень
+     і хто зараз у програмі — малі числа відлякують новачка; повернути, коли їх стане багато). site_stats рахує й далі */
   const stats: [string, string, string][] = [
-    ['Гравців у Q-Hub', n(site?.players), 'увійшли на сайт через Discord'],
-    ['Зараз у програмі', n(online), online === 0 ? 'будь першим — Alt+Q' : 'гравців із запущеним Q-Hub'],
-    ['Завантажень програми', n(site?.downloads), 'Q-Hub Desktop із сайту'],
-    ['Міток на мапі', n(site?.pins), 'на мапі Q-Hub з пошуком і фільтрами']
+    ['Міток на мапі', n(site?.pins), 'на мапі Q-Hub з пошуком і фільтрами'],
+    ['Моделей транспорту', n(wiki.vehicles), 'ціни, швидкість і калькулятор тюнінгу'],
+    ['Робіт у довіднику', n(wiki.jobs), 'з рівнем, оплатою й точкою на мапі'],
+    ['Скупників', n(wiki.buyers ?? snap?.buyers.length), 'ціни, межі й графіки від гравців']
   ];
 
 
@@ -167,6 +177,9 @@ export default function Home() {
           </li>
         </ol>
       </section>
+
+      {/* 7. команда (0062) — склад з бази; порожньо — блоку немає */}
+      <TeamBlock />
     </div>
   );
 }

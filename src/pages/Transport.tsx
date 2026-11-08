@@ -131,7 +131,7 @@ export default function Transport() {
         </div>
         <div className="wiki-stats">
           <div><b className="mono">{list.length || '—'}</b><small>Усього моделей</small></div>
-          <div><b className="mono">{topSpeed ? topSpeed + ' км/год' : '—'}</b><small>Найшвидший</small></div>
+          <div><b className="mono">{topSpeed ? <>{topSpeed}<span className="unit"> км/год</span></> : '—'}</b><small>Найшвидший</small></div>
         </div>
       </section>
       {!supabase && <div className="card empty">База ще не підключена.</div>}
