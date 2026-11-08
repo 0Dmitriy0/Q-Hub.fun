@@ -13,3 +13,4 @@
 - [PR ще відкритий перед push](check-pr-open-before-push.md) — у злиту гілку не пушити: нова гілка від main + cherry-pick
 - [Тести без node:fs](tests-no-node-fs.md) — CI-tsc не знає типів Node; файли в тестах читати через import.meta.glob ?raw
 - [НЕЗРОБЛЕНЕ: деплой бота міток](pending-marks-bot-deploy.md) — власнику: канал «Мітки від гравців» в адмінці
+- [Масові пропозиції SQL-ом](wiki-bulk-proposals-sql.md) — ліміт 10 на розгляді рахує й той самий insert; do-блок з тимчасовим max_pending

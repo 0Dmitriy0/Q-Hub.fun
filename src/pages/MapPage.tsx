@@ -201,7 +201,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       setStaleOk(!!d.staleOk);
       if (embed) { saveCopy(d); loadedAt.current = Date.now(); setOffline(null); }
       apply(d);
-      setOnly(o => (o && d.marks.some(mk => onlyIds(o).includes(mk.category)) ? o : null));
+      /* ?show= лишається, коли в категорії є мітки або зони (поля скарбів — лише зони) */
+      setOnly(o => (o && [...d.marks, ...(d.areas ?? [])].some(mk => onlyIds(o).includes(mk.category)) ? o : null));
     });
   }, [dataV]);
 
@@ -296,10 +297,13 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const fitted = useRef(!!parseHash(location.hash));
   useEffect(() => {
     const m = map.current; if (!m || !only || fitted.current) return;
-    const ids = onlyIds(only), pts = marks.filter(mk => ids.includes(mk.category)); if (!pts.length) return;
+    const ids = onlyIds(only);
+    const pts: [number, number][] = [...marks.filter(mk => ids.includes(mk.category)).map(mk => [mk.x, mk.y] as [number, number]),
+      ...areas.filter(a => ids.includes(a.category)).flatMap(a => a.ring)];
+    if (!pts.length) return;
     fitted.current = true;
-    m.fitBounds(L.latLngBounds(pts.map(mk => m.unproject(toPx(mk.x, mk.y), ZMAX))), { paddingTopLeft: [wide ? 380 : 30, 90], paddingBottomRight: [30, 30] });
-  }, [marks, only]);   // eslint-disable-line react-hooks/exhaustive-deps
+    m.fitBounds(L.latLngBounds(pts.map(([x, y]) => m.unproject(toPx(x, y), ZMAX))), { paddingTopLeft: [wide ? 380 : 30, 90], paddingBottomRight: [30, 30] });
+  }, [marks, areas, only]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* маркер чернетки: білий з помаранчевою обводкою, щоб не сплутати з опублікованими мітками */
   useEffect(() => {
