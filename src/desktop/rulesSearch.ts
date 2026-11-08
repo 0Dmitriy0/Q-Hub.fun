@@ -74,20 +74,18 @@ function index(topics: RuleTopic[]) {
   return cache;
 }
 
-/* «1.8 кк», «ЗП 6.9» — посилання на пункт: номер з крапкою й скорочення документа. Без цього «1.8 кк» схоже на суму
-   «1,8 мільйона» і плашка відповідала б про облік (src/desktop/recordLike.ts) замість статті кодексу */
-export function isRuleRef(topics: RuleTopic[], q: string): boolean {
-  if (!/\d+(?:\.\d+)+/.test(q)) return false;
-  const { abbr } = index(topics);
-  return words(q.replace(/\d+(?:\.\d+)+/g, ' ')).some(w => abbr.has(w));
-}
-
-export function searchRules(topics: RuleTopic[], q: string, limit = 8): RuleHit[] {
-  /* номер пункту чи статті в запиті («КК 4.1») — окремо: такий пункт угорі, а цифри не шукаються як слова */
-  const nums = new Set(q.match(/\d+(?:\.\d+)+/g) ?? []);
+export function searchRules(topics: RuleTopic[], query: string, limit = 8): RuleHit[] {
+  /* «10,10» — те саме, що «10.10»: гравці пишуть номер і через кому */
+  const q = query.replace(/(\d),(\d)/g, '$1.$2');
+  /* номер пункту чи статті в запиті («КК 4.1», «10.10») — окремо: такий пункт угорі, а цифри не шукаються як слова.
+     Запит із самих цифр — номер у будь-якому документі, і ціле число теж («5» — стаття 5); таких збігів буває багато */
+  const onlyNums = /^[\d.\s]+$/.test(q.trim());
+  const NUM = onlyNums ? /\d+(?:\.\d+)*/g : /\d+(?:\.\d+)+/g;
+  const nums = new Set((q.match(NUM) ?? []).map(n => n.replace(/\.$/, '')));
+  if (onlyNums) limit = Math.max(limit, 30);
   /* слово запиту — група варіантів: основа й відповідники з ALIAS */
   const seen = new Set<string>();
-  const all = words(q.replace(/\d+(?:\.\d+)+/g, ' '));
+  const all = words(q.replace(NUM, ' '));
   const penalty = all.some(w => PENALTY.test(w)), numq = NUMQ.test(norm(q));
   const qw = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w));
   const terms = qw.map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);

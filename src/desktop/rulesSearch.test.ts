@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abbrsOf, isRuleRef, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
+import { abbrsOf, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 
 const topics: RuleTopic[] = [
@@ -73,9 +73,20 @@ describe('закони штату в пошуку (specs/010)', () => {
     expect(top('ПКС').every(x => x.topic === 'Загальні правила Кримінальних структур')).toBe(true);
     expect(top('тк', 1)[0].topic).toBe('Загальні правила');   // TK (Team Kill) — як і раніше, не лише Трудовий кодекс
   });
-  it('«1.8 кк» — посилання на статтю, а не сума «1,8 мільйона» для обліку', () => {
-    for (const q of ['1.8 кк', '1.8 КК', 'ЗП 6.9', '1.1.1 пкс']) expect(isRuleRef(t, q), q).toBe(true);
-    for (const q of ['1,5кк машина', '500к зарплата', '1.8 машина', 'кк вбивство']) expect(isRuleRef(t, q), q).toBe(false);
+  it('самі цифри — номер пункту в правилах: «10.10», «10,10», «5», а не облік', () => {
+    const ten = searchRules(t, '10.10');
+    expect(ten.length).toBeGreaterThan(0);
+    expect(ten.every(h => h.n === '10.10')).toBe(true);
+    expect(ten[0].topic).toMatch(/Кримінальний/);
+    expect(searchRules(t, '10,10').map(h => h.n)).toEqual(ten.map(h => h.n));
+    expect(searchRules(t, '10.10.').map(h => h.n)).toEqual(ten.map(h => h.n));
+    /* ціле число — стаття з таким номером у кожному документі, де вона є; їх більше за звичні 8 */
+    const five = searchRules(t, '5');
+    const all5 = (t as RuleTopic[]).reduce((n, x) => n + x.items.filter(i => i.n === '5').length, 0);
+    expect(five.length).toBe(Math.min(all5, 30));
+    expect(five.every(h => h.n === '5')).toBe(true);
+    /* число серед слів, як і раніше, — слово запиту, а номер з крапкою — номер */
+    expect(searchRules(t, 'КК 10.10', 1)[0]).toMatchObject({ n: '10.10' });
   });
   it('уривок для помічника: тип джерела й «ст.» у законах', () => {
     const hits = searchRules(t, 'КК 6.5', 1);
