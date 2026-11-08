@@ -353,6 +353,11 @@ do $$ begin
   assert (select icon from public.jobs where id = 'pilot') like 'https://%', 'admin не змінив іконку';
   begin update public.jobs set icon = 'javascript:alert(1)' where id = 'pilot'; raise exception 'іконка не https пройшла';
   exception when check_violation then null; end;
+  -- 0063: готова іконка мапи — шлях сайту
+  update public.jobs set icon = '/icons/map/boat.svg' where id = 'pilot';
+  assert (select icon from public.jobs where id = 'pilot') = '/icons/map/boat.svg', 'не взялась іконка з мапи';
+  begin update public.jobs set icon = '/icons/../../etc"x.svg' where id = 'pilot'; raise exception 'кривий шлях іконки пройшов';
+  exception when check_violation then null; end;
   begin perform public.wiki_purge_job('pilot'); raise exception 'видалено не прибрану сторінку';
   exception when sqlstate 'QH003' then null; end;
   update public.jobs set hidden = true where id = 'pilot';

@@ -5,6 +5,7 @@ import { MAP_ICONS } from '../data/mapIcons';
 import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
+import IconGrid from './IconGrid';
 
 export const dbErr = (m: string) => /owner_static|icon|column .* does not exist/i.test(m)
   ? 'У базі стара версія таблиць мапи. Запусти оновлений q-hub-map.sql у Supabase → SQL Editor ще раз.'
@@ -15,18 +16,7 @@ export const dbErr = (m: string) => /owner_static|icon|column .* does not exist/
 const colErr = (m: string) => /show_label/i.test(m) ? 'У базі ще немає колонки для підпису мітки. Запусти q-hub-map-label.sql у Supabase → SQL Editor.'
   : /icon/i.test(m) ? 'У базі ще немає колонки для іконки мітки. Запусти q-hub-map-icon.sql у Supabase → SQL Editor.' : dbErr(m);
 
-/* сітка готових іконок; null — «як у категорії» */
-export function IconGrid({ value, onChange, catIcon, label }: { value: string | null; onChange: (v: string | null) => void; catIcon?: string; label: string }) {
-  return (
-    <div className="micons" role="radiogroup" aria-label={label}>
-      {catIcon !== undefined && <button type="button" role="radio" aria-checked={value === null} className={'mcat-ico' + (value === null ? ' on' : '')} onClick={() => onChange(null)} title="Як у категорії">
-        {catIcon ? <img src={catIcon} alt="" width={22} height={22} /> : null}<small>кат.</small></button>}
-      {MAP_ICONS.map(src => (
-        <button type="button" key={src} role="radio" aria-checked={value === src} className={value === src ? 'on' : ''} onClick={() => onChange(src)}><img src={src} alt="" width={26} height={26} loading="lazy" /></button>
-      ))}
-    </div>
-  );
-}
+export { IconGrid };
 
 /* редагування мітки: інша категорія і/або своя іконка */
 export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats: MapCategory[]; onDone: (m: MapMark) => void; onCancel: () => void }) {
