@@ -9,6 +9,7 @@ import Earnings from './Earnings';
 import Characters from './Characters';
 import SettingsPage from './SettingsPage';
 import MyEdits, { unseenCount } from './MyEdits';
+import RulesPage, { loadRulesLog, unseenRules } from './RulesPage';
 import { wikiReady } from '../../lib/jobsData';
 import Select from '../../components/Select';
 import Icon from '../../components/Icon';
@@ -24,6 +25,8 @@ const TABS: [string, string, string, string][] = [
   ['', 'Дашборд', 'Документи, ціни й івенти', 'home'],
   ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
   ['zarobitok', 'Заробіток', 'За годину й по днях', 'chart'],
+  /* зміни правил і законів з форуму — лише в програмі, поруч із пошуком по правилах у плашці */
+  ...(desktop ? [['pravyla', 'Правила', 'Що змінилось у правилах', 'shield'] as [string, string, string, string]] : []),
   ['nalashtuvannya', 'Налаштування', 'Персонажі, нік і статік', 'user'],
   /* правки довідника (specs/043) — лише на сайті: програма в першій черзі не змінюється */
   ...(desktop ? [] : [['pravky', 'Мої правки', 'Пропозиції до довідника', 'tag'] as [string, string, string, string]]),
@@ -37,6 +40,10 @@ export default function Cabinet() {
   const [wiki, setWiki] = useState(false);
   useEffect(() => { if (!desktop) wikiReady().then(setWiki); }, []);
   useEffect(() => { if (session && wiki) unseenCount().then(setUnseen); }, [session, wiki]);
+  /* програма: скільки змін правил гравець ще не бачив — число на плитці «Правила»; відкрив вкладку — значок зникає */
+  const [rulesNew, setRulesNew] = useState(0);
+  const seg0 = pathname.split('/')[2] || '';
+  useEffect(() => { if (desktop) loadRulesLog().then(l => setRulesNew(seg0 === 'pravyla' ? 0 : unseenRules(l))).catch(() => {}); }, [seg0]);
   if (!supabase) return <div className="card empty">Кабінет запрацює після підключення Supabase (див. README).</div>;
   if (!ready) return <div className="card empty">Завантаження…</div>;
   if (!session) return (
@@ -62,7 +69,7 @@ export default function Cabinet() {
       <Select value={current?.id || ''} onChange={setCurrent} options={characters.map(c => ({ value: c.id, label: c.name, icon: 'user' }))} />
     </label>);
   /* персонажів можна створювати й видаляти й на сайті (рішення власника 2026-11-05); решта кабінету на сайті — лише перегляд */
-  const body = seg === 'pravky' && !desktop ? <MyEdits onSeen={() => setUnseen(0)} /> : !current ? <Characters first /> : (<>
+  const body = seg === 'pravky' && !desktop ? <MyEdits onSeen={() => setUnseen(0)} /> : seg === 'pravyla' && desktop ? <RulesPage /> : !current ? <Characters first /> : (<>
     {!canEdit && seg === 'nalashtuvannya' && <Characters />}
     {/* на сайті всі поля й кнопки кабінету вимкнено, форми додавання сховано (.ro у styles.css) */}
     <fieldset className={canEdit ? 'rw' : 'ro'} disabled={!canEdit}>
@@ -81,7 +88,7 @@ export default function Cabinet() {
   </>);
 
   /* програма: кабінет — головна плашки Alt+Q (рядок пошуку, персонаж і кнопки — у самій плашці, src/desktop/Bar.tsx) */
-  if (desktop) return <Deck tab={tab} home={seg === ''} body={body} />;
+  if (desktop) return <Deck tab={tab} home={seg === ''} body={body} counts={{ pravyla: rulesNew }} />;
 
   /* сайт: шапка й вкладки в стилі WIKI (src/pages/Wiki.tsx), під ними — розділ кабінету */
   return (
@@ -108,11 +115,12 @@ export default function Cabinet() {
 }
 
 /* кабінет у плашці: плитки розділів (відкритий — підсвічений), під ними розділ із заголовком; головна — лише плитки й довідник сайту */
-function Deck({ tab, home, body }: { tab: [string, string, string, string]; home: boolean; body: ReactNode }) {
+function Deck({ tab, home, body, counts }: { tab: [string, string, string, string]; home: boolean; body: ReactNode; counts: Record<string, number> }) {
   return (
     <div className="deck">
       <nav className="dtiles" aria-label="Кабінет">{TABS.slice(1).map(([p, l, d, ico]) => (
-        <NavLink key={p} to={'/kabinet/' + p}><span className="dbub"><Icon name={ico} /></span><span><b>{l}</b><small>{d}</small></span><Icon name="chev" className="tr dgo" size={16} /></NavLink>))}
+        <NavLink key={p} to={'/kabinet/' + p}><span className="dbub"><Icon name={ico} /></span><span><b>{l}</b><small>{d}</small></span>
+          {counts[p] > 0 ? <span className="cnt" aria-label={`нових змін: ${counts[p]}`}>{counts[p]}</span> : <Icon name="chev" className="tr dgo" size={16} />}</NavLink>))}
       </nav>
       {!home && <><div className="dtitle"><h1>{tab[1]}</h1><small>{tab[2]}</small></div>{body}</>}
       {home && <>

@@ -2,10 +2,12 @@
    Хто кличе: адмін кнопкою «Оновити зараз» на сайті (сесія admin) або щоденний запуск GitHub Actions (x-sync-secret).
    Що робить: обходить увімкнені джерела з rule_sources послідовно, розбирає теми (parse.ts), зводить знімок (merge.ts) —
    джерело з помилкою лишає свої теми з попереднього знімка — і кладе його в публічний бакет rules (rules.json).
+   Що змінилось проти попереднього знімка — дописує в rules-changes.json того ж бакета (changes.ts, вкладка «Правила» в програмі).
    Ключі — лише в секретах функції (SUPABASE_SERVICE_ROLE_KEY, RULES_SYNC_SECRET). */
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { FORUM, forumTopics, heading, readTopic } from './parse.ts';
 import { merge, plan, type SnapTopic, type SourceRow } from './merge.ts';
+import { append, changes, type Log } from './changes.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -73,6 +75,21 @@ Deno.serve(async req => {
   const up = await db.storage.from('rules').upload('rules.json', new Blob([body], { type: 'application/json' }), { upsert: true, cacheControl: '300', contentType: 'application/json' });
   if (up.error) return fail(502, 'Не вдалося записати знімок правил — попередній лишається.');
 
+  /* журнал змін: збій тут не зриває оновлення — правила вже записано, пропаде лише цей запис журналу */
+  const ok = new Set([...results].filter(([, r]) => !r.error).map(([id]) => id));
+  const cs = changes(prev, topics, ok);
+  let logged = 0, logError: string | null = null;
+  if (cs.length) try {
+    let log: Log | null = null;
+    const was = await db.storage.from('rules').download('rules-changes.json');
+    if (was.data) try { log = JSON.parse(await was.data.text()); } catch { /* битий — почнемо з нуля */ }
+    const next = append(log, fetched, cs);
+    if (next) {
+      const w = await db.storage.from('rules').upload('rules-changes.json', new Blob([JSON.stringify(next)], { type: 'application/json' }), { upsert: true, cacheControl: '300', contentType: 'application/json' });
+      if (w.error) logError = 'журнал змін не записано: ' + w.error.message; else logged = next.entries[0].changes.length;
+    }
+  } catch (e) { logError = 'журнал змін не записано: ' + (e instanceof Error ? e.message : String(e)); }
+
   const out = [];
   for (const s of sources) {
     const r = results.get(s.id); if (!r) continue;
@@ -80,5 +97,5 @@ Deno.serve(async req => {
     await db.from('rule_sources').update(patch).eq('id', s.id);
     out.push({ id: s.id, title: titles.get(s.id) ?? null, items: r.items, error: r.error, diff: r.diff });
   }
-  return json({ fetched, topics: topics.length, items: topics.reduce((n, t) => n + t.items.length, 0), sources: out });
+  return json({ fetched, changes: logged, changes_error: logError, topics: topics.length, items: topics.reduce((n, t) => n + t.items.length, 0), sources: out });
 });
