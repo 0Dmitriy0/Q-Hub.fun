@@ -1282,6 +1282,7 @@ fieldset .static-form .btn { align-self: end; }
 .wiki-stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .wiki-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 12px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line2); }
 .wiki-stats b { font-size: 24px; line-height: 1.2; }
+.wiki-stats b .unit { font-size: 14px; white-space: nowrap; }   /* «500 км/год» не ламається на два рядки на телефоні */
 .wiki-stats b.good { color: var(--good); } .wiki-stats b.bad { color: var(--bad); }
 .wiki-stats small { color: var(--faint); font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
 .wiki .tbar { padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
@@ -1348,6 +1349,11 @@ fieldset .static-form .btn { align-self: end; }
   .wdlg .modal-box { padding: 16px; }
   .wdlg-ico { width: 48px; height: 48px; } .wdlg-ico img { width: 38px; height: 38px; }
   .wdlg-t h2 { font-size: 19px; }
+  /* на телефоні «Запропонувати правку» / «Редагувати» — окремим рядком під назвою: інакше назва стискається в стовпчик
+     і налазить на кнопку (перевірка живого сайту 2026-11-08) */
+  .wdlg-h { flex-wrap: wrap; row-gap: 12px; }
+  .wdlg-h > .wdlg-x { order: 2; }
+  .wdlg-h > .btn { order: 3; flex-basis: 100%; justify-content: center; }
 }
 .wiki > .card.row { flex-direction: row; align-items: center; padding: 12px 16px; }
 @media (max-width: 640px) { .wiki .jgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .wiki .jcard { padding: 16px 10px 12px; } }
@@ -1974,3 +1980,11 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .team-chars { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .team-join { align-self: flex-start; }
 .adm-team { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* мапа на телефоні: значки міток менші (28 замість 36 px), а зона натискання — та сама 36 px (рамка .mpin-wrap),
+   щоб у центрі міста іконки менше лізли одна на одну (перевірка живого сайту 2026-11-08) */
+@media (max-width: 640px) {
+  .mpin-wrap { display: grid; place-items: center; }
+  .mpin { width: 28px; height: 28px; border-width: 2px; }
+  .mpin img { width: 18px; height: 18px; }
+}

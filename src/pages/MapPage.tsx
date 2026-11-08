@@ -44,6 +44,10 @@ const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names',
 
 /* embed — мапа у вікні програми (specs/014): лише перегляд — без інструментів адміна, «Скріну», «Мапи для гри» й чернеток;
    кадр — у localStorage (адреси немає), посилання на сторінки сайту — onLink (програма відкриває їх у браузері) */
+/* картка мітки відсувається з-під кнопок угорі мапи (масштаб, пошук: .mhud, ~60 px) — інакше на телефоні хрестик
+   закриття ховається під «+ 100% −» (перевірка живого сайту 2026-11-08) */
+const POPUP: L.PopupOptions = { autoPanPaddingTopLeft: L.point(12, 76), autoPanPaddingBottomRight: L.point(12, 12) };
+
 export default function MapPage({ embed = false, onLink, focus, where = null, onWhere, shown = 0 }: {
   embed?: boolean; onLink?: (href: string) => void; focus?: { id?: string; x: number; y: number; n: number } | null;
   where?: Where; onWhere?: () => void;   // «Де я?» — лише у вікні програми (specs/014 US3)
@@ -265,7 +269,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         /* «Точка застаріла?» (0060) — гравцям і модераторам; адмін і так прибирає мітку сам */
         + (!isAdmin && wiki && staleOk && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-stale="${mk.dbId}">Точка застаріла?</button></span>` : '')
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
-      markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html).addTo(layers.current[c.id]);
+      markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html, POPUP).addTo(layers.current[c.id]);
       /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
       if (mk.name && mk.label !== false) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
@@ -275,7 +279,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       const c = catById[ar.category]; if (!c || !layers.current[c.id] || ar.dbId === edArea?.dbId) continue;
       const html = `<div class="mpop" style="--c:${c.color}"><span class="mtag">${esc(c.name)}</span><b>${esc(ar.name || c.name)}</b>${ar.note ? `<span>${esc(ar.note)}</span>` : ''}`
         + (isAdmin ? `<span class="mrow"><button type="button" class="medit" data-edit-area="${ar.dbId}">Змінити / перенести</button><button type="button" class="mdel" data-del-area="${ar.dbId}">Видалити зону</button></span>` : '') + '</div>';
-      L.polygon(ar.ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), { color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.28 }).bindPopup(html).addTo(layers.current[c.id]);
+      L.polygon(ar.ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), { color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.28 }).bindPopup(html, POPUP).addTo(layers.current[c.id]);
     }
     /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
