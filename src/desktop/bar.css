@@ -1,5 +1,5 @@
 /* Плашка Alt+Q: вікно прозоре, видно лише панель; поля навколо — під тінь */
-html, body.in-bar { background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
+html:has(> body.in-bar), body.in-bar { background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
 body.in-bar input { user-select: text; }
 /* вікно прозоре: поля довкола плашки — рівно під тінь, щоб її не обрізав край вікна */
 .bwrap { padding: 4px 14px 22px; display: flex; flex-direction: column; align-items: center; }
@@ -305,3 +305,22 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .bsale select { max-width: 260px; }
 .bsale-n { width: 80px; }
 .bsale small.bad { flex-basis: 100%; order: 9; }
+
+/* «Копіювати» (barParts.tsx CopyBtn): у куті пункту, під відповіддю ШІ, у шапці скупника.
+   Текст результатів можна й виділити мишкою — Ctrl+C */
+.bcopy { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 3px 9px; border: 1px solid var(--line2); border-radius: 8px; background: transparent; color: var(--muted); font: 600 12px var(--sans); cursor: pointer; white-space: nowrap; }
+.bcopy:hover { color: var(--fg); border-color: rgba(255, 107, 0, .5); }
+.bcopy.ok { color: var(--good); border-color: var(--good); }
+.bcopy.fail { color: var(--bad); border-color: var(--bad); }
+.brule-top { width: 100%; }
+.bhead { align-items: center; }
+.bhead .bcopy { align-self: center; }
+.bright .brule p, .bright .bpen, .bans, .bright .bbuy b, .bright .bbuy small, .bright .bhead h3, .bright .bnone { user-select: text; cursor: text; }
+/* заголовок групи результатів з «Копіювати все» праворуч */
+.bkind.brow-h { display: flex; width: 100%; }
+.bkind.brow-h .bcopy { text-transform: none; letter-spacing: 0; }
+.bright .bplaces b, .bright .bplaces small { user-select: text; }
+/* значок копіювання: у куті пункту й відповіді ШІ */
+.bcopy.only { width: 30px; height: 30px; min-height: 30px; padding: 0; justify-content: center; }
+.bans { position: relative; padding-right: 50px; }
+.bans > .bcopy.only { position: absolute; top: 8px; right: 8px; }

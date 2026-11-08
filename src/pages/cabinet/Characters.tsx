@@ -90,7 +90,7 @@ export default function Characters({ first }: { first?: boolean }) {
   );
 }
 
-/* «Команда Q-Hub» (0062): якщо адмін додав тебе в команду — сам вирішуєш, яких персонажів показати; за замовчуванням нікого */
+/* «Команда Q-Hub» (0064): якщо адмін додав тебе в команду — сам вирішуєш, яких персонажів показати; за замовчуванням нікого */
 function useTeamChars(me: string | undefined, n: number) {
   const [inTeam, setInTeam] = useState(false);
   const [on, setOn] = useState<Record<string, boolean>>({});

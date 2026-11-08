@@ -4,16 +4,16 @@ import Hub from './Hub';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import { dur, eventStatus, kyHM } from '../lib/events';
-import { money, when } from '../lib/format';
-import { buyers, places, pos, type BarPrice, type BuyerHit, type PlaceHit } from './barSearch';
+import { buyers, places, type BarPrice, type PlaceHit } from './barSearch';
 import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import History, { type HistPick } from './History';
 import { matchCats } from './catMatch';
-import { KIND, isRuleRef, numLabel, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import { isRuleRef, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { isRecordLike, RECORD_REPLY } from './recordLike';
+import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -254,34 +254,6 @@ export default function Bar() {
   );
 }
 
-/* «Заборонено … | Деморган 60 хв. Примітка: …» — покарання окремо, щоб його було видно одразу; примітки й винятки — після нього */
-function splitPenalty(t: string) {
-  const i = t.search(/\s\|\s/);
-  if (i < 0) return { body: t, pen: '', more: '' };
-  const tail = t.slice(i).replace(/^\s*\|\s*/, '').replace(/\s*\|\s*/g, ' · ').trim();
-  const j = tail.search(/\s(Примітк|Виняток|Винятки|Уточнення|Приклад)/);
-  return { body: t.slice(0, i).trim(), pen: j < 0 ? tail : tail.slice(0, j).trim(), more: j < 0 ? '' : tail.slice(j).trim() };
-}
-function RuleCard({ h }: { h: RuleHit }) {
-  const [open, setOpen] = useState(false);
-  const { body, pen, more } = splitPenalty(h.s);
-  const long = body.length > 260 || body.split('\n').length > 4;
-  return <li className="brule">
-    <div className="brule-top">
-      {/* правила сервера карає адміністрація, закони штату — гра: гравцю важливо бачити, що саме порушує (specs/010 FR-005) */}
-      <span className={'bkindtag ' + h.kind}>{KIND[h.kind]}</span>
-      {h.n && <span className="bpunkt">{numLabel(h.kind, h.n)}</span>}
-      <a href={h.url} target="_blank" rel="noreferrer" title="Відкрити тему на форумі">{h.topic}</a>
-    </div>
-    <p className={long && !open ? 'clamp' : ''}>{body}</p>
-    {long && <button className="bmore" onClick={() => setOpen(o => !o)}>{open ? 'Згорнути' : 'Показати повністю'}</button>}
-    {pen && <span className="bpen">{pen}</span>}
-    {more && <p className="bextra">{more}</p>}
-  </li>;
-}
-/* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)», «(Кримінальний кодекс, ст. 6.5)» — помітні, щоб було видно, звідки відповідь */
-const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
-
 /* left — історія замість списку запитів цієї сесії, коли натиснуто «Історія» */
 function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; setSel: (n: number) => void; busy: boolean; q: string; left?: React.ReactNode }) {
   const a = asks[sel];
@@ -297,46 +269,24 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
       {a.hits ? <>
         {a.places && a.places.length > 0 && <>
-          <div className="bkind"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub</div>
+          <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
             <img src={asset(h.icon)} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></button></li>)}</ul>
         </>}
-        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}</div>}
+        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}
+          {a.hits.length > 1 && <CopyBtn text={rulesText(a.hits)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
       </> : <>
         {a.local ? <div className="bkind"><Icon name="chart" size={14} />Q-Hub</div> : <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>}
-        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}</div>}
+        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}<CopyBtn icon text={a.reply} label="Копіювати відповідь" /></div>}
         {!a.error && !a.local && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>
   </>;
 }
 
-
-/* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами */
-function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string }) {
-  if (!cur) return <div className="bempty">{q.trim() ? `Скупника «${q.trim()}» не знайшов. Спробуй «шкури», «риба», «гриби».` : 'Назви скупника чи товар — побачиш його ціни.'}</div>;
-  const left = hits.length ? hits : [cur];
-  return <>
-    <div className="bleft">{left.map((b, i) => (
-      <button key={b.buyer} className={'brow item' + (b.buyer === cur.buyer ? ' on' : '')} onClick={() => hits.length && setSel(i)}>
-        {b.icon ? <img src={asset(b.icon)} alt="" /> : <span className="bava" />}
-        <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}</small></span>
-      </button>))}</div>
-    <div className="bright">
-      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div></div>
-      <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
-        <div key={x.item} className="bbuy">
-          {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
-          <span><b>{x.item}</b><small>{x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
-          {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
-          <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
-        </div>); })}</div>
-    </div>
-  </>;
-}
 
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
 /* F9: показати знімок і дати одразу вибрати категорію й опис (підказка адміну).

@@ -483,6 +483,8 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 @media (max-width: 640px) { .jd-cols { grid-template-columns: 1fr; } .jgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .jico { width: 52px; height: 52px; } }
 .jd-text { white-space: pre-line; }
 .jd-src { font-size: 12.5px; margin: 4px 0 0; }
+.jd-note { font-size: 12.5px; margin: 8px 0 0; }
+.jd-admin { flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px dashed var(--line2); font-size: 13px; }
 .jd-src a { color: var(--accent-hi); }
 
 /* мапа */
@@ -1969,7 +1971,72 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
   .h-cards .card p a { padding-block: 14px; }
 }
 
-/* «Команда Q-Hub» на головній (0062) */
+/* «Програма»: справжня плашка Alt+Q (components/BarDemo.tsx, стилі — desktop/bar.css).
+   Плашка в програмі завжди темна — і на світлій темі сайту лишається такою */
+.p-bar-lead { margin: -4px 0 12px; max-width: 760px; }
+.p-bar-ex { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.p-bar-ex button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surface); color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
+.p-bar-ex button:hover { border-color: var(--accent); }
+.p-bar-ex button .ico { color: var(--accent); }
+.p-bar-screen { min-height: 0; justify-content: center; padding: 28px 20px; }
+.p-bar { padding: 0; width: 100%; max-width: 1120px; margin: 0 auto;
+  --bg: #10141a; --surface: #141b24; --surface2: #1a2330; --line: rgba(38, 51, 68, .8); --line2: #263344;
+  --fg: #f4f7fb; --muted: #8b9bb0; --faint: #7a8ba1; --accent-hi: #ff7a1a;
+  --good: #10b981; --good-soft: rgba(16, 185, 129, .12); --warn: #f59e0b; --bad: #ef4444; --bad-soft: rgba(239, 68, 68, .12);
+  color: var(--fg); text-align: left; }
+.p-bar .bbox { box-shadow: 0 16px 40px -8px rgba(0, 0, 0, .8); }
+.p-bar .bpanes { height: 460px; }
+@media (max-width: 760px) {
+  .p-bar-screen { padding: 12px 8px; }
+  .p-bar .p-bar-x { display: none !important; }
+  .p-bar .bbar { flex-wrap: wrap; }
+  .p-bar .bbar input { flex-basis: 140px; }
+  .p-bar .bpanes { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .p-bar .bleft { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .p-bar .bright { max-height: 460px; }
+  .p-bar .bkeys { display: none; }
+  .p-bar .bbuy { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .p-bar .bbuy .brange { display: none; }
+}
+
+/* WIKI → Гайди (src/pages/Guides.tsx): список карток і стаття (основа — стилі івенту ev-*) */
+@media (max-width: 520px) { .wiki-tabs { display: grid; grid-template-columns: 1fr 1fr; border-radius: 20px; } .wiki-tabs a { padding: 0 10px; } }
+.gd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.gd-card { display: flex; gap: 14px; align-items: flex-start; padding: 18px; color: var(--fg); text-decoration: none; transition: border-color .15s; }
+.gd-card:hover { border-color: var(--accent); }
+.gd-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gd-card b { display: block; font-size: 16px; margin-bottom: 4px; }
+.gd-card p { margin: 0; font-size: 14px; line-height: 1.5; }
+.gd-card.sm { align-items: center; padding: 12px 14px; }
+.gd-card.sm b { margin: 0; font-size: 14.5px; }
+.gd-head { display: flex; gap: 14px; align-items: center; }
+.gd-head h1 { font-size: 28px; margin: 0; }
+.gd-head p { margin: 4px 0 0; }
+.gd-text h2.ev-sub { margin: 10px 0 0; }
+.gd-list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; max-width: 72ch; line-height: 1.6; }
+.gd-warn { background: var(--warn-soft); border-color: var(--warn); }
+.gd-warn svg, .gd-warn b { color: var(--warn); }
+.gd-links { flex-wrap: wrap; gap: 8px; }
+.gd-note { font-size: 13.5px; margin: 0; }
+.gd-note a { color: var(--accent-hi); }
+.gd-more { display: flex; flex-direction: column; gap: 12px; }
+.gd-table { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.gd-table table { width: 100%; border-collapse: collapse; }
+.gd-table th, .gd-table td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); line-height: 1.5; }
+.gd-table thead th { color: var(--muted); font-size: 13px; background: var(--surface2); white-space: nowrap; }
+.gd-table tbody th { color: var(--fg); }
+.gd-table tbody tr:last-child > * { border-bottom: 0; }
+/* телефон: рядок таблиці — картка, підпис стовпця перед значенням */
+@media (max-width: 720px) {
+  .gd-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .gd-table tr { display: block; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .gd-table tbody tr:last-child { border-bottom: 0; }
+  .gd-table th, .gd-table td { display: block; padding: 2px 0; border: 0; }
+  .gd-table tbody th { font-size: 16px; margin-bottom: 4px; }
+  .gd-table td::before { content: attr(data-label) ': '; color: var(--muted); font-size: 13px; font-weight: 700; }
+}
+
+/* «Команда Q-Hub» на головній (0064) */
 .team-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 .team-card { display: flex; flex-direction: row; gap: 14px; align-items: flex-start; }
 .team-ava { width: 56px; height: 56px; border-radius: 16px; flex: none; object-fit: cover; display: grid; place-items: center;

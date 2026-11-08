@@ -335,4 +335,40 @@ do $$ begin
 end $$;
 reset role;
 
+-- ---------- 0062: іконка роботи й видалення прибраної сторінки назавжди ----------
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e4', false) \gset
+do $$ begin
+  begin perform public.wiki_purge_job('pilot'); raise exception 'модератор видалив сторінку назавжди';
+  exception when sqlstate 'QH010' then null; end;
+  update public.jobs set icon = 'https://x.supabase.co/a.webp' where id = 'pilot';
+  assert (select icon from public.jobs where id = 'pilot') = '', 'модератор змінив іконку напряму';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e5', false) \gset
+do $$ begin
+  update public.jobs set icon = 'https://x.supabase.co/storage/v1/object/public/catalog/jobs/pilot.webp' where id = 'pilot';
+  assert (select icon from public.jobs where id = 'pilot') like 'https://%', 'admin не змінив іконку';
+  begin update public.jobs set icon = 'javascript:alert(1)' where id = 'pilot'; raise exception 'іконка не https пройшла';
+  exception when check_violation then null; end;
+  -- 0063: готова іконка мапи — шлях сайту
+  update public.jobs set icon = '/icons/map/boat.svg' where id = 'pilot';
+  assert (select icon from public.jobs where id = 'pilot') = '/icons/map/boat.svg', 'не взялась іконка з мапи';
+  begin update public.jobs set icon = '/icons/../../etc"x.svg' where id = 'pilot'; raise exception 'кривий шлях іконки пройшов';
+  exception when check_violation then null; end;
+  begin perform public.wiki_purge_job('pilot'); raise exception 'видалено не прибрану сторінку';
+  exception when sqlstate 'QH003' then null; end;
+  update public.jobs set hidden = true where id = 'pilot';
+  assert (select count(*) from public.wiki_versions where section = 'job' and target_id = 'pilot') > 0, 'у тестової роботи немає історії';
+  perform public.wiki_purge_job('pilot');
+  assert (select count(*) from public.jobs where id = 'pilot') = 0, 'роботу не видалено';
+  assert (select count(*) from public.wiki_versions where section = 'job' and target_id = 'pilot') = 0, 'лишилась історія';
+  assert (select count(*) from public.wiki_proposals where section = 'job' and (target_id = 'pilot' or data ->> 'id' = 'pilot')) = 0, 'лишились пропозиції';
+  begin perform public.wiki_purge_job('pilot'); raise exception 'повторне видалення пройшло';
+  exception when sqlstate 'QH014' then null; end;
+end $$;
+reset role;
+
 select 'Довідник від гравців ok';

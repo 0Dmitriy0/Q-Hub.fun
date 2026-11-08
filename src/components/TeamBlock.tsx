@@ -4,7 +4,7 @@ import { DiscordMark } from './DiscordMenu';
 import { useLinks } from '../lib/brand';
 import { supabase } from '../lib/supabase';
 
-/* «Команда Q-Hub» на головній (0062): склад і підписи задає admin (адмінка → «Гравці й ролі»), персонажів — кожен сам
+/* «Команда Q-Hub» на головній (0064): склад і підписи задає admin (адмінка → «Гравці й ролі»), персонажів — кожен сам
    (Кабінет → Налаштування → персонажі, галочка «Показувати в команді»). Лише нік у Q-Hub; нікого немає — блоку немає */
 export type TeamCard = { name: string; avatar_url: string | null; title: string; sort: number; characters: { name: string; static: number | null }[] };
 

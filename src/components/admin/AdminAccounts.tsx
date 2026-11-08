@@ -10,7 +10,7 @@ import AdminSection from './AdminSection';
 type Account = { id: string; nick: string | null; name: string; avatar_url: string | null; role: string; created_at: string;
   last_seen: string | null; version: string | null; characters: { name: string; static_id: number | null }[]; total?: number };
 const PAGE = 50;
-/* команда на головній (0062): хто в ній, підпис і порядок; null — таблиці ще немає (міграцію не застосовано) */
+/* команда на головній (0064): хто в ній, підпис і порядок; null — таблиці ще немає (міграцію не застосовано) */
 type Team = Record<string, { title: string; sort: number }>;
 
 export default function AdminAccounts() {
@@ -111,7 +111,7 @@ function AccountCard({ a, team, onTeam, onRole }: { a: Account; team: Team | nul
   );
 }
 
-/* «Команда Q-Hub» на головній (0062): у команді чи ні, підпис ролі, порядок. Персонажів людина відкриває сама */
+/* «Команда Q-Hub» на головній (0064): у команді чи ні, підпис ролі, порядок. Персонажів людина відкриває сама */
 function TeamForm({ id, nick, cur, onSaved }: { id: string; nick: string | null; cur: { title: string; sort: number } | null; onSaved: (t: { title: string; sort: number } | null) => void }) {
   const [on, setOn] = useState(!!cur);
   const [title, setTitle] = useState(cur?.title ?? '');
