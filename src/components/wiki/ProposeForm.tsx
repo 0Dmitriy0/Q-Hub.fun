@@ -4,9 +4,13 @@ import { useAuth } from '../../lib/auth';
 import { desktop } from '../../lib/app';
 import { supabase } from '../../lib/supabase';
 import { uploadProof } from '../../lib/images';
-import { dbError, diff, FIELDS, parseInput, similar, slugFromName, SOURCES, toInput, validate, type Data, type Section } from '../../lib/wiki';
+import { dbError, diff, FIELDS, hasSlug, pageHref, parseInput, similar, slugFromName, SOURCES, toInput, validate, type Data, type Section } from '../../lib/wiki';
+import type { GuideBlock } from '../../data/guides';
 import Icon from '../Icon';
 import DiffView from './DiffView';
+import BlockEditor from './BlockEditor';
+import IconPicker from './IconPicker';
+import GuideBody from './GuideBody';
 
 /* «Запропонувати правку» / «Додати» / «Прибрати сторінку» (specs/043 US1, US2, FR-015): форма за полями розділу.
    Картка не змінюється, поки модератор не прийме — це гарантує база (wiki_decide, 0057). Гість — вхід через Discord
@@ -49,7 +53,7 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
     const f: Record<string, string | boolean> = {};
     for (const x of fields) f[x.key] = toInput(x, target.data[x.key]);
     /* нова сторінка: у списках — перший варіант, а не порожнє значення, якого немає серед варіантів */
-    if (mode === 'new') for (const x of fields) if (x.type === 'select' && !target.data[x.key] && x.options?.length) f[x.key] = x.options[0][0];
+    if (mode === 'new') for (const x of fields) if ((x.type === 'select' || x.type === 'icon') && !target.data[x.key] && x.options?.length) f[x.key] = x.options[0][0];
     setForm(f); setSlug(''); setSlugTouched(false); setSource(''); setNote(''); setProof(null); setTouched({}); setMsg(''); setDone(false);
     dlg.current?.showModal();
     /* заборона (FR-013): пояснення замість форми */
@@ -63,7 +67,8 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
     if (mode !== 'new') return {};
     const d: Data = {};
     for (const f of fields) { const v = next[f.key]; if (!(v === '' || v == null || (Array.isArray(v) && !v.length) || (f.type === 'bool' && !v && f.key !== 'legal'))) d[f.key] = v; }
-    if (section === 'job') { d.id = slugTouched ? slug : slugFromName(String(next.name ?? '')); if (!('legal' in d)) d.legal = !!next.legal; }
+    if (hasSlug(section)) d.id = slugTouched ? slug : slugFromName(String(next.name ?? ''));
+    if (section === 'job' && !('legal' in d)) d.legal = !!next.legal;
     return d;
   }, [next, mode, fields, section, slug, slugTouched]);
   const errors = useMemo(() => (mode === 'hide' ? {} : validate(section, mode === 'new' ? newData : changes, mode === 'new')), [mode, section, newData, changes]);
@@ -107,7 +112,9 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
           </div>
         ) : done ? (
           <div className="wp-done" role="status">
-            <p><b>Надіслано на розгляд.</b> {target.section === 'map_point' ? "Мітка з'явиться на мапі, коли модератор її прийме." : 'Картка зміниться, коли модератор прийме правку.'} Статус — {desktop
+            <p><b>Надіслано на розгляд.</b> {target.section === 'map_point' ? "Мітка з'явиться на мапі, коли модератор її прийме."
+              : target.section === 'guide' && mode === 'new' ? "Гайд з'явиться у WIKI, коли модератор його прийме, — з твоїм ніком як автора."
+              : 'Сторінка зміниться, коли модератор прийме правку.'} Статус — {desktop
               ? <>на сайті q-hub.fun → «Кабінет» → «Мої правки».</>
               : <>у <Link to="/kabinet/pravky" onClick={onClose}>кабінеті → «Мої правки»</Link>.</>}</p>
             <button type="button" className="btn acc" onClick={onClose}>Готово</button>
@@ -120,10 +127,14 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
               const err = touched[f.key] ? errors[f.key] : '';
               const id = 'wp-' + f.key;
               return (
-                <div key={f.key} className={'fld' + (f.type === 'list' || f.type === 'longtext' ? ' wide' : '')}>
+                <div key={f.key} className={'fld' + (f.type === 'list' || f.type === 'longtext' || f.type === 'blocks' || f.type === 'icon' ? ' wide' : '')}>
                   {f.type === 'bool'
                     ? <label className="mcheck"><input type="checkbox" checked={!!form[f.key]} onChange={e => setVal(f.key, e.target.checked)} />{f.label}</label>
+                    : f.type === 'blocks' || f.type === 'icon' ? <span id={id + '-l'} className="fld-l">{f.label}{f.required && mode === 'new' ? ' *' : ''}</span>
                     : <label htmlFor={id}>{f.label}{f.required && mode === 'new' ? ' *' : ''}</label>}
+                  {f.type === 'icon' && <IconPicker value={String(form[f.key] ?? '')} options={(f.options ?? []).map(o => o[0])} labelledBy={id + '-l'} onChange={v => setVal(f.key, v)} />}
+                  {f.type === 'blocks' && <BlockEditor idPrefix={id} value={JSON.parse(String(form[f.key] || '[]')) as GuideBlock[]}
+                    onChange={b => { setVal(f.key, JSON.stringify(b)); setTouched(t => ({ ...t, [f.key]: true })); }} />}
                   {f.type === 'select' && <select id={id} value={String(form[f.key] ?? '')} onChange={e => setVal(f.key, e.target.value)} onBlur={() => setTouched(t => ({ ...t, [f.key]: true }))}>
                     {f.options!.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>}
                   {(f.type === 'text' || f.type === 'int') && <input id={id} inputMode={f.type === 'int' ? 'numeric' : undefined} value={String(form[f.key] ?? '')}
@@ -139,10 +150,14 @@ export default function ProposeForm({ target, mode, list, onClose, options }: {
                 </div>
               );
             })}
-            {mode === 'new' && section === 'job' && (
+            {mode === 'new' && hasSlug(section) && (
               <div className="fld wide"><label htmlFor="wp-slug">Адреса сторінки</label>
                 <input id="wp-slug" className="mono" value={slugTouched ? slug : slugFromName(String(next.name ?? ''))} onChange={e => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }} />
-                <small className={errors.id && touched.name ? 'err' : 'muted'}>{errors.id && touched.name ? errors.id : '/wiki/roboty?job=' + (slugTouched ? slug : slugFromName(String(next.name ?? '')) || '…')}</small></div>
+                <small className={errors.id && touched.name ? 'err' : 'muted'}>{errors.id && touched.name ? errors.id : pageHref(section, (slugTouched ? slug : slugFromName(String(next.name ?? ''))) || '…')}</small></div>
+            )}
+            {/* новий гайд: як він виглядатиме у WIKI (правка показує те саме в «Що зміниться») */}
+            {mode === 'new' && section === 'guide' && Array.isArray(newData.blocks) && (newData.blocks as GuideBlock[]).length > 0 && (
+              <div className="wide wp-prev"><h3 className="wp-h">Як виглядатиме</h3><GuideBody blocks={newData.blocks as GuideBlock[]} className="card" /></div>
             )}
             {mode === 'edit' && Object.keys(changes).length > 0 && <div className="wide"><h3 className="wp-h">Що зміниться</h3><DiffView section={section} old={target.data} changes={changes} /></div>}
             <fieldset className="fld wide wp-src"><legend>Звідки знаєш? *</legend>

@@ -17,10 +17,12 @@ export function Hidden() {
 
   async function load() {
     /* без колонки hidden у мітках мапи запит міток просто нічого не дає — тоді лише роботи й транспорт */
-    const [j, v, m] = await Promise.all([
+    const [j, v, m, g] = await Promise.all([
       supabase!.from('jobs').select('id,name,updated_at').eq('hidden', true).limit(200),
       supabase!.from('vehicles').select('id,name,updated_at').eq('hidden', true).limit(200),
       supabase!.from('map_points').select('id,name,x,y').eq('hidden', true).limit(200),
+      /* гайди (0065): без таблиці запит просто нічого не дає */
+      supabase!.from('wiki_guides').select('id,name,updated_at').eq('hidden', true).limit(200),
     ]);
     type R = { id: string | number; name: string | null; updated_at?: string | null; x?: number; y?: number };
     const rows: HiddenRow[] = [
@@ -28,6 +30,7 @@ export function Hidden() {
       ...((v.data ?? []) as R[]).map(r => ({ section: 'vehicle' as Section, id: String(r.id), name: r.name ?? '', at: r.updated_at ?? '', note: '', href: '' })),
       ...((m.data ?? []) as R[]).map(r => ({ section: 'map_point' as Section, id: String(r.id), name: r.name ?? '', at: '', note: '',
         href: typeof r.x === 'number' && typeof r.y === 'number' ? '/mapa' + makeHash(r.x, r.y, 6) : '' })),
+      ...((g.data ?? []) as R[]).map(r => ({ section: 'guide' as Section, id: String(r.id), name: r.name ?? '', at: r.updated_at ?? '', note: '', href: '/wiki/gaidy/' + encodeURIComponent(String(r.id)) })),
     ];
     if (rows.length) {
       /* причина й час — з останньої версії «Прибрано» */

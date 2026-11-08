@@ -1,8 +1,10 @@
 /* Довідник від гравців (specs/043): поля розділів, «було → стало», схожі назви, адреса з назви, перевірка форми.
-   Білий список полів — той самий, що в базі (wiki_clean, 0057): що тут не описано, база не прийме. */
+   Білий список полів — той самий, що в базі (wiki_clean, 0057, 0065): що тут не описано, база не прийме. */
+import { blocksError, GUIDE_ICONS, tidyBlocks } from './guideBlocks';
 
-export type Section = 'job' | 'vehicle' | 'map_point';
-export type FieldType = 'text' | 'longtext' | 'list' | 'int' | 'bool' | 'select';
+export type Section = 'job' | 'vehicle' | 'map_point' | 'guide';
+/* blocks — текст гайду блоками (src/lib/guideBlocks.ts); icon — вибір іконки з options */
+export type FieldType = 'text' | 'longtext' | 'list' | 'int' | 'bool' | 'select' | 'blocks' | 'icon';
 export type Field = {
   key: string; label: string; type: FieldType; required?: boolean;
   min?: number; max?: number; maxLen?: number; options?: [string, string][]; hint?: string; nullable?: boolean;
@@ -51,9 +53,19 @@ export const FIELDS: Record<Section, Field[]> = {
     { key: 'x', label: 'Точка X', type: 'int', required: true, min: -6000, max: 6800 },
     { key: 'y', label: 'Точка Y', type: 'int', required: true, min: -4400, max: 8500 },
   ],
+  /* гайд (0065): адреса (id) — з назви, як у робіт; текст — блоками */
+  guide: [
+    { key: 'name', label: 'Назва', type: 'text', required: true, maxLen: 80, hint: 'Наприклад: «Рибалка з нуля»' },
+    { key: 'summary', label: 'Коротко', type: 'text', required: true, maxLen: 300, hint: 'Одне речення для списку гайдів: про що він і кому' },
+    { key: 'icon', label: 'Іконка', type: 'icon', options: GUIDE_ICONS.map(i => [i, i]) },
+    { key: 'blocks', label: 'Текст гайду', type: 'blocks', required: true },
+  ],
 };
 
-export const SECTION_NAME: Record<Section, string> = { job: 'Роботи', vehicle: 'Транспорт', map_point: 'Мапа' };
+export const SECTION_NAME: Record<Section, string> = { job: 'Роботи', vehicle: 'Транспорт', map_point: 'Мапа', guide: 'Гайди' };
+/* адреса нової сторінки береться з назви — у робіт і гайдів */
+export const hasSlug = (s: Section) => s === 'job' || s === 'guide';
+export const pageHref = (s: Section, id: string) => (s === 'guide' ? '/wiki/gaidy/' + id : s === 'job' ? '/wiki/roboty?job=' + id : '');
 export const SOURCES: [string, string][] = [['game', 'У грі'], ['discord', 'Discord'], ['forum', 'Форум QuantRP'], ['own', 'Власний досвід']];
 export const REJECT_REASONS = ['Копія з іншого сайту', 'Немає джерела', 'Неправильні дані', 'Дубль', 'Порожня або образлива правка'];
 export const STATUS: Record<string, [string, 'good' | 'warn' | 'bad' | '']> = {
@@ -68,7 +80,9 @@ const same = (a: unknown, b: unknown) => (empty(a) && empty(b)) || JSON.stringif
 /* лише змінені поля розділу — те, що піде в пропозицію */
 export function diff(section: Section, old: Data, next: Data): Data {
   const out: Data = {};
-  for (const f of FIELDS[section]) if (f.key in next && !same(old[f.key], next[f.key])) out[f.key] = next[f.key];
+  /* блоки — після tidyBlocks з обох боків: інакше порядок ключів чи пробіли дали б «зміну» без змін */
+  const norm = (f: Field, v: unknown) => (f.type === 'blocks' && Array.isArray(v) ? tidyBlocks(v) : v);
+  for (const f of FIELDS[section]) if (f.key in next && !same(norm(f, old[f.key]), norm(f, next[f.key]))) out[f.key] = next[f.key];
   return out;
 }
 
@@ -88,6 +102,7 @@ export function diffRows(section: Section, old: Data, changes: Data): DiffRow[] 
 export function show(f: Field | undefined, v: unknown): string {
   if (empty(v)) return '—';
   if (f?.type === 'bool') return v ? 'так' : 'ні';
+  if (f?.type === 'blocks') return Array.isArray(v) ? `${v.length} блоків тексту` : '—';
   if (f?.type === 'select') return f.options?.find(([k]) => k === v)?.[1] ?? String(v);
   return Array.isArray(v) ? v.join('; ') : String(v);
 }
@@ -134,13 +149,15 @@ export function validate(section: Section, data: Data, isNew: boolean): Record<s
       if (empty(v) || !Number.isInteger(n)) err[f.key] = `«${f.label}» — ціле число`;
       else if (f.min !== undefined && n < f.min) err[f.key] = `«${f.label}» — не менше ${f.min}`;
       else if (f.max !== undefined && n > f.max) err[f.key] = `«${f.label}» — не більше ${f.max}`;
+    } else if (f.type === 'blocks') {
+      const e = blocksError(Array.isArray(v) ? tidyBlocks(v) : v); if (e) err[f.key] = e;
     } else if (f.type === 'list') {
       const a = (v as string[]) ?? [];
       if (f.max && a.length > f.max) err[f.key] = `«${f.label}» — до ${f.max} пунктів`;
       else { const long = a.find(x => x.length > (f.maxLen ?? 400)); if (long) err[f.key] = `Пункт «${long.slice(0, 30)}…» довший за ${f.maxLen} символів`; }
     }
   }
-  if (section === 'job' && isNew && !/^[a-z0-9-]{2,40}$/.test(String(data.id ?? ''))) err.id = 'Адреса — лише латинські літери, цифри й дефіс, 2–40';
+  if (hasSlug(section) && isNew && !/^[a-z0-9-]{2,40}$/.test(String(data.id ?? ''))) err.id = 'Адреса — лише латинські літери, цифри й дефіс, 2–40';
   return err;
 }
 
@@ -148,12 +165,15 @@ export function validate(section: Section, data: Data, isNew: boolean): Record<s
 export function parseInput(f: Field, raw: string | boolean): unknown {
   if (f.type === 'bool') return !!raw;
   const s = String(raw);
+  /* блоки гайду живуть у формі JSON-рядком (форма тримає лише рядки й прапорці) */
+  if (f.type === 'blocks') { try { const b = JSON.parse(s || '[]'); return Array.isArray(b) ? tidyBlocks(b) : []; } catch { return []; } }
   if (f.type === 'list') return s.split('\n').map(x => x.trim()).filter(Boolean);
   if (f.type === 'int') { const t = s.replace(/[\s,]/g, ''); if (!t) return f.nullable ? null : ''; return Number(t); }
   return s;
 }
 export function toInput(f: Field, v: unknown): string | boolean {
   if (f.type === 'bool') return !!v;
+  if (f.type === 'blocks') return JSON.stringify(Array.isArray(v) ? v : []);
   if (f.type === 'list') return ((v as string[] | undefined) ?? []).join('\n');
   return v == null ? '' : String(v);
 }

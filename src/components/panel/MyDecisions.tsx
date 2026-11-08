@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { SECTION_NAME } from '../../lib/wiki';
+import { pageHref, SECTION_NAME } from '../../lib/wiki';
 import { ACTION_LABEL, mergeDecisions, panelError, type Decision, type DecidedProposal, type MyVersion } from '../../lib/panel';
 import AdminSection from '../admin/AdminSection';
 
 /* «Мої рішення» (specs/061 US5): що я опублікував, відхилив, відкотив і повернув — з наявних пропозицій і версій */
 const when = (s: string) => new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const href = (d: Decision) => (d.section === 'job' && d.target_id ? '/wiki/roboty?job=' + encodeURIComponent(d.target_id) : '');
+const href = (d: Decision) => (d.target_id ? pageHref(d.section, encodeURIComponent(d.target_id)) : '');
 
 export default function MyDecisions() {
   const { session } = useAuth();

@@ -69,6 +69,8 @@ delete from public.map_points where category_id = 'harbuzy';
 \i supabase/migrations/0033_map_batches_events.sql
 -- 0033 переписує політику читання міток; 0060 додає до неї «сховані не видно» — повертаємо її, як на справжній базі
 \i supabase/migrations/0060_wiki_checks_stale_points.sql
+-- 0060 переписує wiki_snapshot/wiki_apply без гілки гайдів — 0065 повертає її (на справжній базі так само: після 0060 — 0065)
+\i supabase/migrations/0065_wiki_guides.sql
 do $$ begin assert (select count(*) from public.map_categories where id = 'harbuzy') = 1, 'повторний запуск дублює категорію'; end $$;
 \echo 'Партії міток ok'
 

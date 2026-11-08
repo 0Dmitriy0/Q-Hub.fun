@@ -13,6 +13,7 @@ interface Mine {
 const KIND = { new: 'Нова сторінка', edit: 'Правка', hide: 'Прибрати сторінку' };
 const when = (s: string) => new Date(s).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const link = (p: Mine) => (p.section === 'job' ? `/wiki/roboty${p.target_id ? '?job=' + p.target_id : ''}`
+  : p.section === 'guide' ? `/wiki/gaidy${p.target_id ? '/' + p.target_id : p.status.startsWith('accepted') && typeof p.data?.id === 'string' ? '/' + p.data.id : ''}`
   : p.section === 'map_point' ? (typeof p.data?.x === 'number' && typeof p.data?.y === 'number' ? '/mapa' + makeHash(p.data.x, p.data.y, 6) : '/mapa') : '/wiki/transport');
 
 /* скільки рішень автор ще не бачив — для значка біля «Мої правки» */

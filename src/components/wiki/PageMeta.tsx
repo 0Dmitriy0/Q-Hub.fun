@@ -15,9 +15,10 @@ export const resetNames = () => { names = null; };
 const WEEK = 7 * 86_400_000;
 const day = (s: string) => new Date(s).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
-export default function PageMeta({ createdBy, updatedBy, createdAt, updatedAt, version, hidden, onHistory }: {
+/* createdLabel — «Додав» у картках, «Автор» у гайдів */
+export default function PageMeta({ createdBy, updatedBy, createdAt, updatedAt, version, hidden, onHistory, createdLabel = 'Додав' }: {
   createdBy?: string | null; updatedBy?: string | null; createdAt?: string; updatedAt?: string | null; version?: number;
-  hidden?: boolean; onHistory?: () => void;
+  hidden?: boolean; onHistory?: () => void; createdLabel?: string;
 }) {
   const [map, setMap] = useState<Map<string, string> | null>(null);
   useEffect(() => { if (createdBy || updatedBy) loadNames().then(setMap); }, [createdBy, updatedBy]);
@@ -32,7 +33,7 @@ export default function PageMeta({ createdBy, updatedBy, createdAt, updatedAt, v
       {hidden && <span className="wtag upd">Прибрано — гравці не бачать</span>}
       {isNew && <span className="wtag new">Нове</span>}
       {isUpd && <span className="wtag upd">Оновлено {day(updatedAt!)}</span>}
-      {createdBy && <span>Додав: <b>{who(createdBy)}</b></span>}
+      {createdBy && <span>{createdLabel}: <b>{who(createdBy)}</b></span>}
       {updatedBy && (version ?? 1) > 1 && <span>Останнім оновив: <b>{who(updatedBy)}</b>{updatedAt ? ' · ' + day(updatedAt) : ''}</span>}
       {history && <button type="button" className="linkish" onClick={onHistory}>Історія змін</button>}
     </p>
