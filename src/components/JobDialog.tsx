@@ -6,7 +6,11 @@ import { makeHash } from '../lib/mapGeo';
 import Icon from './Icon';
 import Profit from './Profit';
 import PageMeta from './wiki/PageMeta';
-import type { JobRow } from '../lib/jobsData';
+import { jobIconSrc, type JobRow } from '../lib/jobsData';
+import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
+import { dbError } from '../lib/wiki';
+import PicUpload from './PicUpload';
 import HistoryDialog from './wiki/HistoryDialog';
 import WikiChecks from './wiki/WikiChecks';
 
@@ -25,18 +29,32 @@ const JOB_LAYER: Record<string, [string, string]> = { treasure: ['treasure-field
 export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }: { job: JobRow | null; onClose: () => void; onPropose?: () => void; onHide?: () => void; onChanged?: () => void }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [hist, setHist] = useState(false);
-  useEffect(() => { if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
+  const [err, setErr] = useState('');
+  const { role } = useAuth();
+  /* іконка й видалення назавжди — лише admin (0062); у базі це теж перевіряється */
+  const admin = role === 'admin' && !!supabase && job?.version !== undefined;
+  useEffect(() => { setErr(''); if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
   if (!job) return <dialog ref={dlg} className="modal jmodal" onClose={onClose} />;
   const list = (k: keyof Job) => (job[k] as string[] | undefined) || [];
   /* точка влаштування на мапі — з тих самих даних, що й мітки «Роботи» на мапі */
   const pt = POINTS.find(p => p.kind === 'job' && p.job === job.id);
   const layer = JOB_LAYER[job.id];
+  const setIcon = async (icon: string) => {
+    const { error } = await supabase!.from('jobs').update({ icon }).eq('id', job.id);
+    if (error) setErr(dbError(error)); else { setErr(''); onChanged?.(); }
+  };
+  const purge = async () => {
+    if (!confirm(`Видалити «${job.name}» назавжди? Зникнуть сторінка, її історія й усі пропозиції по ній. Повернути не вийде.`)) return;
+    const { error } = await supabase!.rpc('wiki_purge_job', { p_id: job.id });
+    if (error) { setErr(dbError(error)); return; }
+    onClose(); onChanged?.();
+  };
 
   return (
     <dialog ref={dlg} className="modal jmodal wdlg" aria-labelledby="jd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
       <div className="modal-box">
         <div className="wdlg-h">
-          <span className={'wdlg-ico' + (job.legal ? '' : ' ill')}><img src={`/icons/jobs/${job.id}.svg`} alt="" width={52} height={52} onError={jobIcon} /></span>
+          <span className={'wdlg-ico' + (job.legal ? '' : ' ill')}><img src={jobIconSrc(job)} alt="" width={52} height={52} onError={jobIcon} /></span>
           <div className="wdlg-t"><h2 id="jd-title">{job.name}</h2>
             <div className="jd-tags"><span className={'jtag' + (job.legal ? '' : ' ill')}>{job.legal ? 'Легальна' : 'Нелегальна'}</span>
               <span className="jtag lvl"><Icon name="trophy" size={13} />з {job.level} рівня</span><Profit n={job.profit} /></div></div>
@@ -51,6 +69,15 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
         <PageMeta createdBy={job.created_by} updatedBy={job.updated_by} createdAt={job.created_at} updatedAt={job.updated_at} version={job.version} hidden={job.hidden} onHistory={job.version !== undefined ? () => setHist(true) : undefined} />
         {!job.hidden && <WikiChecks section="job" target={job.id} version={job.version} changedAt={job.updated_at ?? job.created_at} onPropose={onPropose} />}
         <HistoryDialog section="job" target={job.id} title={job.name} hidden={job.hidden} open={hist} onClose={() => setHist(false)} onChanged={onChanged} />
+        {admin && (
+          <div className="jd-admin row" aria-label="Адмін">
+            <span className="muted">Адмін:</span>
+            <PicUpload label={'Іконка роботи ' + job.name} text="Змінити іконку" path={`jobs/${job.id}-${Date.now().toString(36)}.webp`} frame={{ w: 128, h: 128 }} onDone={setIcon} />
+            {job.icon && <button type="button" className="btn ghost sm" onClick={() => setIcon('')}>Стандартна іконка</button>}
+            {job.hidden && <button type="button" className="btn sm bad" onClick={purge}>Видалити назавжди</button>}
+            {err && <span className="bad" role="alert">{err}</span>}
+          </div>
+        )}
         <div className="wdlg-f">
           {job.forum ? <p className="muted jd-src">Джерело: <a href={FORUM_FAQ} target="_blank" rel="noopener noreferrer">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></p> : <span />}
           <div className="row">

@@ -11,11 +11,11 @@ function imageError(x: unknown) {
 }
 
 /* кнопка-файл для адміна: вибрав картинку → стиснулась → у сховище → адреса в рядок каталогу */
-export default function PicUpload({ label, path, onDone, frame }: { label: string; path: string; onDone: (url: string) => Promise<void>; frame?: { w: number; h: number } }) {
+export default function PicUpload({ label, path, onDone, frame, text = 'Фото' }: { label: string; path: string; onDone: (url: string) => Promise<void>; frame?: { w: number; h: number }; text?: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <label className={'btn sm ghost' + (busy ? ' busy' : '')} title={label}>
-      {busy ? 'Вантажу…' : 'Фото'}
+      {busy ? 'Вантажу…' : text}
       <input type="file" accept="image/*" className="vh" disabled={busy} onChange={async e => {
         const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
         setBusy(true);
