@@ -11,6 +11,7 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { dbError } from '../lib/wiki';
 import PicUpload from './PicUpload';
+import IconGrid from './IconGrid';
 import HistoryDialog from './wiki/HistoryDialog';
 import WikiChecks from './wiki/WikiChecks';
 
@@ -30,10 +31,18 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
   const dlg = useRef<HTMLDialogElement>(null);
   const [hist, setHist] = useState(false);
   const [err, setErr] = useState('');
+  /* вибір з іконок мапи: готові + свої іконки категорій з бази (вантажаться, коли відкрили вибір) */
+  const [pick, setPick] = useState(false);
+  const [catIcons, setCatIcons] = useState<string[]>([]);
+  useEffect(() => {
+    if (!pick || catIcons.length || !supabase) return;
+    supabase.from('map_categories').select('icon').then(({ data }) =>
+      setCatIcons([...new Set((data ?? []).map(r => r.icon as string).filter(s => /^https:\/\//.test(s ?? '')))]));
+  }, [pick]);   // eslint-disable-line react-hooks/exhaustive-deps
   const { role } = useAuth();
   /* іконка й видалення назавжди — лише admin (0062); у базі це теж перевіряється */
   const admin = role === 'admin' && !!supabase && job?.version !== undefined;
-  useEffect(() => { setErr(''); if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
+  useEffect(() => { setErr(''); setPick(false); if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
   if (!job) return <dialog ref={dlg} className="modal jmodal" onClose={onClose} />;
   const list = (k: keyof Job) => (job[k] as string[] | undefined) || [];
   /* точка влаштування на мапі — з тих самих даних, що й мітки «Роботи» на мапі */
@@ -73,11 +82,14 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <div className="jd-admin row" aria-label="Адмін">
             <span className="muted">Адмін:</span>
             <PicUpload label={'Іконка роботи ' + job.name} text="Змінити іконку" path={`jobs/${job.id}-${Date.now().toString(36)}.webp`} frame={{ w: 128, h: 128 }} onDone={setIcon} />
+            <button type="button" className={'btn ghost sm' + (pick ? ' on' : '')} aria-expanded={pick} onClick={() => setPick(p => !p)}>Іконка з мапи</button>
             {job.icon && <button type="button" className="btn ghost sm" onClick={() => setIcon('')}>Стандартна іконка</button>}
             {job.hidden && <button type="button" className="btn sm bad" onClick={purge}>Видалити назавжди</button>}
             {err && <span className="bad" role="alert">{err}</span>}
           </div>
         )}
+        {admin && pick && <IconGrid label={'Іконка роботи ' + job.name} value={job.icon ?? null} extra={catIcons}
+          onChange={v => { if (v) { setIcon(v); setPick(false); } }} />}
         <div className="wdlg-f">
           {job.forum ? <p className="muted jd-src">Джерело: <a href={FORUM_FAQ} target="_blank" rel="noopener noreferrer">F.A.Q. «Роботи на сервері» на форумі QuantRP</a></p> : <span />}
           <div className="row">
