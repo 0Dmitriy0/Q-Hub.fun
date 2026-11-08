@@ -19,6 +19,9 @@ const SECTIONS: [keyof Job, string][] = [
   ['skills', 'Рівні навички'], ['progress', 'Прокачка навички'], ['controls', 'Керування'], ['tips', 'Поради']
 ];
 
+/* робота → шар мапи, який варто відкрити одразу (поля скарбів — зони, не мітки) */
+const JOB_LAYER: Record<string, [string, string]> = { treasure: ['treasure-fields', 'Поля скарбів на мапі'] };
+
 export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }: { job: JobRow | null; onClose: () => void; onPropose?: () => void; onHide?: () => void; onChanged?: () => void }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [hist, setHist] = useState(false);
@@ -27,6 +30,7 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
   const list = (k: keyof Job) => (job[k] as string[] | undefined) || [];
   /* точка влаштування на мапі — з тих самих даних, що й мітки «Роботи» на мапі */
   const pt = POINTS.find(p => p.kind === 'job' && p.job === job.id);
+  const layer = JOB_LAYER[job.id];
 
   return (
     <dialog ref={dlg} className="modal jmodal wdlg" aria-labelledby="jd-title" onClose={onClose} onClick={e => { if (e.target === dlg.current) onClose(); }}>
@@ -39,7 +43,8 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
         <section className="jd-sec wdlg-box"><h3>Опис</h3>{job.description ? <p className="jd-text">{job.description}</p> : <p className="muted">Опис ще додаємо.</p>}</section>
-        {job.pay && <section className="jd-sec wdlg-box"><h3>Заробіток</h3><p className="jd-text">{job.pay}</p></section>}
+        {job.pay && <section className="jd-sec wdlg-box"><h3>Заробіток</h3><p className="jd-text">{job.pay}</p>
+          <p className="muted jd-note">Суми — з тестів гравців і можуть бути застарілими. Знаєш точніше — запропонуй правку.</p></section>}
         <div className="jd-cols">{SECTIONS.filter(([k]) => list(k).length).map(([k, t]) => (
           <section className="jd-sec wdlg-box" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
         ))}</div>
@@ -51,6 +56,7 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <div className="row">
             {onPropose && <button type="button" className="btn ghost sm" onClick={onPropose}><Icon name="tag" size={15} />Запропонувати правку</button>}
             {onHide && <button type="button" className="btn ghost sm" onClick={onHide} title="Наприклад, роботу прибрали з гри">Прибрати сторінку</button>}
+            {layer && <Link className="btn ghost sm" to={`/mapa?show=${layer[0]}`}><Icon name="map" size={16} />{layer[1]}</Link>}
             {pt && <Link className="btn acc sm" to={'/mapa' + makeHash(pt.x, pt.y, 5)}><Icon name="map" size={16} />Мітка на мапі</Link>}
           </div>
         </div>
