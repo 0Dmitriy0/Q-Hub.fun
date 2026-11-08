@@ -5,7 +5,10 @@ import { supabase } from './supabase';
 /* роботи з бази (specs/043, 0057): там їх правлять гравці через пропозиції. src/data/jobs.ts — запас: поки база не відповіла,
    без Supabase (npm run dev) чи якщо таблиці ще немає (міграцію не застосовано) — показуємо роботи з коду */
 export type WikiMeta = { version: number; hidden: boolean; created_by: string | null; updated_by: string | null; created_at: string; updated_at: string | null };
-export type JobRow = Job & Partial<WikiMeta>;
+export type JobRow = Job & Partial<WikiMeta> & { icon?: string };
+
+/* іконка роботи: своя з бази (0062, міняє admin) або стандартна з public/icons/jobs */
+export const jobIconSrc = (j: { id: string; icon?: string }) => j.icon || `/icons/jobs/${j.id}.svg`;
 
 const ARR = ['requirements', 'features', 'location', 'skills', 'progress', 'controls', 'tips'] as const;
 export function fromRow(r: Record<string, unknown>): JobRow {
@@ -13,6 +16,7 @@ export function fromRow(r: Record<string, unknown>): JobRow {
   for (const k of ARR) if (!((j[k] as string[] | undefined)?.length)) delete j[k];
   if (!j.description) delete j.description;
   if (!j.pay) delete j.pay;
+  if (!j.icon) delete j.icon;
   return j;
 }
 

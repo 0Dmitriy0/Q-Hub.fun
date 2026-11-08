@@ -8,7 +8,7 @@ import Profit from '../components/Profit';
 import Leaderboard from '../components/Leaderboard';
 import { jobIcon } from '../components/JobDialog';
 import ProposeForm, { takeIntent, type ProposeTarget } from '../components/wiki/ProposeForm';
-import { useJobs, type JobRow } from '../lib/jobsData';
+import { jobIconSrc, useJobs, type JobRow } from '../lib/jobsData';
 import { useAuth } from '../lib/auth';
 import type { Data } from '../lib/wiki';
 
@@ -67,7 +67,7 @@ export default function Jobs() {
       {!shown.length && <div className="card empty wiki-none"><b>Робіт не знайдено</b><span className="muted">Зміни фільтр або очисти пошук.</span><button type="button" className="btn acc sm" onClick={() => { setQ(''); setKind('all'); }}>Скинути пошук</button></div>}
       <div className="jgrid">{shown.map(j => (
         <button type="button" key={j.id} className={'card jcard' + (j.legal ? '' : ' ill')} onClick={() => setOpenId(j.id)} aria-haspopup="dialog">
-          <img className="jico" src={`/icons/jobs/${j.id}.svg`} alt="" width={64} height={64} loading="lazy" onError={jobIcon} />
+          <img className="jico" src={jobIconSrc(j)} alt="" width={64} height={64} loading="lazy" onError={jobIcon} />
           <span className="jname">{j.name}</span>
           <span className="jmeta"><span className="jtag lvl"><Icon name="trophy" size={13} />{j.level} рів.</span><Profit n={j.profit} /></span>
           {!j.legal && <span className="jtag ill jcorner">Нелегальна</span>}
