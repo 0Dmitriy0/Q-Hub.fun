@@ -18,7 +18,8 @@ export default function Wiki() {
     supabase.from('season_events').select('starts_on,ends_on').then(({ data }) =>
       setLive((data || []).filter(e => phase(e.starts_on, e.ends_on, today).kind === 'now').length));
   }, []);
-  const here = pathname.startsWith('/wiki/transport') ? 'Транспорт' : pathname.startsWith('/wiki/iventy') ? 'Івенти' : 'Роботи';
+  const here = pathname.startsWith('/wiki/transport') ? 'Транспорт' : pathname.startsWith('/wiki/iventy') ? 'Івенти'
+    : pathname.startsWith('/wiki/gaidy') ? 'Гайди' : 'Роботи';
   return (
     <div className="wiki">
       <div className="wiki-top">
@@ -27,6 +28,7 @@ export default function Wiki() {
           <NavLink to="/wiki/roboty" role="tab"><Icon name="jobs" size={16} />Роботи<span className="cnt mono">{JOBS.length}</span></NavLink>
           <NavLink to="/wiki/transport" role="tab"><Icon name="car" size={16} />Транспорт{cars != null && <span className="cnt mono">{cars}</span>}</NavLink>
           <NavLink to="/wiki/iventy" role="tab"><Icon name="spark" size={16} />Івенти{live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>}</NavLink>
+          <NavLink to="/wiki/gaidy" role="tab"><Icon name="book" size={16} />Гайди</NavLink>
         </div>
       </div>
       <Outlet />
