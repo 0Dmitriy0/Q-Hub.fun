@@ -74,6 +74,8 @@ function index(topics: RuleTopic[]) {
   return cache;
 }
 
+const LOOKALIKE: Record<string, string> = { a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', i: 'і', k: 'к', m: 'м', o: 'о', p: 'р', t: 'т', x: 'х', y: 'у' };
+
 export function searchRules(topics: RuleTopic[], query: string, limit = 8): RuleHit[] {
   /* «10,10» — те саме, що «10.10»: гравці пишуть номер і через кому */
   const q = query.replace(/(\d),(\d)/g, '$1.$2');
@@ -92,7 +94,8 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
   if (!terms.length && !nums.size) return [];
   const { docs, vocab, abbr } = index(topics);
   /* слово запиту — скорочення документа («ЗП», «ПКС»): пункти цього документа рахуються так, ніби слово є в назві */
-  const abbrOf = qw.map(w => abbr.get(w));
+  /* «KK», «PKC» латиницею (не та розкладка, однакові на вигляд літери) — те саме скорочення */
+  const abbrOf = qw.map(w => abbr.get(w) ?? (/^[a-z]+$/.test(w) ? abbr.get([...w].map(c => LOOKALIKE[c] ?? c).join('')) : undefined));
   /* слово в назві документа; для скорочення — лише сам документ («КК вбивство» — не «Правила … Кримінальних Структур») */
   const inHeadOf = (d: Doc, i: number) => (abbrOf[i] ? abbrOf[i].has(d.topic) : has(d.head, i));
   /* «грабувати» — і «пограбування», «почати» — і «розпочати»: основа після префікса (від 4 літер — інакше шуму забагато) */
@@ -106,6 +109,8 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
   /* «скільки учасників»: пункт «кількість учасників» відповідає прямо — вище за будь-який пункт з цифрами */
   const qtyOf = numq && terms.length ? new RegExp(`(кількіст|мінімальн|максимальн)\\p{L}* (${terms.flat().join('|')})`, 'u') : null;
   const hits: RuleHit[] = [];
+  /* «6.7 КК»: стаття з цим номером знайшлася — лише вона (і такі ж номери, що підходять під решту слів), інші статті кодексу не потрібні */
+  const exact = new Set<RuleHit>();
   for (const d of docs) {
     let score = 0, got = 0;
     terms.forEach((_, i) => {
@@ -116,14 +121,18 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
     });
     const num = nums.has(d.item.n);
     /* «КК 4.1»: стаття з таким номером; кодекс названо в назві документа — вище, ніж лише згадано в тексті */
-    if (num && got === terms.length) score += terms.every((_, i) => inHeadOf(d, i)) ? 10 : 4;
+    const isExact = num && got === terms.length;
+    if (isExact) score += terms.every((_, i) => inHeadOf(d, i)) ? 10 : 4;
     else if (!got || !terms.some((_, i) => has(d.words, i) && idf[i] > 0)) continue;
     else score *= got / terms.length * (d.item.n || d.topic.kind === 'info' ? 1 : 0.75);   // збіглися всі слова — пункт угорі; вступ без номера — нижче пунктів (у довідці номерів немає взагалі)
     if (penalty && d.topic.kind === 'law') score *= 1.5;
     if (numq && /\d/.test(d.item.s)) score *= qtyOf?.test(d.low) ? 2 : QTY.test(d.low) ? 1.6 : 1.3;
     if (without.some(re => re.test(d.low))) score *= 1.5;
-    hits.push({ topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score });
+    const hit: RuleHit = { topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score };
+    hits.push(hit);
+    if (isExact) exact.add(hit);
   }
+  if (exact.size) return [...exact].sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);
   /* лише скорочення («ПКС») і нічого не знайшлося — початок документа по порядку */
   if (!hits.length && !nums.size && abbrOf.every(Boolean))
     return docs.filter(d => abbrOf.every(s => s!.has(d.topic))).slice(0, limit)

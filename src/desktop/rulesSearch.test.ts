@@ -88,6 +88,16 @@ describe('закони штату в пошуку (specs/010)', () => {
     /* число серед слів, як і раніше, — слово запиту, а номер з крапкою — номер */
     expect(searchRules(t, 'КК 10.10', 1)[0]).toMatchObject({ n: '10.10' });
   });
+  it('номер + документ («6.7 КК», «КК 6.7», латиницею «6.7 KK») — лише ця стаття, без інших статей кодексу', () => {
+    for (const q of ['6.7 КК', 'КК 6.7', '6.7 KK', '6,7 кк']) {
+      const h = searchRules(t, q);
+      expect(h.length, q).toBe(1);
+      expect(h[0], q).toMatchObject({ n: '6.7', kind: 'law' });
+      expect(h[0].topic, q).toMatch(/Кримінальний/);
+    }
+    /* номер є, але слово не з цієї статті — звичайний пошук, а не порожньо */
+    expect(searchRules(t, '6.7 риба').length).toBeGreaterThan(0);
+  });
   it('уривок для помічника: тип джерела й «ст.» у законах', () => {
     const hits = searchRules(t, 'КК 6.5', 1);
     expect(rulesExcerpt(hits)).toMatch(/^\[Закон штату · Кримінальний кодекс штату Quant, ст\. 6\.5\]/);
