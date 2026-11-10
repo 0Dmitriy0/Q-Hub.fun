@@ -5,21 +5,22 @@ import type { Prefs } from './Bar';
 import { CHANGES, GROUPS, dayOf } from '../lib/changelog';
 import { FAMILY } from '../lib/brand';
 import { HOTKEY_GROUPS } from '../lib/hotkeys';
+import { EVENT_LIST, eventIds, plural } from '../lib/alerts';
 
 /* Налаштування плашки — як у помічників для RP-серверів: ліворуч профіль, розділи й версія програми,
    праворуч картки з рядками «назва — перемикач». Зберігає головний процес (barPrefs у desktop/src/main.cjs). */
 
 interface SetApi {
   shotsStats(): Promise<{ stats: Record<string, number>; key: string }>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>; keysPause(on: boolean): Promise<void>;
-  aiLeft(): Promise<number | null>;
+  aiLeft(): Promise<number | null>; notifyTest(): Promise<boolean | null>;
 }
 const api = (window as unknown as { qhub: SetApi }).qhub;
 export const AI_DAY = 50;   // питань до ШІ на день — так само, як у 0027_assistant_limit_50.sql
 /* клавіші мітки з гри — готові варіанти: F9 без модифікатора гра забирає собі */
 const PIN_KEYS = ['Alt+F9', 'Alt+M', 'Ctrl+F9', 'Alt+X'];
 
-export type SetSec = 'main' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
-const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
+export type SetSec = 'main' | 'alerts' | 'ai' | 'vision' | 'keys' | 'faq' | 'changes';
+const NAV: [SetSec, string, string][] = [['main', 'Основне', 'gear'], ['alerts', 'Сповіщення', 'bell'], ['ai', 'Відповіді ШІ', 'spark'], ['vision', 'Зір програми', 'camera'], ['keys', 'Клавіші', 'bolt'], ['faq', 'Часті питання', 'book'], ['changes', 'Журнал оновлень', 'history']];
 
 /* журнал оновлень (src/data/changelog.json, спільний із сайтом — src/lib/changelog.ts): найновіший — першим */
 export { CHANGES };
@@ -36,6 +37,11 @@ const FAQ: [string, [string, string][]][] = [
   ['Прибуток і ціни', [
     ['Звідки програма бере прибуток за годину', 'Поки гра запущена, програма читає готівку й картку з HUD гри. На початку сеансу запам’ятовує суму, а в смужці під плашкою показує, скільки в середньому заробляєш за годину. Наприкінці сеансу зберігає лише підсумок: баланс на початку й наприкінці, суму надходжень і час. Його бачиш тільки ти — у кабінеті на сайті, вкладка «Заробіток». Окремих операцій програма не записує.'],
     ['Звідки беруться ціни скупників', 'Якщо увімкнено «Ціни скупників на сайт», програма читає їх з вікна скупника, поки гра запущена, і вносить від твого імені.'],
+  ]],
+  ['Сповіщення', [
+    ['Про що програма сповіщає', 'Про три речі: ціна товару, за яким стежиш, піднялась у верхні 20% діапазону скупника («час здавати»); вибраний івент почнеться за 10 хвилин; оголошення на маркеті закінчується за годину й закінчилось. Усе вмикається в «Сповіщення».'],
+    ['Як стежити за ціною товару', 'Alt+Q → Tab («Ціни») → відкрий скупника й натисни дзвіночок біля товару. Сповіщення прийде, коли найкраща ціна буде від 80% діапазону й свіжа (внесена не раніше як 3 години тому). Про один товар — не частіше разу на 30 хвилин і не двічі про ту саму ціну.'],
+    ['Сповіщення не спливають під час гри', 'Windows сама вмикає «Не турбувати», коли гра на весь екран: сповіщення тоді тихо лягають у центр сповіщень. Вимкни це в параметрах Windows: Система → Сповіщення → автоматичне ввімкнення режиму «Не турбувати» → зніми «під час гри». Перевірити: «Сповіщення» → «Перевірити сповіщення».'],
   ]],
   ['ШІ й програма', [
     ['Скільки питань можна поставити ШІ', `${AI_DAY} на день, лічильник оновлюється о 00:00 за Києвом. Пошук у правилах (звичайний Enter) — без ліміту.`],
@@ -63,8 +69,10 @@ function KeyRec({ value, set }: { value: string; set: (k: string) => void }) {
     {rec ? 'Натисни комбінацію…' : <Keys k={value} />}</button>;
 }
 
-export default function Settings({ prefs, save, staff, user, version, discord, start = 'main', unseen, onSeen }: {
+export default function Settings({ prefs, save, staff, user, version, discord, start = 'main', unseen, onSeen, watching = 0, onWatchClear }: {
   prefs: Prefs; save: (p: Partial<Prefs>) => void; staff: boolean; version?: string; discord?: string; start?: SetSec; unseen: number; onSeen: () => void;
+  /* скільки товарів позначено дзвіночком у «Цінах» (specs/075) */
+  watching?: number; onWatchClear?: () => void;
   user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null;
 }) {
   const [sec, setSec] = useState<SetSec>(start);
@@ -74,6 +82,9 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
   const [shots, setShots] = useState<{ n: number; key: string } | null>(null);
   useEffect(() => { if (sec === 'ai') api.aiLeft().then(setLeft); if (sec === 'vision') api.shotsStats().then(s => setShots({ n: Object.values(s.stats).reduce((a, b) => a + b, 0), key: s.key })); }, [sec]);
   const title = NAV.find(n => n[0] === sec)![1];
+  /* сповіщення (specs/075–077): вибрані івенти й результат «Перевірити сповіщення» */
+  const picked = eventIds(prefs.eventIds ?? ['ufo']);
+  const [tested, setTested] = useState<boolean | null | undefined>(undefined);
 
   return (
     <div className="sset">
@@ -106,6 +117,31 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
             <Row t="Не ховати, коли повертаюсь у гру" d="Те саме, що шпилька в рядку"><Toggle on={prefs.pinned} set={v => save({ pinned: v })} label="Не ховати" /></Row>
             <Row t="Вкладка з найближчим івентом" d="Над рядком плашки"><Toggle on={prefs.tab} set={v => save({ tab: v })} label="Вкладка з івентом" /></Row>
           </div>
+        </>}
+        {sec === 'alerts' && <>
+          <div className="scard">
+            <Row t="Час здавати" d="Коли товар, за яким стежиш, скупник бере за ціною від 80% діапазону. Не частіше разу на 30 хв на товар; ціни, старші за 3 години, не рахуються">
+              <Toggle on={prefs.sellAlert !== false} set={v => save({ sellAlert: v })} label="Сповіщення «час здавати»" /></Row>
+            <Row t={watching ? `Стежиш за ${watching} ${plural(watching, ['товаром', 'товарами', 'товарами'])}` : 'Ще не стежиш за жодним товаром'}
+              d={<>Дзвіночок біля товару: <Keys k="Alt+Q" /> → <Keys k="Tab" /> («Ціни») → скупник</>}>
+              {watching > 0 && <button className="btn sm" onClick={onWatchClear}>Очистити список</button>}</Row>
+          </div>
+          <div className="scard">
+            <Row t="Нагадувати про івенти" d="За 10 хвилин до старту, за київським часом">
+              <Toggle on={!!prefs.eventAlert} set={v => save({ eventAlert: v })} label="Нагадування про івенти" /></Row>
+            <div className={'sevs' + (prefs.eventAlert ? '' : ' off')} role="group" aria-label="Про які івенти нагадувати">
+              {EVENT_LIST.map(ev => { const on = picked.includes(ev.id); return (
+                <button key={ev.id} className={'sev' + (on ? ' on' : '')} aria-pressed={on}
+                  onClick={() => save({ eventIds: on ? picked.filter(x => x !== ev.id) : [...picked, ev.id] })}><b>{ev.name}</b><small>{ev.sched}</small></button>); })}
+            </div>
+            {prefs.eventAlert && !picked.length && <p className="swarn" role="status">Вибери хоча б один івент — інакше нагадувань не буде.</p>}
+          </div>
+          <div className="scard">
+            <Row t="Таймер оголошення на маркеті" d="Запускається вкладкою «Таймер оголошення» над плашкою: нагадає за годину до кінця й коли оголошення завершиться. Свій у кожного персонажа" />
+            <Row t="Перевірити сповіщення" d={tested === undefined ? 'Покаже пробне сповіщення Windows' : tested ? 'Надіслано. Не спливло — у Windows увімкнено «Не турбувати» (див. «Часті питання»)' : 'Windows не дає показувати сповіщення цій програмі'}>
+              <button className="btn sm" onClick={() => api.notifyTest().then(setTested)}>Перевірити</button></Row>
+          </div>
+          <p className="muted">Сповіщення приходять, поки програма запущена, — і коли гра закрита.</p>
         </>}
         {sec === 'ai' && <>
           <div className="scard">

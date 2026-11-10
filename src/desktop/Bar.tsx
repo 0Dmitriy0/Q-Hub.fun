@@ -13,6 +13,7 @@ import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rules
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
+import MarketTab, { type Market } from './MarketTab';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -23,8 +24,10 @@ import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barPa
 /* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
 /* плашка завжди однієї ширини — і порожня, і з результатами: не «стрибає», коли з'являються результати */
 const BAR_WIDE = 1120;
-export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string;
+  /* сповіщення Windows (specs/075, 076): «час здавати» і нагадування про вибрані івенти */
+  sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[] }
+interface Data { /* товари, за якими стежу (specs/075), і таймер оголошення обраного персонажа (specs/077) */ watch?: (number | string)[]; market?: Market | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
 interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
@@ -37,6 +40,7 @@ interface BarApi {
   onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
+  watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 /* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
@@ -136,6 +140,9 @@ export default function Bar() {
   const prefs = d?.prefs;
   const decidePin = (send: boolean, hint?: PinHint) => { setPinQ(null); setView('main'); api.pinDecide(send, hint); };
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
+  /* дзвіночок біля товару й «Очистити список» у налаштуваннях (specs/075): список тримає головний процес */
+  const setWatch = (w: (number | string)[] | null) => { if (w) setD(x => (x ? { ...x, watch: w } : x)); };
+  const toggleWatch = (id: number | string) => { api.watchToggle(id).then(setWatch); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
 
@@ -191,7 +198,11 @@ export default function Bar() {
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
-      {prefs?.tab !== false && <NextEvent />}
+      {/* вкладки над плашкою: найближчий івент і таймер оголошення на маркеті (specs/077) */}
+      <div className="btabs">
+        {prefs?.tab !== false && <NextEvent />}
+        {d?.user && d.character && <MarketTab key={d.character} market={d.market ?? null} onChange={m => setD(x => (x ? { ...x, market: m } : x))} />}
+      </div>
       <div className="bbox">
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
@@ -229,10 +240,10 @@ export default function Bar() {
           <button className={'bico' + (view === 'settings' && setStart !== 'keys' ? ' on' : '')} title="Налаштування плашки" onClick={() => { const open = view === 'settings' && setStart !== 'keys'; setSetStart('main'); setView(open ? 'main' : 'settings'); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
-        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
+        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} watching={d?.watch?.length ?? 0} onWatchClear={() => { api.watchClear().then(setWatch); }} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
-           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} /> :
+           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} watch={d?.watch} onWatch={toggleWatch} /> :
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 

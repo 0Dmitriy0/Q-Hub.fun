@@ -324,3 +324,36 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .bcopy.only { width: 30px; height: 30px; min-height: 30px; padding: 0; justify-content: center; }
 .bans { position: relative; padding-right: 50px; }
 .bans > .bcopy.only { position: absolute; top: 8px; right: 8px; }
+
+/* ---------- сповіщення (specs/075–077) ---------- */
+/* вкладки над плашкою: найближчий івент і таймер оголошення на маркеті */
+.btabs { display: flex; align-items: flex-end; justify-content: center; gap: 6px; max-width: 100%; }
+.bmk { cursor: default; }
+button.bmk { cursor: pointer; font: 600 12px var(--sans); }
+button.bmk:hover, .bmk-t:hover { color: var(--fg); }
+.bmk.idle { color: var(--faint); }
+.bmk button { border: 0; background: none; color: inherit; font: inherit; padding: 0; cursor: pointer; }
+.bmk .bmk-x { display: grid; place-items: center; width: 18px; height: 18px; margin: -2px -6px -2px 0; border-radius: 5px; color: var(--muted); }
+.bmk .bmk-x:hover { background: var(--surface2); color: var(--fg); }
+.bmk.edit { color: var(--fg); }
+.bmk.edit input { width: 44px; padding: 1px 4px; border: 1px solid var(--line2); border-radius: 6px; background: #0a0e14; color: var(--fg); font: 700 12px var(--sans); text-align: center; outline: 0; }
+.bmk.edit input:focus { border-color: var(--accent); }
+.bmk.edit input[aria-invalid="true"] { border-color: var(--bad); }
+.bmk.edit .bmk-go { padding: 1px 8px; border-radius: 6px; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.bmk.edit small { color: var(--bad); font-size: 11.5px; }
+.bmk :focus-visible, button.bmk:focus-visible, .bbell:focus-visible, .sev:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* дзвіночок «стежу за ціною» біля товару (лише в програмі — рядок з п'ятою колонкою) */
+.bbuy.w { grid-template-columns: 28px minmax(0, 1fr) 90px auto 30px; }
+.bbuy.w .mono { grid-column: 4; }
+.bbell { grid-column: 5; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
+.bbell:hover { background: var(--surface2); color: var(--fg); }
+.bbell.on { background: rgba(255, 106, 31, .16); color: var(--accent); }
+/* вибір івентів у «Сповіщення» */
+.sevs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 14px; }
+.sevs.off { opacity: .55; }
+.sev { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 1px solid var(--line2); border-radius: 10px; background: none; color: var(--muted); font: inherit; text-align: left; cursor: pointer; }
+.sev b { font-size: 13.5px; color: var(--fg); }
+.sev small { font-size: 11.5px; }
+.sev:hover { border-color: rgba(255, 107, 0, .4); }
+.sev.on { border-color: var(--accent); background: rgba(255, 107, 0, .12); }
+.swarn { margin: 0; padding: 0 16px 14px; color: var(--warn); font-size: 12.5px; }
