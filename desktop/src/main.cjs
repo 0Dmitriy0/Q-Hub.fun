@@ -9,7 +9,7 @@ const { parseCharacter } = require('./character.cjs');
 const { parseNick } = require('./nick.cjs');
 const { fileStorage, writeAtomic, trimLog } = require('./store.cjs');
 const { createNotifier } = require('./notify.cjs');
-/* сповіщення: «час здавати», івенти, таймер оголошення — логіка з src/lib/alerts.ts (specs/075–077) */
+/* сповіщення («час здавати», івенти) і промокод над плашкою — логіка з src/lib/alerts.ts (specs/075–077) */
 const alerts = require('./lib/alerts.cjs');
 const gameSession = require('./session.cjs');
 const { sessionMoney, MAX_JUMP } = require('./sessionmoney.cjs');
@@ -97,10 +97,6 @@ async function state() {
   hasNick = !!profile?.nick;
   const characters = (chars || []).map(c => ({ id: c.id, name: c.name, static: c.static_id ?? null }));
   if (!characters.some(c => c.id === settings.character)) { settings.character = characters[0]?.id || null; saveSettings(); }
-  /* імена — для сповіщень таймера оголошення; таймер видаленого персонажа зникає (specs/077) */
-  charNames = new Map(characters.map(c => [c.id, c.name]));
-  const timers = alerts.marketPrune(settings.market, characters.map(c => c.id), Date.now());
-  if (Object.keys(timers).length !== Object.keys(markets()).length) { settings.market = timers; saveSettings(); }
   return {
     user: { name: meta.custom_claims?.global_name || meta.full_name || meta.name || 'Гравець', avatar: meta.avatar_url || null,
       nick: profile?.nick || '', nickChangedAt: profile?.nick_changed_at || null },
@@ -555,12 +551,28 @@ async function siteDiscord() {
   } catch { /* немає зв'язку — лишаємо збережене */ }
   return settings.discord || '';
 }
+/* промокод Q-Hub для вкладки над плашкою (specs/077): той самий public.site_promo, що на головній сайту (specs/022);
+   раз на 30 хв, останній відомий — у settings (без інтернету вкладка лишається). null — адмін вимкнув промокод */
+let promoAt = 0;
+async function sitePromo() {
+  if (Date.now() - promoAt > 30 * 60e3) {
+    try {
+      const { data, error } = await sb.from('site_promo').select('code,reward,enabled').maybeSingle();
+      if (!error) {
+        promoAt = Date.now();
+        const p = alerts.sitePromo(data);
+        if (JSON.stringify(p) !== JSON.stringify(settings.promo ?? null)) { settings.promo = p; saveSettings(); }
+      }
+    } catch { /* немає зв'язку — лишаємо збережене */ }
+  }
+  return alerts.sitePromo(settings.promo);
+}
 async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
-  const [prices, discord] = await Promise.all([barPrices(), siteDiscord()]);
+  const [prices, discord, promo] = await Promise.all([barPrices(), siteDiscord(), sitePromo()]);
   return { ...s, prices, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord,
-    watch: watch(), market: marketOf(s.character) };
+    watch: watch(), promo };
 }
 /* зміна персонажа з плашки — кабінет перемикається разом із нею */
 async function barCharacter(id) {
@@ -1006,16 +1018,14 @@ function startSessionTimer() {
   rules(); setInterval(rules, 36e5);
 }
 
-/* ---------- сповіщення (lib/alerts.cjs ← src/lib/alerts.ts): «час здавати» (specs/075), івенти за 10 хв (076),
-   таймер оголошення на маркеті (077). Тут лише тик, збереження й показ; що й коли сповіщати — у чистих функціях з тестами.
+/* ---------- сповіщення (lib/alerts.cjs ← src/lib/alerts.ts): «час здавати» (specs/075), івенти за 10 хв (076).
+   Тут лише тик, збереження й показ; що й коли сповіщати — у чистих функціях з тестами.
    Усе локально: у базу нічого не пишеться, у грі програма нічого не робить ---------- */
 const ALERT_TICK = 20e3, SELL_EVERY = 5 * 60e3;
-let sellAt = 0, sellBusy = false, charNames = new Map();
+let sellAt = 0, sellBusy = false;
 const sentOf = k => (settings.alertSent ??= {})[k] || {};
 /* товари, за якими гравець стежить (дзвіночок у «Цінах»): складу програма не веде (specs/040) */
 const watch = () => alerts.watchList(settings.watch);
-const markets = () => (settings.market && typeof settings.market === 'object' ? settings.market : {});
-const marketOf = id => { const t = id && markets()[id]; return alerts.marketValid(t) ? { hours: t.hours, ends: t.ends } : null; };
 async function sellCheck() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
@@ -1029,14 +1039,6 @@ function alertsTick() {
     const r = alerts.eventDue(alerts.eventIds(p.eventIds), sentOf('events'), now);
     if (r.note) { settings.alertSent.events = r.sent; saveSettings(); notify(r.note, openFromToast); }
   }
-  /* таймери всіх персонажів: оголошення спливає і в того, ким зараз не граєш */
-  for (const [id, t] of Object.entries(markets())) {
-    if (!alerts.marketValid(t)) continue;
-    const r = alerts.marketDue(t, now);
-    if (!r.kind) continue;
-    settings.market[id] = r.t; saveSettings();
-    notify(alerts.marketNote(r.kind, r.t, now, r.late, charNames.size > 1 ? charNames.get(id) || '' : ''), openFromToast);
-  }
   /* ціни — раз на 5 хв і лише коли є за чим стежити: без позначених товарів програма по них не ходить */
   if (p.sellAlert && !sellBusy && now - sellAt >= SELL_EVERY && watch().length) {
     sellAt = now; sellBusy = true;
@@ -1044,7 +1046,8 @@ function alertsTick() {
   }
 }
 function startAlerts() {
-  settings.market = alerts.marketPrune(settings.market, null, Date.now());
+  /* таймер оголошення на маркеті прибрано до виходу (рішення власника 2026-11-10) — слід від тестової збірки не лишаємо */
+  if (settings.market) { delete settings.market; saveSettings(); }
   alertsTick(); setInterval(alertsTick, ALERT_TICK);
 }
 
@@ -1191,7 +1194,7 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));
   ipcMain.handle('bar-prefs', (e, p) => (fromBar(e) ? barPrefs(p) : null));
-  /* сповіщення (specs/075–077, contracts/ipc-alerts.md): дзвіночок біля товару, таймер оголошення, перевірка сповіщень */
+  /* сповіщення (specs/075, 076; contracts/ipc-alerts.md): дзвіночок біля товару, перевірка сповіщень */
   ipcMain.handle('watch-toggle', (e, id) => {
     if (!fromBar(e)) return null;
     settings.watch = alerts.watchToggle(watch(), id); saveSettings();
@@ -1199,21 +1202,7 @@ app.whenReady().then(() => {
     return settings.watch;
   });
   ipcMain.handle('watch-clear', e => { if (!fromBar(e)) return null; settings.watch = []; saveSettings(); return []; });
-  ipcMain.handle('market-set', (e, v) => {
-    if (!fromBar(e)) return null;
-    const hours = alerts.marketHours(v);
-    if (hours === null) return { error: alerts.MARKET_HINT };
-    if (!settings.character) return { error: 'Спершу вибери персонажа.' };
-    settings.market = { ...markets(), [settings.character]: alerts.marketStart(hours, Date.now()) }; saveSettings();
-    return { market: marketOf(settings.character) };
-  });
-  ipcMain.handle('market-clear', e => {
-    if (!fromBar(e)) return null;
-    const m = { ...markets() }; delete m[settings.character];
-    settings.market = m; saveSettings();
-    return { market: null };
-  });
-  ipcMain.handle('notify-test', e => (fromBar(e) ? notify({ title: 'Q-Hub: сповіщення працюють', body: 'Так виглядатимуть «час здавати», івенти й таймер оголошення.' }, openFromToast) : null));
+  ipcMain.handle('notify-test', e => (fromBar(e) ? notify({ title: 'Q-Hub: сповіщення працюють', body: 'Так виглядатимуть «час здавати» й нагадування про івенти.' }, openFromToast) : null));
   ipcMain.handle('shot-label', async (e, name, label, note, share) => {
     if (!fromBar(e) || !shotStore || !shotStore.label(name, label, note)) return { ok: false };
     if (typeof share === 'boolean' && share !== prefs().shareShots) barPrefs({ shareShots: share });

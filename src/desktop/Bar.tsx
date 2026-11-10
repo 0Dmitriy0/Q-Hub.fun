@@ -13,7 +13,7 @@ import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rules
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
-import MarketTab, { type Market } from './MarketTab';
+import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -27,7 +27,7 @@ const BAR_WIDE = 1120;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string;
   /* сповіщення Windows (specs/075, 076): «час здавати» і нагадування про вибрані івенти */
   sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[] }
-interface Data { /* товари, за якими стежу (specs/075), і таймер оголошення обраного персонажа (specs/077) */ watch?: (number | string)[]; market?: Market | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
+interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
 interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
@@ -59,14 +59,27 @@ const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' 
 const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl }; };
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
-/* найближчий івент — у вкладці над плашкою */
-function NextEvent() {
+/* вкладки над плашкою: найближчий івент, а поруч — промокод Q-Hub, але лише коли івент не йде й не почнеться
+   за 15 хв (specs/077): перед івентом і під час нього промокод не заступає головне. Клік копіює команду для чату гри */
+function Tabs({ promo }: { promo: SitePromo | null }) {
   const [now, setNow] = useState(Date.now());
+  const [copied, setCopied] = useState<'' | 'ok' | 'fail'>('');
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(t); }, []);
   const s = eventStatus(now).sort((a, b) => (a.now ? 0 : 1) - (b.now ? 0 : 1) || (a.next?.s ?? Infinity) - (b.next?.s ?? Infinity))[0];
-  if (!s) return null;
-  const soon = s.now || (s.next && s.next.s - now <= 15 * 60e3);
-  return <div className={'btab' + (soon ? ' soon' : '')}><Icon name="clock" size={13} />{s.ev.name} · {s.now ? `іде, ще ${dur(s.now.e - now)}` : s.next ? `о ${kyHM(s.next.s)}, через ${dur(s.next.s - now)}` : '—'}</div>;
+  /* той самий поріг, що promoShown() у src/lib/alerts.ts: s — найближчий івент, тож досить його */
+  const soon = !!s && (!!s.now || (!!s.next && s.next.s - now <= PROMO_QUIET));
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(promoCommand(promo!.code)); setCopied('ok'); } catch { setCopied('fail'); }
+    setTimeout(() => setCopied(''), 1600);
+  };
+  return <div className="btabs">
+    {s && <div className={'btab' + (soon ? ' soon' : '')}><Icon name="clock" size={13} />{s.ev.name} · {s.now ? `іде, ще ${dur(s.now.e - now)}` : s.next ? `о ${kyHM(s.next.s)}, через ${dur(s.next.s - now)}` : '—'}</div>}
+    {promo && !soon && <button type="button" className={'btab bpromo' + (copied ? ' ' + copied : '')} onClick={copy}
+      title={`${promo.reward ? promo.reward.replace(/[.!]?$/, '. ') : ''}Клік — скопіювати команду ${promoCommand(promo.code)} для чату гри`}>
+      <Icon name={copied === 'ok' ? 'check' : 'tag'} size={13} />
+      <span aria-live="polite">{copied === 'ok' ? `Скопійовано ${promoCommand(promo.code)}` : copied === 'fail' ? `Не вийшло — введи ${promoCommand(promo.code)}` : <>Промокод Q-Hub: <b className="mono">{promo.code}</b></>}</span>
+    </button>}
+  </div>;
 }
 
 export default function Bar() {
@@ -198,11 +211,7 @@ export default function Bar() {
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
-      {/* вкладки над плашкою: найближчий івент і таймер оголошення на маркеті (specs/077) */}
-      <div className="btabs">
-        {prefs?.tab !== false && <NextEvent />}
-        {d?.user && d.character && <MarketTab key={d.character} market={d.market ?? null} onChange={m => setD(x => (x ? { ...x, market: m } : x))} />}
-      </div>
+      {prefs?.tab !== false && <Tabs promo={d?.promo ?? null} />}
       <div className="bbox">
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>

@@ -1,4 +1,5 @@
-/* Сповіщення програми Q-Hub (specs/075–077): «час здавати», івент за 10 хв, таймер оголошення на маркеті.
+/* Сповіщення програми Q-Hub: «час здавати» (specs/075), івент за 10 хв (specs/076); і коли над плашкою показувати
+   промокод Q-Hub (specs/077).
    Лише чисті функції: що сповістити зараз і що запам'ятати. Час (`now`) завжди передається — так це перевіряється тестом.
    Показує сповіщення й зберігає стан головний процес (desktop/src/main.cjs), куди цей файл збирається як lib/alerts.cjs
    (vite.lib.config.ts). Поріг «вигідно» й вік ціни — ті самі, що на сайті (advise, GOOD, STALE). */
@@ -86,45 +87,20 @@ export function eventDue(ids: string[], sent: EventSent, now: number): { note: N
   return { note, sent: next };
 }
 
-/* ---------- 077: таймер оголошення на маркеті ---------- */
-export const MARKET_MIN = 1, MARKET_MAX = 48;
-export const MARKET_WARN = 60 * MIN;        // «лишилась година»
-export const MARKET_KEEP = 7 * 24 * 60 * MIN;   // завершений таймер, який не закрили, прибирається сам
-const LATE = 2 * MIN;                       // кінець настав раніше — програма тоді не працювала
-export interface MarketTimer { hours: number; ends: number; warned: boolean; done: boolean }
-export const MARKET_HINT = `Від ${MARKET_MIN} до ${MARKET_MAX} годин`;
-
-/* години з поля вводу: лише ціле від 1 до 48 */
-export function marketHours(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d{1,2}$/.test(v.trim()) ? Number(v.trim()) : NaN;
-  return Number.isInteger(n) && n >= MARKET_MIN && n <= MARKET_MAX ? n : null;
+/* ---------- 077: промокод Q-Hub над плашкою — лише коли найближчим часом івентів немає ---------- */
+export const PROMO_QUIET = 15 * MIN;   // івент іде або почнеться раніше — промокод ховається, щоб не заступати івент
+export interface SitePromo { code: string; reward: string }
+/* рядок public.site_promo (specs/022) → що показати; null — промокод вимкнено адміном, порожній чи з недопустимими знаками */
+export function sitePromo(row: unknown): SitePromo | null {
+  const r = row as { code?: unknown; reward?: unknown; enabled?: unknown } | null;
+  if (!r || typeof r !== 'object' || r.enabled === false || typeof r.code !== 'string') return null;
+  const code = r.code.trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(code)) return null;
+  return { code, reward: typeof r.reward === 'string' ? r.reward.trim().slice(0, 200) : '' };
 }
-/* таймер на годину «лишилась година» не сповіщає — це збіглося б із запуском */
-export const marketStart = (hours: number, now: number): MarketTimer => ({ hours, ends: now + hours * 60 * MIN, warned: hours * 60 * MIN <= MARKET_WARN, done: false });
-export const marketValid = (t: unknown): t is MarketTimer => !!t && typeof t === 'object' && Number.isFinite((t as MarketTimer).ends) && Number.isFinite((t as MarketTimer).hours);
-/* що сповістити зараз; t — таймер з новими відмітками (зберегти, якщо kind не null) */
-export function marketDue(t: MarketTimer, now: number): { t: MarketTimer; kind: 'warn' | 'done' | null; late: boolean } {
-  if (!t.done && now >= t.ends) return { t: { ...t, warned: true, done: true }, kind: 'done', late: now - t.ends > LATE };
-  if (!t.done && !t.warned && t.ends - now <= MARKET_WARN) return { t: { ...t, warned: true }, kind: 'warn', late: false };
-  return { t, kind: null, late: false };
-}
-/* who — ім'я персонажа, коли їх кілька */
-export function marketNote(kind: 'warn' | 'done', t: MarketTimer, now: number, late = false, who = ''): Note {
-  const tail = who ? ` Персонаж: ${who}.` : '';
-  if (kind === 'warn') {
-    const left = t.ends - now;
-    return { title: left > 55 * MIN ? 'Оголошення на маркеті: лишилась 1 година' : `Оголошення на маркеті: лишилось ${dur(left)}`, body: `Закінчиться о ${kyHM(t.ends)} за Києвом.${tail}` };
-  }
-  return { title: 'Оголошення на маркеті завершилось', body: (late ? `Закінчилось о ${kyHM(t.ends)} за Києвом, поки Q-Hub не працював.` : 'Забери товар або вистав його знову.') + tail };
-}
-/* «ще 5 год 12 хв» для вкладки над плашкою; null — час вийшов */
-export const marketLeft = (ends: number, now: number): string | null => (now >= ends ? null : 'ще ' + dur(ends - now));
-/* таймери з налаштувань: без битих, без видалених персонажів (chars — відомі id; null — список невідомий), без давно завершених */
-export function marketPrune(all: unknown, chars: string[] | null, now: number): Record<string, MarketTimer> {
-  const out: Record<string, MarketTimer> = {};
-  for (const [id, t] of Object.entries(all && typeof all === 'object' ? all : {})) {
-    if (!marketValid(t) || (chars && !chars.includes(id)) || now - t.ends > MARKET_KEEP) continue;
-    out[id] = { hours: t.hours, ends: t.ends, warned: !!t.warned, done: !!t.done };
-  }
-  return out;
+/* команда для чату гри — її гравець вставляє сам (програма в грі нічого не вводить) */
+export const promoCommand = (code: string) => `/promo ${code.toLowerCase()}`;
+/* чи показувати промокод зараз: жоден івент не йде й не почнеться за PROMO_QUIET */
+export function promoShown(now: number, quiet = PROMO_QUIET): boolean {
+  return !eventStatus(now).some(s => s.now || (s.next && s.next.s - now <= quiet));
 }

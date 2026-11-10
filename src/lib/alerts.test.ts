@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EVENT_LEAD, MARKET_KEEP, MARKET_WARN, SELL_GAP, WATCH_MAX, eventDue, eventIds, marketDue, marketHours, marketLeft, marketNote, marketPrune,
-  marketStart, sellDue, watchList, watchToggle, type SellSent, type WatchPrice,
+  EVENT_LEAD, PROMO_QUIET, SELL_GAP, WATCH_MAX, eventDue, eventIds, promoCommand, promoShown, sellDue, sitePromo, watchList, watchToggle,
+  type SellSent, type WatchPrice,
 } from './alerts';
 import { kyTs } from './events';
 import { GOOD, STALE } from './pricestats';
@@ -136,63 +136,28 @@ describe('076 нагадування про івенти: eventDue', () => {
   });
 });
 
-describe('077 таймер оголошення', () => {
-  it('години: лише ціле від 1 до 48', () => {
-    for (const ok of [1, 48, '24', ' 5 ', '01']) expect(marketHours(ok)).toBe(Number(String(ok).trim()));
-    for (const bad of [0, 49, 1.5, '', 'abc', '1.5', '-3', '100', null, undefined, NaN, '1e1']) expect(marketHours(bad)).toBeNull();
+describe('077 промокод Q-Hub над плашкою', () => {
+  it('показується, лише коли жоден івент не йде й не почнеться за 15 хв', () => {
+    expect(PROMO_QUIET).toBe(15 * MIN);
+    expect(promoShown(ky(14, 30))).toBe(true);    // Перегони скінчились о 14:07, Лотерея — о 15:00
+    expect(promoShown(ky(14, 44))).toBe(true);    // до Лотереї 16 хв
+    expect(promoShown(ky(14, 45))).toBe(false);   // рівно 15 хв до Лотереї
+    expect(promoShown(ky(15, 3))).toBe(false);    // Лотерея й Перегони йдуть
+    expect(promoShown(ky(15, 7))).toBe(false);    // до GunGame о 15:20 — 13 хв
+    expect(promoShown(ky(15, 25))).toBe(true);    // GunGame скінчився, до Лотереї 35 хв
+    expect(promoShown(ky(13, 0))).toBe(false);    // НЛО 12:15–14:15 іде
+    expect(promoShown(ky(5, 1))).toBe(false);     // Рестарт о 05:15 — за 14 хв
   });
-  it('запуск: кінець — через стільки годин; залишок для плашки', () => {
-    const t = marketStart(24, now);
-    expect(t).toEqual({ hours: 24, ends: now + 24 * H, warned: false, done: false });
-    expect(marketLeft(t.ends, now + MIN)).toBe('ще 23 год 59 хв');
-    expect(marketLeft(t.ends, now + 18 * H + 48 * MIN)).toBe('ще 5 год 12 хв');
-    expect(marketLeft(t.ends, t.ends)).toBeNull();
+  it('рядок з бази: вимкнений, порожній чи з недопустимими знаками — не показуємо', () => {
+    expect(sitePromo({ code: ' QHUB ', reward: ' 50.000$ та +1 рівень. ', note: '', enabled: true })).toEqual({ code: 'QHUB', reward: '50.000$ та +1 рівень.' });
+    expect(sitePromo({ code: 'QHUB', enabled: false })).toBeNull();
+    expect(sitePromo({ code: '', enabled: true })).toBeNull();
+    expect(sitePromo({ code: 'Q HUB', enabled: true })).toBeNull();
+    expect(sitePromo({ code: '<b>x</b>', enabled: true })).toBeNull();
+    expect(sitePromo(null)).toBeNull();
+    expect(sitePromo({ code: 'QHUB' })).toEqual({ code: 'QHUB', reward: '' });
   });
-  it('за годину до кінця — «лишилась 1 година», один раз', () => {
-    const t = marketStart(3, now);
-    expect(marketDue(t, now + 2 * H - MIN).kind).toBeNull();
-    const w = marketDue(t, now + 2 * H);
-    expect(w).toMatchObject({ kind: 'warn', late: false, t: { warned: true, done: false } });
-    expect(marketNote('warn', w.t, now + 2 * H).title).toBe('Оголошення на маркеті: лишилась 1 година');
-    expect(marketDue(w.t, now + 2 * H + 20e3).kind).toBeNull();
-  });
-  it('таймер на 1 годину — без «лишилась година», лише кінець', () => {
-    const t = marketStart(1, now);
-    expect(t.warned).toBe(true);
-    expect(marketDue(t, now + MIN).kind).toBeNull();
-    expect(marketDue(t, now + H).kind).toBe('done');
-  });
-  it('кінець — одне сповіщення; далі тиша', () => {
-    const t = { ...marketStart(2, now), warned: true };
-    const d = marketDue(t, t.ends + 5e3);
-    expect(d).toMatchObject({ kind: 'done', late: false, t: { done: true } });
-    expect(marketNote('done', d.t, t.ends + 5e3)).toEqual({ title: 'Оголошення на маркеті завершилось', body: 'Забери товар або вистав його знову.' });
-    expect(marketDue(d.t, t.ends + H).kind).toBeNull();
-  });
-  it('перезапуск: закінчилось, поки програма не працювала, — одне сповіщення «поки Q-Hub не працював», без «лишилась година»', () => {
-    const t = marketStart(5, now);
-    const d = marketDue(t, t.ends + 3 * H);
-    expect(d).toMatchObject({ kind: 'done', late: true, t: { warned: true, done: true } });
-    expect(marketNote('done', d.t, t.ends + 3 * H, d.late).body).toMatch(/поки Q-Hub не працював/);
-    expect(marketDue(d.t, t.ends + 3 * H + 20e3).kind).toBeNull();
-  });
-  it('перезапуск за 25 хв до кінця без попередження — попередження з правдивим залишком', () => {
-    const t = marketStart(5, now), at25 = t.ends - 25 * MIN;
-    const w = marketDue(t, at25);
-    expect(w.kind).toBe('warn');
-    expect(marketNote('warn', w.t, at25).title).toBe('Оголошення на маркеті: лишилось 25 хв');
-    /* уже надіслане (відмітка збережена) після перезапуску не повторюється */
-    expect(marketDue(JSON.parse(JSON.stringify(w.t)), at25 + MIN).kind).toBeNull();
-  });
-  it('персонаж названий, коли передано ім\'я; час кінця — київський', () => {
-    const t = { hours: 2, ends: ky(17, 15), warned: false, done: false };
-    expect(marketNote('warn', t, t.ends - MARKET_WARN, false, 'Dmitriy_Core').body).toBe('Закінчиться о 17:15 за Києвом. Персонаж: Dmitriy_Core.');
-    expect(marketNote('done', t, t.ends, false, 'Dmitriy_Core').body).toMatch(/Персонаж: Dmitriy_Core\.$/);
-  });
-  it('прибирання: таймери видалених персонажів, биті й завершені понад 7 днів тому', () => {
-    const live = marketStart(4, now), old = { hours: 1, ends: now - MARKET_KEEP - MIN, warned: true, done: true };
-    expect(marketPrune({ a: live, b: live, c: old, d: 'сміття', e: { hours: 1 } }, ['a', 'c', 'd', 'e'], now)).toEqual({ a: live });
-    expect(Object.keys(marketPrune({ a: live, b: live }, null, now))).toEqual(['a', 'b']);   // список персонажів невідомий — нікого не губимо
-    expect(marketPrune(null, null, now)).toEqual({});
+  it('команда для чату гри — малими літерами', () => {
+    expect(promoCommand('QHUB')).toBe('/promo qhub');
   });
 });

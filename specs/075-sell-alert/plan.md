@@ -1,12 +1,12 @@
-# Implementation Plan: Етап 1 програми — сповіщення (075, 076, 077)
+# Implementation Plan: Етап 1 програми — сповіщення й промокод (075, 076, 077)
 
-**Branch**: `075-stage1-alerts` | **Date**: 2026-11-10 | **Spec**: [spec.md](spec.md), [076](../076-event-reminders/spec.md), [077](../077-market-timer/spec.md)
+**Branch**: `075-stage1-alerts` | **Date**: 2026-11-10 | **Spec**: [spec.md](spec.md), [076](../076-event-reminders/spec.md), [077](../077-promo-tab/spec.md)
 
-Один план на три фічі: у них спільні логіка, склейка й розділ налаштувань. У 076 і 077 — лише свої частини.
+Один план на три фічі: у них спільні логіка й склейка. Третьою спершу був таймер оголошення на маркеті — його прибрано до злиття (рішення власника 2026-11-10), замість нього — промокод над плашкою (specs/077-promo-tab). У 076 і 077 — лише свої частини.
 
 ## Summary
 
-Три сповіщення Windows з програми: «час здавати» (товар, за яким стежиш, ≥ 80% діапазону), івент за 10 хв, таймер оголошення (за годину й у кінці). Уся логіка — чисті функції в `src/lib/alerts.ts` поверх наявних `advise` / `GOOD` / `STALE` (`advice.ts`, `pricestats.ts`) і `eventStatus` (`events.ts`); збірка кладе їх у `desktop/src/lib/alerts.cjs` для головного процесу. `main.cjs` лише тикає раз на 20 с, зберігає стан у `settings.json` і показує `Notification`. Інтерфейс — дзвіночок у «Цінах», вкладка таймера над плашкою, розділ «Сповіщення» в налаштуваннях.
+Два сповіщення Windows з програми: «час здавати» (товар, за яким стежиш, ≥ 80% діапазону) й івент за 10 хв; і промокод Q-Hub над плашкою, коли івентів поруч немає. Уся логіка — чисті функції в `src/lib/alerts.ts` поверх наявних `advise` / `GOOD` / `STALE` (`advice.ts`, `pricestats.ts`) і `eventStatus` (`events.ts`); збірка кладе їх у `desktop/src/lib/alerts.cjs` для головного процесу. `main.cjs` лише тикає раз на 20 с, зберігає стан у `settings.json` і показує `Notification`. Інтерфейс — дзвіночок у «Цінах», вкладка промокоду над плашкою, розділ «Сповіщення» в налаштуваннях.
 
 ## Technical Context
 
@@ -18,7 +18,7 @@
 **Project Type**: desktop-програма (Electron) + спільний код із сайтом
 **Performance Goals**: тик — мікросекунди; мережа — один запит цін на 5 хв і лише коли є позначені товари
 **Constraints**: сповіщення ±30 с; нічого не робити в грі; нічого не писати в базу
-**Scale/Scope**: ≤ 50 позначених товарів, 5 івентів, ≤ 3 таймери (по одному на персонажа)
+**Scale/Scope**: ≤ 50 позначених товарів, 5 івентів
 
 ## Constitution Check
 
@@ -40,20 +40,20 @@
 ```text
 specs/075-sell-alert/      plan.md (цей), research.md, data-model.md, contracts/ipc-alerts.md, quickstart.md, tasks.md
 specs/076-event-reminders/ plan.md, tasks.md
-specs/077-market-timer/    plan.md, tasks.md
+specs/077-promo-tab/       spec.md, plan.md, tasks.md
 ```
 
 ### Source Code
 
 ```text
-src/lib/alerts.ts            # sellDue, eventDue, marketHours/Start/Due/Left + тексти сповіщень (нове)
+src/lib/alerts.ts            # sellDue, eventDue, promoShown + тексти сповіщень (нове)
 src/lib/alerts.test.ts       # тести логіки (нове)
 vite.lib.config.ts           # друга точка входу → desktop/src/lib/alerts.cjs
 desktop/src/main.cjs         # notify(), тик, IPC, налаштування
-desktop/src/preload.cjs      # watchToggle, watchClear, marketSet, marketClear, notifyTest
+desktop/src/preload.cjs      # watchToggle, watchClear, notifyTest
 desktop/src/store.cjs        # writeAtomic, trimLog (аудит)
-src/desktop/Bar.tsx          # дані watch/market, вкладки над плашкою
-src/desktop/MarketTab.tsx    # вкладка таймера (нове)
+src/desktop/Bar.tsx          # дані watch/promo, вкладки над плашкою
+src/desktop/Bar.tsx (Tabs)   # вкладка промокоду поруч з івентом
 src/desktop/barParts.tsx     # дзвіночок у Prices
 src/desktop/Settings.tsx     # розділ «Сповіщення»
 src/desktop/bar.css

@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Таймер оголошення на маркеті
+# Specification Quality Checklist: Промокод Q-Hub над плашкою
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-11-10
