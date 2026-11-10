@@ -80,7 +80,9 @@ export default function RulesAdmin() {
             <thead><tr><th>Джерело</th><th>Тип</th><th className="n">Пунктів</th><th>Оновлено</th><th>Остання зміна</th><th /></tr></thead>
             <tbody>{list.map(s => <tr key={s.id} className={s.enabled ? '' : 'muted'}>
               <td><a href={s.url} target="_blank" rel="noreferrer"><b>{s.title || short(s.url)}</b></a><br /><small className="mono muted">{short(s.url)}</small>
-                {s.error && <><br /><small className="err">{s.error}</small></>}</td>
+                {s.error && <><br /><small className="err">{s.error}</small></>}
+                {/* форум не пускає сервер (403/429): кнопка «Оновити зараз» цього не вилікує — сказати, що робити */}
+                {s.error && /40[39]|429|не пускає/.test(s.error) && <><br /><small className="muted">Правила в пошуку лишаються з останнього вдалого оновлення. Доступ відкриває адміністрація форуму.</small></>}</td>
               <td>{KIND[s.kind]}</td>
               <td className="n">{s.items || '—'}</td>
               <td>{s.synced_at ? when(s.synced_at) : 'ще ні'}</td>

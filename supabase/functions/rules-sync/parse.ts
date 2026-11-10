@@ -5,6 +5,15 @@ export interface Item { n: string; h: string; s: string }
 export interface Topic { title: string; section: string; url: string; kind: Kind; items: Item[] }
 
 export const FORUM = 'https://forum.quant5.com.ua/';
+/* чому форум не віддав сторінку — словами для адміна. 403 і 429 — форум (його захист від автоматичних запитів) не пускає
+   сервер, з якого йде оновлення: це не помилка джерела й не лікується кнопкою. Захист ми не обходимо — про доступ
+   домовляються з адміністрацією форуму */
+export function forumError(status: number): string {
+  if (status === 403 || status === 429) return `форум не пускає сервер Q-Hub (відповідь ${status}) — це блокування на боці форуму, джерело справне`;
+  if (status === 404) return 'такої сторінки на форумі немає (404) — перевір посилання джерела';
+  if (status >= 500) return `форум зараз не працює (відповідь ${status}) — спробуй пізніше`;
+  return `форум відповів ${status}`;
+}
 
 export const ent = (s: string) => s.replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
   .replace(/&mdash;/g, '—').replace(/&ndash;/g, '–').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&amp;/g, '&');

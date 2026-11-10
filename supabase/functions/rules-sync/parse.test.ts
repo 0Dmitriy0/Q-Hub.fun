@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { chunks, forumTopics, links, numOf, postText, topicSection, topicTitle } from './parse';
+import { chunks, forumError, forumTopics, links, numOf, postText, topicSection, topicTitle } from './parse';
+
+describe('чому форум не віддав сторінку — словами для адміна', () => {
+  it('403 і 429 — блокування на боці форуму, а не помилка джерела', () => {
+    expect(forumError(403)).toMatch(/форум не пускає сервер Q-Hub \(відповідь 403\).*джерело справне/);
+    expect(forumError(429)).toMatch(/не пускає/);
+  });
+  it('404 — перевірити посилання; 5xx — спробувати пізніше; решта — як є', () => {
+    expect(forumError(404)).toMatch(/перевір посилання/);
+    expect(forumError(503)).toMatch(/спробуй пізніше/);
+    expect(forumError(418)).toBe('форум відповів 418');
+  });
+});
 
 /* пост IPS у тому вигляді, як його віддає форум */
 const post = (id: number, user: string, body: string) => `<div id='comment-${id}_wrap'><div data-commentID="${id}" data-quoteData='{&quot;username&quot;:&quot;${user}&quot;}'></div>`
