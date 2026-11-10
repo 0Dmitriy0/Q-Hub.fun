@@ -13,6 +13,7 @@ import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rules
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
+import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
    а щойно пишеш — дві панелі пошуку.
@@ -23,8 +24,10 @@ import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barPa
 /* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
 /* плашка завжди однієї ширини — і порожня, і з результатами: не «стрибає», коли з'являються результати */
 const BAR_WIDE = 1120;
-export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string }
-interface Data { user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string;
+  /* сповіщення Windows (specs/075, 076): «час здавати» і нагадування про вибрані івенти */
+  sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[] }
+interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
 interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
@@ -37,6 +40,7 @@ interface BarApi {
   onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
+  watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 /* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
@@ -55,14 +59,27 @@ const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' 
 const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl }; };
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
-/* найближчий івент — у вкладці над плашкою */
-function NextEvent() {
+/* вкладки над плашкою: найближчий івент, а поруч — промокод Q-Hub, але лише коли івент не йде й не почнеться
+   за 15 хв (specs/077): перед івентом і під час нього промокод не заступає головне. Клік копіює команду для чату гри */
+function Tabs({ promo }: { promo: SitePromo | null }) {
   const [now, setNow] = useState(Date.now());
+  const [copied, setCopied] = useState<'' | 'ok' | 'fail'>('');
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(t); }, []);
   const s = eventStatus(now).sort((a, b) => (a.now ? 0 : 1) - (b.now ? 0 : 1) || (a.next?.s ?? Infinity) - (b.next?.s ?? Infinity))[0];
-  if (!s) return null;
-  const soon = s.now || (s.next && s.next.s - now <= 15 * 60e3);
-  return <div className={'btab' + (soon ? ' soon' : '')}><Icon name="clock" size={13} />{s.ev.name} · {s.now ? `іде, ще ${dur(s.now.e - now)}` : s.next ? `о ${kyHM(s.next.s)}, через ${dur(s.next.s - now)}` : '—'}</div>;
+  /* той самий поріг, що promoShown() у src/lib/alerts.ts: s — найближчий івент, тож досить його */
+  const soon = !!s && (!!s.now || (!!s.next && s.next.s - now <= PROMO_QUIET));
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(promoCommand(promo!.code)); setCopied('ok'); } catch { setCopied('fail'); }
+    setTimeout(() => setCopied(''), 1600);
+  };
+  return <div className="btabs">
+    {s && <div className={'btab' + (soon ? ' soon' : '')}><Icon name="clock" size={13} />{s.ev.name} · {s.now ? `іде, ще ${dur(s.now.e - now)}` : s.next ? `о ${kyHM(s.next.s)}, через ${dur(s.next.s - now)}` : '—'}</div>}
+    {promo && !soon && <button type="button" className={'btab bpromo' + (copied ? ' ' + copied : '')} onClick={copy}
+      title={`${promo.reward ? promo.reward.replace(/[.!]?$/, '. ') : ''}Клік — скопіювати команду ${promoCommand(promo.code)} для чату гри`}>
+      <Icon name={copied === 'ok' ? 'check' : 'tag'} size={13} />
+      <span aria-live="polite">{copied === 'ok' ? `Скопійовано ${promoCommand(promo.code)}` : copied === 'fail' ? `Не вийшло — введи ${promoCommand(promo.code)}` : <>Промокод Q-Hub: <b className="mono">{promo.code}</b></>}</span>
+    </button>}
+  </div>;
 }
 
 export default function Bar() {
@@ -136,6 +153,9 @@ export default function Bar() {
   const prefs = d?.prefs;
   const decidePin = (send: boolean, hint?: PinHint) => { setPinQ(null); setView('main'); api.pinDecide(send, hint); };
   const savePrefs = async (p: Partial<Prefs>) => { const r = await api.barPrefs(p); setD(x => (x ? { ...x, prefs: r.prefs } : x)); if (r.error) setNote({ text: r.error, bad: true }); };
+  /* дзвіночок біля товару й «Очистити список» у налаштуваннях (specs/075): список тримає головний процес */
+  const setWatch = (w: (number | string)[] | null) => { if (w) setD(x => (x ? { ...x, watch: w } : x)); };
+  const toggleWatch = (id: number | string) => { api.watchToggle(id).then(setWatch); };
   const switchMode = (m: 'ai' | 'prices') => { setMode(m); setView('main'); setSel(0); setBuyer(null); savePrefs({ mode: m }); input.current?.focus(); };
 
 
@@ -191,7 +211,7 @@ export default function Bar() {
 
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
-      {prefs?.tab !== false && <NextEvent />}
+      {prefs?.tab !== false && <Tabs promo={d?.promo ?? null} />}
       <div className="bbox">
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
@@ -229,10 +249,10 @@ export default function Bar() {
           <button className={'bico' + (view === 'settings' && setStart !== 'keys' ? ' on' : '')} title="Налаштування плашки" onClick={() => { const open = view === 'settings' && setStart !== 'keys'; setSetStart('main'); setView(open ? 'main' : 'settings'); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
-        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} /> : <div className="bpanes">
+        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} watching={d?.watch?.length ?? 0} onWatchClear={() => { api.watchClear().then(setWatch); }} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
-           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} /> :
+           mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} watch={d?.watch} onWatch={toggleWatch} /> :
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 

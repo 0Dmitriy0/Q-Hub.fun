@@ -7,7 +7,10 @@ const cfg = require('./config.json');
 const { makeClient, login } = require('./auth.cjs');
 const { parseCharacter } = require('./character.cjs');
 const { parseNick } = require('./nick.cjs');
-const { fileStorage } = require('./store.cjs');
+const { fileStorage, writeAtomic, trimLog } = require('./store.cjs');
+const { createNotifier } = require('./notify.cjs');
+/* сповіщення («час здавати», івенти) і промокод над плашкою — логіка з src/lib/alerts.ts (specs/075–077) */
+const alerts = require('./lib/alerts.cjs');
 const gameSession = require('./session.cjs');
 const { sessionMoney, MAX_JUMP } = require('./sessionmoney.cjs');
 const { randomUUID } = require('node:crypto');
@@ -28,6 +31,10 @@ const SHOT_KEY = 'Alt+S';
 /* файли мапи для вікна мапи (qmap.cjs): схему треба оголосити до готовності програми */
 protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
+/* ідентифікатор програми для Windows (сповіщення) НЕ задаємо: з типовим «electron.app.Q-Hub» сповіщення доходять,
+   а з власним (шлях до exe) — ні: перевірено 2026-11-10 на Windows 11, Windows просто мовчки їх не показує */
+const APP_ID = 'fun.q-hub.desktop';   // лише для ярлика на робочому столі (setDeskLink)
+
 /* плашка Alt+Q — уся програма: ширина згорнутої (лише рядок), найбільша ширина й висота розгорнутої */
 const BAR_W = 1120, BAR_MAX_W = 1120, BAR_MAX_H = 860;   // ширина плашки стала — як у розгорнутої (Bar.tsx BAR_WIDE)
 /* ширина вікна плашки входу: сама плашка + прозоре поле під тінь */
@@ -39,7 +46,11 @@ const settingsFile = () => path.join(dir(), 'settings.json');
 /* знімок правил з публічного бакета rules (функція rules-sync); dir() доступний лише після app ready — тож лінивий */
 let rulesStore = null;
 const rulesSnap = () => (rulesStore ??= createRules({ dir: dir(), url: cfg.url + '/storage/v1/object/public/rules/rules.json' }));
-const saveSettings = () => fs.writeFileSync(settingsFile(), JSON.stringify(settings, null, 2));
+/* цілим файлом (store.cjs): обірваний запис не лишає битий settings.json — інакше програма забула б персонажа й сесію гри */
+const saveSettings = () => writeAtomic(settingsFile(), JSON.stringify(settings, null, 2));
+/* сповіщення Windows (notify.cjs): клік відкриває плашку */
+const { notify } = createNotifier({ Notification, icon: path.join(__dirname, 'icon.png') });
+const openFromToast = () => { showBar().catch(() => {}); };
 
 /* лише адреси сайту й Discord відкриваються в браузері; все інше — ні */
 const openExternal = url => { if (/^https:\/\//.test(url)) shell.openExternal(url); };
@@ -448,10 +459,9 @@ function startUpdates() {
       bar?.webContents.send('update', { ...s, auto: autoUpdate() });
       trayMenu();
       /* сповіщення Windows — один раз на кожну нову версію; з автооновленням не треба: поставиться само */
-      if (s.status === 'available' && !autoUpdate() && s.version !== notifiedVersion && Notification.isSupported()) {
+      if (s.status === 'available' && !autoUpdate() && s.version !== notifiedVersion) {
         notifiedVersion = s.version;
-        const n = new Notification({ title: 'Вийшла нова версія Q-Hub', body: `${s.version} — натисни «Оновити» в програмі або в меню іконки в треї.`, icon: path.join(__dirname, 'icon.png') });
-        n.on('click', showMain); n.show();
+        notify({ title: 'Вийшла нова версія Q-Hub', body: `${s.version} — натисни «Оновити» в програмі або в меню іконки в треї.` }, showMain);
       }
     },
   });
@@ -477,7 +487,7 @@ async function quickAsk(text, rules) {
   return { reply: String(data.reply || ''), actions: [] };
 }
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M' };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M', sellAlert: true, eventAlert: false, eventIds: ['ufo'] };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
@@ -499,7 +509,7 @@ const deskLink = () => path.join(app.getPath('desktop'), 'Q-Hub.lnk');
 const hasDeskLink = () => app.isPackaged && fs.existsSync(deskLink());
 function setDeskLink(on) {
   try {
-    if (on) shell.writeShortcutLink(deskLink(), 'create', { target: process.execPath, appUserModelId: 'fun.q-hub.desktop', description: 'Q-Hub' });
+    if (on) shell.writeShortcutLink(deskLink(), 'create', { target: process.execPath, appUserModelId: APP_ID, description: 'Q-Hub' });
     else fs.rmSync(deskLink(), { force: true });
   } catch { /* перевірка нижче скаже, що не вийшло */ }
   return hasDeskLink() === on;
@@ -508,8 +518,9 @@ const AUTOSTART_ERR = 'Windows не дала змінити автозапуск
 
 /* ціни скупників — раз на 5 хвилин, а не на кожне відкриття плашки */
 let pricesAt = 0, pricesCache = [];
-async function barPrices() {
-  if (Date.now() - pricesAt < 5 * 60e3 && pricesCache.length) return pricesCache;
+/* fresh — перевірка «час здавати» (specs/075): їй потрібні ціни зараз, а не до 5 хв тому */
+async function barPrices(fresh = false) {
+  if (!fresh && Date.now() - pricesAt < 5 * 60e3 && pricesCache.length) return pricesCache;
   const [{ data, error }, pend] = await Promise.all([
     sb.from('buyer_items').select('item_id,price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url,sub)'),
     /* ціни, що чекають другого гравця (specs/029) — доповнення: без них плашка однаково показує поточні */
@@ -540,11 +551,28 @@ async function siteDiscord() {
   } catch { /* немає зв'язку — лишаємо збережене */ }
   return settings.discord || '';
 }
+/* промокод Q-Hub для вкладки над плашкою (specs/077): той самий public.site_promo, що на головній сайту (specs/022);
+   раз на 30 хв, останній відомий — у settings (без інтернету вкладка лишається). null — адмін вимкнув промокод */
+let promoAt = 0;
+async function sitePromo() {
+  if (Date.now() - promoAt > 30 * 60e3) {
+    try {
+      const { data, error } = await sb.from('site_promo').select('code,reward,enabled').maybeSingle();
+      if (!error) {
+        promoAt = Date.now();
+        const p = alerts.sitePromo(data);
+        if (JSON.stringify(p) !== JSON.stringify(settings.promo ?? null)) { settings.promo = p; saveSettings(); }
+      }
+    } catch { /* немає зв'язку — лишаємо збережене */ }
+  }
+  return alerts.sitePromo(settings.promo);
+}
 async function barData() {
   const s = await state();
   if (!s.user) return { user: null };
-  const [prices, discord] = await Promise.all([barPrices(), siteDiscord()]);
-  return { ...s, prices, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord };
+  const [prices, discord, promo] = await Promise.all([barPrices(), siteDiscord(), sitePromo()]);
+  return { ...s, prices, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord,
+    watch: watch(), promo };
 }
 /* зміна персонажа з плашки — кабінет перемикається разом із нею */
 async function barCharacter(id) {
@@ -856,6 +884,10 @@ function barPrefs(p) {
   if (typeof p?.autoPrices === 'boolean') next.autoPrices = p.autoPrices;
   if (typeof p?.shareShots === 'boolean') next.shareShots = p.shareShots;
   if (typeof p?.autoUpdate === 'boolean') next.autoUpdate = p.autoUpdate;
+  /* сповіщення (specs/075, 076): вимикачі й вибрані івенти — лише відомі з розкладу */
+  if (typeof p?.sellAlert === 'boolean') next.sellAlert = p.sellAlert;
+  if (typeof p?.eventAlert === 'boolean') next.eventAlert = p.eventAlert;
+  if (Array.isArray(p?.eventIds)) next.eventIds = alerts.eventIds(p.eventIds);
   if (typeof p?.autostart === 'boolean') {
     if (!app.isPackaged) return { error: 'Автозапуск вмикається лише у встановленій програмі', prefs: { ...cur, autostart: false } };
     if (!setAutostart(p.autostart)) return { error: AUTOSTART_ERR, prefs: { ...cur, autostart: autostart() } };
@@ -943,7 +975,7 @@ async function autoLimits(buyer, item, price) {
   try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} limits sent ${buyer}/${item} ${price}: ${error ? 'ні — ' + error.message : 'так'}\n`); } catch { /* журнал не обов'язковий */ }
 }
 function startVision() {
-  try { if (fs.statSync(visionLog()).size > 2e6) fs.writeFileSync(visionLog(), ''); } catch { /* ще немає */ }
+  trimLog(visionLog());   // завеликий журнал — лишається хвіст, а не порожній файл
   const eye = vision({
     nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
     /* гра йде — HUD читаємо завжди (прибуток за годину сеансу, specs/040); ціни скупників — за налаштуванням і з персонажем */
@@ -984,6 +1016,39 @@ function startSessionTimer() {
   run(); setInterval(run, 10e3);
   const rules = () => loadMoneyRules().catch(() => {});   // без зв'язку — збережені пороги
   rules(); setInterval(rules, 36e5);
+}
+
+/* ---------- сповіщення (lib/alerts.cjs ← src/lib/alerts.ts): «час здавати» (specs/075), івенти за 10 хв (076).
+   Тут лише тик, збереження й показ; що й коли сповіщати — у чистих функціях з тестами.
+   Усе локально: у базу нічого не пишеться, у грі програма нічого не робить ---------- */
+const ALERT_TICK = 20e3, SELL_EVERY = 5 * 60e3;
+let sellAt = 0, sellBusy = false;
+const sentOf = k => (settings.alertSent ??= {})[k] || {};
+/* товари, за якими гравець стежить (дзвіночок у «Цінах»): складу програма не веде (specs/040) */
+const watch = () => alerts.watchList(settings.watch);
+async function sellCheck() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const r = alerts.sellDue(watch(), await barPrices(true), sentOf('sell'), Date.now());
+  if (r.changed) { settings.alertSent.sell = r.sent; saveSettings(); }
+  if (r.note) notify(r.note, openFromToast);
+}
+function alertsTick() {
+  const now = Date.now(), p = prefs();
+  if (p.eventAlert) {
+    const r = alerts.eventDue(alerts.eventIds(p.eventIds), sentOf('events'), now);
+    if (r.note) { settings.alertSent.events = r.sent; saveSettings(); notify(r.note, openFromToast); }
+  }
+  /* ціни — раз на 5 хв і лише коли є за чим стежити: без позначених товарів програма по них не ходить */
+  if (p.sellAlert && !sellBusy && now - sellAt >= SELL_EVERY && watch().length) {
+    sellAt = now; sellBusy = true;
+    sellCheck().catch(() => {}).finally(() => { sellBusy = false; });
+  }
+}
+function startAlerts() {
+  /* таймер оголошення на маркеті прибрано до виходу (рішення власника 2026-11-10) — слід від тестової збірки не лишаємо */
+  if (settings.market) { delete settings.market; saveSettings(); }
+  alertsTick(); setInterval(alertsTick, ALERT_TICK);
 }
 
 /* помилка запуску — повідомлення замість тихого виходу без вікна */
@@ -1129,6 +1194,15 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
   ipcMain.handle('bar-character', (e, id) => (fromBar(e) ? barCharacter(id) : null));
   ipcMain.handle('bar-prefs', (e, p) => (fromBar(e) ? barPrefs(p) : null));
+  /* сповіщення (specs/075, 076; contracts/ipc-alerts.md): дзвіночок біля товару, перевірка сповіщень */
+  ipcMain.handle('watch-toggle', (e, id) => {
+    if (!fromBar(e)) return null;
+    settings.watch = alerts.watchToggle(watch(), id); saveSettings();
+    sellAt = 0;   // щойно позначений товар перевірити найближчим тиком, а не за 5 хв
+    return settings.watch;
+  });
+  ipcMain.handle('watch-clear', e => { if (!fromBar(e)) return null; settings.watch = []; saveSettings(); return []; });
+  ipcMain.handle('notify-test', e => (fromBar(e) ? notify({ title: 'Q-Hub: сповіщення працюють', body: 'Так виглядатимуть «час здавати» й нагадування про івенти.' }, openFromToast) : null));
   ipcMain.handle('shot-label', async (e, name, label, note, share) => {
     if (!fromBar(e) || !shotStore || !shotStore.label(name, label, note)) return { ok: false };
     if (typeof share === 'boolean' && share !== prefs().shareShots) barPrefs({ shareShots: share });
@@ -1161,14 +1235,14 @@ app.whenReady().then(() => {
   if (autostarted) sb.auth.getSession().then(({ data }) => {
     if (!data.session || !settings.character) tray?.displayBalloon?.({ title: 'Q-Hub', content: `Увійди в Q-Hub — клікни іконку в треї або натисни ${prefs().hotkey}.` });
   }).catch(() => {});
-  if (updatedFrom && Notification.isSupported()) {
-    const n = new Notification({ title: `Q-Hub оновлено до ${app.getVersion()}`, body: 'Що нового — у плашці Alt+Q: «Програму оновлено — що нового».', icon: path.join(__dirname, 'icon.png') });
-    n.on('click', () => showBar()); n.show();
-  }
+  if (updatedFrom) notify({ title: `Q-Hub оновлено до ${app.getVersion()}`, body: 'Що нового — у плашці Alt+Q: «Програму оновлено — що нового».' }, openFromToast);
   later(startDrafts);
   startOnline();
   startSessionTimer();
   later(startVision);
+  later(startAlerts);
+  /* журнали діагностики не ростуть без кінця (store.cjs) */
+  for (const n of ['pin.log', 'update.log']) trimLog(path.join(dir(), n));
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
   if (!registerMapKey(prefs().mapKey))

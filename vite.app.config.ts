@@ -11,5 +11,7 @@ export default defineConfig({
   plugins: [react(), { name: 'qhub-icons', closeBundle: () => { for (const d of ['icons', 'brand']) cpSync(`public/${d}`, `desktop/src/ui/${d}`, { recursive: true }); } }],
   base: './',
   publicDir: false,
+  /* .ts/.tsx — раніше за .js: забута копія від tsc (src/desktop/Bar.js) не підміняє справжній Bar.tsx у збірці */
+  resolve: { extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'] },
   build: { outDir: 'desktop/src/ui', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 1500, rollupOptions: { input: { bar: 'bar.html', map: 'map.html' } } },
 });

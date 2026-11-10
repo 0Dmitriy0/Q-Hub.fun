@@ -1,7 +1,14 @@
 import { defineConfig } from 'vite';
 
-/* розбір скріншотів скупника (src/lib/shotParse.ts) — той самий код, що на сайті, зібраний для головного процесу програми */
+/* код сайту, зібраний для головного процесу програми (CommonJS, desktop/src/lib):
+   shotparse.cjs — розбір скріншотів скупника (src/lib/shotParse.ts);
+   alerts.cjs — сповіщення: «час здавати», івенти, таймер оголошення (src/lib/alerts.ts, specs/075–077) */
 export default defineConfig({
   publicDir: false,
-  build: { outDir: 'desktop/src/lib', emptyOutDir: true, minify: false, lib: { entry: 'src/lib/shotParse.ts', formats: ['cjs'], fileName: () => 'shotparse.cjs' } },
+  /* .ts — раніше за .js: забута копія від tsc не підміняє справжній файл (як у vite.app.config.ts) */
+  resolve: { extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'] },
+  build: {
+    outDir: 'desktop/src/lib', emptyOutDir: true, minify: false,
+    lib: { entry: { shotparse: 'src/lib/shotParse.ts', alerts: 'src/lib/alerts.ts' }, formats: ['cjs'], fileName: (_f, name) => name + '.cjs' },
+  },
 });
