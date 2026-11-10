@@ -12,4 +12,4 @@
 - [x] T003 [US1] `sitePromo`, `promoCommand`, `promoShown` у `src/lib/alerts.ts`
 - [x] T004 [US1] `sitePromo()` і `promo` в `bar-data` — `desktop/src/main.cjs`
 - [x] T005 [US1] Вкладка промокоду в `Tabs` (`src/desktop/Bar.tsx`), стилі `.bpromo` у `src/desktop/bar.css`, підпис вимикача в `src/desktop/Settings.tsx`
-- [ ] T006 Власнику руками: вкладка з'являється й зникає за 15 хв до івенту; клік копіює команду, вона вставляється в чат гри
+- [x] T006 Власнику руками: вкладка з'являється й зникає за 15 хв до івенту; клік копіює команду, вона вставляється в чат гри

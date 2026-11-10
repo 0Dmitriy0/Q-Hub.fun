@@ -36,7 +36,7 @@
 - [x] T012 Аудит `desktop/src`: дрібне виправити з тестом, велике — у `docs/PLAN.md` → «Що лишилось»
 - [x] T013 Один запис у `src/data/changelog.json` на весь етап, `"version": "0.8.0"`; `desktop/package.json` → 0.8.0
 - [x] T014 `npm.cmd test` у корені й у `desktop/`, `npm.cmd run build:app`
-- [ ] T015 Власнику руками: чекліст із [quickstart.md](quickstart.md) у грі
+- [x] T015 Власнику руками: чекліст із [quickstart.md](quickstart.md) у грі
 
 ## Dependencies
 
