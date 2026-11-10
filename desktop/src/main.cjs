@@ -31,6 +31,10 @@ const SHOT_KEY = 'Alt+S';
 /* файли мапи для вікна мапи (qmap.cjs): схему треба оголосити до готовності програми */
 protocol.registerSchemesAsPrivileged([{ scheme: 'qmap', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
+/* ідентифікатор програми для Windows (сповіщення) НЕ задаємо: з типовим «electron.app.Q-Hub» сповіщення доходять,
+   а з власним (шлях до exe) — ні: перевірено 2026-11-10 на Windows 11, Windows просто мовчки їх не показує */
+const APP_ID = 'fun.q-hub.desktop';   // лише для ярлика на робочому столі (setDeskLink)
+
 /* плашка Alt+Q — уся програма: ширина згорнутої (лише рядок), найбільша ширина й висота розгорнутої */
 const BAR_W = 1120, BAR_MAX_W = 1120, BAR_MAX_H = 860;   // ширина плашки стала — як у розгорнутої (Bar.tsx BAR_WIDE)
 /* ширина вікна плашки входу: сама плашка + прозоре поле під тінь */
@@ -509,7 +513,7 @@ const deskLink = () => path.join(app.getPath('desktop'), 'Q-Hub.lnk');
 const hasDeskLink = () => app.isPackaged && fs.existsSync(deskLink());
 function setDeskLink(on) {
   try {
-    if (on) shell.writeShortcutLink(deskLink(), 'create', { target: process.execPath, appUserModelId: 'fun.q-hub.desktop', description: 'Q-Hub' });
+    if (on) shell.writeShortcutLink(deskLink(), 'create', { target: process.execPath, appUserModelId: APP_ID, description: 'Q-Hub' });
     else fs.rmSync(deskLink(), { force: true });
   } catch { /* перевірка нижче скаже, що не вийшло */ }
   return hasDeskLink() === on;
