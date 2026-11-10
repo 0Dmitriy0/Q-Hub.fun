@@ -13,6 +13,7 @@ import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rules
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
+import { streamView } from './streamer';
 import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
@@ -26,7 +27,9 @@ import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 const BAR_WIDE = 1120;
 export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string;
   /* сповіщення Windows (specs/075, 076): «час здавати» і нагадування про вибрані івенти */
-  sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[] }
+  sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[];
+  /* режим стрімера: без ніка, персонажів і грошей у плашці (streamer.ts) */
+  streamer?: boolean }
 interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
 interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
 interface BarApi {
@@ -115,7 +118,7 @@ export default function Bar() {
   const load = useCallback(async () => { const x = await api.barData(); setD(x); if (x.prefs) setMode(x.prefs.mode); }, []);
   useEffect(() => {
     load();
-    api.onQuickShow(() => { setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
+    api.onQuickShow(() => { setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
     /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
@@ -206,7 +209,11 @@ export default function Bar() {
 
   const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy || histOn)));
   useLayoutEffect(() => { fit(); }, [expanded, fit]);
-  const ch = d?.characters.find(c => c.id === d.character);
+  /* режим стрімера: підписи без ніка, аватара, імен персонажів і статіків; кабінет — під заслінкою, доки не відкриють */
+  const streamer = !!prefs?.streamer;
+  const sv = streamView(d?.user ?? null, d?.characters ?? [], streamer);
+  const [peek, setPeek] = useState(false);
+  const ch = sv.characters.find(c => c.id === d?.character);
   const aiNext = mode === 'ai' && shift;
 
   return (
@@ -231,11 +238,11 @@ export default function Bar() {
           </div>
           <div className="bchar">
             <button className="bpill" onClick={() => setChars(c => !c)} aria-expanded={chars}>
-              {d?.user?.avatar ? <img src={d.user.avatar} alt="" /> : <span className="bava">{(d?.user?.nick || ch?.name || 'Q')[0]}</span>}
+              {sv.user?.avatar ? <img src={sv.user.avatar} alt="" /> : <span className="bava">{streamer ? 'Q' : (sv.user?.nick || ch?.name || 'Q')[0]}</span>}
               {/* зверху нік акаунта, під ним — вибраний персонаж зі статіком (specs/025): «D_VYRX» / «Dmitriy_Core #171028» */}
-              <span className="bwho"><b>{d?.user?.nick || d?.user?.name || 'Q-Hub'}</b><small>{ch ? ch.name + (ch.static ? ' #' + ch.static : '') : 'Персонаж'}</small></span><Icon name="chev" size={14} />
+              <span className="bwho"><b>{sv.user?.nick || sv.user?.name || 'Q-Hub'}</b><small>{ch ? ch.name + (ch.static ? ' #' + ch.static : '') : 'Персонаж'}</small></span><Icon name="chev" size={14} />
             </button>
-            {chars && d && <div className="bmenu" role="menu">{d.characters.map(c => (
+            {chars && d && <div className="bmenu" role="menu">{sv.characters.map(c => (
               <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}{c.static ? <small className="mono"> #{c.static}</small> : null}</button>))}
               <button onClick={() => go('/kabinet/nalashtuvannya')}>Персонажі й профіль…</button>
               <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}
@@ -249,7 +256,7 @@ export default function Bar() {
           <button className={'bico' + (view === 'settings' && setStart !== 'keys' ? ' on' : '')} title="Налаштування плашки" onClick={() => { const open = view === 'settings' && setStart !== 'keys'; setSetStart('main'); setView(open ? 'main' : 'settings'); }}><Icon name="gear" size={17} />{unseen > 0 && <i className="bdot" aria-hidden="true" />}</button>
         </div>
 
-        {expanded && (v === 'hub' ? <Hub /> : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={d?.user ?? null} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} watching={d?.watch?.length ?? 0} onWatchClear={() => { api.watchClear().then(setWatch); }} /> : <div className="bpanes">
+        {expanded && (v === 'hub' ? (streamer && !peek ? <div className="bveil"><Icon name="shield" size={22} /><b>Режим стрімера</b><p>У кабінеті — персонажі, документи й заробіток. Глядачам їх не видно, доки не відкриєш.</p><button className="btn sm" onClick={() => setPeek(true)}>Показати кабінет</button></div> : <Hub />) : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={sv.user} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} watching={d?.watch?.length ?? 0} onWatchClear={() => { api.watchClear().then(setWatch); }} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} watch={d?.watch} onWatch={toggleWatch} /> :
