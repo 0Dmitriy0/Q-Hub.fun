@@ -10,3 +10,5 @@ metadata:
 **Why:** власник зливає PR сам і швидко; злита гілка мовчки приймає push.
 
 **How to apply:** перед push у наявну гілку — `gh pr view <гілка> --json state`; якщо MERGED — нова гілка від свіжого main і cherry-pick. Функцію `discord-bot` деплоїти лише з коду, що є (або от-от буде) в main. Див. [[discord-bot-ops]].
+
+2026-11-10: повторилось з PR #125 — `gh pr view 125 --json state -q .state && git push` не захищає: команда друкує MERGED і завершується успішно, тож push іде далі. Перевіряти так: `[ "$(gh pr view N --json state -q .state)" = OPEN ] && git push`.
