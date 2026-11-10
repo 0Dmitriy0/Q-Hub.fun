@@ -66,7 +66,8 @@
     if (isBuyer) return buyer(d);
     started = d.started || null; tick();
     const p = document.getElementById('prof'), v = document.getElementById('pv');
-    if (d.perHour === null || d.perHour === undefined) { p.className = 'p none'; v.textContent = d.game ? 'Прибуток: рахуємо…' : 'Прибуток: —'; }
+    if (d.hidden) { p.className = 'p none'; v.textContent = 'Прибуток: приховано'; }
+    else if (d.perHour === null || d.perHour === undefined) { p.className = 'p none'; v.textContent = d.game ? 'Прибуток: рахуємо…' : 'Прибуток: —'; }
     else { p.className = 'p' + (d.perHour < 0 ? ' neg' : ''); v.textContent = 'Прибуток: ~' + (d.perHour < 0 ? '−' : '') + fmt(d.perHour) + ' $/год'; }
     document.getElementById('mode').textContent = d.game ? 'Режим: вікно без рамки' : 'Гру не запущено';
     document.getElementById('dot').className = 'dot' + (d.game ? '' : ' off');

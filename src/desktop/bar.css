@@ -352,3 +352,8 @@ button.bpromo { cursor: pointer; font: 600 12px var(--sans); }
 .bpromo.ok .ico { color: var(--good); }
 .bpromo.fail { color: var(--warn); }
 .bpromo:focus-visible, .bbell:focus-visible, .sev:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* режим стрімера: кабінет під заслінкою, доки гравець сам не відкриє */
+.bveil { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 44px 20px 48px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); }
+.bveil b { color: var(--fg); font-size: 16px; }
+.bveil p { margin: 0 0 6px; max-width: 420px; font-size: 13px; }
+.bveil .ico { color: var(--accent); }

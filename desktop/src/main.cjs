@@ -307,8 +307,10 @@ function sessionSummary(characterId) {
 /* сесія з таймера гри (settings.session); без гри — порожньо */
 function stripData() {
   const s = settings.session;
-  if (!s) return { started: null, perHour: null, game: false };
+  if (!s) return { started: null, perHour: null, game: false, hidden: !!prefs().streamer };
   sessMoney ??= sessionMoney(settings.sessionMoney);
+  /* hidden — режим стрімера: суму глядачам не показуємо й у смужку її не передаємо */
+  if (prefs().streamer) return { started: s.started, perHour: null, game: true, hidden: true };
   return { started: s.started, perHour: sessMoney.perHour(moneyKey(), Date.now()), game: true };
 }
 async function showStrip() {
@@ -487,7 +489,7 @@ async function quickAsk(text, rules) {
   return { reply: String(data.reply || ''), actions: [] };
 }
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M', sellAlert: true, eventAlert: false, eventIds: ['ufo'] };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M', sellAlert: true, eventAlert: false, eventIds: ['ufo'], streamer: false };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
@@ -886,6 +888,8 @@ function barPrefs(p) {
   if (typeof p?.autoUpdate === 'boolean') next.autoUpdate = p.autoUpdate;
   /* сповіщення (specs/075, 076): вимикачі й вибрані івенти — лише відомі з розкладу */
   if (typeof p?.sellAlert === 'boolean') next.sellAlert = p.sellAlert;
+  /* режим стрімера: смужка одразу ховає прибуток (нік і персонажів ховає сама плашка, src/desktop/streamer.ts) */
+  if (typeof p?.streamer === 'boolean' && p.streamer !== cur.streamer) { next.streamer = p.streamer; setTimeout(() => { if (bar?.isVisible()) showStrip().catch(() => {}); }, 0); }
   if (typeof p?.eventAlert === 'boolean') next.eventAlert = p.eventAlert;
   if (Array.isArray(p?.eventIds)) next.eventIds = alerts.eventIds(p.eventIds);
   if (typeof p?.autostart === 'boolean') {
