@@ -68,6 +68,12 @@ function GuidePage({ slug, guides, propose, onChanged }: { slug: string; guides:
   const g = guides.find(x => x.slug === slug);
   const [links] = useLinks();
   const [hist, setHist] = useState(false);
+  /* своя назва вкладки й опис статті — Google бере їх з відмальованої сторінки (Layout ставить лише «WIKI») */
+  useEffect(() => {
+    if (!g) return;
+    document.title = `${g.title} — гайди · Q-Hub`;
+    if (g.summary) document.querySelector('meta[name="description"]')?.setAttribute('content', g.summary);
+  }, [g]);
   const back = <Link to="/wiki/gaidy" className="btn sm ghost ev-back"><Icon name="chev" size={16} />Усі гайди</Link>;
   if (!g) return (
     <div className="ev-page">{back}
