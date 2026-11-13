@@ -90,7 +90,7 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
     <div className="sset">
       <aside className="snav">
         {user && <div className="sme">{user.avatar ? <img src={user.avatar} alt="" /> : <span className="bava">{(user.nick || user.name)[0]}</span>}
-          <div><b>{user.nick || user.name}</b><small>Discord: {user.name}</small></div></div>}
+          <div><b>{user.nick || user.name}</b>{!prefs.streamer && <small>Discord: {user.name}</small>}</div></div>}
         <nav>{NAV.map(([k, l, ico]) => <button key={k} aria-current={sec === k ? 'page' : undefined} onClick={() => setSec(k)}><Icon name={ico} size={16} />{l}{k === 'changes' && unseen > 0 && <span className="sdot" aria-label={`нових: ${unseen}`}>{unseen}</span>}</button>)}</nav>
         {/* Discord Q-Hub (specs/037) — лише коли адмін задав посилання; підпис авторів (specs/033) */}
         {discord && <a className="sdisc" href={discord} target="_blank" rel="noreferrer">Discord Q-Hub</a>}
@@ -114,6 +114,7 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
           <div className="scard">
             <Row t="Запускати разом з Windows" d="Q-Hub стартує тихо в треї, коли вмикаєш комп'ютер, — Alt+Q одразу під рукою"><Toggle on={!!prefs.autostart} set={v => save({ autostart: v })} label="Запускати разом з Windows" /></Row>
             <Row t="Оновлювати автоматично" d="Нова версія завантажується у фоні й ставиться, коли програмою 10 хв не користуються, або при виході"><Toggle on={prefs.autoUpdate !== false} set={v => save({ autoUpdate: v })} label="Оновлювати автоматично" /></Row>
+            <Row t="Режим стрімера" d="Ховає нік, аватар, персонажів зі статіком і прибуток за годину; кабінет відкривається лише кнопкою. Для стрімів і відео"><Toggle on={!!prefs.streamer} set={v => save({ streamer: v })} label="Режим стрімера" /></Row>
             <Row t="Не ховати, коли повертаюсь у гру" d="Те саме, що шпилька в рядку"><Toggle on={prefs.pinned} set={v => save({ pinned: v })} label="Не ховати" /></Row>
             <Row t="Вкладка з найближчим івентом" d="Над рядком плашки. Коли івентів немає найближчі 15 хв — поруч промокод Q-Hub"><Toggle on={prefs.tab} set={v => save({ tab: v })} label="Вкладка з івентом" /></Row>
           </div>
