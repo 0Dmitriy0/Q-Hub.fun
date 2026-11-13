@@ -24,7 +24,7 @@ const { loadMapRef } = require('./mapref.cjs');
 const { createRules } = require('./rules.cjs');
 const { createQmap } = require('./qmap.cjs');
 const mapwin = require('./mapwin.cjs');
-const { gameFocus, hwndOf } = require('./gamefocus.cjs');
+const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
 const SHOT_KEY = 'Alt+S';
@@ -691,7 +691,8 @@ let pinKeyState = '';
 function registerPinKey(key) {
   if (pinKeyReg) { globalShortcut.unregister(pinKeyReg); pinKeyReg = null; }
   if (!myRole) return true;   // без входу клавішу не займаємо — нікуди надсилати
-  const ok = globalShortcut.register(key, () => { pinLog(`${key} натиснуто`); pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); });
+  /* game.remember() — зараз на передньому плані гра: після форми мітки фокус повернеться саме їй (specs/078) */
+  const ok = globalShortcut.register(key, () => { game.remember(); pinLog(`${key} натиснуто`); pinShot().catch(e => showPin('Не вдалося зберегти чернетку: ' + (e?.message || e), true)); });
   if (ok) pinKeyReg = key;
   const st = `${key}:${ok}`;
   if (st !== pinKeyState) {
@@ -1217,10 +1218,14 @@ app.whenReady().then(() => {
   ipcMain.handle('keys-pause', (e, on) => { if (fromBar(e)) pauseKeys(!!on); });
   ipcMain.handle('shots-open', e => { if (!fromBar(e)) return; shotStore ??= shots.store(path.join(dir(), 'shots')); shell.openPath(shotStore.dir); });
   ipcMain.handle('quick-hide', e => { if (fromBar(e)) hideBarToGame(); });
-  /* F9: форма категорії — «надіслати» чи «не надсилати» */
+  /* F9: форма категорії — «надіслати» чи «не надсилати». Форма закривається, і керування одразу в грі (specs/078),
+     не чекаючи мережі; результат pinDecide → showPin показує поверх гри без фокусу */
   ipcMain.handle('pin-decide', (e, send, hint) => {
     if (!fromBar(e) || !pinAsk) return;
-    const a = pinAsk; pinAsk = null; bar.hide(); pinAsk = a;   // hide не має скасувати те, що вибрали
+    const hadFocus = bar.isFocused();
+    const a = pinAsk; pinAsk = null;   // hide не має скасувати те, що вибрали
+    closeToGame({ hadFocus, hide: () => bar.hide(), giveBack: () => game.giveBack() });
+    pinAsk = a;
     pinDecide(send === true, hint && typeof hint === 'object' ? hint : {});
   });
   /* кнопка «Оновити» в кабінеті */

@@ -36,4 +36,13 @@ function gameFocus({ api = load(), ours = () => [] } = {}) {
   };
 }
 
-module.exports = { gameFocus, hwndOf };
+/* сховати наше вікно й, якщо фокус був у ньому, віддати його грі (specs/078: після «Надіслати мітку» гра лишалась без
+   керування). Пішов в інше вікно сам (hadFocus = false) — не перемикаємо. Збій повернення фокусу не ламає закриття.
+   true — фокус віддали грі */
+function closeToGame({ hadFocus, hide, giveBack }) {
+  hide();
+  if (hadFocus !== true) return false;
+  try { return !!giveBack(); } catch { return false; }
+}
+
+module.exports = { gameFocus, hwndOf, closeToGame };
