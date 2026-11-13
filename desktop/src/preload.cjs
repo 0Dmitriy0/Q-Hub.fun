@@ -43,6 +43,10 @@ contextBridge.exposeInMainWorld('qhub', {
   aiLeft: () => ipcRenderer.invoke('ai-left'),
   barCharacter: id => ipcRenderer.invoke('bar-character', id),
   barPrefs: p => ipcRenderer.invoke('bar-prefs', p),
+  /* сповіщення (specs/075, 076): дзвіночок біля товару, перевірка сповіщень Windows */
+  watchToggle: id => ipcRenderer.invoke('watch-toggle', id),
+  watchClear: () => ipcRenderer.invoke('watch-clear'),
+  notifyTest: () => ipcRenderer.invoke('notify-test'),
   /* навчальні знімки (Alt+S) */
   onShot: cb => { ipcRenderer.on('shot', (_e, s) => cb(s)); },
   /* F9: результат чернетки мітки — текст у плашці */

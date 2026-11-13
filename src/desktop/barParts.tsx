@@ -67,7 +67,9 @@ export function RuleCard({ h }: { h: RuleHit }) {
 export const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
 
 /* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами */
-export function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string }) {
+/* watch / onWatch — дзвіночок «стежу за ціною» (specs/075): лише в програмі, демо на сайті їх не передає */
+export function Prices({ hits, setSel, cur, q, watch, onWatch }: { hits: BuyerHit[]; setSel: (n: number) => void; cur: BuyerHit | null; q: string;
+  watch?: (number | string)[]; onWatch?: (id: number | string) => void }) {
   if (!cur) return <div className="bempty">{q.trim() ? `Скупника «${q.trim()}» не знайшов. Спробуй «шкури», «риба», «гриби».` : 'Назви скупника чи товар — побачиш його ціни.'}</div>;
   const left = hits.length ? hits : [cur];
   return <>
@@ -79,12 +81,15 @@ export function Prices({ hits, setSel, cur, q }: { hits: BuyerHit[]; setSel: (n:
     <div className="bright">
       <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div>
         <CopyBtn label="Копіювати ціни скупника" text={[cur.buyer + ':', ...cur.items.filter(x => x.price).map(x => `${x.item} — ${money(x.price)}/${x.unit}`)].join('\n')} /></div>
-      <div className="bbuyers">{cur.items.map(x => { const p = pos(x); return (
-        <div key={x.item} className="bbuy">
+      <div className="bbuyers">{cur.items.map(x => { const p = pos(x), id = x.itemId, on = id != null && !!watch?.some(w => String(w) === String(id)); return (
+        <div key={x.item} className={'bbuy' + (onWatch ? ' w' : '')}>
           {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
           <span><b>{x.item}</b><small>{x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
           {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
           <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
+          {onWatch && id != null && <button type="button" className={'bbell' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onWatch(id)}
+            aria-label={`${on ? 'Не стежити' : 'Стежити'} за ціною: ${x.item}`}
+            title={on ? 'Стежу: сповіщу, коли ціна буде у верхніх 20% діапазону. Натисни, щоб не стежити' : p === null ? 'Стежити за ціною. У цього товару ще не вписані межі — сповіщення буде, коли їх впишуть' : 'Стежити: сповістити, коли ціна буде у верхніх 20% діапазону'}><Icon name="bell" size={15} /></button>}
         </div>); })}</div>
     </div>
   </>;
