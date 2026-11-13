@@ -1,6 +1,8 @@
 # Збірка Q-Hub Desktop для Windows. Інтерфейс програми й розбір скріншотів збираються з коду сайту (корінь репозиторію),
-# тому ставляться залежності й сайту, й програми. На main (і вручну) інсталятор викладається в реліз «desktop-latest»
-# (pre-release — тестова версія): кнопка на сторінці «Програма» сайту веде саме туди.
+# тому ставляться залежності й сайту, й програми. Кожен push лише збирає й перевіряє. Гравцям (реліз «desktop-latest»,
+# pre-release — тестова версія; кнопка на сторінці «Програма» сайту веде туди) збірка йде ТІЛЬКИ вручну з main:
+# Actions → Desktop (Windows) → Run workflow, або `gh workflow run desktop.yml --ref main`. Так оновлення виходять паками,
+# а не на кожне злиття. Перед випуском у src/data/changelog.json з верхнього запису знімають "pending" (крок нижче перевіряє).
 name: Desktop (Windows)
 
 on:
@@ -20,6 +22,8 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      RELEASE: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +35,12 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             desktop/package-lock.json
+      - name: Журнал готовий до випуску (верхній запис без "pending")
+        if: env.RELEASE == 'true'
+        shell: bash
+        run: |
+          node -e "const e=require('./src/data/changelog.json').entries[0];
+            if(e&&e.pending){console.error('::error::Верхній запис журналу '+e.id+' ще pending: постав id датою релізу й зніми pending, тоді випускай');process.exit(1)}"
       - run: npm ci
       - run: npm ci
         working-directory: desktop
@@ -55,7 +65,7 @@ jobs:
           path: desktop/dist/Q-Hub-Setup.exe
           if-no-files-found: error
       - name: Реліз «desktop-latest» (тестова версія)
-        if: github.ref == 'refs/heads/main'
+        if: env.RELEASE == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-latest
@@ -73,7 +83,7 @@ jobs:
             Інсталятор не підписаний: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».
       # latest.yml (версія й контрольна сума) — останнім: програма бачить нову версію лише тоді, коли інсталятор уже на місці
       - name: Реліз «desktop-latest» — опис версії для оновлення
-        if: github.ref == 'refs/heads/main'
+        if: env.RELEASE == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-latest
@@ -82,7 +92,7 @@ jobs:
           files: desktop/dist/latest.yml
       # старі версії не потрібні: лишаємо 3 останні (з запасом для тих, хто давно не оновлювався — їм просто прийде повне завантаження)
       - name: Прибрати старі версії з релізу
-        if: github.ref == 'refs/heads/main'
+        if: env.RELEASE == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

@@ -16,3 +16,4 @@
 - [Димова перевірка main.cjs](main-smoke-fake-electron.md) — Q-Hub власника запущена → не `npm start`, а підроблений electron; heredoc з апострофом у Bash падає
 - [Старі .js-копії підміняли .tsx](stale-js-copies-shadow-ts.md) — після зміни інтерфейсу перевіряти бандл; живий вигляд — через порт налагодження Electron
 - [Масові пропозиції SQL-ом](wiki-bulk-proposals-sql.md) — ліміт 10 на розгляді рахує й той самий insert; do-блок з тимчасовим max_pending
+- [Програма виходить паками](desktop-release-packs.md) — реліз лише вручну `gh workflow run desktop.yml`; запис журналу пака з "pending"
