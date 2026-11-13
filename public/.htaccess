@@ -1,6 +1,13 @@
-# Hostiq (Apache): усі шляхи сайту віддають index.html — маршрути обробляє сам застосунок
+# Hostiq (Apache): усі шляхи сайту віддають index.html — маршрути обробляє сам застосунок.
+# Для адрес зі статичною копією (dist/_p/<адреса>.html, scripts/static-pages.mjs) — її: та сама оболонка, але свій заголовок і
+# текст для Google. Копії немає — на другому проході правило нижче віддає звичайний index.html
 Options -MultiViews
 RewriteEngine On
+RewriteRule ^$ _p/index.html [L]
+RewriteCond %{REQUEST_URI} !^/_p/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+?)/?$ _p/$1.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
