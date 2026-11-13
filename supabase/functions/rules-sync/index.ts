@@ -5,7 +5,7 @@
    Що змінилось проти попереднього знімка — дописує в rules-changes.json того ж бакета (changes.ts, вкладка «Правила» в програмі).
    Ключі — лише в секретах функції (SUPABASE_SERVICE_ROLE_KEY, RULES_SYNC_SECRET). */
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { FORUM, forumTopics, heading, readTopic } from './parse.ts';
+import { FORUM, forumError, forumTopics, heading, readTopic } from './parse.ts';
 import { merge, plan, type SnapTopic, type SourceRow } from './merge.ts';
 import { append, changes, type Log } from './changes.ts';
 
@@ -23,7 +23,7 @@ async function get(path: string) {
   const hit = pages.get(u.href); if (hit) return hit;
   await new Promise(r => setTimeout(r, 250));
   const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 Q-Hub rules sync' } });
-  if (!r.ok) throw new Error(`форум відповів ${r.status}`);
+  if (!r.ok) throw new Error(forumError(r.status));
   const h = await r.text(); pages.set(u.href, h); return h;
 }
 

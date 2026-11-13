@@ -31,3 +31,5 @@ jobs:
           echo "HTTP $code"
           node -e "const r=require('./out.json'); console.log(r.error || ('тем ' + r.topics + ', пунктів ' + r.items + ', змін у журналі ' + (r.changes ?? 0))); for (const s of r.sources || []) console.log((s.error ? '✗ ' : '✓ ') + (s.title || s.id) + ': ' + (s.error || s.items + ' пунктів')); if (r.changes_error) console.log('::warning::' + r.changes_error)" || cat out.json
           [ "$code" = 200 ]
+          # жодне джерело не оновилось (форум не пускає сервер) — запуск червоний, щоб це було видно одразу, а не за тиждень
+          node -e "const s=require('./out.json').sources||[]; if (s.length && s.every(x=>x.error)) { console.log('::error::Жодне джерело правил не оновилось — правила в програмі застарівають'); process.exit(1) }"
