@@ -56,6 +56,7 @@ jobs:
           local-dir: ./dist/
           server-dir: ${{ secrets.FTP_DIR || vars.FTP_DIR || './' }}
       # Новини в Discord (specs/060 US2): верхній запис журналу програми й новин сайту → чернетки в адмінці «Новини».
+      # Запис з "pending" (пак програми ще не випущено) пропускається — чернетка з'явиться після випуску.
       # Нічого не публікує — лише чернетки; наявні не чіпає. Збій тут не валить деплой.
       - name: Discord news drafts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -68,7 +69,7 @@ jobs:
             exit 0
           fi
           URL=$(node -p "require('./desktop/src/config.json').url")
-          node -e "const r=f=>JSON.parse(require('fs').readFileSync(f,'utf8')).entries[0]||null;
+          node -e "const r=f=>JSON.parse(require('fs').readFileSync(f,'utf8')).entries.find(e=>!e.pending)||null;
             process.stdout.write(JSON.stringify({action:'drafts',changelog:r('src/data/changelog.json'),site:r('src/data/sitenews.json')}))" > drafts.json
           code=$(curl -sS -o out.json -w '%{http_code}' -X POST "$URL/functions/v1/discord-bot" \
             -H "x-sync-secret: $SECRET" -H 'Content-Type: application/json' --data-binary @drafts.json --max-time 60)
