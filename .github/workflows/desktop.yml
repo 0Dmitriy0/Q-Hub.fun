@@ -8,7 +8,7 @@ name: Desktop (Windows)
 on:
   workflow_dispatch:
   push:
-    paths: ['desktop/**', 'src/**', 'bar.html', 'map.html', 'vite.app.config.ts', 'vite.lib.config.ts', '.github/workflows/desktop.yml']
+    paths: ['desktop/**', 'src/**', 'bar.html', 'map.html', 'rule.html', 'timer.html', 'vite.app.config.ts', 'vite.lib.config.ts', '.github/workflows/desktop.yml']
 
 permissions:
   contents: write   # реліз з інсталятором

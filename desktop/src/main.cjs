@@ -27,6 +27,7 @@ const mapwin = require('./mapwin.cjs');
 const rulewin = require('./rulewin.cjs');
 const jobtimer = require('./jobtimer.cjs');
 const { blackWatch } = require('./blackwatch.cjs');
+const { createIdle } = require('./idlewin.cjs');
 const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
@@ -188,7 +189,7 @@ function histAdd(it) {
 }
 /* ---------- мапа Q-Hub поверх гри (map.html, specs/014): окрема плашка, як «Історія»; лише перегляд ----------
    Відкрита кнопкою з плашки — живе разом з плашкою; клавішею (Alt+M) — сама: бере фокус, Esc чи клавіша ховають,
-   повернувся в гру — ховається. Вікно створюється при першому відкритті, далі лише ховається: швидко й без навантаження */
+   повернувся в гру — ховається. Вікно створюється при першому відкритті, далі лише ховається (швидко); давно сховане — закривається (reapIdle) */
 let mapw = null, mapFrom = 'key', mapShownAt = 0, mapSteals = 0, mapKeyReg = null, mapFocus = null;
 function createMap() {
   mapw = new BrowserWindow({
@@ -373,6 +374,16 @@ function timerHistLoad() {
 }
 const timerHistSave = () => { try { writeAtomic(timerFile(), JSON.stringify(timerHist || [])); } catch { /* історія не обов'язкова */ } };
 const timerJobIds = () => (Array.isArray(settings.jobsCache) ? new Set(settings.jobsCache.map(j => j.id)) : null);
+/* давно сховані вікна — закрити, щоб звільнити пам'ять (idlewin.cjs): мапа, таймер і «Окремо» без жодного правила.
+   Стан кожного живе тут, у головному процесі, тож наступне відкриття створить вікно заново з тим самим вмістом.
+   destroy(), а не close(): у таймера й «Окремо» close означає «завершити замір» / «закрити всі правила» */
+const idle = createIdle(Number(process.env.QHUB_IDLE_MS) || undefined);   // QHUB_IDLE_MS — лише для перевірки
+function reapIdle() {
+  const now = Date.now();
+  if (idle.due('map', { exists: !!mapw, visible: !!mapw?.isVisible() }, now)) { const w = mapw; mapw = null; w.destroy(); }
+  if (idle.due('timer', { exists: !!timerw, visible: !!timerw?.isVisible() }, now)) { const w = timerw; timerw = null; w.destroy(); }
+  if (idle.due('rule', { exists: !!rulew, visible: !!rulew?.isVisible(), keep: ruleSt.groups.length > 0 }, now)) { const w = rulew; rulew = null; w.destroy(); }
+}
 function createTimerWin() {
   timerw = new BrowserWindow({
     width: TIMER_W, height: 170, show: false, frame: false, transparent: true, hasShadow: false, resizable: false, movable: true,
@@ -1723,6 +1734,7 @@ app.whenReady().then(() => {
   createBar();
   createStrip();
   createTray();
+  setInterval(reapIdle, 60e3);
   /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */
   const later = f => (autostarted ? setTimeout(f, 30e3) : f());
   later(startUpdates);
