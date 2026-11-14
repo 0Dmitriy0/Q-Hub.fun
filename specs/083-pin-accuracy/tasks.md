@@ -59,7 +59,7 @@
 
 - [X] T015 Журнал: у `src/data/changelog.json` верхній запис пака (`"pending": true`), `"changed"`: «Мітка з гри (Alt+F9): точніше місце — ближче до хрестика, особливо на наближеній карті; у формі видно мапу Q-Hub там, куди ляже мітка»
 - [X] T016 `cd desktop && npm.cmd test`, `npx.cmd vitest run`, `npx.cmd tsc --noEmit -p .` — зелені; димова перевірка `main.cjs` (пам'ять `main-smoke-fake-electron`)
-- [ ] T017 Головна сторінка Lavish (`.lavish/hub.html`, розділ 083): графік «до/після» з T001/T009/T010
+- [X] T017 Головна сторінка Lavish (`.lavish/hub.html`, розділ 083): графік «до/після» з T001/T009/T010
 - [ ] T018 Власнику: перевірка в грі за `specs/083-pin-accuracy/quickstart.md`
 
 ---
