@@ -450,3 +450,87 @@ body.in-rule ::-webkit-scrollbar-thumb { background: var(--line2); border-radius
 .rich.clamp { max-height: calc(1.6em * 4); overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
 /* виділення мишею (specs/085): приглушене, у тон акценту, замість яскраво-синього системного */
 .bright ::selection, .rwin ::selection { background: rgba(255, 107, 0, .32); color: #fff; }
+
+/* ---------- таймер заробітку (specs/086): вікно поверх гри, як вікно правил ---------- */
+html:has(> body.in-timer), body.in-timer { margin: 0; background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
+.twrap { padding: 4px 10px 18px; }
+.twin { display: flex; flex-direction: column; max-height: calc(100vh - 22px); box-sizing: border-box; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7); overflow: hidden; transition: border-color .15s; }
+.twin.free { border-color: rgba(255, 107, 0, .55); }
+.twin-head { flex: none; display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px 7px 7px 12px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; color: var(--accent-hi); }
+.twin-head b { flex: none; font: 700 13px var(--sans); color: var(--fg); }
+.ttabs { -webkit-app-region: no-drag; display: flex; gap: 2px; margin-left: auto; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, .04); }
+.ttabs button { border: 0; background: transparent; color: var(--muted); font: 600 11.5px var(--sans); padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+.ttabs button.on { background: var(--surface2); color: var(--fg); }
+.twin-head .rwin-x { margin-left: 2px; }
+.twin:not(.free) .twin-head .ttabs + .rwin-x, .twin:not(.free) .rwin-x { display: none; }
+.tbody { display: flex; flex-direction: column; gap: 9px; padding: 11px 14px 13px; overflow-y: auto; min-height: 0; scrollbar-width: none; }
+.tbody::-webkit-scrollbar { display: none; }
+.tclock { display: flex; align-items: baseline; gap: 8px; font: 700 28px var(--mono); letter-spacing: .02em; color: var(--fg); font-variant-numeric: tabular-nums; }
+.tclock span { font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.tclock.paused { color: var(--muted); }
+.tnums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tnums > div { display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-radius: 10px; background: #18212d; border: 1px solid var(--line); }
+.tnums small { font: 600 11px var(--sans); color: var(--muted); }
+.tnums b { font: 700 16px var(--mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+.tnums b.good { color: var(--good); }
+.tnote { margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.tnote b { color: var(--fg); }
+.tnote.warn, .titem .warn { color: #fbbf24; }
+.tnote.bad, .tprop small.bad, .tfield small.bad { color: #f87171; }
+.tnote.good, .tprop small.good { color: var(--good); }
+.tnote .ico { flex: none; margin-top: 2px; }
+.thint { margin: 0; font-size: 11.5px; color: var(--faint); }
+.tnote kbd, .thint kbd { font: 600 10.5px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; color: var(--fg); }
+.tbtns { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tbtn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px; padding: 4px 11px; border: 1px solid var(--line2); border-radius: 8px; background: transparent; color: var(--fg); font: 600 12.5px var(--sans); cursor: pointer; }
+.tbtn:hover:not(:disabled) { border-color: rgba(255, 107, 0, .5); }
+.tbtn:disabled { opacity: .5; cursor: default; }
+.tbtn.main { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.tbtn.main:hover:not(:disabled) { background: var(--accent-hi); }
+.tbtn.bad { border-color: rgba(239, 68, 68, .6); color: #f87171; }
+.tbtn.wide { width: 100%; }
+.tbtn:focus-visible, .ttabs button:focus-visible, .tseg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tlabel { display: flex; flex-direction: column; gap: 8px; padding: 9px 10px; border-radius: 10px; background: #18212d; border: 1px solid var(--line); }
+.tseg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, .04); }
+.tseg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: 600 11.5px var(--sans); padding: 5px 4px; border-radius: 6px; cursor: pointer; }
+.tseg button.on { background: var(--surface2); color: var(--fg); }
+.tfield { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.tfield > span { font-weight: 600; color: var(--fg); }
+.tfield select, .tfield input { width: 100%; box-sizing: border-box; min-height: 30px; padding: 4px 8px; border: 1px solid var(--line2); border-radius: 7px; background: #0f151d; color: var(--fg); font: 500 13px var(--sans); user-select: text; }
+.tfield input[aria-invalid="true"] { border-color: #f87171; }
+.tfield small { font-size: 11px; color: var(--faint); }
+.tprop { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.tprop small { font-size: 11.5px; color: var(--muted); }
+.thist { gap: 10px; }
+.tgroups { display: flex; flex-direction: column; gap: 4px; }
+.tgroup { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; padding: 6px 9px; border-radius: 8px; background: rgba(255, 107, 0, .07); }
+.tgroup b { font: 700 12.5px var(--sans); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tgroup small { grid-column: 1; font-size: 11px; color: var(--muted); }
+.tgroup span { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 700 13px var(--mono); color: var(--accent-hi); }
+.titems { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.titem { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 10px; background: #18212d; border: 1px solid var(--line); }
+.titem-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.titem-top b { font: 700 12.5px var(--sans); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.titem-top small { flex: none; font-size: 11px; color: var(--faint); }
+.titem-nums { font: 600 12px var(--mono); color: var(--muted); }
+.titem .tbtn { min-height: 26px; padding: 2px 8px; font-size: 11.5px; }
+@media (prefers-reduced-motion: reduce) { .twin { transition: none; } }
+.tlog { font-size: 11.5px; color: var(--muted); }
+.tlog summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.tlog summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.tlog ul { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.tlog li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.tlog li span { font: 500 11px var(--mono); color: var(--faint); }
+.tlog li b { font: 700 12px var(--mono); color: var(--fg); }
+.tlog li.gain b { color: var(--good); }
+.tlog li.fix b, .tlog li.jump b { color: #fbbf24; text-decoration: line-through; }
+.tlog li.hold b { color: #fbbf24; }
+.tlog li small { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.tchips button { border: 1px solid var(--line2); background: transparent; color: var(--fg); font: 600 12px var(--sans); padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+.tchips button.on { background: rgba(255, 107, 0, .18); border-color: rgba(255, 107, 0, .6); color: var(--accent-hi); }
+.tchips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* гра в повноекранному режимі (blackwatch.cjs) */
+.bfull { width: 100%; box-sizing: border-box; display: flex; align-items: flex-start; gap: 9px; margin-bottom: 8px; padding: 10px 14px; border-radius: 12px; background: rgba(251, 191, 36, .12); border: 1px solid rgba(251, 191, 36, .5); color: var(--fg); font-size: 13.5px; line-height: 1.45; }
+.bfull .ico { flex: none; margin-top: 2px; color: #fbbf24; }
+.bfull b { color: #fde68a; }

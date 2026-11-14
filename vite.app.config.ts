@@ -13,5 +13,5 @@ export default defineConfig({
   publicDir: false,
   /* .ts/.tsx — раніше за .js: забута копія від tsc (src/desktop/Bar.js) не підміняє справжній Bar.tsx у збірці */
   resolve: { extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'] },
-  build: { outDir: 'desktop/src/ui', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 1500, rollupOptions: { input: { bar: 'bar.html', map: 'map.html', rule: 'rule.html' } } },
+  build: { outDir: 'desktop/src/ui', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 1500, rollupOptions: { input: { bar: 'bar.html', map: 'map.html', rule: 'rule.html', timer: 'timer.html' } } },
 });
