@@ -427,3 +427,12 @@ html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !imp
 body.in-rule ::-webkit-scrollbar { width: 10px; }
 body.in-rule ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
 .bkindtag.ai { color: #c9b3ff; background: rgba(150, 110, 255, .16); }
+/* без горизонтальної прокрутки у вікні правил: усе переноситься в ширину вікна */
+.rwin-body { overflow-x: hidden; overflow-y: auto; }
+.rwin-in, .rwin-rule { min-width: 0; max-width: 100%; }
+.rwin-rule { align-items: stretch; }
+.rwin-rule > .bpen { align-self: flex-start; max-width: 100%; }
+.rwin-body .brule-top > a { flex: 1 1 auto; min-width: 0; }
+.rwin-body .brule-top > .bkindtag, .rwin-body .brule-top > .bpunkt { flex: none; }
+.rwin-body p, .rwin-body .bpen { overflow-wrap: anywhere; word-break: break-word; }
+.rwin-body .bcite { white-space: normal; overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
