@@ -13,6 +13,7 @@ import { dbError } from '../lib/wiki';
 import PicUpload from './PicUpload';
 import IconGrid from './IconGrid';
 import HistoryDialog from './wiki/HistoryDialog';
+import PayBlock from './wiki/PayBlock';
 import WikiChecks from './wiki/WikiChecks';
 
 /* нова робота від гравців може бути ще без своєї іконки — тоді загальна */
@@ -74,7 +75,7 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
         <section className="jd-sec wdlg-box"><h3>Опис</h3>{job.description ? <p className="jd-text">{job.description}</p> : <p className="muted">Опис ще додаємо.</p>}</section>
-        {job.pay && <section className="jd-sec wdlg-box"><h3>Заробіток</h3><p className="jd-text">{job.pay}</p>
+        {job.pay && <section className="jd-sec wdlg-box"><h3>Заробіток</h3><PayBlock target={job.id} pay={job.pay} />
           <p className="muted jd-note">Суми — з тестів гравців і можуть бути застарілими. Знаєш точніше — запропонуй правку.</p></section>}
         <div className="jd-cols">{SECTIONS.filter(([k]) => list(k).length).map(([k, t]) => (
           <section className="jd-sec wdlg-box" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
