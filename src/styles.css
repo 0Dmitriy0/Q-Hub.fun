@@ -989,7 +989,10 @@ fieldset .static-form .btn { align-self: end; }
 .mdot.good { background: var(--good); box-shadow: 0 0 8px var(--good); }
 .h-lbl { display: inline-flex; align-items: center; gap: 8px; color: var(--faint); font: 600 10.5px/14px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .h-acc { color: var(--accent-hi); }
-.h-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px; align-items: center; padding-top: 16px; }
+/* перший екран: дві колонки лише коли є картка івенту (HalloweenBanner, specs/079); немає — текст на всю ширину */
+.h-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: center; padding-top: 16px; }
+.h-hero:has(> .h-promo) { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.h-hero:not(:has(> .h-promo)) .h-lead { max-width: 80ch; }
 .h-hero-txt { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
 .h-hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.15; letter-spacing: -.03em; }
 .h-pill { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line2); color: var(--muted); font: 600 12px var(--mono); }
@@ -1068,7 +1071,7 @@ fieldset .static-form .btn { align-self: end; }
 .h-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }   /* 6 карток — два рівні ряди */
 .start-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
 @media (max-width: 1000px) {
-  .h-hero, .h-split { grid-template-columns: 1fr; }
+  .h-hero, .h-hero:has(> .h-promo), .h-split { grid-template-columns: 1fr; }
   .h-stats, .h-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .h-pillars { grid-template-columns: 1fr; }
 }
