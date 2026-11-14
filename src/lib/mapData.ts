@@ -1,5 +1,5 @@
 /* Дані мапи: категорії й мітки з бази плюс вбудовані (роботи, скупники) з даних сайту. */
-export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean; description?: string; starts_on?: string | null; ends_on?: string | null }
+export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean; description?: string; starts_on?: string | null; ends_on?: string | null; show_labels?: boolean }
 export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; icon?: string; label?: boolean; photo?: string; author?: string; link?: { href: string; label: string } }
 
 /* «Нік #статік» власника; ніка може не бути, якщо гравець не зареєстрований на сайті */
@@ -20,6 +20,11 @@ export function groupCategories(cats: MapCategory[]): { grp: string; cats: MapCa
 
 const TR: Record<string, string> = { а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ie', ж: 'zh', з: 'z', и: 'y', і: 'i', ї: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ь: '', ю: 'iu', я: 'ia', ы: 'y', э: 'e', ъ: '', ё: 'io' };
 /* id категорії з назви: латиниця, цифри й дефіси (так вимагає база) */
+/* назва під міткою на мапі (specs/081): є назва, власний підпис мітки не вимкнено і в категорії ввімкнено назви.
+   Поля show_labels ще немає (базу без 0067) чи категорії немає — як раніше, з назвою */
+export const labelShown = (mark: Pick<MapMark, 'name' | 'label'>, cat?: Pick<MapCategory, 'show_labels'>) =>
+  !!mark.name?.trim() && mark.label !== false && (cat?.show_labels ?? true);
+
 export function slugify(name: string): string {
   const s = [...name.toLowerCase()].map(c => TR[c] ?? c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   return s.length >= 2 ? s : 'cat-' + Date.now().toString(36);

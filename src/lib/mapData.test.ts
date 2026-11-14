@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupCategories, parseBulk, ringProblem, slugify, type MapCategory } from './mapData';
+import { groupCategories, labelShown, parseBulk, ringProblem, slugify, type MapCategory } from './mapData';
 
 const c = (id: string, grp: string, sort: number): MapCategory => ({ id, name: id, grp, icon: '', color: '#ff6a1f', sort, shown: true });
 
@@ -33,4 +33,21 @@ describe('контур зони', () => {
   it('трикутник у межах мапи — можна', () => expect(ringProblem([[0, 0], [10, 0], [0, 10]])).toBeNull());
   it('точка поза мапою — ні', () => expect(ringProblem([[0, 0], [10, 0], [99999, 10]])).toMatch(/поза мапою/));
   it('понад 500 точок — ні', () => expect(ringProblem(Array.from({ length: 501 }, (_, i) => [i, 0] as [number, number]))).toMatch(/Забагато/));
+});
+
+describe('назва під міткою — галочка категорії (specs/081)', () => {
+  const mk = (name: string, label?: boolean) => ({ name, label });
+  it('категорія без назв — назви немає', () => {
+    expect(labelShown(mk('Бак'), { show_labels: false })).toBe(false);
+  });
+  it('категорія з назвами — є, якщо назва не порожня й підпис мітки не вимкнено', () => {
+    expect(labelShown(mk('Бак'), { show_labels: true })).toBe(true);
+    expect(labelShown(mk('Бак', false), { show_labels: true })).toBe(false);
+    expect(labelShown(mk('   '), { show_labels: true })).toBe(false);
+    expect(labelShown(mk(''), { show_labels: true })).toBe(false);
+  });
+  it('база без поля чи категорії немає — як раніше, з назвою', () => {
+    expect(labelShown(mk('Бак'), {})).toBe(true);
+    expect(labelShown(mk('Бак'))).toBe(true);
+  });
 });

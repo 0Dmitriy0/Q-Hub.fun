@@ -7,7 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, readView, saveView, toGame, toPx } from '../lib/mapGeo';
 import { asset } from '../lib/app';
 import { namesLayer } from '../lib/mapVector';
-import { groupCategories, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
+import { groupCategories, labelShown, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
@@ -271,8 +271,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         + (!isAdmin && wiki && staleOk && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-stale="${mk.dbId}">Точка застаріла?</button></span>` : '')
         + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html, POPUP).addTo(layers.current[c.id]);
-      /* назва під міткою; на дальньому зумі ховається (див. .mlabels-on), щоб не було каші */
-      if (mk.name && mk.label !== false) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
+      /* назва під міткою — лише в категоріях з галочкою «назви» (specs/081); на дальньому зумі ховається (.mlabels-on) */
+      if (labelShown(mk, c)) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
     }
     /* зони з бази: заливка кольору категорії, клік — назва й примітка (адміну — «Змінити» й «Видалити»);
        зону, яку зараз змінюють, малює окремий шар правки */
