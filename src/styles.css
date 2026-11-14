@@ -484,6 +484,12 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jd-text { white-space: pre-line; }
 .jd-src { font-size: 12.5px; margin: 4px 0 0; }
 .jd-note { font-size: 12.5px; margin: 8px 0 0; }
+/* заробіток частинами з підписами (specs/087) */
+.jd-sec ul.jd-pay, .wdlg .jd-sec ul.jd-pay { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.jd-pay-part { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.jd-pay-by { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.jd-pay-stale { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 5px; background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.jd-pay-by:empty { display: none; }
 .jd-admin { flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px dashed var(--line2); font-size: 13px; }
 .jd-src a { color: var(--accent-hi); }
 
