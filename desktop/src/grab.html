@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Q-Hub · кадр екрана</title>
+<video id="v" autoplay muted></video>
+<script>
+/* Постійний потік екрана для «зору» (vision.cjs): кадр з нього — ~60 мс проти ~780 мс у desktopCapturer.getSources
+   (замір 2026-11-14). Сховане вікно; кадр віддається головному процесу як BGRA-бітмап (як nativeImage.toBitmap()).
+   Лише знімок екрана — у гру нічого не втручається (конституція, I); кадри нікуди не пишуться й не надсилаються */
+let stream = null, canvas = null, ctx = null;
+const v = document.getElementById('v');
+window.grab.onStart(async ({ id, w, h, fps }) => {
+  try {
+    stream?.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: id, minWidth: w, maxWidth: w, minHeight: h, maxHeight: h, maxFrameRate: fps } } });
+    v.srcObject = stream; await v.play();
+    canvas = new OffscreenCanvas(w, h); ctx = canvas.getContext('2d', { willReadFrequently: true });
+    window.grab.started({ ok: true });
+  } catch (e) { stream = null; window.grab.started({ ok: false, err: String(e) }); }
+});
+window.grab.onFrame(n => {
+  try {
+    const w = v.videoWidth, h = v.videoHeight;
+    if (!stream || !w || !h) return window.grab.frame(n, null);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.drawImage(v, 0, 0, w, h);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    for (let i = 0; i < d.length; i += 4) { const r = d[i]; d[i] = d[i + 2]; d[i + 2] = r; }   // RGBA → BGRA
+    window.grab.frame(n, { width: w, height: h, data: new Uint8Array(d.buffer) });
+  } catch { window.grab.frame(n, null); }
+});
+window.grab.onStop(() => { stream?.getTracks().forEach(t => t.stop()); stream = null; v.srcObject = null; });
+</script>

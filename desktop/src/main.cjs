@@ -1045,6 +1045,62 @@ async function captureFrame() {
   const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
   return (srcs.find(s => s.display_id === String(d.id)) || srcs[0])?.thumbnail || null;
 }
+/* швидкий кадр для «зору»: постійний потік екрана у схованому вікні (grab.html) — ~60 мс замість ~780 мс у captureFrame
+   (замір 2026-11-14: getSources щоразу запускає захоплення з нуля). Потік живе, поки зір питає кадри, і закривається
+   за GRAB_IDLE без запитів (гру закрито). Не вийшло (потік не стартував, кадр не прийшов) — звичайний captureFrame,
+   і наступна спроба потоку — за GRAB_RETRY. Гострий знімок для мітки (grabClean) цього не стосується */
+const GRAB_FPS = 4, GRAB_IDLE = 20e3, GRAB_RETRY = 60e3, GRAB_WAIT = 1500;
+let grabw = null, grabOn = false, grabStarting = null, grabN = 0, grabIdleT = null, grabFailAt = -Infinity;
+const grabWaits = new Map();
+function grabStop() {
+  clearTimeout(grabIdleT); grabIdleT = null; grabOn = false;
+  if (grabw && !grabw.isDestroyed()) grabw.webContents.send('grab-stop');
+}
+async function grabStart() {
+  const d = screen.getPrimaryDisplay();
+  const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
+  const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
+  const src = srcs.find(s => s.display_id === String(d.id)) || srcs[0];
+  if (!src) return false;
+  if (!grabw || grabw.isDestroyed()) {
+    grabw = new BrowserWindow({ show: false, width: 200, height: 100, skipTaskbar: true, focusable: false, title: 'Q-Hub · кадр екрана',
+      webPreferences: { preload: path.join(__dirname, 'grab.preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false } });
+    grabw.webContents.on('will-navigate', e => e.preventDefault());
+    grabw.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    ipcMain.on('grab-frame-done', (e, n, f) => { if (e.sender !== grabw?.webContents) return; const r = grabWaits.get(n); if (r) { grabWaits.delete(n); r(f); } });
+    await grabw.loadFile(path.join(__dirname, 'grab.html'));
+  }
+  const ok = await new Promise(res => {
+    const t = setTimeout(() => res(false), 5000);
+    ipcMain.once('grab-started', (e, r) => { clearTimeout(t); res(e.sender === grabw.webContents && !!r?.ok); });
+    grabw.webContents.send('grab-start', { id: src.id, w: size.width, h: size.height, fps: GRAB_FPS });
+  });
+  if (ok) await new Promise(r => setTimeout(r, 300));   // перший кадр потоку
+  return ok;
+}
+async function captureFast() {
+  if (Date.now() - grabFailAt < GRAB_RETRY) return captureFrame();
+  try {
+    if (!grabOn) {
+      grabStarting ??= grabStart().finally(() => { grabStarting = null; });
+      grabOn = await grabStarting;
+      if (!grabOn) throw new Error('потік не стартував');
+    }
+    clearTimeout(grabIdleT); grabIdleT = setTimeout(grabStop, GRAB_IDLE);
+    const n = ++grabN;
+    const f = await new Promise(res => {
+      const t = setTimeout(() => { grabWaits.delete(n); res(null); }, GRAB_WAIT);
+      grabWaits.set(n, x => { clearTimeout(t); res(x); });
+      grabw.webContents.send('grab-frame', n);
+    });
+    if (!f?.data || !f.width || !f.height || f.data.byteLength !== f.width * f.height * 4) throw new Error('кадр не прийшов');
+    return nativeImage.createFromBitmap(Buffer.from(f.data.buffer, f.data.byteOffset, f.data.byteLength), { width: f.width, height: f.height });
+  } catch (e) {
+    grabFailAt = Date.now(); grabStop();
+    try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} grab: потік екрана не працює (${e?.message || e}) — звичайний знімок\n`); } catch { /* журнал не обов'язковий */ }
+    return captureFrame();
+  }
+}
 /* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
 /* час наступної зміни цін з вікна скупника — на сайт від імені гравця (база перевіряє, що це найближчі 24 год і є нік зі статіком) */
 async function autoNextChange(buyer, at) {
@@ -1081,7 +1137,7 @@ async function autoLimits(buyer, item, price) {
 function startVision() {
   trimLog(visionLog());   // завеликий журнал — лишається хвіст, а не порожній файл
   const eye = vision({
-    nativeImage, logFile: visionLog(), capture: captureFrame, catalog: visionCatalog,
+    nativeImage, logFile: visionLog(), capture: captureFast, catalog: visionCatalog,
     /* гра йде — HUD читаємо завжди (прибуток за годину сеансу, specs/040); ціни скупників — за налаштуванням і з персонажем */
     active: () => !!settings.session,
     prices: () => prefs().autoPrices !== false && !!settings.character,

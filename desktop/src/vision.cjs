@@ -1,4 +1,4 @@
-/* «Зір» програми: раз на 2 с під час гри знімає екран і
+/* «Зір» програми: під час гри знімає екран (раз на 0,7 с, у меню — на 0,35 с; кадр — з постійного потоку, main.cjs captureFast) і
    — читає готівку й банк з HUD (hud.cjs): стабільний баланс → прибуток за годину сеансу в смужці (лише показ, specs/040);
    — поки HUD закритий меню, визначає місце (магазин, скупник, банкомат…), а вікно скупника ще й розбирає на ціни
      тим самим кодом, що сайт (lib/shotparse.cjs ← src/lib/shotParse.ts).
@@ -16,7 +16,10 @@ const { ocrRelease } = require('./ocridle.cjs');
 
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
-const TICK_EVERY = 2000, TICK_POLL = 250;   // кадр гри — раз на 2 с; вікно скупника — кадр за кадром
+/* як часто знімати екран (замір 2026-11-14): кадр з потоку коштує ~60 мс, тож HUD читаємо раз на TICK_FAST, а поки HUD
+   закритий меню — раз на TICK_MENU, щоб вікно скупника впізнати одразу (заголовок — ~120 мс). Знімок повільний (потік не
+   працює, запасний getSources ~780 мс) — як раніше, раз на TICK_EVERY. Вікно скупника — кадр за кадром */
+const TICK_EVERY = 2000, TICK_FAST = 700, TICK_MENU = 350, SLOW_CAPTURE = 300, TICK_POLL = 100;
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
 const REREAD_AFTER = 3;         // ціна без назви в стількох кадрах — перечитати назву окремо (T030)
 
@@ -45,7 +48,12 @@ function whiteOnly(img, nativeImage) {
    onPrices([{buyer_id,item_id,price}]), logFile */
 function vision(deps) {
   /* lists — окремий рушій для великих кадрів списку скупника: його пам'ять росте найбільше, тож він закривається сам (ocridle.cjs) */
+  /* lists — два рушії: колонки списку читаються одночасно (881 → 497 мс на кадр, той самий текст; замір 2026-11-14) */
   let digits = null, text = null, lists = null, listsAt = 0, inactiveSince = 0, busy = false, lastLines = null, lastTick = 0, atList = false;
+  let pace = TICK_EVERY, lastProbe = null, lastChange = null, sameFrame = false;   // sameFrame — список той самий, що минулого кадру (не гортали)
+  /* один рушій — одна картинка за раз: завдання до того самого рушія стають у чергу */
+  const queue = new WeakMap();
+  const on = (w, f) => { const p = (queue.get(w) || Promise.resolve()).then(f); queue.set(w, p.catch(() => {})); return p; };
   const feed = hud.watcher();
   let place = null, lastScene = 0;
   const pickPrices = pricePicker();
@@ -65,25 +73,32 @@ function vision(deps) {
     }
     if (!text) text = await createWorker(['ukr', 'eng'], 1, { langPath: OCR, gzip: false, cacheMethod: 'none' });
   }
-  const read = async (w, img) => (await w.recognize(img.toPNG())).data.text;
+  const read = async (w, img) => (await on(w, () => w.recognize(img.toPNG()))).data.text;
+  const LANGS = ['ukr', 'eng'], WOPT = { langPath: OCR, gzip: false, cacheMethod: 'none' };
+  /* одна ділянка списку → рядки з висотою й колонкою, у координатах половини екрана, збільшеної вдвічі.
+     Мови й збільшення не чіпати: без eng чи з ×1,5 «$» читається як «5» (замір 2026-11-14) */
+  async function readPart(w, { col, r, img: part }, half) {
+    const { data } = await on(w, () => w.recognize(part.resize({ width: r.width * 2, quality: 'best' }).toPNG(), {}, { blocks: true }));
+    const dx = (r.x - col * half) * 2, dy = r.y * 2, out = [];
+    /* h — висота рядка: обрізаний краєм списку рядок нижчий за решту, parseShot його відкидає (specs/024, R5) */
+    for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0 + dy, x: l.bbox.x0 + dx, h: l.bbox.y1 - l.bbox.y0, col });
+    return out;
+  }
+  const keyOf = parts => { const h = crypto.createHash('sha1'); for (const p of parts) h.update(JSON.stringify(p.r)).update(p.img.toBitmap()); return h.digest('hex'); };
   /* рядки з висотою й колонкою для розбору скупника (як readLines() на сайті) — у координатах половини екрана, збільшеної
      вдвічі; читаються лише ділянки з listParts(). Ті самі білі пікселі, що й минулого кадру (гравець не гортав), — той самий
      результат без OCR: розпізнавання однакового зображення однакове, тож друга зчитка для підтвердження ціни — миттєва */
   async function lines(img) {
-    if (!lists) lists = await createWorker(['ukr', 'eng'], 1, { langPath: OCR, gzip: false, cacheMethod: 'none' });
+    if (!lists) lists = await Promise.all([0, 1].map(() => createWorker(LANGS, 1, WOPT)));
     listsAt = Date.now();
-    const { width, height } = img.getSize(), out = [], half = Math.floor(width / 2);
+    const { width, height } = img.getSize(), half = Math.floor(width / 2);
     const parts = listParts(width, height).map(p => ({ ...p, img: whiteOnly(img.crop(p.r), deps.nativeImage) }));
-    const hash = crypto.createHash('sha1');
-    for (const p of parts) hash.update(JSON.stringify(p.r)).update(p.img.toBitmap());
-    const key = hash.digest('hex');
-    if (lastLines?.key === key) return lastLines.out;
-    for (const { col, r, img: part } of parts) {
-      const { data } = await lists.recognize(part.resize({ width: r.width * 2, quality: 'best' }).toPNG(), {}, { blocks: true });
-      const dx = (r.x - col * half) * 2, dy = r.y * 2;
-      /* h — висота рядка: обрізаний краєм списку рядок нижчий за решту, parseShot його відкидає (specs/024, R5) */
-      for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) out.push({ text: l.text, y: l.bbox.y0 + dy, x: l.bbox.x0 + dx, h: l.bbox.y1 - l.bbox.y0, col });
-    }
+    const key = keyOf(parts);
+    sameFrame = lastLines?.key === key;
+    if (sameFrame) return lastLines.out;
+    /* дві найбільші ділянки (колонки) — рушіям списків, решта (заголовок) — рушію тексту; усі одночасно */
+    const big = parts.map((p, i) => i).sort((a, b) => parts[b].r.width * parts[b].r.height - parts[a].r.width * parts[a].r.height);
+    const out = (await Promise.all(parts.map((p, i) => readPart(big.indexOf(i) < 2 ? lists[big.indexOf(i)] : text, p, half)))).flat();
     lastLines = { key, out };
     /* QHUB_PRICE_TRACE=1 — розпізнаний текст кадру в журнал, щоб записати фікстуру (fixtures/prices/README.md); знімок не пишеться */
     if (process.env.QHUB_PRICE_TRACE === '1') log('trace ' + JSON.stringify(out));
@@ -96,10 +111,10 @@ function vision(deps) {
     if (active) inactiveSince = 0; else if (!inactiveSince) inactiveSince = now;
     const what = ocrRelease({ active, inactiveSince, listsAt, hasAny: !!(digits || text || lists), hasLists: !!lists, now });
     if (what === 'all') { await stop(); log('ocr released (idle)'); }
-    else if (what === 'lists') { const w = lists; lists = null; await w.terminate().catch(() => {}); }
+    else if (what === 'lists') { const ws = lists; lists = null; await Promise.all(ws.map(w => w.terminate().catch(() => {}))); }
   }
   async function stop() {
-    const ws = [digits, text, lists];
+    const ws = [digits, text, ...(lists || [])];
     digits = text = lists = null;
     await Promise.all(ws.map(w => w?.terminate().catch(() => {})));
   }
@@ -108,17 +123,20 @@ function vision(deps) {
      попереднього, без очікування (кадр 2,5 с при таймері 2 с займав 4 с). Вікно закрили — знову раз на TICK_EVERY */
   async function tick() {
     if (busy) return;
-    if (Date.now() - lastTick < TICK_EVERY && !atList) return;
+    if (Date.now() - lastTick < pace && !atList) return;
     lastTick = Date.now();
     atList = false;
     const active = deps.active();
     busy = true;
     try { await release(active); } finally { busy = false; }
-    if (!active) return;
+    if (!active) { pace = TICK_EVERY; return; }
     busy = true;
     try {
+      const t0 = Date.now();
       const img = await deps.capture();
       if (!img || img.isEmpty()) return;
+      const slow = Date.now() - t0 > SLOW_CAPTURE;
+      pace = slow ? TICK_EVERY : TICK_FAST;
       await workers();
       const { width, height } = img.getSize(), now = Date.now();
       const badge = hud.hasBadge(img.crop(hud.badgeRegion(width, height)).toBitmap());
@@ -136,9 +154,22 @@ function vision(deps) {
       const atBuyer = place?.kind === 'buyer' && now - place.at < 10e3;
       /* вікно скупника вже читається (останній кадр — до OPEN_GAP тому): меню не розпізнаємо щоразу, одразу ціни —
          на живій грі кадр займав 20–25 с, з них кілька — розпізнавання меню (specs/024) */
+      /* HUD закритий меню — дивимось частіше: вікно скупника треба впізнати одразу, як відкрилось */
+      if (!money && !badge && !slow) pace = TICK_MENU;
       if (!money && !badge && deps.prices() && now - lastPricesAt < OPEN_GAP) {
         lastScene = now;
-        if (await scanPrices(img, now)) { atList = true; place = { ...(place || { kind: 'buyer', title: 'Скупник' }), at: now }; return; }
+        /* новий кадр списку — одразу наступний (друга зчитка підтверджує ціну); той самий — за TICK_MENU, без зайвої роботи */
+        if (await scanPrices(img, now)) { atList = !sameFrame; place = { ...(place || { kind: 'buyer', title: 'Скупник' }), at: now }; return; }
+      }
+      /* вікно скупника щойно відкрили: заголовок «Купує …» ліворуч угорі читається за ~120 мс — і одразу ціни, без
+         розпізнавання всього меню (2,8 с; замір 2026-11-14). Заголовка не видно — як раніше, через меню нижче */
+      if (!money && !badge && deps.prices() && await probeBuyer(img)) {
+        const first = place?.kind !== 'buyer' || now - place.at > OPEN_GAP;
+        if (await scanPrices(img, now)) {
+          if (first) log('scene Скупник (заголовок)');
+          lastScene = now; atList = !sameFrame; place = { kind: 'buyer', title: 'Скупник', at: now };
+          return;
+        }
       }
       if (!money && !badge && now - lastScene > (atBuyer ? 0 : SCENE_EVERY)) {
         /* HUD закритий — гравець у меню: де саме */
@@ -155,11 +186,28 @@ function vision(deps) {
     finally { busy = false; }
   }
 
+  /* чи це вікно скупника — лише за заголовком «Купує …» (16:9: ділянка заголовка з listParts). Той самий заголовок, що
+     й минулого кадру, — та сама відповідь без OCR */
+  async function probeBuyer(img) {
+    const { width, height } = img.getSize();
+    const parts = listParts(width, height);
+    if (parts.length < 3) return false;   // не 16:9 — заголовок окремо не читається
+    const head = { ...parts[0], img: whiteOnly(img.crop(parts[0].r), deps.nativeImage) };
+    const key = keyOf([head]);
+    if (lastProbe?.key === key) return lastProbe.hit;
+    const k = height / 1080 * 2;
+    const hit = !!headerBuyer(await readPart(text, head, Math.floor(width / 2)), { maxX: 400 * k, maxY: 330 * k });
+    lastProbe = { key, hit };
+    return hit;
+  }
+
   /* вікно скупника → ціни на сайт від імені гравця (сервер сам перевіряє межі, ліміт і цикл цін) */
   async function scanPrices(img, now) {
     const items = await deps.catalog();
     if (!items.length) return null;
     const t0 = Date.now();
+    /* таймер «зміна цін через …» читається одночасно зі списком */
+    const change = readChange(img).catch(() => null);
     const ls = await lines(img);
     /* спершу заголовок «Купує …», якщо не видно — за впізнаними назвами товарів (як на сайті) */
     /* заголовок — ліворуч угорі: до 400×330 px на 1080p; рядки — з половини екрана, збільшеної вдвічі (lines()) */
@@ -177,7 +225,7 @@ function vision(deps) {
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
       .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
     rows.push(...await rereadNames(img, ls, names, buyer, rows, now));
-    await scanChange(img, buyer, now);
+    await sendChange(buyer, await change, now);
     const fresh = pickPrices(buyer, rows, now);
     /* та сама ціна поза межами, впевнено прочитана тричі: межі на сайті, мабуть, хибні — адміну «перевір межі» (T031) */
     if (pickPrices.outside.length) log(`limits ${buyer}: ${JSON.stringify(pickPrices.outside)}`);
@@ -186,7 +234,8 @@ function vision(deps) {
     for (const o of pickPrices.outside) await deps.onLimits?.(buyer, o.item_id, o.price);
     const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now);
     deps.onCoverage?.(cov);
-    log(`cover ${buyer}: ${cov.read}/${cov.total}, чекають ${cov.pending}, кадр за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
+    /* той самий кадр (не гортали) — у журнал не пишемо: тепер їх кілька на секунду */
+    if (!sameFrame) log(`cover ${buyer}: ${cov.read}/${cov.total}, чекають ${cov.pending}, кадр за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
     reportUnknown(buyer, ls, names, now);
     /* для діагностики: вікно бачимо, але нового немає — раз на хвилину на скупника, щоб не засмічувати журнал */
     if (!fresh.length) { if (now - (quietAt.get(buyer) || 0) > 60e3) { quietAt.set(buyer, now); log(`prices ${buyer}: кадр ${rows.length}/${all.length}, нового немає`); } return buyer; }
@@ -272,12 +321,19 @@ function vision(deps) {
   }
 
   /* таймер «зміна цін через …» того самого вікна → «Наступна зміна цін» на сайті (set_next_change) */
-  async function scanChange(img, buyer, now) {
-    if (!deps.onNextChange) return;
+  /* хвилини до зміни цін або null; ті самі пікселі таймера, що й минулого кадру, — та сама відповідь без OCR */
+  async function readChange(img) {
+    if (!deps.onNextChange) return null;
     const { width, height } = img.getSize(), r = changeRegion(width, height);
-    const crop = whiteOnly(img.crop(r), deps.nativeImage).resize({ width: r.width * 3, quality: 'best' });
-    const mins = parseChange(await read(text, crop));
-    if (mins === null) return;
+    const part = whiteOnly(img.crop(r), deps.nativeImage);
+    const key = keyOf([{ r, img: part }]);
+    if (lastChange?.key === key) return lastChange.mins;
+    const mins = parseChange(await read(text, part.resize({ width: r.width * 3, quality: 'best' })));
+    lastChange = { key, mins };
+    return mins;
+  }
+  async function sendChange(buyer, mins, now) {
+    if (!deps.onNextChange || mins === null || mins === undefined) return;
     const at = Math.round((now + mins * 60e3) / 60e3) * 60e3;
     if (!pickChange(buyer, at)) return;
     log(`next ${buyer}: через ${mins} хв (${new Date(at).toISOString()})`);
