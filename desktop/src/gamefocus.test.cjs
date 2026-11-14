@@ -44,3 +44,31 @@ test('HWND з Buffer Electron — числом', () => {
   const s = Buffer.alloc(4); s.writeUInt32LE(77);
   assert.equal(hwndOf(s), 77);
 });
+
+/* specs/078: форма мітки закривається — фокус грі лише якщо форма його мала */
+const { closeToGame } = require('./gamefocus.cjs');
+const spy = (ret) => { const f = () => { f.calls++; if (ret instanceof Error) throw ret; return ret; }; f.calls = 0; return f; };
+
+test('closeToGame: форма мала фокус — ховає й віддає грі', () => {
+  const hide = spy(), giveBack = spy(true);
+  assert.equal(closeToGame({ hadFocus: true, hide, giveBack }), true);
+  assert.equal(hide.calls, 1);
+  assert.equal(giveBack.calls, 1);
+});
+
+test('closeToGame: гравець пішов в інше вікно — ховає, але не перемикає', () => {
+  const hide = spy(), giveBack = spy(true);
+  assert.equal(closeToGame({ hadFocus: false, hide, giveBack }), false);
+  assert.equal(hide.calls, 1);
+  assert.equal(giveBack.calls, 0);
+});
+
+test('closeToGame: гру закрили (giveBack — false) — просто false', () => {
+  assert.equal(closeToGame({ hadFocus: true, hide: spy(), giveBack: spy(false) }), false);
+});
+
+test('closeToGame: збій повернення фокусу — не кидає, вікно все одно сховане', () => {
+  const hide = spy();
+  assert.equal(closeToGame({ hadFocus: true, hide, giveBack: spy(new Error('user32')) }), false);
+  assert.equal(hide.calls, 1);
+});
