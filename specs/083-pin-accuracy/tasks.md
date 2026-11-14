@@ -48,17 +48,17 @@
 
 **Independent Test**: quickstart «У грі» п. 1; тест `pinPreview`.
 
-- [ ] T011 [P] [US2] Створити `src/desktop/pinPreview.ts`: `pinPreview(x, y, size = 240)` → `{ tiles: { z: 6, tx, ty, left, top }[], pin: { left, top } }` за data-model.md — через `toPx` з `src/lib/mapGeo.ts` (`ZMAX = 6`, `TILE = 256`); лише плитки з `0 ≤ tx, ty < 64`
-- [ ] T012 [P] [US2] Тести `src/desktop/pinPreview.test.ts`: точка в центрі мапи — позначка в центрі квадрата; плитки покривають увесь квадрат (сума площ); точка біля краю мапи — плитки поза межами відкинуто; одиниці — 0,78 м/пікс (`PX_PER_M`)
-- [ ] T013 [US2] `src/desktop/Bar.tsx`, `PinAsk`: у стані `ok` (є `ask.point`) під знімком у `.bleft` — блок `.bpinmap` 240×240 з плитками (`<img src={mapUrl('/map/6/' + tx + '/' + ty + '.webp')}>`, абсолютно) і позначкою-хрестиком у центрі; підпис «Мапа Q-Hub · сюди ляже мітка». Перевірити, що `mapUrl` у програмі веде на ті самі плитки, що мапа Alt+M (інакше — `asset()` як у мапі програми)
-- [ ] T014 [US2] `src/desktop/bar.css`: `.bpinmap { position: relative; width: 240px; height: 240px; overflow: hidden; border-radius: 10px; border: 2px solid var(--good); background: #0a0e11 }`, `.bpinmap img { position: absolute; width: 256px; height: 256px }`, позначка — хрестик кольору `--accent` з тінню
+- [X] T011 [P] [US2] Створити `src/desktop/pinPreview.ts`: `pinPreview(x, y, size = 240)` → `{ tiles: { z: 6, tx, ty, left, top }[], pin: { left, top } }` за data-model.md — через `toPx` з `src/lib/mapGeo.ts` (`ZMAX = 6`, `TILE = 256`); лише плитки з `0 ≤ tx, ty < 64`
+- [X] T012 [P] [US2] Тести `src/desktop/pinPreview.test.ts`: точка в центрі мапи — позначка в центрі квадрата; плитки покривають увесь квадрат (сума площ); точка біля краю мапи — плитки поза межами відкинуто; одиниці — 0,78 м/пікс (`PX_PER_M`)
+- [X] T013 [US2] `src/desktop/Bar.tsx`, `PinAsk`: у стані `ok` (є `ask.point`) під знімком у `.bleft` — блок `.bpinmap` 240×240 з плитками (`<img src={mapUrl('/map/6/' + tx + '/' + ty + '.webp')}>`, абсолютно) і позначкою-хрестиком у центрі; підпис «Мапа Q-Hub · сюди ляже мітка». Перевірити, що `mapUrl` у програмі веде на ті самі плитки, що мапа Alt+M (інакше — `asset()` як у мапі програми)
+- [X] T014 [US2] `src/desktop/bar.css`: `.bpinmap { position: relative; width: 240px; height: 240px; overflow: hidden; border-radius: 10px; border: 2px solid var(--good); background: #0a0e11 }`, `.bpinmap img { position: absolute; width: 256px; height: 256px }`, позначка — хрестик кольору `--accent` з тінню
 
 ---
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T015 Журнал: у `src/data/changelog.json` верхній запис пака (`"pending": true`), `"changed"`: «Мітка з гри (Alt+F9): точніше місце — ближче до хрестика, особливо на наближеній карті; у формі видно мапу Q-Hub там, куди ляже мітка»
-- [ ] T016 `cd desktop && npm.cmd test`, `npx.cmd vitest run`, `npx.cmd tsc --noEmit -p .` — зелені; димова перевірка `main.cjs` (пам'ять `main-smoke-fake-electron`)
+- [X] T015 Журнал: у `src/data/changelog.json` верхній запис пака (`"pending": true`), `"changed"`: «Мітка з гри (Alt+F9): точніше місце — ближче до хрестика, особливо на наближеній карті; у формі видно мапу Q-Hub там, куди ляже мітка»
+- [X] T016 `cd desktop && npm.cmd test`, `npx.cmd vitest run`, `npx.cmd tsc --noEmit -p .` — зелені; димова перевірка `main.cjs` (пам'ять `main-smoke-fake-electron`)
 - [ ] T017 Головна сторінка Lavish (`.lavish/hub.html`, розділ 083): графік «до/після» з T001/T009/T010
 - [ ] T018 Власнику: перевірка в грі за `specs/083-pin-accuracy/quickstart.md`
 

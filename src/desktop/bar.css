@@ -145,6 +145,15 @@ body.in-bar input { user-select: text; }
 .bpinst p { margin: 0; }
 .bpinline { font-size: 13.5px; font-weight: 600; color: var(--fg); }
 .bshot.ok img { border: 2px solid var(--good); }
+/* шматок мапи Q-Hub під знімком (specs/083 US2) */
+.bpinmap-w { margin: 6px 0 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bpinmap-w figcaption { font-size: 12px; color: var(--muted); }
+.bpinmap { position: relative; width: 240px; height: 240px; overflow: hidden; border-radius: 10px; border: 2px solid var(--good); background: #0a0e11; }
+.bshot .bpinmap img { position: absolute; width: 256px; height: 256px; max-width: none; border: 0; border-radius: 0; }
+.bpinmap-x { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; }
+.bpinmap-x::before, .bpinmap-x::after { content: ''; position: absolute; background: var(--accent); box-shadow: 0 0 0 1px rgba(0, 0, 0, .7); }
+.bpinmap-x::before { left: 10px; top: 0; width: 2px; height: 22px; }
+.bpinmap-x::after { top: 10px; left: 0; height: 2px; width: 22px; }
 .bshot.bad img { border: 2px solid var(--bad); }
 .blabels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .blabels .btn { justify-content: space-between; border-radius: 12px; min-height: 44px; }
