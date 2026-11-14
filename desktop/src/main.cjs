@@ -24,6 +24,7 @@ const { loadMapRef } = require('./mapref.cjs');
 const { createRules } = require('./rules.cjs');
 const { createQmap } = require('./qmap.cjs');
 const mapwin = require('./mapwin.cjs');
+const rulewin = require('./rulewin.cjs');
 const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
@@ -158,11 +159,14 @@ function createBar() {
   bar.webContents.on('before-input-event', touch);
   bar.on('hide', hideStrip);
   bar.on('hide', () => { if (mapFrom === 'bar') mapw?.hide(); });   // і мапа, відкрита з плашки
+  /* вікно з правилом (specs/084): плашка видна — налаштовуєш, сховано — зафіксоване */
+  bar.on('show', () => ruleLock(false));
+  bar.on('hide', () => ruleLock(true));
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* фокус пішов з плашки чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
 function hideUnlessOurs() {
-  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== mapw) bar.hide(); }, 80);
+  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== mapw && f !== rulew) bar.hide(); }, 80);
 }
 
 /* ---------- історія: ліва колонка плашки (Історія в Bar.tsx). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
@@ -199,7 +203,7 @@ function createMap() {
       if (mapSteals++ < 2) setTimeout(() => { if (mapw.isVisible()) { mapw.moveTop(); mapw.focus(); } }, 60);
       return;
     }
-    setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (f !== mapw && f !== bar) mapw.hide(); }, 80);
+    setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (f !== mapw && f !== bar && f !== rulew) mapw.hide(); }, 80);
   });
   mapw.loadFile(path.join(__dirname, 'ui', 'map.html'));
 }
@@ -265,6 +269,73 @@ function registerMapKey(key) {
   const ok = globalShortcut.register(key, () => mapKeyPressed().catch(e => pinLog('where ' + (e?.stack || e))));
   if (ok) mapKeyReg = key;
   return ok;
+}
+
+/* ---------- окреме вікно з правилом (rule.html, specs/084, contracts/rule-window.md) ----------
+   «Відкрити окремо» біля пункту в плашці → вкладка в одному вікні (до 5). Плашка видна — вікно рухається, міняє розмір,
+   вкладки перемикаються; сховано — зафіксоване: кліки йдуть крізь нього в гру, фокус не бере. Не прозоре: frameless-вікно
+   з transparent на Windows не міняє розмір (research R1). Вкладки — лише в пам'яті, місце й розмір — settings.ruleWin */
+let rulew = null, ruleSt = rulewin.empty(), ruleLocked = true, ruleSaveT = null;
+function createRuleWin() {
+  rulew = new BrowserWindow({
+    width: 380, height: 300, show: false, frame: false, transparent: false, backgroundColor: '#141b24', resizable: true, movable: true,
+    minimizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, focusable: false, title: 'Q-Hub · правило',
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  rulew.setAlwaysOnTop(true, 'screen-saver');
+  rulew.setMinimumSize(rulewin.MIN_W, rulewin.MIN_H);
+  guardPage(rulew);
+  /* з вікна — лише тема правила на форумі, у браузері */
+  rulew.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://forum.quant5.com.ua/')) openExternal(url); return { action: 'deny' }; });
+  /* Esc — назад у плашку (вікно лишається) */
+  rulew.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && bar?.isVisible()) { e.preventDefault(); bar.focus(); } });
+  /* місце й розмір — після руху, не на кожен піксель */
+  const save = () => { clearTimeout(ruleSaveT); ruleSaveT = setTimeout(() => { if (rulew?.isVisible()) { settings.ruleWin = rulew.getBounds(); saveSettings(); } }, 400); };
+  rulew.on('moved', save);
+  rulew.on('resized', save);
+  /* Alt+F4 тощо — як «×»: ховається з вкладками; вихід із програми — закривається */
+  rulew.on('close', e => { if (quitting) return; e.preventDefault(); ruleCloseAll(); });
+  rulew.loadFile(path.join(__dirname, 'ui', 'rule.html'));
+}
+const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked });
+/* стан у вікно; примітка («найстаріше закрито») — разова */
+function rulePush() {
+  if (!rulew) return;
+  rulew.webContents.send('rule-state', ruleView());
+  ruleSt = { ...ruleSt, note: null };
+}
+function ruleLock(locked) {
+  ruleLocked = locked;
+  if (!rulew) return;
+  rulew.setIgnoreMouseEvents(locked);
+  rulew.setFocusable(!locked);
+  rulew.setResizable(!locked);
+  rulew.setMovable(!locked);
+  rulePush();
+}
+/* місце: збережене (якщо його видно на якомусь моніторі), інакше праворуч біля плашки (rulewin.place) */
+function placeRule() {
+  const saved = rulewin.okRect(settings.ruleWin) ? settings.ruleWin : null;
+  const b = bar?.isVisible() ? bar.getBounds() : null;
+  const d = saved ? screen.getDisplayMatching(saved) : b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const w = d.workArea;
+  rulew.setMaximumSize(Math.max(rulewin.MIN_W, Math.floor(w.width / 2)), Math.max(rulewin.MIN_H, Math.floor(w.height / 2)));
+  rulew.setBounds(rulewin.place({ work: w, bar: b, saved }));
+}
+function openRule(hit) {
+  const tab = rulewin.cleanHit(hit);
+  if (!tab) return false;
+  ruleSt = rulewin.addTab(ruleSt, tab);
+  if (!rulew) createRuleWin();
+  if (!rulew.isVisible()) { placeRule(); rulew.showInactive(); }   // без фокусу: гра не втрачає керування (FR-009)
+  rulew.moveTop();
+  ruleLock(!bar?.isVisible());
+  return true;
+}
+function ruleCloseAll() {
+  ruleSt = rulewin.empty();
+  rulePush();
+  rulew?.hide();
 }
 
 /* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
@@ -371,7 +442,7 @@ function raiseBar() {
 /* гравець сам ховає плашку (Esc, клавіша) — фокус назад у гру; пішов в інше вікно сам — не чіпаємо */
 const game = gameFocus({ ours: () => BrowserWindow.getAllWindows().map(w => hwndOf(w.getNativeWindowHandle())) });
 function hideBarToGame() {
-  const had = bar.isFocused() || !!mapw?.isFocused();
+  const had = bar.isFocused() || !!mapw?.isFocused() || !!rulew?.isFocused();
   bar.hide();
   if (had) game.giveBack();
 }
@@ -1203,6 +1274,18 @@ app.whenReady().then(() => {
   ipcMain.handle('map-key', e => (fromMap(e) ? prefs().mapKey : null));
   ipcMain.handle('map-where', async e => (fromMap(e) ? whereFrom(await grabClean().catch(() => null)) : null));
   ipcMain.handle('map-open', (e, p) => { if (fromBar(e) && p && Number.isFinite(p.x) && Number.isFinite(p.y)) openMapAt(p); });
+  /* вікно з правилом (specs/084, contracts/rule-window.md): плашка відкриває пункт, вікно перемикає й закриває вкладки,
+     поки не зафіксоване */
+  const fromRule = e => rulew && e.sender === rulew.webContents;
+  ipcMain.handle('rule-open', (e, h) => (fromBar(e) ? openRule(h) : false));
+  ipcMain.handle('rule-state', e => (fromRule(e) ? ruleView() : null));
+  ipcMain.handle('rule-tab', (e, id) => { if (fromRule(e) && !ruleLocked) { ruleSt = rulewin.activate(ruleSt, id); rulePush(); } });
+  ipcMain.handle('rule-close-tab', (e, id) => {
+    if (!fromRule(e) || ruleLocked) return;
+    ruleSt = rulewin.closeTab(ruleSt, id);
+    if (ruleSt.tabs.length) rulePush(); else ruleCloseAll();
+  });
+  ipcMain.handle('rule-close', e => { if (fromRule(e) && !ruleLocked) ruleCloseAll(); });
   ipcMain.handle('map-focus-take', e => { if (!fromMap(e)) return null; const f = mapFocus; mapFocus = null; return f; });
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });

@@ -49,6 +49,7 @@ interface BarApi {
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
   watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
+  ruleOpen?(h: Omit<RuleHit, 'score'>): Promise<boolean>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 /* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
@@ -310,7 +311,7 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
         {(a.hits.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}
           {a.hits.length > 1 && <CopyBtn text={rulesText(a.hits)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
-        {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
+        {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} onOpen={api.ruleOpen ? x => { api.ruleOpen!({ topic: x.topic, url: x.url, kind: x.kind, n: x.n, h: x.h, s: x.s }).catch(() => {}); } : undefined} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
       </> : <>
         <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
