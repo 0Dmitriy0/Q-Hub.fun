@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kyivTime, money, newsDescription, newsMessage, newsTooLong, nextChange, pricesMessage, profit, tier } from './format';
+import { kyivTime, money, newsDescription, newsItem, newsMessage, newsTooLong, nextChange, pricesMessage, profit, tier } from './format';
 import type { BoardRow, Group } from './prices';
 
 const SITE = 'https://q-hub.fun';
@@ -143,6 +143,14 @@ describe('новина з чернетки', () => {
     expect(e.description).toBe('**✨ Додано**\n• Нове\n\n**🔧 Змінено**\n• Інше');
     expect(e.footer!.text).toBe('Q-Hub · q-hub.fun');
     expect(e.url).toBeUndefined(); expect(e.image).toBeUndefined();
+  });
+  it('назва пункту — жирним; між кількома пунктами — порожній рядок', () => {
+    expect(newsItem('Таймер заробітку (Alt+T): рахує заробіток')).toBe('**Таймер заробітку (Alt+T)**: рахує заробіток');
+    expect(newsItem('Режим стрімера — ховає нік')).toBe('**Режим стрімера** — ховає нік');
+    expect(newsItem('Просто речення без назви')).toBe('Просто речення без назви');
+    expect(newsItem('**Вже** розмічено: так')).toBe('**Вже** розмічено: так');
+    expect(newsItem('x'.repeat(80) + ': пізно')).toBe('x'.repeat(80) + ': пізно');
+    expect(newsDescription({ title: 't', added: ['Нове: 1', 'Б'], changed: [], removed: [] })).toBe('**✨ Додано**\n• **Нове**: 1\n\n• Б');
   });
   it('посилання й банер — лише якщо задані; банер окремою карткою зверху', () => {
     const [banner, e] = newsMessage({ ...d, link: 'https://q-hub.fun/mapa', image_url: 'https://x/y.webp' }).embeds!;

@@ -7,10 +7,15 @@ export type DraftIn = { source_ref: string; title: string; added: string[]; chan
 
 export const ITEM_MAX = 300, TITLE_MAX = 120;
 
-/* задовгий пункт — обрізати на межі слова з «…» (обмеження бази: пункт ≤ 300 символів) */
+/* задовгий пункт (обмеження бази: пункт ≤ 300 символів) — обрізати по кінцю речення, якщо воно не надто рано;
+   інакше на межі слова з «…» */
 export function clip(s: string, max = ITEM_MAX): string {
   const t = s.trim().replace(/\s+/g, ' ');
   if (t.length <= max) return t;
+  const head = t.slice(0, max);
+  let end = -1;
+  for (const m of head.matchAll(/[.!?](?=\s)/g)) end = m.index!;
+  if (end + 1 >= max * 0.6) return head.slice(0, end + 1);
   const cut = t.slice(0, max - 1), sp = cut.lastIndexOf(' ');
   return (sp > max / 2 ? cut.slice(0, sp) : cut).replace(/[\s,.;:—–-]+$/, '') + '…';
 }
@@ -30,7 +35,7 @@ export function toDraft(e: Entry | null | undefined, kind: 'changelog' | 'site')
   const added = list(e.added), changed = [...list(e.changed), ...list(e.fixed)], removed = list(e.removed);
   if (!added.length && !changed.length && !removed.length) return null;
   const who = kind === 'site' ? 'Сайт Q-Hub' : 'Програма Q-Hub';
-  const title = e.version ? `${who} ${e.version} — що нового`
+  const title = e.version ? `${who} ${e.version} — ${e.title?.trim() || 'що нового'}`
     : e.title ? `${who}: ${e.title}`
     : `${who} — що нового ${dayOf(e.id)}`;
   return { source_ref: `${kind}:${e.id}`, title: clip(title, TITLE_MAX), added, changed, removed };
