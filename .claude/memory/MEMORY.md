@@ -17,4 +17,4 @@
 - [Масові пропозиції SQL-ом](wiki-bulk-proposals-sql.md) — ліміт 10 на розгляді рахує й той самий insert; do-блок з тимчасовим max_pending
 - [Програма виходить паками](desktop-release-packs.md) — реліз лише вручну `gh workflow run desktop.yml`; запис журналу пака з "pending"
 - [Відкат партії міток — назавжди](map-batch-restore-seed.md) — гарбузи повертати сідом map_pumpkins_ohm.sql з delete лише по harbuzy
-- [Власник керує через Lavish](owner-uses-lavish.md) — результати кроків і рішення — сторінкою lavish-axi; пише в термінал; відповідь — через --agent-reply-file
+- [Власник керує через Lavish](owner-uses-lavish.md) — одна сторінка .lavish/hub.html (оновлювати її, не нові вкладки); відповідь — через --agent-reply-file
