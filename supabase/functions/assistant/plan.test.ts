@@ -80,3 +80,31 @@ describe('довідка (F.A.Q.) у витягу (specs/010, 2026-10-30)', () =
   });
   it('підказка: довідка — пояснення, а не заборона', () => expect(SYSTEM).toMatch(/«Довідка» — F\.A\.Q\..*не заборона/));
 });
+
+/* пошук по правилах у функції — копія пошуку програми: розійшлися — помічник шукав би інакше, ніж Enter у плашці */
+import { SEARCH_TOOL } from './plan.ts';
+import { searchRules } from './rulesSearch.ts';
+import RULES from '../../../src/data/rules.json';
+const raw = import.meta.glob(['./rulesSearch.ts', '../../../src/desktop/rulesSearch.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+describe('пошук помічника по правилах (search_rules)', () => {
+  it('копія rulesSearch.ts у функції — така сама, як у програмі (окрім шапки)', () => {
+    const copy = raw['./rulesSearch.ts'].replace(/\r\n/g, '\n'), src = raw['../../../src/desktop/rulesSearch.ts'].replace(/\r\n/g, '\n');
+    expect(copy.slice(copy.indexOf('/* Пошук по правилах'))).toBe(src);
+  });
+  it('інструмент — один рядок запиту, строга схема', () => {
+    expect(SEARCH_TOOL.name).toBe('search_rules');
+    expect(SEARCH_TOOL.input_schema.required).toEqual(['query']);
+  });
+  it('у промпті — коли й як шукати самому', () => {
+    expect(SYSTEM).toContain('search_rules');
+    expect(SYSTEM).not.toMatch(/JSON за схемою/);
+  });
+  const topics = (RULES as { topics: Parameters<typeof searchRules>[0] }).topics;
+  it.each([
+    ['угон авто', /викрад/i],
+    ['кафи', /наручн|затрим/i],
+    ['права при арешті', /затрим|адвокат/i],
+  ])('сленг «%s» знаходить офіційні пункти', (q, re) => {
+    expect(searchRules(topics, q, 20).some(h => re.test(h.s))).toBe(true);
+  });
+});
