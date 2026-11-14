@@ -106,6 +106,9 @@ export default function Settings({ prefs, save, staff, user, version, discord, s
             <Row t="Мапа Q-Hub" d="Показати чи сховати мапу поверх гри">
               <span className="row">{(prefs.mapKey || 'Alt+M') !== 'Alt+M' && <button className="slink" onClick={() => save({ mapKey: 'Alt+M' })}>скинути</button>}<KeyRec value={prefs.mapKey || 'Alt+M'} set={k => save({ mapKey: k })} /></span>
             </Row>
+            <Row t="Таймер заробітку" d="Заміряти, скільки платить робота за годину: натисни — старт, ще раз — підсумок">
+              <span className="row">{(prefs.timerKey || 'Alt+T') !== 'Alt+T' && <button className="slink" onClick={() => save({ timerKey: 'Alt+T' })}>скинути</button>}<KeyRec value={prefs.timerKey || 'Alt+T'} set={k => save({ timerKey: k })} /></span>
+            </Row>
             <Row t="Де з’являється">
               <div className="bseg sm">{([['top', 'Зверху'], ['center', 'По центру'], ['bottom', 'Знизу']] as const).map(([k, l]) => <button key={k} aria-pressed={prefs.position === k} onClick={() => save({ position: k })}>{l}</button>)}</div>
             </Row>

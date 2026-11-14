@@ -25,6 +25,8 @@ const { createRules } = require('./rules.cjs');
 const { createQmap } = require('./qmap.cjs');
 const mapwin = require('./mapwin.cjs');
 const rulewin = require('./rulewin.cjs');
+const jobtimer = require('./jobtimer.cjs');
+const { blackWatch } = require('./blackwatch.cjs');
 const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
@@ -161,13 +163,13 @@ function createBar() {
   bar.on('hide', () => { if (mapFrom === 'bar') mapw?.hide(); });   // і мапа, відкрита з плашки
   /* вікно з правилом (specs/084): плашка видна — налаштовуєш, сховано — зафіксоване */
   /* око закрите — вікно ховається й з'являється разом з плашкою, як плашка без шпильки */
-  bar.on('show', () => { ruleLock(false); ruleWithBar(true); });
-  bar.on('hide', () => { ruleLock(true); ruleWithBar(false); });
+  bar.on('show', () => { ruleLock(false); ruleWithBar(true); timerLock(false); });
+  bar.on('hide', () => { ruleLock(true); ruleWithBar(false); timerLock(true); });
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* фокус пішов з плашки чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
 function hideUnlessOurs() {
-  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== mapw && f !== rulew) bar.hide(); }, 80);
+  setTimeout(() => { const f = BrowserWindow.getFocusedWindow(); if (!prefs().pinned && f !== bar && f !== mapw && f !== rulew && f !== timerw) bar.hide(); }, 80);
 }
 
 /* ---------- історія: ліва колонка плашки (Історія в Bar.tsx). Пошуки й питання до ШІ — локально (history.json), записи — з бази ---------- */
@@ -357,6 +359,255 @@ function ruleCloseAll() {
   rulew?.hide();
 }
 
+/* ---------- таймер заробітку (timer.html, specs/086, contracts/timer-ipc.md) ----------
+   Alt+T (чи кнопка в плашці): старт → ще раз стоп і підсумок → ще раз у історію й сховати. Вимір рахує jobtimer.cjs з того самого
+   балансу HUD, що й сеанс, але сеанс не чіпає (FR-012). Вікно — як окреме вікно правил: з відкритою Alt+Q кнопки й перетягування,
+   сховано — кліки йдуть крізь нього в гру. Поточний вимір — settings.jobTimer, історія — jobtimer.json; у базу — лише пропозиція */
+const TIMER_W = 300, TIMER_MIN_H = 120, TIMER_GAP = 12;
+let timerReady = false, timerw = null, timerM = null, timerLocked = true, timerKeyReg = null, timerTick = null, timerSaveAt = 0, timerMoveT = null, timerHist = null, lastMoney = null;
+const timerFile = () => path.join(dir(), 'jobtimer.json');
+const timerLogLine = s => { try { fs.appendFileSync(path.join(dir(), 'timer.log'), `${new Date().toISOString()} ${s}\n`); } catch { /* журнал не обов'язковий */ } };
+function timerHistLoad() {
+  if (!timerHist) { try { const a = JSON.parse(fs.readFileSync(timerFile(), 'utf8')); timerHist = Array.isArray(a) ? a : []; } catch { timerHist = []; } }
+  return timerHist;
+}
+const timerHistSave = () => { try { writeAtomic(timerFile(), JSON.stringify(timerHist || [])); } catch { /* історія не обов'язкова */ } };
+const timerJobIds = () => (Array.isArray(settings.jobsCache) ? new Set(settings.jobsCache.map(j => j.id)) : null);
+function createTimerWin() {
+  timerw = new BrowserWindow({
+    width: TIMER_W, height: 170, show: false, frame: false, transparent: true, hasShadow: false, resizable: false, movable: true,
+    minimizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, focusable: false, title: 'Q-Hub · таймер',
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+  });
+  timerw.setAlwaysOnTop(true, 'screen-saver');
+  guardPage(timerw);
+  timerw.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && bar?.isVisible()) { e.preventDefault(); bar.focus(); } });
+  timerw.on('moved', () => { clearTimeout(timerMoveT); timerMoveT = setTimeout(() => { if (timerw?.isVisible()) { const { x, y } = timerw.getBounds(); settings.timerWin = { x, y }; saveSettings(); } }, 400); });
+  timerw.on('close', e => { if (quitting) return; e.preventDefault(); timerFinish(); });
+  timerw.on('show', timerTicking);
+  timerw.on('hide', timerTicking);
+  timerw.loadFile(path.join(__dirname, 'ui', 'timer.html'));
+}
+/* місце: збережене, якщо його видно на якомусь моніторі; інакше — правий верхній кут монітора плашки */
+function placeTimer() {
+  const s = settings.timerWin, h = timerw.getBounds().height;
+  const seen = p => screen.getAllDisplays().some(d => { const w = d.workArea; return p.x >= w.x - TIMER_W + 60 && p.x <= w.x + w.width - 60 && p.y >= w.y && p.y <= w.y + w.height - 40; });
+  if (s && Number.isFinite(s.x) && Number.isFinite(s.y) && seen(s)) { timerw.setBounds({ x: s.x, y: s.y, width: TIMER_W, height: h }); return; }
+  const b = bar?.isVisible() ? bar.getBounds() : null;
+  const w = (b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint())).workArea;
+  timerw.setBounds({ x: w.x + w.width - TIMER_W - TIMER_GAP, y: w.y + Math.round(w.height * 0.15), width: TIMER_W, height: h });
+}
+function timerView() {
+  const m = timerM, now = Date.now(), p = prefs();
+  const base = { free: !timerLocked, streamer: !!p.streamer, opacity: p.opacity, key: p.timerKey || 'Alt+T' };
+  if (!m) return { ...base, state: timerReady ? 'ready' : null };
+  const why = m.state === 'done' ? jobtimer.canPropose(m, { jobIds: timerJobIds() }) : '';
+  return { ...base, id: m.id, state: m.state, runMs: jobtimer.runMsAt(m, now), gain: m.gain, perHour: jobtimer.perHour(m, now), flag: m.flag,
+    blindMs: m.blindMs, blind: jobtimer.blind(m, now), interrupted: m.interrupted, label: m.label, log: (m.log || []).slice(-6), fixes: m.fixes || 0, pending: jobtimer.pending(m),
+    suggest: settings.jobTimerLast?.[m.char] || null, canPropose: m.state === 'done' && !why, why, sent: m.sent };
+}
+function timerPush() { if (timerw && !timerw.isDestroyed()) timerw.webContents.send('timer-view', timerView()); }
+/* секунди — раз на 1 с, лише поки йде відлік і вікно видно; на диск не пишемо */
+function timerTicking() {
+  const need = timerM?.state === 'run' && !!timerw?.isVisible();
+  if (need && !timerTick) timerTick = setInterval(timerPush, 1000);
+  if (!need && timerTick) { clearInterval(timerTick); timerTick = null; }
+}
+function timerSave() {
+  settings.jobTimer = timerM ? jobtimer.state(jobtimer.touch(timerM, Date.now())) : null;
+  timerSaveAt = Date.now();
+  saveSettings();
+}
+function timerLock(locked) {
+  timerLocked = locked;
+  if (!timerw) return;
+  /* клацнули кнопку в таймері з відкритою Alt+Q — фокус лишився на таймері; Alt+Q закрили — віддаємо керування грі */
+  const hadFocus = locked && timerw.isFocused();
+  timerw.setIgnoreMouseEvents(locked);
+  timerw.setFocusable(!locked);
+  timerw.setMovable(!locked);
+  if (hadFocus) game.giveBack();
+  timerPush();
+}
+/* «Старт» у вікні таймера: відлік пішов — ховаємо Alt+Q і віддаємо керування грі */
+function timerToGame() {
+  if (bar?.isVisible()) bar.hide();
+  game.giveBack();
+}
+function timerShow() {
+  if (!timerw) createTimerWin();
+  if (!timerw.isVisible()) { placeTimer(); timerw.showInactive(); }   // без фокусу: гра не втрачає керування (FR-004)
+  timerw.moveTop();
+  timerLock(!bar?.isVisible());
+  timerTicking();
+}
+/* стоп: порожній вимір (баланс так і не прийшов) не зберігаємо (U2) */
+function timerStop() {
+  if (!timerM) return;
+  jobtimer.stop(timerM, Date.now());
+  if (jobtimer.isEmpty(timerM)) { timerM = null; timerSave(); timerw?.hide(); return; }
+  timerSave();
+  timerPush(); timerTicking();
+}
+/* вимір у історію (без підпису — «Без підпису», підписати можна пізніше) і сховати вікно */
+function timerFinish() {
+  if (timerM && timerM.state !== 'done') jobtimer.stop(timerM, Date.now());
+  if (timerM && !jobtimer.isEmpty(timerM)) { timerHist = jobtimer.historyAdd(timerHistLoad(), timerM); timerHistSave(); }
+  timerM = null; timerReady = false;
+  timerSave();
+  timerw?.hide();
+  timerTicking();
+}
+/* Alt+T (FR-003): немає виміру — старт; іде чи пауза — стоп і підсумок; підсумок — у історію й сховати.
+   Свіжий баланс (≤ 15 с) уже відомий — відлік починається одразу, без очікування наступного зчитування */
+function timerStart() {
+  const now = Date.now();
+  timerReady = false;
+  timerM = jobtimer.create(moneyKey() || '', now);
+  if (lastMoney && now - lastMoney.at <= jobtimer.BLIND_MS) jobtimer.update(timerM, lastMoney.m, now, Number(moneyRules().max_jump) || MAX_JUMP);
+  timerSave();
+  timerShow();
+}
+function timerPressed() {
+  if (!timerM) timerStart();
+  else if (timerM.state === 'done') timerFinish();
+  else { timerShow(); timerStop(); }
+}
+/* кнопка таймера в плашці: відкрити «Готовий» без відліку (старт — кнопкою у вікні); відкрите й порожнє — сховати */
+function timerOpen() {
+  if (timerM) { timerShow(); timerPush(); return; }
+  if (timerReady && timerw?.isVisible()) { timerReady = false; timerw.hide(); return; }
+  timerReady = true;
+  timerShow();
+  timerPush();
+}
+function registerTimerKey(key) {
+  if (timerKeyReg) { globalShortcut.unregister(timerKeyReg); timerKeyReg = null; }
+  if (!key) return false;
+  /* Alt+T у грі не має забирати керування (власник 2026-11-14): RAGE MP втрачає ввід, щойно поверх з'являється наше вікно,
+     навіть без фокусу. Тож як з плашкою: запам'ятали гру до показу — після показу (і ще раз трохи згодом) віддаємо їй фокус */
+  const ok = globalShortcut.register(key, () => {
+    try {
+      const inGame = !bar?.isVisible();
+      if (inGame) game.remember();
+      timerPressed();
+      if (inGame) { const back = () => { if (!bar?.isVisible()) game.giveBack(); }; setTimeout(back, 60); setTimeout(back, 300); }
+    } catch (e) { pinLog('timer ' + (e?.stack || e)); }
+  });
+  if (ok) timerKeyReg = key;
+  return ok;
+}
+/* баланс з «зору»: таймер окремо від сеансу; інший персонаж чи нова сесія гри — автостоп (Edge Case) */
+function timerOnMoney(m, at) {
+  if (!timerM || timerM.state === 'done') return;
+  const key = moneyKey();
+  if (key && timerM.char && key !== timerM.char && timerM.state !== 'wait') { timerStop(); return; }
+  if (!timerM.char && key) timerM.char = key;
+  const was = timerM.state;
+  const before = timerM.log?.length ? timerM.log[timerM.log.length - 1] : null;
+  jobtimer.update(timerM, m, at, Number(moneyRules().max_jump) || MAX_JUMP);
+  /* кожна зміна балансу під час виміру — у timer.log: якщо цифра здивує, видно, що саме прочитав «зір» */
+  const after = timerM.log?.length ? timerM.log[timerM.log.length - 1] : null;
+  if (after && after !== before) timerLogLine(`${timerM.id.slice(0, 8)} ${after.kind} ${after.acc || ""} d=${after.d} add=${after.add} cash=${m.cash} bank=${m.bank} gain=${timerM.gain}`);
+  if (was !== timerM.state || Date.now() - timerSaveAt > 30e3) timerSave();
+  if (was !== timerM.state) timerTicking();
+  timerPush();
+}
+function timerCmd(cmd) {
+  if (!timerM) {
+    if (cmd === 'start') { timerStart(); timerToGame(); }
+    else if (cmd === 'close') { timerReady = false; timerw?.hide(); }
+    timerTicking(); timerPush();
+    return timerView();
+  }
+  const now = Date.now();
+  if (cmd === 'pause') { jobtimer.pause(timerM, now); timerSave(); }
+  else if (cmd === 'resume') { jobtimer.resume(timerM, now); timerSave(); }
+  else if (cmd === 'stop') timerStop();
+  else if (cmd === 'close') timerFinish();
+  timerTicking();
+  timerPush();
+  return timerView();
+}
+function timerLabel(arg) {
+  const id = typeof arg?.id === 'string' ? arg.id : null;
+  if (!id || id === timerM?.id) {
+    if (!timerM) return { ok: false, error: 'Виміру немає' };
+    if (timerM.sent) return { ok: false, error: 'Вимір уже надіслано в довідник — підпис не змінити' };
+    const c = jobtimer.cleanLabel(arg?.label ?? null);
+    if (!c.ok) return c;
+    timerM.label = c.label;
+    if (c.label && timerM.char) settings.jobTimerLast = { ...settings.jobTimerLast, [timerM.char]: c.label };
+    timerSave(); timerPush();
+    return { ok: true };
+  }
+  const r = jobtimer.historyRelabel(timerHistLoad(), id, arg?.label ?? null);
+  if (!r.ok) return r;
+  timerHist = r.items; timerHistSave();
+  return { ok: true };
+}
+async function timerJobs() {
+  try {
+    const { data, error } = await sb.from('jobs').select('id,name').eq('hidden', false).order('name');
+    if (!error && Array.isArray(data)) { settings.jobsCache = data.map(j => ({ id: String(j.id), name: String(j.name) })); saveSettings(); }
+  } catch { /* без зв'язку — останній відомий список */ }
+  /* варіанти замість рівня (ферма: пшениця, гарбузи…) — з jobtimer.VARIANTS */
+  return (settings.jobsCache || []).map(j => ({ ...j, variants: jobtimer.VARIANTS[j.id] || null }));
+}
+/* історія + свіжі статуси надісланих пропозицій (автор бачить свої — RLS «wiki proposals: read») */
+async function timerHistory() {
+  const items = timerHistLoad();
+  const ids = items.filter(x => x.sent?.proposalId && !['accepted', 'accepted_edited', 'rejected', 'withdrawn'].includes(x.sent.status)).map(x => x.sent.proposalId);
+  if (ids.length) {
+    try {
+      const { data, error } = await sb.from('wiki_proposals').select('id,status').in('id', ids);
+      if (!error && data?.length) {
+        const st = new Map(data.map(r => [r.id, r.status]));
+        timerHist = items.map(x => (x.sent && st.has(x.sent.proposalId) ? { ...x, sent: { ...x.sent, status: st.get(x.sent.proposalId) } } : x));
+        timerHistSave();
+      }
+    } catch { /* без зв'язку — статуси як були */ }
+  }
+  const list = timerHistLoad();
+  return { items: list, groups: jobtimer.historyGroups(list), jobIds: [...(timerJobIds() || [])] };
+}
+/* пропозиція заробітку в довідник (contracts/wage-proposal.md): наявна черга wiki_proposals, без нових прав і таблиць */
+async function timerPropose(id) {
+  const inHist = timerHistLoad().find(x => x.id === id);
+  const m = inHist || (timerM?.id === id ? timerM : null);
+  if (!m) return { ok: false, error: 'Виміру немає' };
+  let login = false;
+  try { login = !!(await sb.auth.getSession()).data.session; } catch { /* як без входу */ }
+  const why = jobtimer.canPropose(m, { jobIds: timerJobIds(), login });
+  if (why) return { ok: false, why };
+  try {
+    const cur = await sb.from('jobs').select('pay').eq('id', m.label.id).maybeSingle();
+    if (cur.error) return { ok: false, why: 'offline' };
+    if (!cur.data) return { ok: false, why: 'gone' };
+    const { pay, tooLong } = jobtimer.mergePay(cur.data.pay, m.label.variant || m.label.level, jobtimer.payPart(m));
+    const { data, error } = await sb.from('wiki_proposals').insert({
+      section: 'job', target_id: m.label.id, kind: 'edit', data: { pay }, source: 'game', source_note: jobtimer.sourceNote(m, tooLong),
+    }).select('id').single();
+    if (error) {
+      if (/^QH0\d\d$/.test(error.code || '')) return { ok: false, error: error.message };
+      if (error.code === '42501') return { ok: false, why: 'login' };
+      return { ok: false, why: 'offline' };
+    }
+    const sent = { at: Date.now(), proposalId: data.id, status: 'pending' };
+    if (inHist) { timerHist = timerHistLoad().map(x => (x.id === id ? { ...x, sent } : x)); timerHistSave(); }
+    if (timerM?.id === id) { timerM.sent = sent; timerSave(); timerPush(); }
+    return { ok: true };
+  } catch { return { ok: false, why: 'offline' }; }
+}
+/* після перезапуску: незавершений вимір — на паузі з позначкою «перервано» (FR-011); завершений, але не закритий — у історію */
+function timerRestore() {
+  timerM = jobtimer.restore(settings.jobTimer, Date.now());
+  if (!timerM) return;
+  if (timerM.state === 'done') { timerFinish(); return; }
+  timerSave();
+  timerShow();
+}
+
 /* нижня смужка під плашкою Alt+Q: сесія й чистий прибуток за годину (strip.html, strip.cjs).
    Прозоре вікно на всю ширину екрана, кліки проходять крізь нього в гру, фокус не забирає */
 const STRIP_H = 44, STRIP_GAP = 12;
@@ -385,6 +636,9 @@ async function loadMoneyRules() {
 function onMoney(m, at) {
   sessMoney ??= sessionMoney(settings.sessionMoney);
   if (sessMoney.update(moneyKey(), m, at, Number(moneyRules().max_jump) || MAX_JUMP)) { settings.sessionMoney = sessMoney.state(); saveSettings(); }
+  /* таймер заробітку (specs/086) — після сеансу й окремо від нього: сеанс таймер не змінює (FR-012) */
+  lastMoney = { m, at };
+  timerOnMoney(m, at);
 }
 /* підсумок для рядка сесії персонажа characterId; стан зберігаємо разом, щоб перезапуск програми не губив «Заробив» */
 function sessionSummary(characterId) {
@@ -579,7 +833,7 @@ async function quickAsk(text, rules) {
   return { reply: String(data.reply || ''), actions: [] };
 }
 /* ---------- плашка Alt+Q: дані, персонаж, історія, налаштування ---------- */
-const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M', sellAlert: true, eventAlert: false, eventIds: ['ufo'], streamer: false };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
+const BAR_DEFAULTS = { pinned: false, position: 'top', opacity: 1, hotkey: 'Alt+Q', mode: 'ai', tab: true, autoPrices: true, shareShots: true, pinKey: 'Alt+F9', autoUpdate: true, mapKey: 'Alt+M', timerKey: 'Alt+T', sellAlert: true, eventAlert: false, eventIds: ['ufo'], streamer: false };   // F9 без модифікатора гра (RAGE MP) забирає собі — до програми не доходить
 const prefs = () => ({ ...BAR_DEFAULTS, ...settings.bar });
 /* «Запускати разом з Windows» — стан бере сама Windows; з npm start (не встановлена програма) — завжди вимкнено */
 /* автозапуск з Windows (specs/009): запис «Q-Hub» у реєстрі з аргументом --autostart — так видно, що програму запустила
@@ -664,7 +918,7 @@ async function barData() {
   if (!s.user) return { user: null };
   const [prices, discord, promo] = await Promise.all([barPrices(), siteDiscord(), sitePromo()]);
   return { ...s, prices, prefs: { ...prefs(), autostart: autostart() }, staff: STAFF.includes(myRole), version: app.getVersion(), discord,
-    watch: watch(), promo };
+    watch: watch(), promo, fullscreen: blackW.black };
 }
 /* зміна персонажа з плашки — кабінет перемикається разом із нею */
 async function barCharacter(id) {
@@ -968,12 +1222,12 @@ let keysPaused = null;
 function pauseKeys(on) {
   clearTimeout(keysPaused); keysPaused = null;
   if (on) {
-    for (const k of [barKey, mapKeyReg, pinKeyReg, SHOT_KEY]) if (k) globalShortcut.unregister(k);
+    for (const k of [barKey, mapKeyReg, pinKeyReg, timerKeyReg, SHOT_KEY]) if (k) globalShortcut.unregister(k);
     keysPaused = setTimeout(() => pauseKeys(false), 20e3);
     return;
   }
   const p = prefs();
-  registerHotkey(p.hotkey); registerMapKey(p.mapKey); registerPinKey(p.pinKey);
+  registerHotkey(p.hotkey); registerMapKey(p.mapKey); registerPinKey(p.pinKey); registerTimerKey(p.timerKey);
   if (!globalShortcut.isRegistered(SHOT_KEY)) globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {}));
 }
 function barPrefs(p) {
@@ -1004,6 +1258,17 @@ function barPrefs(p) {
     try { ok = registerMapKey(p.mapKey); } catch { ok = false; }
     if (!ok) { registerMapKey(cur.mapKey); return { error: `${p.mapKey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
     next.mapKey = p.mapKey;
+  }
+  /* клавіша таймера заробітку (specs/086 FR-001) */
+  if (typeof p?.timerKey === 'string' && p.timerKey !== cur.timerKey) {
+    const k = s => String(s || '').toLowerCase(), t = k(p.timerKey);
+    if (!t) return { error: 'Оберіть клавішу.', prefs: cur };
+    const busy = [[cur.hotkey, 'відкриває плашку'], [next.mapKey, 'відкриває мапу'], [cur.pinKey, 'ставить мітку'], [SHOT_KEY, 'робить навчальний знімок']].find(([key]) => k(key) === t);
+    if (busy) return { error: `${p.timerKey} уже ${busy[1]} — оберіть іншу клавішу.`, prefs: cur };
+    let ok = false;
+    try { ok = registerTimerKey(p.timerKey); } catch { ok = false; }
+    if (!ok) { registerTimerKey(cur.timerKey); return { error: `${p.timerKey} не вийшло зайняти — вона вже в іншої програми або недопустима`, prefs: cur }; }
+    next.timerKey = p.timerKey;
   }
   if (typeof p?.pinKey === 'string' && p.pinKey !== cur.pinKey) {
     if (p.pinKey.toLowerCase() === String(cur.mapKey).toLowerCase()) return { error: `${p.pinKey} уже відкриває мапу — оберіть іншу клавішу.`, prefs: cur };
@@ -1141,10 +1406,26 @@ function startVision() {
     /* гра йде — HUD читаємо завжди (прибуток за годину сеансу, specs/040); ціни скупників — за налаштуванням і з персонажем */
     active: () => !!settings.session,
     prices: () => prefs().autoPrices !== false && !!settings.character,
-    onMoney, onPrices: autoPrices, onNextChange: autoNextChange,
+    onMoney, onPrices: autoPrices, onNextChange: autoNextChange, onFrame: onGameFrame, onIdle: () => fullscreenSay(blackW.reset()),
     onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
   });
   setInterval(() => eye.tick(), TICK_POLL);
+}
+
+/* гра в повноекранному режимі (blackwatch.cjs): знімок чорний 20 с поспіль — «зір» нічого не бачить, плашки й таймера поверх гри
+   не видно. Малювати поверх ексклюзивного повноекранного режиму без вбудовування в гру не можна (конституція, принцип I) —
+   тож попереджаємо: сповіщення Windows (лишиться в Центрі сповіщень, видно, щойно згорнеш гру) і банер у плашці */
+const blackW = blackWatch();
+function fullscreenSay(r) {
+  if (!r) return;
+  if (r === 'warn') notify({ title: 'Q-Hub не бачить гру', body: 'Гра в повноекранному режимі. Постав у налаштуваннях графіки GTA V режим екрана «Вікно без рамки» — інакше плашка, таймер і ціни не працюють.' }, openFromToast);
+  bar?.webContents.send('fullscreen', blackW.black);
+}
+/* кадр зменшений до 96 px — перевірка на чорний майже нічого не коштує; чорний — далі не читаємо */
+function onGameFrame(img) {
+  const black = shots.isBlack(img.resize({ width: 96 }).toBitmap(), 1);
+  fullscreenSay(blackW.feed(black, Date.now()));
+  return !black;
 }
 
 /* таймер ігрової сесії: гра запущена — сесія йде, гру закрито — записана (session.cjs) */
@@ -1378,6 +1659,27 @@ app.whenReady().then(() => {
   ipcMain.handle('rule-close', e => { if (fromRule(e) && !ruleLocked) ruleCloseAll(); });
   ipcMain.handle('rule-size', (e, h) => { if (fromRule(e)) ruleSize(h); });
   ipcMain.handle('rule-opts', (e, p) => { if (fromRule(e) && !ruleLocked) ruleSetOpts(p); });
+  /* таймер заробітку (specs/086, contracts/timer-ipc.md): вікно таймера — команди, плашка — лише «перемкнути» */
+  const fromTimer = e => timerw && e.sender === timerw.webContents;
+  ipcMain.handle('timer-state', e => (fromTimer(e) ? timerView() : null));
+  ipcMain.handle('timer-cmd', (e, cmd) => (fromTimer(e) && (!timerLocked || cmd === 'close') ? timerCmd(cmd) : null));
+  ipcMain.handle('timer-toggle', e => { if (fromBar(e)) timerOpen(); });
+  ipcMain.handle('timer-jobs', e => (fromTimer(e) ? timerJobs() : []));
+  ipcMain.handle('timer-label', (e, arg) => (fromTimer(e) ? timerLabel(arg) : { ok: false, error: 'Недоступно' }));
+  ipcMain.handle('timer-history', e => (fromTimer(e) ? timerHistory() : null));
+  ipcMain.handle('timer-delete', (e, id) => {
+    if (!fromTimer(e) || typeof id !== 'string') return null;
+    timerHist = jobtimer.historyRemove(timerHistLoad(), id); timerHistSave();
+    return timerHistory();
+  });
+  ipcMain.handle('timer-propose', (e, id) => (fromTimer(e) && typeof id === 'string' ? timerPropose(id) : { ok: false, error: 'Недоступно' }));
+  /* висота під вміст (відлік, підсумок, історія): від 120 px до 80 % екрана; верх лишається на місці */
+  ipcMain.handle('timer-size', (e, h) => {
+    if (!fromTimer(e) || !Number.isFinite(h)) return;
+    const b = timerw.getBounds(), w = screen.getDisplayMatching(b).workArea;
+    const height = Math.round(Math.min(Math.floor(w.height * 0.8), Math.max(TIMER_MIN_H, h)));
+    timerw.setBounds({ x: b.x, y: Math.min(b.y, w.y + w.height - height), width: TIMER_W, height });
+  });
   ipcMain.handle('map-focus-take', e => { if (!fromMap(e)) return null; const f = mapFocus; mapFocus = null; return f; });
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
@@ -1435,11 +1737,14 @@ app.whenReady().then(() => {
   later(startVision);
   later(startAlerts);
   /* журнали діагностики не ростуть без кінця (store.cjs) */
-  for (const n of ['pin.log', 'update.log']) trimLog(path.join(dir(), n));
+  for (const n of ['pin.log', 'update.log', 'timer.log']) trimLog(path.join(dir(), n));
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
   if (!registerMapKey(prefs().mapKey))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${prefs().mapKey} зайнята іншою програмою — мапу відкривай кнопкою «Мапа» в плашці або зміни клавішу в налаштуваннях.` });
+  if (!registerTimerKey(prefs().timerKey))
+    tray?.displayBalloon?.({ title: 'Q-Hub', content: `${prefs().timerKey} зайнята іншою програмою — таймер заробітку відкривай кнопкою в плашці або зміни клавішу в налаштуваннях.` });
+  timerRestore();
   if (!registerHotkey(prefs().hotkey))
     dialog.showErrorBox('Q-Hub', `${prefs().hotkey} уже зайнята іншою програмою — плашку відкривай з іконки в треї або зміни клавішу в налаштуваннях плашки.`);
 }).catch(fail);

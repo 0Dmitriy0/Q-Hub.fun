@@ -51,6 +51,17 @@ contextBridge.exposeInMainWorld('qhub', {
   ruleRemove: id => ipcRenderer.invoke('rule-remove', id),
   ruleMove: (src, to) => ipcRenderer.invoke('rule-move', src, to),
   onRuleState: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('rule-state', f); return () => ipcRenderer.removeListener('rule-state', f); },
+  /* таймер заробітку (specs/086, contracts/timer-ipc.md): плашка перемикає, вікно таймера — команди, підпис, історія, пропозиція */
+  timerToggle: () => ipcRenderer.invoke('timer-toggle'),
+  timerState: () => ipcRenderer.invoke('timer-state'),
+  timerCmd: cmd => ipcRenderer.invoke('timer-cmd', cmd),
+  timerJobs: () => ipcRenderer.invoke('timer-jobs'),
+  timerLabel: arg => ipcRenderer.invoke('timer-label', arg),
+  timerHistory: () => ipcRenderer.invoke('timer-history'),
+  timerDelete: id => ipcRenderer.invoke('timer-delete', id),
+  timerPropose: id => ipcRenderer.invoke('timer-propose', id),
+  timerSize: h => ipcRenderer.invoke('timer-size', h),
+  onTimerView: cb => { const f = (_e, v) => cb(v); ipcRenderer.on('timer-view', f); return () => ipcRenderer.removeListener('timer-view', f); },
   aiLeft: () => ipcRenderer.invoke('ai-left'),
   barCharacter: id => ipcRenderer.invoke('bar-character', id),
   barPrefs: p => ipcRenderer.invoke('bar-prefs', p),
@@ -60,6 +71,8 @@ contextBridge.exposeInMainWorld('qhub', {
   notifyTest: () => ipcRenderer.invoke('notify-test'),
   /* навчальні знімки (Alt+S) */
   onShot: cb => { ipcRenderer.on('shot', (_e, s) => cb(s)); },
+  /* гра в повноекранному режимі — «зір» не бачить гру (blackwatch.cjs) */
+  onFullscreen: cb => { ipcRenderer.on('fullscreen', (_e, on) => cb(!!on)); },
   /* F9: результат чернетки мітки — текст у плашці */
   onPin: cb => { ipcRenderer.on('pin', (_e, s) => cb(s)); },
   /* F9 без точки: показати знімок і причину, відповідь — надіслати чи ні */

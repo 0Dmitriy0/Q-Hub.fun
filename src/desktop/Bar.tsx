@@ -30,24 +30,24 @@ import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 /* ширина плашки: згорнута — лише рядок, розгорнута — головна, дашборд чи дві панелі */
 /* плашка завжди однієї ширини — і порожня, і з результатами: не «стрибає», коли з'являються результати */
 const BAR_WIDE = 1120;
-export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string;
+export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' | 'center' | 'bottom'; opacity: number; hotkey: string; mode: 'ai' | 'prices'; tab: boolean; autoPrices: boolean; shareShots: boolean; pinKey?: string; autoUpdate?: boolean; mapKey?: string; timerKey?: string;
   /* сповіщення Windows (specs/075, 076): «час здавати» і нагадування про вибрані івенти */
   sellAlert?: boolean; eventAlert?: boolean; eventIds?: string[];
   /* режим стрімера: без ніка, персонажів і грошей у плашці (streamer.ts) */
   streamer?: boolean }
-interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
+interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string; fullscreen?: boolean }
 /* unseen — відповідь ШІ прийшла, поки плашку не бачили: при новому Alt+Q лишається лише вона (specs/082) */
 interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
-  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; mapToggle(): Promise<boolean>;
+  histAdd(it: { kind: 'ai' | 'search'; q: string; reply?: string }): Promise<void>; mapToggle(): Promise<boolean>; timerToggle(): Promise<void>;
   barPrefs(p: Partial<Prefs>): Promise<{ prefs: Prefs; error?: string }>;
   quickAsk(t: string, rules: string): Promise<{ reply: string; error?: string }>;
   quickSize(h: number, w: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void; mapOpen(p: { id?: string; x: number; y: number }): Promise<void>;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
   onPinAsk(cb: (s: PinAskT) => void): void; onPinMiss?(cb: (s: PinMissT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
-  onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
+  onShot(cb: (s: Shot) => void): void; onFullscreen(cb: (on: boolean) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
   watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
   ruleOpen?(h: Omit<RuleHit, 'score' | 'kind'> & { kind: RuleHit['kind'] | 'ai' }): Promise<boolean>;
@@ -132,6 +132,7 @@ export default function Bar() {
     api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
+    api.onFullscreen(on => setD(x => (x ? { ...x, fullscreen: on } : x)));
     /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
@@ -232,6 +233,8 @@ export default function Bar() {
   return (
     <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
       {prefs?.tab !== false && <Tabs promo={d?.promo ?? null} />}
+      {/* гра в повноекранному режимі — «зір» не бачить гру (blackwatch.cjs): плашка, таймер і ціни не працюють */}
+      {d?.fullscreen && <div className="bfull" role="alert"><Icon name="alert" size={16} /><span><b>Q-Hub не бачить гру — вона в повноекранному режимі.</b> Постав у GTA V: Налаштування → Графіка → Режим екрана → «Вікно без рамки».</span></div>}
       <div className="bbox">
         <div className="bbar">
           <button className={'blogo' + (v === 'hub' ? ' on' : '')} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))} title={v === 'hub' ? 'Згорнути' : 'Головна'} aria-label="Головна" aria-pressed={v === 'hub'}><img src={asset('/brand/q-hub-logo.svg')} alt="" width={30} height={30} /></button>
@@ -262,6 +265,7 @@ export default function Bar() {
           </div>
           <span className="bsep" aria-hidden="true" />
           <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
+          <button className="bico" title={`Таймер заробітку (${prefs?.timerKey || "Alt+T"})`} aria-label="Таймер заробітку" onClick={() => { api.timerToggle().catch(() => {}); }}><Icon name="clock" size={17} /></button>
           <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки й питання до ШІ" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
           <button className={'bico' + (mapOn ? ' on' : '')} title={`Мапа Q-Hub · ${prefs?.mapKey || 'Alt+M'}`} aria-label="Мапа Q-Hub" aria-pressed={mapOn} onClick={toggleMap}><Icon name="map" size={17} /></button>
           {/* «?» — комбінації клавіш (Налаштування → Клавіші, список — src/lib/hotkeys.ts); повторний клік закриває */}

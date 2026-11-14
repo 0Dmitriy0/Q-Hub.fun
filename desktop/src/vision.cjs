@@ -129,12 +129,14 @@ function vision(deps) {
     const active = deps.active();
     busy = true;
     try { await release(active); } finally { busy = false; }
-    if (!active) { pace = TICK_EVERY; return; }
+    if (!active) { pace = TICK_EVERY; deps.onIdle?.(); return; }
     busy = true;
     try {
       const t0 = Date.now();
       const img = await deps.capture();
       if (!img || img.isEmpty()) return;
+      /* чорний кадр (гра в повноекранному режимі) — читати нічого, лише попередити гравця (blackwatch.cjs) */
+      if (deps.onFrame && deps.onFrame(img) === false) return;
       const slow = Date.now() - t0 > SLOW_CAPTURE;
       pace = slow ? TICK_EVERY : TICK_FAST;
       await workers();

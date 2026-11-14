@@ -1,7 +1,7 @@
 /* Комбінації клавіш програми Q-Hub — одне джерело для двох місць: програма (Налаштування → Клавіші, кнопка «?» у плашці)
    і сайт (сторінка «Програма»). Змінив клавішу чи поведінку в desktop/src/main.cjs або src/desktop/Bar.tsx — онови й тут.
    pref — клавіша, яку гравець може перепризначити (Prefs у src/desktop/Bar.tsx); key — типова */
-export type KeyPref = 'hotkey' | 'mapKey' | 'pinKey';
+export type KeyPref = 'hotkey' | 'mapKey' | 'pinKey' | 'timerKey';
 export interface Hotkey { key: string; pref?: KeyPref; t: string; d: string; login?: boolean }
 
 export const HOTKEY_GROUPS: [string, string, Hotkey[]][] = [
@@ -10,6 +10,7 @@ export const HOTKEY_GROUPS: [string, string, Hotkey[]][] = [
     { key: 'Alt+M', pref: 'mapKey', t: 'Мапа Q-Hub', d: 'Мапа з мітками, полями й зонами поверх гри. Натисни ще раз — сховається' },
     { key: 'Alt+M', pref: 'mapKey', t: '«Де я?»', d: 'Відкрий велику карту гри й натисни — мапа Q-Hub покаже «Ти тут»' },
     { key: 'Alt+F9', pref: 'pinKey', t: 'Мітка з гри', d: 'На великій карті гри — запропонувати нову мітку: програма знайде точку, ти вибираєш категорію й назву', login: true },
+    { key: 'Alt+T', pref: 'timerKey', t: 'Таймер заробітку', d: 'Заміряти заробіток на роботі: натисни — старт, ще раз — підсумок' },
     { key: 'Alt+S', t: 'Навчальний знімок', d: 'Зберегти знімок екрана, щоб навчити програму краще читати гру' },
   ]],
   ['У плашці', 'Коли рядок Alt+Q відкритий', [
