@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../components/Icon';
+import { plainText } from './richText';
 
 /* Історія — ліва колонка плашки Alt+Q (кнопка «Історія»): пошуки в правилах і питання до ШІ програма зберігає в себе
    (history.json). Клік по рядку показує його праворуч без нового запиту (ліміт ШІ не витрачається).
@@ -44,7 +45,7 @@ export default function History({ onPick, onClose }: { onPick: (it: HistPick) =>
   }, []);
 
   const rows = useMemo(() => {
-    const all: Row[] = items.map(i => ({ id: i.id, kind: i.kind, title: i.q, sub: i.kind === 'ai' ? i.reply : '', ts: i.ts, item: i }))
+    const all: Row[] = items.map(i => ({ id: i.id, kind: i.kind, title: i.q, sub: i.kind === 'ai' ? plainText(i.reply).replace(/\s+/g, ' ') : '', ts: i.ts, item: i }))
       .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
     const t = q.trim().toLowerCase();
     return all.filter(r => (tab === 'all' || r.kind === tab) && (!t || (r.title + ' ' + r.sub).toLowerCase().includes(t)));

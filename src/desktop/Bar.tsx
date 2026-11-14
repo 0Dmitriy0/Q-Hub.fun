@@ -12,7 +12,8 @@ import { matchCats } from './catMatch';
 import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
-import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
+import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from './barParts';
+import { plainText } from './richText';
 import { streamView } from './streamer';
 import { pinStatus, type PinStatus } from './pinStatus';
 import { pinPreview } from './pinPreview';
@@ -178,7 +179,7 @@ export default function Bar() {
     const text = q.trim(); if (!text || busy) return;
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
-    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
+    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 40), 24000));
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', error: r.error, unseen: !document.hasFocus() }, ...a].slice(0, 30));
     setSel(0);
@@ -318,7 +319,7 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
           {/* «Окремо» (specs/084): відповідь — вкладкою у вікні правил, як пункт правил */}
           {!a.error && api.ruleOpen && <button type="button" className="bcopy bopen" title="Відкрити окремо — вікно лишиться поверх гри, коли закриєш Alt+Q"
             onClick={() => { api.ruleOpen!({ topic: a.q, url: '', kind: 'ai', n: '', h: '', s: a.reply }).catch(() => {}); }}><Icon name="layers" size={14} /><span>Окремо</span></button>}</div>
-        {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}<CopyBtn icon text={a.reply} label="Копіювати відповідь" /></div>}
+        {a.error ? <p className="bad">{a.error}</p> : <div className="bans"><Rich text={a.reply} /><CopyBtn icon text={plainText(a.reply)} label="Копіювати відповідь" /></div>}
         {!a.error && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}
     </> : left ? <p className="bnone">Обери рядок в історії ліворуч — пошук чи відповідь ШІ з’явиться тут без нового запиту.</p> : null}</div>

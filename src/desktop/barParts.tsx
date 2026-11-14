@@ -4,6 +4,7 @@ import { asset } from '../lib/app';
 import { money, when } from '../lib/format';
 import { pos, type BuyerHit, type PlaceHit } from './barSearch';
 import { KIND, numLabel, type RuleHit } from './rulesSearch';
+import { parseRich, type Span } from './richText';
 
 /* частини плашки Alt+Q, спільні для програми (Bar.tsx) і демо на сайті (components/BarDemo.tsx) —
    щоб на сторінці «Програма» було видно рівно те, що в грі */
@@ -26,10 +27,20 @@ export function CopyBtn({ text, label = 'Копіювати', short = 'Копі�
 /* «Заборонено … | Деморган 60 хв. Примітка: …» — покарання окремо, щоб його було видно одразу; примітки й винятки — після нього */
 export function splitPenalty(t: string) {
   const i = t.search(/\s\|\s/);
-  if (i < 0) return { body: t, pen: '', more: '' };
+  if (i < 0) return lawPenalty(t);
   const tail = t.slice(i).replace(/^\s*\|\s*/, '').replace(/\s*\|\s*/g, ' · ').trim();
   const j = tail.search(/\s(Примітк|Виняток|Винятки|Уточнення|Приклад)/);
   return { body: t.slice(0, i).trim(), pen: j < 0 ? tail : tail.slice(0, j).trim(), more: j < 0 ? '' : tail.slice(j).trim() };
+}
+
+/* закони штату (specs/085): «…\nПріоритет розшуку: 3.\nКарається …» — рядки розшуку й кари стають покаранням */
+function lawPenalty(t: string) {
+  const lines = t.split('\n'), isPen = (l: string) => /^\s*(Пріоритет розшуку|Карається)/.test(l);
+  const k = lines.findIndex(isPen);
+  if (k < 1) return { body: t, pen: '', more: '' };
+  const pen = lines.slice(k).filter(isPen).map(l => l.trim().replace(/^(Пріоритет розшуку:\s*\d+)\.$/, '$1')).join(' · ');
+  const more = lines.slice(k).filter(l => l.trim() && !isPen(l)).join('\n').trim();
+  return { body: lines.slice(0, k).join('\n').trim(), pen, more };
 }
 
 /* текст для буфера: «Кримінальний кодекс, ст. 6.5» + текст + покарання — щоб у вставленому було видно, звідки пункт */
@@ -59,7 +70,7 @@ export function RuleCard({ h, onOpen }: { h: RuleHit; onOpen?: (h: RuleHit) => v
         <Icon name="layers" size={14} /><span>Окремо</span></button>}
       <CopyBtn icon text={text} label="Копіювати пункт" />
     </div>
-    <p className={long && !open ? 'clamp' : ''}>{body}</p>
+    <Rich text={body} cite={false} clamp={long && !open} />
     {long && <button className="bmore" onClick={() => setOpen(o => !o)}>{open ? 'Згорнути' : 'Показати повністю'}</button>}
     {pen && <span className="bpen">{pen}</span>}
     {more && <p className="bextra">{more}</p>}
@@ -68,6 +79,20 @@ export function RuleCard({ h, onOpen }: { h: RuleHit; onOpen?: (h: RuleHit) => v
 
 /* посилання на пункти у відповіді ШІ — «(Правила Зелених Зон, п. 1.3)», «(Кримінальний кодекс, ст. 6.5)» — помітні, щоб було видно, звідки відповідь */
 export const cites = (t: string) => t.split(/(\([^()]*(?:п|ст)\.\s*\d[^()]*\))/g).map((p, i) => (i % 2 ? <mark key={i} className="bcite">{p.slice(1, -1)}</mark> : p));
+
+/* текст відповіді ШІ чи пункту правил (specs/085): абзаци, списки, жирне — React-вузлами, без HTML.
+   cite — позначки «(…, п. 1.3)»; clamp — згорнутий вигляд (~4 рядки зі згасанням) */
+export function Rich({ text, cite = true, clamp }: { text: string; cite?: boolean; clamp?: boolean }) {
+  const show = (ss: Span[]) => ss.map((s, i) => {
+    const v = cite ? cites(s.v) : s.v;
+    return s.t === 'bold' ? <strong key={i}>{v}</strong> : <span key={i}>{v}</span>;
+  });
+  return <div className={'rich' + (clamp ? ' clamp' : '')}>{parseRich(text).map((b, i) => b.t === 'para'
+    ? <p key={i}>{show(b.spans)}</p>
+    : b.ordered
+      ? <ol key={i} start={b.start}>{b.items.map((it, j) => <li key={j}>{show(it)}</li>)}</ol>
+      : <ul key={i}>{b.items.map((it, j) => <li key={j}>{show(it)}</li>)}</ul>)}</div>;
+}
 
 /* ціни: ліворуч скупники, що підійшли під запит, праворуч товари відкритого скупника з цінами */
 /* watch / onWatch — дзвіночок «стежу за ціною» (specs/075): лише в програмі, демо на сайті їх не передає */

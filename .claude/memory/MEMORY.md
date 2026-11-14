@@ -19,3 +19,4 @@
 - [Відкат партії міток — назавжди](map-batch-restore-seed.md) — гарбузи повертати сідом map_pumpkins_ohm.sql з delete лише по harbuzy
 - [Власник керує через Lavish](owner-uses-lavish.md) — одна сторінка .lavish/hub.html (оновлювати її, не нові вкладки); відповідь — через --agent-reply-file
 - [Перезапуск програми після зміни](relaunch-app-after-change.md) — закрити Q-Hub власника, зібрати й `npm.cmd start` з коду після кожної зміни програми
+- [Наступний пак — 0.9.0](next-pack-is-0-9.md) — версію піднімати останнім комітом перед «випускай», не раніше
