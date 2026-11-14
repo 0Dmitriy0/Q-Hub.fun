@@ -1,0 +1,83 @@
+# 083 — вихідні цифри (до змін), 2026-11-14
+
+## Перевірочний набір (fixtures/map, 39 кадрів)
+casino-317.png: похибка 13.7 м, бал 0.418, відрив 2.54
+casino-56.png: unsure, бал 0.427, відрив 1.14
+casino-683.png: похибка 15.6 м, бал 0.366, відрив 2.16
+chumash-tattoo-111.png: похибка 4.7 м, бал 0.801, відрив 1.46
+chumash-tattoo-572.png: похибка 2.5 м, бал 0.581, відрив 4.93
+chumash-tattoo-982.png: unsure, бал 0.159, відрив 1
+del-perro-cars-253.png: похибка 11.4 м, бал 0.472, відрив 1.46
+del-perro-cars-61.png: unsure, бал 0.404, відрив 1.26
+del-perro-cars-933.png: похибка 14.4 м, бал 0.376, відрив 1.38
+grapeseed-farm-313.png: похибка 23.9 м, бал 0.535, відрив 1.86
+grapeseed-farm-69.png: unsure, бал 0.285, відрив 1.02
+grapeseed-farm-786.png: похибка 27.7 м, бал 0.418, відрив 2.06
+little-seoul-hospital-1100.png: похибка 19.9 м, бал 0.175, відрив 1.44
+little-seoul-hospital-699.png: похибка 12.8 м, бал 0.197, відрив 1.51
+little-seoul-hospital-80.png: похибка 2.8 м, бал 0.427, відрив 1.64
+mirror-park-spawn-114.png: похибка 6.9 м, бал 0.633, відрив 2.16
+mirror-park-spawn-390.png: похибка 21.0 м, бал 0.493, відрив 2.24
+mirror-park-spawn-982.png: похибка 22.4 м, бал 0.467, відрив 9
+observatory-225.png: похибка 0.0 м, бал 0.413, відрив 1.37
+paleto-sheriff-155.png: похибка 0.1 м, бал 0.539, відрив 1.65
+paleto-sheriff-379.png: похибка 5.9 м, бал 0.445, відрив 1.66
+paleto-sheriff-742.png: похибка 10.2 м, бал 0.391, відрив 1.5
+pillbox-bus-578.png: похибка 6.6 м, бал 0.203, відрив 1.73
+pillbox-bus-78.png: похибка 0.4 м, бал 0.46, відрив 1.39
+port-trucker-100.png: похибка 4.0 м, бал 0.555, відрив 1.4
+port-trucker-246.png: похибка 3.8 м, бал 0.575, відрив 1.7
+port-trucker-998.png: похибка 13.9 м, бал 0.437, відрив 1.66
+sandy-delivery-1100.png: unsure, бал 0.152, відрив 1.05
+sandy-delivery-591.png: похибка 10.2 м, бал 0.414, відрив 9
+vespucci-police-1100.png: похибка 11.5 м, бал 0.243, відрив 9
+vespucci-police-217.png: похибка 6.9 м, бал 0.352, відрив 2.35
+vespucci-police-66.png: похибка 5.4 м, бал 0.585, відрив 1.81
+vinewood-hills-114.png: похибка 1.4 м, бал 0.687, відрив 2.05
+vinewood-hills-bar-108.png: похибка 6.2 м, бал 0.493, відрив 2.69
+vinewood-hills-bar-197.png: похибка 6.4 м, бал 0.468, відрив 2.62
+vinewood-hills-bar-982.png: похибка 0.7 м, бал 0.39, відрив 1.5
+zancudo-guard-142.png: похибка 11.5 м, бал 0.699, відрив 3.44
+zancudo-guard-60.png: похибка 1.6 м, бал 0.699, відрив 2.19
+zancudo-guard-742.png: похибка 15.0 м, бал 0.497, відрив 1.9
+
+## Кадри власника 2026-11-14 (16, поза репо)
+{t:043021,m:60,note:Дэвис, біля Арени,bar:210,kind:unsure,score:0.161,ratio:1.24,agree:true,ms:1946}
+{t:043244,m:76,note:Пасифік-Блаффс, гора Інкасів,bar:210,kind:unsure,score:0.432,ratio:1.07,agree:true,ms:1364}
+{t:043234,m:83,note:Каньйон Бенхем, дорога,bar:210,kind:point,x:-2252.7,y:1079,score:0.822,ratio:1.83,agree:true,ms:1377}
+{t:043224,m:76,note:Чумаш, шосе Грейт-Оушн,bar:210,kind:unsure,score:0.508,ratio:1.06,agree:true,ms:1457}
+{t:043214,m:48,note:Ліс Палето, траса М1,bar:210,kind:zoom_out,ms:1}
+{t:043207,m:68,note:Палето-Бей,bar:210,kind:unsure,score:0.625,ratio:1.27,agree:true,ms:1362}
+{t:043159,m:67,note:Грейпсід, ферма,bar:210,kind:unsure,score:0.511,ratio:1.04,agree:true,ms:1283}
+{t:043151,m:65,note:Сенді-Шорс,bar:210,kind:point,x:1959.5,y:3915.9,score:0.689,ratio:1.67,agree:true,ms:1299}
+{t:043140,m:55,note:Сан-Шаньський хребет, петля,bar:210,kind:point,x:2827.7,y:3668.8,score:0.76,ratio:1.33,agree:true,ms:1362}
+{t:043132,m:52,note:Сан-Шаньський хребет, Ашан,bar:210,kind:unsure,score:0.526,ratio:1.01,agree:true,ms:1356}
+{t:043123,m:84,note:Девіс-Кварц, кар'єр,bar:210,kind:unsure,score:0.554,ratio:1.2,agree:true,ms:1367}
+{t:043114,m:81,note:Гранд-Сенора, в'язниця,bar:210,kind:point,x:1889.6,y:2610.7,score:0.53,ratio:2.52,agree:true,ms:1398}
+{t:043104,m:42,note:Гранд-Сенора, шосе,bar:210,kind:zoom_out,ms:0}
+{t:043054,m:63,note:Гранд-Сенора, роздоріжжя,bar:210,kind:point,x:248.6,y:2930.1,score:0.75,ratio:1.89,agree:true,ms:1332}
+{t:043044,m:51,note:Форт-Занкудо, КПП-2,bar:210,kind:unsure,score:0.555,ratio:1.24,agree:true,ms:1367}
+{t:043032,m:67,note:Рокфорд-Хіллз,bar:210,kind:point,x:-1033.6,y:-353.1,score:0.558,ratio:2.18,agree:true,ms:1321}
+
+## Після етапу 3 (2026-11-14)
+50–100 м: кадрів 7, знайдено 5, медіана 2.5 м, 90% 6.4 м, макс 6.4 м
+100–600 м: кадрів 19, знайдено 19, медіана 4.7 м, 90% 9.8 м, макс 9.9 м
+600–1000 м: кадрів 10, знайдено 9, медіана 5.7 м, 90% 12.9 м, макс 12.9 м
+1000+ м: кадрів 3, знайдено 2, медіана 19.9 м, 90% 19.9 м, макс 19.9 м
+середній час locate: 1736 мс
+{t:043021,m:60,note:Дэвис, біля Арени,bar:210,kind:unsure,score:0.161,ratio:1.24,agree:true,ms:2744}
+{t:043244,m:76,note:Пасифік-Блаффс, гора Інкасів,bar:210,kind:unsure,score:0.432,ratio:1.07,agree:true,ms:1627}
+{t:043234,m:83,note:Каньйон Бенхем, дорога,bar:210,kind:point,x:-2253.9,y:1078.2,score:0.822,ratio:1.83,agree:true,ms:1664}
+{t:043224,m:76,note:Чумаш, шосе Грейт-Оушн,bar:210,kind:unsure,score:0.508,ratio:1.06,agree:true,ms:1786}
+{t:043214,m:48,note:Ліс Палето, траса М1,bar:210,kind:unsure,score:0.596,ratio:1,agree:false,ms:1658}
+{t:043207,m:68,note:Палето-Бей,bar:210,kind:unsure,score:0.625,ratio:1.27,agree:true,ms:1617}
+{t:043159,m:67,note:Грейпсід, ферма,bar:210,kind:unsure,score:0.511,ratio:1.04,agree:true,ms:1674}
+{t:043151,m:65,note:Сенді-Шорс,bar:210,kind:point,x:1958,y:3913.8,score:0.689,ratio:1.67,agree:true,ms:1642}
+{t:043140,m:55,note:Сан-Шаньський хребет, петля,bar:210,kind:point,x:2834.5,y:3687.2,score:0.76,ratio:1.33,agree:true,ms:1691}
+{t:043132,m:52,note:Сан-Шаньський хребет, Ашан,bar:210,kind:unsure,score:0.526,ratio:1.01,agree:true,ms:1605}
+{t:043123,m:84,note:Девіс-Кварц, кар'єр,bar:210,kind:point,x:2944.3,y:2745.7,score:0.554,ratio:1.2,agree:true,ms:1793}
+{t:043114,m:81,note:Гранд-Сенора, в'язниця,bar:210,kind:point,x:1889,y:2606.1,score:0.53,ratio:2.52,agree:true,ms:1674}
+{t:043104,m:42,note:Гранд-Сенора, шосе,bar:210,kind:point,x:1132,y:2697.8,score:0.81,ratio:1.2,agree:true,ms:1804}
+{t:043054,m:63,note:Гранд-Сенора, роздоріжжя,bar:210,kind:point,x:249,y:2931.3,score:0.75,ratio:1.89,agree:true,ms:1656}
+{t:043044,m:51,note:Форт-Занкудо, КПП-2,bar:210,kind:point,x:-2263.3,y:3354.3,score:0.555,ratio:1.24,agree:true,ms:1729}
+{t:043032,m:67,note:Рокфорд-Хіллз,bar:210,kind:point,x:-1033.2,y:-351.5,score:0.558,ratio:2.18,agree:true,ms:1547}

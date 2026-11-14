@@ -15,6 +15,8 @@ import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
 import { streamView } from './streamer';
 import { pinStatus, type PinStatus } from './pinStatus';
+import { pinPreview } from './pinPreview';
+import { mapUrl } from '../lib/mapGeo';
 import { freshAsks } from './barReset';
 import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
@@ -334,6 +336,20 @@ function PinState({ st, point }: { st: PinStatus; point?: { x: number; y: number
   );
 }
 
+/* шматок мапи Q-Hub навколо знайденої точки (specs/083 US2): гравець порівнює зі знімком, куди ляже мітка */
+function PinMap({ x, y }: { x: number; y: number }) {
+  const p = useMemo(() => pinPreview(x, y, 240), [x, y]);
+  return (
+    <figure className="bpinmap-w">
+      <div className="bpinmap" aria-label="Мапа Q-Hub навколо точки мітки">
+        {p.tiles.map(t => <img key={t.tx + '/' + t.ty} src={mapUrl(`/map/${t.z}/${t.tx}/${t.ty}.webp`)} alt="" style={{ left: t.left, top: t.top }} />)}
+        <i className="bpinmap-x" style={{ left: p.pin.left, top: p.pin.top }} aria-hidden="true" />
+      </div>
+      <figcaption>Мапа Q-Hub · сюди ляже мітка</figcaption>
+    </figure>
+  );
+}
+
 /* гравцю точку не знайдено: лише показати, що й чому (форми немає — без точки мітку не надіслати); керування в грі */
 function PinMiss({ miss }: { miss: PinMissT }) {
   const st = pinStatus({ point: null, player: true, kind: miss.kind, reason: miss.reason, mapKey: miss.mapKey });
@@ -366,7 +382,8 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
   };
   const st = pinStatus(ask);
   return <>
-    <div className={'bleft bshot ' + st.tone}><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
+    <div className={'bleft bshot ' + st.tone}><img src={ask.preview} alt="Знімок, зроблений по F9" />
+      {ask.point && <PinMap x={ask.point.x} y={ask.point.y} />}</div>
     <div className="bright" ref={box} onKeyDown={onKey}>
       <PinState st={st} point={ask.point} />
       <label className="bnote">{ask.player ? 'Категорія' : 'Категорія (необов’язково)'}

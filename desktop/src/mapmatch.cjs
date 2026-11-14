@@ -16,7 +16,7 @@ const PAD = 2500;                       // море навколо мапи: н�
 const MIN_SCORE = 0.17, MIN_RATIO = 1.3;
 const AGREE = 7;                        // пікс (×8 м): наскільки можуть розійтися половини шаблону при правильному збігу
 const MIN_EDGES = 0.35;                // місця з країв менше за третину медіани (море, поле) не розглядаються
-const SCALE_MIN = 50, SCALE_MAX = 1500;   // на 114 м і 551 м перевірено на справжніх кадрах; хибне відсіює поріг впевненості
+const SCALE_MIN = 35, SCALE_MAX = 1500;   // на 114 м і 551 м перевірено на справжніх кадрах; хибне відсіює поріг впевненості
 
 const lum = hex => { const v = parseInt(hex.slice(1), 16); return (0.299 * (v >> 16 & 255) + 0.587 * (v >> 8 & 255) + 0.114 * (v & 255)) / 255; };
 
@@ -251,6 +251,40 @@ function scaleMeters(text) {
    Так можна позначити й те, що бачиш здалеку, а не лише місце, де стоїш */
 const target = (w, h) => ({ x: w / 2, y: h / 2 });
 
+/* ---------- етап 3: біля хрестика (specs/083) ----------
+   Етап 2 порівнює квадрат ~1,6 км на кроці 8 м: на близькому масштабі він не бачить дрібних деталей, а неточно
+   прочитана шкала зсуває точку пропорційно до відстані від хрестика. Тут — лише ~240 м навколо хрестика (мале плече
+   для похибки масштабу), крок 2–4 м за масштабом, з підбором масштабу і перевіркою половин.
+   Швидкість: кандидатів спершу порівнює дешевий прохід (quick — один масштаб, без половин), повний — лише найкращий */
+const R3_HALF_M = 120, R3_MIN_PX = 120, R3_PAD = 24, R3_SCALES = [-0.03, 0, 0.03], R3_KMAX = 0.03;
+const R3_MIN_SCORE = 0.25, R3_AGREE = 2, R3_MIN_RATIO = 1.3;
+/* g, ui — сірий знімок і маска; est — оцінка хрестика в метрах кадру {x, y}; s — м/пікс за шкалою */
+function refine3(g, ui, ref, aim, s, est, quick = false) {
+  const r = Math.min(4, Math.max(2, Math.round(2 * s)));
+  const half = Math.round(Math.min(Math.max(R3_HALF_M / s, R3_MIN_PX), aim.x, aim.y, g.w - aim.x, g.h - aim.y));
+  const cx0 = Math.round(aim.x - half), cy0 = Math.round(aim.y - half);
+  const crop = sub(g, ui, cx0, cy0, 2 * half, 2 * half);
+  /* еталон — раз на кандидата, з запасом на найбільший масштаб і зсув ±R3_PAD */
+  const ext = half * s * (1 + R3_KMAX) + R3_PAD;
+  const box = { x: est.x - ext, y: est.y - ext, w: 2 * ext, h: 2 * ext };
+  const re = prep(edges(renderRef(ref, r, box)));
+  let best = null;
+  for (const k of quick ? [0] : R3_SCALES) {
+    const sk = s * (1 + k), t = shrink(crop.g, r / sk, crop.m), te = edges(t, t.m), cc = ncc(re, te, t.m);
+    const [p] = peaks(cc, 1, 1);
+    if (p && (!best || p.s > best.s)) best = { ...p, k, sk, t, te, cc };
+  }
+  if (!best) return null;
+  if (quick) return { score: best.s, x: box.x + best.x * r + (aim.x - cx0) * best.sk, y: box.y + best.y * r + (aim.y - cy0) * best.sk };
+  const [dx, dy] = subpixel(best.cc, best.x, best.y);
+  const split = side => { const m = Uint8Array.from(best.t.m, (v, i) => (v && ((i % best.t.w) < best.t.w / 2) === side ? 1 : 0)); return peaks(ncc(re, best.te, m), 1, 1)[0]; };
+  const L = split(true), R = split(false);
+  const agree = !!L && !!R && Math.hypot(L.x - best.x, L.y - best.y) <= R3_AGREE && Math.hypot(R.x - best.x, R.y - best.y) <= R3_AGREE;
+  /* лівий верхній кут вирізу в метрах кадру + зсув до хрестика за підібраним масштабом */
+  const x = box.x + (best.x + dx) * r + (aim.x - cx0) * best.sk, y = box.y + (best.y + dy) * r + (aim.y - cy0) * best.sk;
+  return { x, y, score: best.s, agree, k: best.k, r };
+}
+
 /* ---------- головне ---------- */
 /* краї всієї мапи (з морем навколо) для грубого пошуку на кроці rc — рахуються раз */
 const coarseRef = (ref, rc, cache) => (cache[rc] ??= prep(edges(renderRef(ref, rc, { x: -PAD, y: -PAD, w: FRAME.w + 2 * PAD, h: FRAME.h + 2 * PAD }))));
@@ -299,10 +333,29 @@ function locate(frame, ref, meters, opts = {}) {
   const [b1] = fine, other = fine.find(f => Math.hypot(f.fx - b1.fx, f.fy - b1.fy) > 150);
   const ratio = other ? b1.s / Math.max(other.s, 1e-6) : 9;
   const match = { scale_m_per_px: Math.round(s * 1e4) / 1e4, score: Math.round(b1.s * 1e3) / 1e3, ratio: Math.round(ratio * 100) / 100, agree: b1.agree };
-  if (b1.s < MIN_SCORE || ratio < MIN_RATIO || !b1.agree) return { kind: 'unsure', match };
+  const stage2ok = b1.s >= MIN_SCORE && ratio >= MIN_RATIO && b1.agree;
+
+  /* етап 3 (specs/083): для кожного кандидата — уточнення біля хрестика; між схожими ділянками вибирає бал етапу 3
+     (на дрібному кроці вони розрізняються). Не впевнений — лишається рішення етапу 2 */
+  if (opts.stage3 !== false) {
+    /* дешевий прохід по кандидатах (один масштаб) → відрив; повний (масштаб, половини, між пікселями) — лише найкращому */
+    const q = fine.slice(0, opts.stage3Cands || 5).map(f => ({ f, e: { x: f.fx + aim.x * s, y: f.fy + aim.y * s } }))
+      .map(c => ({ ...c, q: refine3(g, ui, ref, aim, s, c.e, true) })).filter(c => c.q).sort((a, b) => b.q.score - a.q.score);
+    const [q1] = q, q2 = q1 && q.find(c => Math.hypot(c.q.x - q1.q.x, c.q.y - q1.q.y) > 150);
+    const ratio3 = q1 ? (q2 ? q1.q.score / Math.max(q2.q.score, 1e-6) : 9) : 0;
+    const c1 = q1 && ratio3 >= R3_MIN_RATIO ? { f: q1.f, r: refine3(g, ui, ref, aim, s, q1.e) } : null;
+    if (c1 && c1.r && c1.r.score >= R3_MIN_SCORE && c1.r.agree && (stage2ok || c1.f.s >= (opts.stage3Floor ?? 0.12))) {
+      const e2 = { x: c1.f.fx + aim.x * s, y: c1.f.fy + aim.y * s };
+      match.fine3 = { r: c1.r.r, k: c1.r.k, score: Math.round(c1.r.score * 1e3) / 1e3, ratio: Math.round(ratio3 * 100) / 100, agree: true,
+        dx: Math.round((c1.r.x - e2.x) * 10) / 10, dy: Math.round((e2.y - c1.r.y) * 10) / 10 };
+      return { kind: 'point', x: Math.round((FRAME.x0 + c1.r.x) * 10) / 10, y: Math.round((FRAME.yt - c1.r.y) * 10) / 10, match };
+    }
+    match.fine3 = null;
+  }
+  if (!stage2ok) return { kind: 'unsure', match };
   /* лівий верхній кут знімка в метрах кадру + зсув до хрестика */
   const x = FRAME.x0 + b1.fx + aim.x * s, y = FRAME.yt - (b1.fy + aim.y * s);
   return { kind: 'point', x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, match };
 }
 
-module.exports = { FRAME, warm, parseRef, renderRef, shrink, edges, fft, ncc, peaks, mask, gray, scaleBar, scaleMeters, target, locate, MIN_SCORE, MIN_RATIO };
+module.exports = { FRAME, warm, parseRef, renderRef, shrink, edges, fft, ncc, peaks, mask, gray, scaleBar, scaleMeters, target, locate, refine3, MIN_SCORE, MIN_RATIO };
