@@ -96,24 +96,42 @@ test('шум зі шкалою — не точка', () => {
 
 /* справжні кадри великої карти з fixtures/map: <назва>.png + <назва>.json { x, y, scale_m }.
    Головне — жодної хибної точки: краще «не впевнений», ніж мітка не там (конституція, принцип IV).
-   SC-002 — у робочому масштабі 100–1000 м щонайменше 90% у межах 30 м; на всіх кадрах — сторож від погіршення */
+   specs/083 (етап 3 біля хрестика): 100–600 м — ≥ 90 % у межах 10 м і жодної далі 20 м; 600–1000 м — ≥ 90 % у межах 20 м;
+   усі — жодної далі 50 м (хибна); знайдено на 100–1000 м — не менше, ніж до 083 (28/29); час — у звіті.
+   2026-11-14: 35/39 знайдено, 100–600 м — макс. 9,9 м, 600–1000 м — макс. 12,9 м (до 083: 34/39, викиди до 24 м) */
 const FIX = path.join(__dirname, 'fixtures', 'map');
-const MIN_FOUND = 0.8, MIN_WORK = 0.9;   // 39 кадрів 2026-10-30: 34 знайдено (87%), 100–1000 м — 28/29
-test('справжні кадри: жодної точки далі 30 м, 100–1000 м — щонайменше ' + MIN_WORK * 100 + '%, усього — ' + MIN_FOUND * 100 + '%', () => {
+const MIN_FOUND = 0.85, MIN_WORK = 0.9;
+const BANDS = [['50–100 м', 0, 100], ['100–600 м', 100, 600], ['600–1000 м', 600, 1000], ['1000+ м', 1000, 1e9]];
+/* звіт по смугах масштабу: скільки кадрів, знайдено, медіана, 90-й перцентиль і максимум похибки */
+function bands(rows) {
+  for (const [name, lo, hi] of BANDS) {
+    const b = rows.filter(r => r.m >= lo && r.m < hi), e = b.filter(r => r.err != null).map(r => r.err).sort((a, c) => a - c);
+    const q = p => (e.length ? e[Math.min(e.length - 1, Math.floor(p * e.length))].toFixed(1) : '—');
+    console.log(`  ${name}: кадрів ${b.length}, знайдено ${e.length}, медіана ${q(0.5)} м, 90% ${q(0.9)} м, макс ${e.length ? e[e.length - 1].toFixed(1) : '—'} м`);
+  }
+}
+test('справжні кадри: 100–600 м ≤ 10 м (90 %) і ≤ 20 м усі, 600–1000 м ≤ 20 м (90 %), хибних 0', () => {
   const files = fs.readdirSync(FIX).filter(f => f.endsWith('.png'));
-  let found = 0, work = 0, workFound = 0;
+  const rows = []; let ms = 0;
   for (const f of files) {
     const meta = JSON.parse(fs.readFileSync(path.join(FIX, f.replace(/\.png$/, '.json')), 'utf8'));
+    const t0 = Date.now();
     const r = mm.locate(decodePng(fs.readFileSync(path.join(FIX, f))), ref, meta.scale_m, { bgra: false, cache });
-    const inWork = meta.scale_m >= 100 && meta.scale_m <= 1000;
-    if (inWork) work++;
-    if (r.kind !== 'point') { console.log(`  ${f}: ${r.kind}, бал ${r.match?.score}, відрив ${r.match?.ratio}`); continue; }
+    ms += Date.now() - t0;
+    if (r.kind !== 'point') { console.log(`  ${f}: ${r.kind}, бал ${r.match?.score}, відрив ${r.match?.ratio}`); rows.push({ f, m: meta.scale_m, err: null }); continue; }
     const err = Math.hypot(r.x - meta.x, r.y - meta.y);
-    console.log(`  ${f}: похибка ${err.toFixed(1)} м, бал ${r.match.score}, відрив ${r.match.ratio}`);
-    assert.ok(err <= 30, `${f}: похибка ${err.toFixed(1)} м`);
-    found++;
-    if (inWork) workFound++;
+    console.log(`  ${f}: похибка ${err.toFixed(1)} м, бал ${r.match.score}, відрив ${r.match.ratio}${r.match.fine3 ? `, етап 3: крок ${r.match.fine3.r} м` : ''}`);
+    rows.push({ f, m: meta.scale_m, err });
   }
-  assert.ok(workFound >= MIN_WORK * work, `100–1000 м: знайдено ${workFound} з ${work}`);
-  assert.ok(found >= MIN_FOUND * files.length, `знайдено ${found} з ${files.length}`);
+  bands(rows);
+  console.log(`  середній час locate: ${Math.round(ms / files.length)} мс`);
+  const found = rows.filter(r => r.err != null);
+  for (const r of found) assert.ok(r.err <= 50, `${r.f}: хибна точка, ${r.err.toFixed(1)} м`);
+  const mid = found.filter(r => r.m >= 100 && r.m < 600), far = found.filter(r => r.m >= 600 && r.m <= 1000);
+  for (const r of mid) assert.ok(r.err <= 20, `${r.f}: ${r.err.toFixed(1)} м на 100–600 м`);
+  assert.ok(mid.filter(r => r.err <= 10).length >= 0.9 * mid.length, '100–600 м: менше 90 % у межах 10 м');
+  assert.ok(far.filter(r => r.err <= 20).length >= 0.9 * far.length, '600–1000 м: менше 90 % у межах 20 м');
+  const work = rows.filter(r => r.m >= 100 && r.m <= 1000);
+  assert.ok(work.filter(r => r.err != null).length >= MIN_WORK * work.length, `100–1000 м: знайдено ${work.filter(r => r.err != null).length} з ${work.length}`);
+  assert.ok(found.length >= MIN_FOUND * files.length, `знайдено ${found.length} з ${files.length}`);
 });
