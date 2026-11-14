@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cleanHit, empty, addTab, activate, closeTab, fit, place, MIN_W, MIN_H } = require('./rulewin.cjs');
+const { cleanHit, empty, addTab, activate, closeTab, fit, fitH, place, MIN_W, MIN_H, DEF_W } = require('./rulewin.cjs');
 
 const hit = (n, at = Number(n) || 0) => cleanHit({ topic: 'Кримінальний кодекс', url: 'https://forum.quant5.com.ua/t/1', kind: 'law', n: String(n), h: '', s: 'Текст | Покарання', score: 3 }, at);
 const work = { x: 0, y: 0, width: 1920, height: 1040 };
@@ -64,14 +64,20 @@ test('place: типове — праворуч біля краю, на рівн�
   assert.equal(nobar.y, Math.round(1040 * 0.15));
 });
 
-test('place: збережене місце видно — лишається; поза екраном — типове', () => {
-  const saved = { x: 100, y: 200, width: 500, height: 400 };
-  assert.deepEqual(place({ work, saved }), saved);
-  const off = place({ work, saved: { x: 3000, y: 200, width: 500, height: 400 } });
+test('place: збережене місце видно — лишається (ширина стала); поза екраном — типове', () => {
+  assert.deepEqual(place({ work, saved: { x: 100, y: 200 }, height: 400 }), { x: 100, y: 200, width: DEF_W, height: 400 });
+  const off = place({ work, saved: { x: 3000, y: 200 } });
   assert.equal(off.x + off.width, 1920 - 12);
   /* видно лише смужку 50 пікс — типове */
-  assert.notEqual(place({ work, saved: { x: 1870, y: 200, width: 500, height: 400 } }).x, 1870);
-  assert.equal(place({ work, saved: { x: 'a' } }).width, 380);
+  assert.notEqual(place({ work, saved: { x: 1870, y: 200 } }).x, 1870);
+  assert.equal(place({ work, saved: { x: 'a' } }).width, DEF_W);
+});
+
+test('fitH: висота під вміст у межах', () => {
+  assert.equal(fitH(10, work), MIN_H);
+  assert.equal(fitH(5000, work), 520);
+  assert.equal(fitH(333, work), 333);
+  assert.equal(place({ work, height: 5000 }).height, 520);
 });
 
 test('fit: мін/макс розмір і рамка в межах робочої області', () => {

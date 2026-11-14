@@ -1,6 +1,7 @@
 /* окреме вікно з правилом (specs/084): вкладки й місце вікна. Чисті функції — тести без Electron (rulewin.test.cjs).
    Стан вкладок тримає головний процес; вікно лише малює те, що отримало (contracts/rule-window.md) */
-const MAX_TABS = 5, MIN_W = 280, MIN_H = 160, DEF_W = 380, DEF_H = 300, GAP = 12, SEEN_W = 120, SEEN_H = 60;
+/* DEF_W — стала ширина прозорого вікна разом з полями під тінь (розмір руками не міняється, як у плашки) */
+const MAX_TABS = 5, MIN_W = 280, MIN_H = 140, DEF_W = 420, DEF_H = 300, GAP = 12, SEEN_W = 120, SEEN_H = 60;
 const KINDS = ['rules', 'law', 'order', 'info'];
 const FORUM = 'https://forum.quant5.com.ua/';
 
@@ -56,12 +57,18 @@ function seen(r, work) {
   const h = Math.min(r.y + r.height, work.y + work.height) - Math.max(r.y, work.y);
   return w >= SEEN_W && h >= SEEN_H;
 }
-/* де стоїть вікно: збережене, якщо його видно; інакше праворуч біля краю, на рівні верху плашки (без плашки — 15 % висоти).
-   work — робоча область монітора (збереженого або плашки), bar — рамка плашки чи null */
-function place({ work, bar = null, saved = null }) {
-  if (okRect(saved) && seen(saved, work)) return fit(saved, work);
+/* висота під вміст: не менше заголовка з трьома рядками, не більше половини робочої області */
+const fitH = (h, work) => Math.round(Math.min(Math.max(MIN_H, Math.floor(work.height / 2)), Math.max(MIN_H, Number(h) || DEF_H)));
+/* де стоїть вікно: збережене місце { x, y }, якщо вікно там видно; інакше праворуч біля краю, на рівні верху плашки
+   (без плашки — 15 % висоти). Ширина стала, висота — поточна (під пункт). work — робоча область монітора, bar — рамка плашки чи null */
+function place({ work, bar = null, saved = null, height = DEF_H }) {
+  const h = fitH(height, work);
+  if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    const r = { x: saved.x, y: saved.y, width: DEF_W, height: h };
+    if (seen(r, work)) return fit(r, work);
+  }
   const y = bar ? bar.y : work.y + Math.round(work.height * 0.15);
-  return fit({ x: work.x + work.width - DEF_W - GAP, y, width: DEF_W, height: DEF_H }, work);
+  return fit({ x: work.x + work.width - DEF_W - GAP, y, width: DEF_W, height: h }, work);
 }
 
-module.exports = { MAX_TABS, MIN_W, MIN_H, cleanHit, empty, addTab, activate, closeTab, fit, place, okRect };
+module.exports = { MAX_TABS, MIN_W, MIN_H, DEF_W, fitH, cleanHit, empty, addTab, activate, closeTab, fit, place, okRect };

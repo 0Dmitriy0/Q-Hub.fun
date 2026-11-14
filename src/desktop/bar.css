@@ -381,11 +381,13 @@ button.bpromo { cursor: pointer; font: 600 12px var(--sans); }
 /* «Окремо» біля пункту (specs/084): поруч із «Копіювати», праворуч у рядку */
 .bcopy.bopen + .bcopy { margin-left: 0; }
 
-/* окреме вікно з правилом (rule.html, specs/084): заголовок — ручка перетягування, вкладки, пункт; зафіксоване — без кнопок */
-html:has(> body.in-rule), body.in-rule { height: 100%; margin: 0; background: var(--surface); overflow: hidden; user-select: none; cursor: default; }
-.rwin { display: flex; flex-direction: column; height: 100vh; border: 1px solid var(--line2); box-sizing: border-box; }
+/* окреме вікно з правилом (rule.html, specs/084): у стилі плашки — прозоре вікно, той самий фон, рамка, заокруглення й тінь
+   (.bbox), та сама прозорість з налаштувань. Заголовок — ручка перетягування; зафіксоване — без кнопок */
+html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
+.rwrap { padding: 4px 10px 18px; }
+.rwin { display: flex; flex-direction: column; max-height: calc(100vh - 22px); box-sizing: border-box; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7); overflow: hidden; transition: border-color .15s; }
 .rwin.free { border-color: rgba(255, 107, 0, .55); }
-.rwin-head { flex: none; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 6px 6px 12px; background: var(--surface2); -webkit-app-region: drag; }
+.rwin-head { flex: none; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 7px 7px 14px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; }
 .rwin-head b { flex: none; font: 700 13px var(--sans); color: var(--fg); }
 .rwin-tabs { display: flex; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
 .rwin-tab { -webkit-app-region: no-drag; display: inline-flex; align-items: center; gap: 2px; min-width: 0; max-width: 140px; padding: 0 2px 0 8px; height: 24px; border-radius: 6px; border: 0; background: var(--line2); color: var(--muted); font: 600 11.5px var(--mono); cursor: pointer; }
@@ -398,7 +400,8 @@ html:has(> body.in-rule), body.in-rule { height: 100%; margin: 0; background: va
 .rwin-x:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
 .rwin-lock { flex: none; font: 600 11px var(--sans); color: var(--faint); padding-right: 6px; }
 .rwin-note { flex: none; padding: 5px 12px; font-size: 12px; color: var(--accent-hi); background: rgba(255, 106, 31, .1); }
-.rwin-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.rwin-body { flex: 0 1 auto; min-height: 0; overflow: auto; padding: 11px 14px 13px; }
+.rwin-in { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
 .rwin.locked .rwin-body { overflow: hidden; }
 .rwin-body .brule-top { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .rwin-body a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

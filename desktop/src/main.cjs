@@ -272,32 +272,30 @@ function registerMapKey(key) {
 }
 
 /* ---------- окреме вікно з правилом (rule.html, specs/084, contracts/rule-window.md) ----------
-   «Відкрити окремо» біля пункту в плашці → вкладка в одному вікні (до 5). Плашка видна — вікно рухається, міняє розмір,
-   вкладки перемикаються; сховано — зафіксоване: кліки йдуть крізь нього в гру, фокус не бере. Не прозоре: frameless-вікно
-   з transparent на Windows не міняє розмір (research R1). Вкладки — лише в пам'яті, місце й розмір — settings.ruleWin */
+   «Відкрити окремо» біля пункту в плашці → вкладка в одному вікні (до 5). Плашка видна — вікно рухається за заголовок,
+   вкладки перемикаються; сховано — зафіксоване: кліки йдуть крізь нього в гру, фокус не бере. Прозоре, як плашка, тож розмір
+   не міняється руками (власник 2026-11-14): ширина стала, висота — під пункт. Вкладки — лише в пам'яті, місце — settings.ruleWin */
 let rulew = null, ruleSt = rulewin.empty(), ruleLocked = true, ruleSaveT = null;
 function createRuleWin() {
   rulew = new BrowserWindow({
-    width: 380, height: 300, show: false, frame: false, transparent: false, backgroundColor: '#141b24', resizable: true, movable: true,
+    width: rulewin.DEF_W, height: 300, show: false, frame: false, transparent: true, hasShadow: false, resizable: false, movable: true,
     minimizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, focusable: false, title: 'Q-Hub · правило',
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
   });
   rulew.setAlwaysOnTop(true, 'screen-saver');
-  rulew.setMinimumSize(rulewin.MIN_W, rulewin.MIN_H);
   guardPage(rulew);
   /* з вікна — лише тема правила на форумі, у браузері */
   rulew.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://forum.quant5.com.ua/')) openExternal(url); return { action: 'deny' }; });
   /* Esc — назад у плашку (вікно лишається) */
   rulew.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && bar?.isVisible()) { e.preventDefault(); bar.focus(); } });
-  /* місце й розмір — після руху, не на кожен піксель */
-  const save = () => { clearTimeout(ruleSaveT); ruleSaveT = setTimeout(() => { if (rulew?.isVisible()) { settings.ruleWin = rulew.getBounds(); saveSettings(); } }, 400); };
-  rulew.on('moved', save);
-  rulew.on('resized', save);
+  /* місце — після руху, не на кожен піксель */
+  rulew.on('moved', () => { clearTimeout(ruleSaveT); ruleSaveT = setTimeout(() => { if (rulew?.isVisible()) { const { x, y } = rulew.getBounds(); settings.ruleWin = { x, y }; saveSettings(); } }, 400); });
   /* Alt+F4 тощо — як «×»: ховається з вкладками; вихід із програми — закривається */
   rulew.on('close', e => { if (quitting) return; e.preventDefault(); ruleCloseAll(); });
   rulew.loadFile(path.join(__dirname, 'ui', 'rule.html'));
 }
-const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked });
+/* opacity — та сама прозорість, що в плашки (Налаштування → прозорість) */
+const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked, opacity: prefs().opacity });
 /* стан у вікно; примітка («найстаріше закрито») — разова */
 function rulePush() {
   if (!rulew) return;
@@ -309,18 +307,21 @@ function ruleLock(locked) {
   if (!rulew) return;
   rulew.setIgnoreMouseEvents(locked);
   rulew.setFocusable(!locked);
-  rulew.setResizable(!locked);
   rulew.setMovable(!locked);
   rulePush();
 }
-/* місце: збережене (якщо його видно на якомусь моніторі), інакше праворуч біля плашки (rulewin.place) */
+/* місце: збережене (якщо його видно на якомусь моніторі), інакше праворуч біля плашки (rulewin.place); висота — поточна */
 function placeRule() {
-  const saved = rulewin.okRect(settings.ruleWin) ? settings.ruleWin : null;
+  const s = settings.ruleWin, saved = s && Number.isFinite(s.x) && Number.isFinite(s.y) ? { x: s.x, y: s.y } : null;
   const b = bar?.isVisible() ? bar.getBounds() : null;
-  const d = saved ? screen.getDisplayMatching(saved) : b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const w = d.workArea;
-  rulew.setMaximumSize(Math.max(rulewin.MIN_W, Math.floor(w.width / 2)), Math.max(rulewin.MIN_H, Math.floor(w.height / 2)));
-  rulew.setBounds(rulewin.place({ work: w, bar: b, saved }));
+  const d = saved ? screen.getDisplayNearestPoint(saved) : b ? screen.getDisplayMatching(b) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  rulew.setBounds(rulewin.place({ work: d.workArea, bar: b, saved, height: rulew.getBounds().height }));
+}
+/* висота під пункт (з вікна): не менше заголовка з трьома рядками, не більше половини екрана; верх лишається на місці */
+function ruleSize(h) {
+  if (!rulew || !Number.isFinite(h)) return;
+  const b = rulew.getBounds(), w = screen.getDisplayMatching(b).workArea;
+  rulew.setBounds(rulewin.fit({ x: b.x, y: b.y, width: rulewin.DEF_W, height: rulewin.fitH(h, w) }, w));
 }
 function openRule(hit) {
   const tab = rulewin.cleanHit(hit);
@@ -1286,6 +1287,7 @@ app.whenReady().then(() => {
     if (ruleSt.tabs.length) rulePush(); else ruleCloseAll();
   });
   ipcMain.handle('rule-close', e => { if (fromRule(e) && !ruleLocked) ruleCloseAll(); });
+  ipcMain.handle('rule-size', (e, h) => { if (fromRule(e)) ruleSize(h); });
   ipcMain.handle('map-focus-take', e => { if (!fromMap(e)) return null; const f = mapFocus; mapFocus = null; return f; });
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });
