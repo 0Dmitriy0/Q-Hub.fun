@@ -15,6 +15,12 @@ RewriteRule ^ index.html [L]
 # сторінку завжди перевіряти заново — інакше браузер показує стару версію сайту після оновлення;
 # файли в assets/ мають хеш у назві, їх можна кешувати надовго
 <IfModule mod_headers.c>
+  # захист: лише https надалі (рік); браузер не вгадує тип файлу; сайт не вбудувати в чужу сторінку (клікджекінг);
+  # на чужі сайти йде лише адреса сайту без шляху
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
   <FilesMatch "\.(html)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
