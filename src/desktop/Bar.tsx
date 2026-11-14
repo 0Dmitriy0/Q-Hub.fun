@@ -15,6 +15,7 @@ import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
 import { streamView } from './streamer';
 import { pinStatus, type PinStatus } from './pinStatus';
+import { freshAsks } from './barReset';
 import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
@@ -32,7 +33,8 @@ export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' |
   /* режим стрімера: без ніка, персонажів і грошей у плашці (streamer.ts) */
   streamer?: boolean }
 interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string }
-interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[] }
+/* unseen — відповідь ШІ прийшла, поки плашку не бачили: при новому Alt+Q лишається лише вона (specs/082) */
+interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
@@ -122,7 +124,8 @@ export default function Bar() {
   const load = useCallback(async () => { const x = await api.barData(); setD(x); if (x.prefs) setMode(x.prefs.mode); }, []);
   useEffect(() => {
     load();
-    api.onQuickShow(() => { setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
+    /* нове відкриття — як перше за сесію: без минулих відповідей (вони в «Історії»), крім непрочитаної відповіді ШІ (specs/082) */
+    api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
     /* F9 у грі: чернетку мітки збережено чи ні — коротко внизу плашки, вона сама сховається */
@@ -174,7 +177,7 @@ export default function Bar() {
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
     const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
     setBusy(false);
-    setAsks(a => [{ q: text, reply: r.reply || '', error: r.error }, ...a].slice(0, 30));
+    setAsks(a => [{ q: text, reply: r.reply || '', error: r.error, unseen: !document.hasFocus() }, ...a].slice(0, 30));
     setSel(0);
     if (!r.error && r.reply) api.histAdd({ kind: 'ai', q: text, reply: r.reply });
   }
