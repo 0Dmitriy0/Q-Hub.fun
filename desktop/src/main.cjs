@@ -296,20 +296,19 @@ function createRuleWin() {
   rulew.loadFile(path.join(__dirname, 'ui', 'rule.html'));
 }
 /* opacity — та сама прозорість, що в плашки (Налаштування → прозорість) */
-/* keep — око: лишати поверх гри, коли Alt+Q закрита (типово так); all — усі вкладки разом, одна під одною. Пам'ятаються */
-const ruleOpts = () => ({ keep: settings.ruleWin?.keep !== false, all: settings.ruleWin?.all === true });
-const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked, opacity: prefs().opacity, ...ruleOpts() });
+/* keep — око: лишати поверх гри, коли Alt+Q закрита (типово так); пам'ятається. Вкладки — groups, у кожній до 5 правил */
+const ruleOpts = () => ({ keep: settings.ruleWin?.keep !== false });
+const ruleView = () => ({ groups: ruleSt.groups, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked, opacity: prefs().opacity, ...ruleOpts() });
 function ruleSetOpts(p) {
   const o = ruleOpts();
   if (typeof p?.keep === 'boolean') o.keep = p.keep;
-  if (typeof p?.all === 'boolean') o.all = p.all;
   settings.ruleWin = { ...settings.ruleWin, ...o };
   saveSettings();
   rulePush();
 }
 /* око закрите: плашку сховали — вікно теж (вкладки лишаються), показали — вікно назад */
 function ruleWithBar(shown) {
-  if (!rulew || ruleOpts().keep || !ruleSt.tabs.length) return;
+  if (!rulew || ruleOpts().keep || !ruleSt.groups.length) return;
   if (!shown) { rulew.hide(); return; }
   if (!rulew.isVisible()) { placeRule(); rulew.showInactive(); }
   rulew.moveTop();
@@ -339,13 +338,13 @@ function placeRule() {
 function ruleSize(h) {
   if (!rulew || !Number.isFinite(h)) return;
   const b = rulew.getBounds(), w = screen.getDisplayMatching(b).workArea;
-  const frac = ruleOpts().all ? rulewin.ALL_FRAC : 0.5;
+  const frac = (ruleSt.groups.find(g => g.id === ruleSt.active)?.rules.length || 1) > 1 ? rulewin.ALL_FRAC : 0.5;   // кілька правил у вкладці — вікно вище
   rulew.setBounds(rulewin.fit({ x: b.x, y: b.y, width: rulewin.DEF_W, height: rulewin.fitH(h, w, frac) }, w, frac));
 }
 function openRule(hit) {
   const tab = rulewin.cleanHit(hit);
   if (!tab) return false;
-  ruleSt = rulewin.addTab(ruleSt, tab);
+  ruleSt = rulewin.addRule(ruleSt, tab);
   if (!rulew) createRuleWin();
   if (!rulew.isVisible()) { placeRule(); rulew.showInactive(); }   // без фокусу: гра не втрачає керування (FR-009)
   rulew.moveTop();
@@ -1302,8 +1301,23 @@ app.whenReady().then(() => {
   ipcMain.handle('rule-tab', (e, id) => { if (fromRule(e) && !ruleLocked) { ruleSt = rulewin.activate(ruleSt, id); rulePush(); } });
   ipcMain.handle('rule-close-tab', (e, id) => {
     if (!fromRule(e) || ruleLocked) return;
-    ruleSt = rulewin.closeTab(ruleSt, id);
-    if (ruleSt.tabs.length) rulePush(); else ruleCloseAll();
+    ruleSt = rulewin.closeGroup(ruleSt, id);
+    if (ruleSt.groups.length) rulePush(); else ruleCloseAll();
+  });
+  /* «×» на правилі й перетягування (rulewin.move): src — { rule } або { group }, to — { group, anchor, pos } або { newGroup } */
+  ipcMain.handle('rule-remove', (e, id) => {
+    if (!fromRule(e) || ruleLocked) return;
+    ruleSt = rulewin.removeRule(ruleSt, id);
+    if (ruleSt.groups.length) rulePush(); else ruleCloseAll();
+  });
+  ipcMain.handle('rule-move', (e, src, to) => {
+    if (!fromRule(e) || ruleLocked || !src || !to) return;
+    const s = typeof src.rule === 'string' ? { rule: src.rule } : typeof src.group === 'string' ? { group: src.group } : null;
+    const d = to.newGroup === true ? { newGroup: true } : typeof to.group === 'string'
+      ? { group: to.group, anchor: typeof to.anchor === 'string' ? to.anchor : undefined, pos: to.pos === 'after' ? 'after' : 'before' } : null;
+    if (!s || !d) return;
+    ruleSt = rulewin.move(ruleSt, s, d);
+    rulePush();
   });
   ipcMain.handle('rule-close', e => { if (fromRule(e) && !ruleLocked) ruleCloseAll(); });
   ipcMain.handle('rule-size', (e, h) => { if (fromRule(e)) ruleSize(h); });

@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('qhub', {
   ruleClose: () => ipcRenderer.invoke('rule-close'),
   ruleSize: h => ipcRenderer.invoke('rule-size', h),
   ruleOpts: p => ipcRenderer.invoke('rule-opts', p),
+  ruleRemove: id => ipcRenderer.invoke('rule-remove', id),
+  ruleMove: (src, to) => ipcRenderer.invoke('rule-move', src, to),
   onRuleState: cb => { const f = (_e, s) => cb(s); ipcRenderer.on('rule-state', f); return () => ipcRenderer.removeListener('rule-state', f); },
   aiLeft: () => ipcRenderer.invoke('ai-left'),
   barCharacter: id => ipcRenderer.invoke('bar-character', id),

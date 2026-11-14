@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cleanHit, empty, addTab, activate, closeTab, fit, fitH, place, MIN_W, MIN_H, DEF_W } = require('./rulewin.cjs');
+const { cleanHit, empty, addRule, activate, closeGroup, removeRule, move, fit, fitH, place, MIN_W, MIN_H, DEF_W } = require('./rulewin.cjs');
 
 const hit = (n, at = Number(n) || 0) => cleanHit({ topic: 'Кримінальний кодекс', url: 'https://forum.quant5.com.ua/t/1', kind: 'law', n: String(n), h: '', s: 'Текст | Покарання', score: 3 }, at);
 const work = { x: 0, y: 0, width: 1920, height: 1040 };
@@ -17,43 +17,87 @@ test('cleanHit: лише потрібні поля, чужі посилання 
   assert.equal(hit(1).url, 'https://forum.quant5.com.ua/t/1');
 });
 
-test('addTab: нова вкладка активна; той самий пункт — без дубля', () => {
-  let st = addTab(empty(), hit(1));
-  st = addTab(st, hit(2));
-  assert.deepEqual(st.tabs.map(t => t.n), ['1', '2']);
-  assert.equal(st.active, hit(2).id);
-  st = addTab(st, hit(1, 99));
-  assert.equal(st.tabs.length, 2);
-  assert.equal(st.active, hit(1).id);
+/* стан для тестів: n — номери пунктів, кожен у своїй вкладці (вкладка = g<номер>) */
+const open = (...ns) => ns.reduce((st, n) => addRule(st, hit(n), n), empty());
+const g = (st, n) => st.groups.find(x => x.rules.some(r => r.n === String(n))).id;
+const layout = st => st.groups.map(x => x.rules.map(r => r.n).join(','));
+
+test('addRule: нова вкладка активна; той самий пункт — без дубля, його вкладка активна', () => {
+  let st = open(1, 2);
+  assert.deepEqual(layout(st), ['1', '2']);
+  assert.equal(st.active, g(st, 2));
+  st = addRule(st, hit(1, 99), 99);
+  assert.equal(st.groups.length, 2);
+  assert.equal(st.active, g(st, 1));
 });
 
-test('addTab: шостий пункт замінює найстаріший і лишає примітку', () => {
-  let st = empty();
-  for (const n of [1, 2, 3, 4, 5]) st = addTab(st, hit(n));
+test('addRule: шоста вкладка замінює найстарішу й лишає примітку', () => {
+  let st = open(1, 2, 3, 4, 5);
   assert.equal(st.note, null);
-  st = addTab(st, hit(6));
-  assert.deepEqual(st.tabs.map(t => t.n), ['2', '3', '4', '5', '6']);
-  assert.match(st.note, /найстаріше/);
-  assert.equal(activate(st, hit(3).id).note, null);
+  st = addRule(st, hit(6), 6);
+  assert.deepEqual(layout(st), ['2', '3', '4', '5', '6']);
+  assert.match(st.note, /найстарішу/);
+  assert.equal(activate(st, g(st, 3)).note, null);
 });
 
-test('closeTab: активна — сусідня праворуч, крайня — ліворуч, остання — порожньо', () => {
-  let st = empty();
-  for (const n of [1, 2, 3]) st = addTab(st, hit(n));
-  st = activate(st, hit(2).id);
-  st = closeTab(st, hit(2).id);
-  assert.equal(st.active, hit(3).id);
-  st = closeTab(st, hit(3).id);
-  assert.equal(st.active, hit(1).id);
-  st = closeTab(st, hit(1).id);
-  assert.deepEqual(st, { tabs: [], active: null, note: null });
-  assert.equal(closeTab(st, 'нема'), st);
+test('move: правило на вкладку — у кінець тієї вкладки, порожня вкладка зникає', () => {
+  let st = open(1, 2, 3);
+  st = move(st, { rule: hit(3).id }, { group: g(st, 1) });
+  assert.deepEqual(layout(st), ['1,3', '2']);
+  assert.equal(st.active, g(st, 1));
 });
 
-test('closeTab: неактивна — активна лишається', () => {
-  let st = addTab(addTab(empty(), hit(1)), hit(2));
-  st = closeTab(st, hit(1).id);
-  assert.equal(st.active, hit(2).id);
+test('move: вище чи нижче правила', () => {
+  let st = open(1, 2, 3);
+  st = move(st, { rule: hit(2).id }, { group: g(st, 1) });
+  st = move(st, { rule: hit(3).id }, { group: g(st, 1), anchor: hit(1).id, pos: 'before' });
+  assert.deepEqual(layout(st), ['3,1,2']);
+  st = move(st, { rule: hit(3).id }, { group: g(st, 1), anchor: hit(1).id, pos: 'after' });
+  assert.deepEqual(layout(st), ['1,3,2']);
+});
+
+test('move: уся вкладка на іншу — правила зливаються', () => {
+  let st = open(1, 2, 3);
+  st = move(st, { rule: hit(2).id }, { group: g(st, 1) });
+  st = move(st, { group: g(st, 3) }, { group: g(st, 1), anchor: hit(1).id, pos: 'after' });
+  assert.deepEqual(layout(st), ['1,3,2']);
+});
+
+test('move: більше 5 правил у вкладці — нічого не міняється, примітка', () => {
+  let st = open(1, 2, 3, 4, 5);
+  for (const n of [2, 3, 4, 5]) st = move(st, { rule: hit(n).id }, { group: g(st, 1) });
+  st = addRule(st, hit(6), 6);
+  const before = layout(st);
+  st = move(st, { rule: hit(6).id }, { group: g(st, 1) });
+  assert.deepEqual(layout(st), before);
+  assert.match(st.note, /до 5 правил/);
+});
+
+test('move: правило в нову вкладку; шостої не буде; вкладку саму в себе — без змін', () => {
+  let st = open(1, 2);
+  st = move(st, { rule: hit(2).id }, { group: g(st, 1) });
+  st = move(st, { rule: hit(2).id }, { newGroup: true }, 50);
+  assert.deepEqual(layout(st), ['1', '2']);
+  const one = open(1);
+  assert.equal(move(one, { rule: hit(1).id }, { newGroup: true }), one);
+  let full = open(1, 2, 3, 4, 5);
+  full = move(full, { rule: hit(2).id }, { group: g(full, 1) });
+  full = addRule(full, hit(6), 6);
+  const r = move(full, { rule: hit(2).id }, { newGroup: true });
+  assert.match(r.note, /Уже 5 вкладок/);
+});
+
+test('closeGroup і removeRule: активна — сусідня, остання — порожньо', () => {
+  let st = open(1, 2, 3);
+  st = activate(st, g(st, 2));
+  st = closeGroup(st, g(st, 2));
+  assert.equal(st.active, g(st, 3));
+  st = move(st, { rule: hit(3).id }, { group: g(st, 1) });
+  st = removeRule(st, hit(1).id);
+  assert.deepEqual(layout(st), ['3']);
+  st = removeRule(st, hit(3).id);
+  assert.deepEqual(st, { groups: [], active: null, note: null });
+  assert.equal(closeGroup(st, 'нема'), st);
 });
 
 test('place: типове — праворуч біля краю, на рівні плашки', () => {

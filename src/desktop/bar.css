@@ -404,6 +404,17 @@ html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !imp
 .rwin-in { display: flex; flex-direction: column; gap: 12px; }
 .rwin-rule { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
 .rwin-rule + .rwin-rule { padding-top: 12px; border-top: 1px solid var(--line); }
+/* перетягування (specs/084): затиснуте правило блякне, лінія показує, куди ляже; вкладка під курсором підсвічена */
+.rwin.free .rwin-rule { position: relative; cursor: grab; }
+.rwin.free .rwin-rule p { user-select: none; }
+.rwin-rule.self { opacity: .4; }
+.rwin-rule.drop-before::before, .rwin-rule.drop-after::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent); }
+.rwin-rule.drop-before::before { top: -8px; }
+.rwin-rule.drop-after::after { bottom: -8px; }
+.rwin-tab.over { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rwin-tab em { font-style: normal; color: var(--accent-hi); }
+.rwin-tab.plus { padding: 0 8px; border: 1px dashed var(--accent); background: transparent; color: var(--accent-hi); }
+.rwin.dragging .rwin-in { min-height: 40px; }
 .rwin-x.on { color: var(--accent-hi); }
 .rwin-x.sm { width: 22px; height: 22px; margin-left: auto; }
 .rwin.locked .rwin-body { overflow: hidden; }
