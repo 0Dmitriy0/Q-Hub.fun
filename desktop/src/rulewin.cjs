@@ -2,7 +2,8 @@
    Стан вкладок тримає головний процес; вікно лише малює те, що отримало (contracts/rule-window.md) */
 /* DEF_W — стала ширина прозорого вікна разом з полями під тінь (розмір руками не міняється, як у плашки) */
 const MAX_TABS = 5, MIN_W = 280, MIN_H = 140, DEF_W = 420, DEF_H = 300, GAP = 12, SEEN_W = 120, SEEN_H = 60;
-const KINDS = ['rules', 'law', 'order', 'info'];
+/* ai — відповідь ШІ: topic — питання, s — відповідь */
+const KINDS = ['rules', 'law', 'order', 'info', 'ai'];
 const FORUM = 'https://forum.quant5.com.ua/';
 
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -12,7 +13,8 @@ function cleanHit(h, now = Date.now()) {
   const t = { topic: str(h.topic, 300), url: '', kind: KINDS.includes(h.kind) ? h.kind : 'rules', n: str(h.n, 40), h: str(h.h, 300), s: str(h.s, 8000), at: now };
   if (!t.s.trim()) return null;
   if (typeof h.url === 'string' && h.url.startsWith(FORUM)) t.url = h.url.slice(0, 500);
-  t.id = `${t.topic}|${t.n}|${t.h}`;
+  /* відповіді ШІ на те саме питання бувають різні — до ключа йде й початок відповіді */
+  t.id = `${t.topic}|${t.n}|${t.h}` + (t.kind === 'ai' ? `|${t.s.slice(0, 80)}` : '');
   return t;
 }
 

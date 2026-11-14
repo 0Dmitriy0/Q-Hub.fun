@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import Icon from '../components/Icon';
-import { splitPenalty } from './barParts';
+import { cites, splitPenalty } from './barParts';
 import { abbrsOf, KIND, numLabel, type RuleKind } from './rulesSearch';
 
 /* окреме вікно з правилами (specs/084, contracts/rule-window.md): до 5 вкладок, у кожній до 5 правил.
@@ -8,7 +8,8 @@ import { abbrsOf, KIND, numLabel, type RuleKind } from './rulesSearch';
    на «+» — у нову вкладку; затримався над вкладкою — вона відкривається, щоб покласти між її правилами.
    Стан дає головний процес; locked — Alt+Q закрита: вікно зафіксоване, кнопок і перетягування немає, кліки йдуть у гру.
    keep — око: лишати поверх гри, коли Alt+Q закрита */
-interface Rule { id: string; topic: string; url: string; kind: RuleKind; n: string; h: string; s: string }
+/* kind ai — відповідь ШІ (topic — питання, s — відповідь): без номера й покарання, з виділеними посиланнями на пункти */
+interface Rule { id: string; topic: string; url: string; kind: RuleKind | 'ai'; n: string; h: string; s: string }
 interface Group { id: string; rules: Rule[] }
 interface State { groups: Group[]; active: string | null; note: string | null; locked: boolean; opacity?: number; keep?: boolean }
 type Src = { rule: string } | { group: string };
@@ -22,8 +23,10 @@ const api = (window as unknown as { qhub: RuleApi }).qhub;
 const MAX_TABS = 5, MAX_RULES = 5;
 
 /* підпис: «КК ст. 6.7» — скорочення документа й номер; у вкладці з кількома правилами — «+2» */
-const ruleLabel = (r: Rule) => [abbrsOf(r.topic)[0]?.toUpperCase() || r.topic.slice(0, 14), numLabel(r.kind, r.n)].filter(Boolean).join(' ');
-const tabTitle = (g: Group) => g.rules.map(r => `${KIND[r.kind]} · ${r.topic}${r.n ? ' · ' + numLabel(r.kind, r.n) : ''}`).join('\n');
+const kindOf = (r: Rule) => (r.kind === 'ai' ? 'Відповідь ШІ' : KIND[r.kind]);
+const ruleLabel = (r: Rule) => (r.kind === 'ai' ? 'ШІ · ' + (r.topic.length > 16 ? r.topic.slice(0, 15) + '…' : r.topic)
+  : [abbrsOf(r.topic)[0]?.toUpperCase() || r.topic.slice(0, 14), numLabel(r.kind, r.n)].filter(Boolean).join(' '));
+const tabTitle = (g: Group) => g.rules.map(r => `${kindOf(r)} · ${r.topic}${r.n && r.kind !== 'ai' ? ' · ' + numLabel(r.kind, r.n) : ''}`).join('\n');
 
 export default function RuleWin() {
   const [st, setSt] = useState<State>({ groups: [], active: null, note: null, locked: true });
@@ -102,7 +105,7 @@ export default function RuleWin() {
       onDragOver={e => { if (dragging && from !== cur.id && e.target === e.currentTarget) e.preventDefault(); }}
       onDrop={e => { if (e.target === e.currentTarget) { e.preventDefault(); drop({ group: cur.id }); } }}>
       {cur.rules.map(r => {
-        const { body, pen, more } = splitPenalty(r.s);
+        const ai = r.kind === 'ai', { body, pen, more } = ai ? { body: r.s, pen: '', more: '' } : splitPenalty(r.s);
         const self = !!dragging && 'rule' in dragging && dragging.rule === r.id;
         const full = !!dragging && from !== cur.id && cur.rules.length >= MAX_RULES;
         return <div key={r.id} className={'rwin-rule' + (self ? ' self' : '') + (line?.id === r.id ? ' drop-' + line.pos : '')} draggable={free}
@@ -117,13 +120,13 @@ export default function RuleWin() {
           onDragLeave={() => { if (line?.id === r.id) setLine(null); }}
           onDrop={e => { e.preventDefault(); e.stopPropagation(); drop({ group: cur.id, anchor: r.id, pos: line?.id === r.id ? line.pos : 'after' }); }}>
           <div className="brule-top">
-            <span className={'bkindtag ' + r.kind}>{KIND[r.kind]}</span>
-            {r.n && <span className="bpunkt">{numLabel(r.kind, r.n)}</span>}
-            {r.url ? <a href={r.url} target="_blank" rel="noreferrer" draggable={false} title="Відкрити тему на форумі">{r.topic}</a> : <a>{r.topic}</a>}
+            <span className={'bkindtag ' + r.kind}>{kindOf(r)}</span>
+            {r.n && r.kind !== 'ai' && <span className="bpunkt">{numLabel(r.kind, r.n)}</span>}
+            {r.url ? <a href={r.url} target="_blank" rel="noreferrer" draggable={false} title="Відкрити тему на форумі">{r.topic}</a> : <a title={ai ? 'Питання' : undefined}>{r.topic}</a>}
             {free && cur.rules.length > 1 && <button type="button" className="rwin-x sm" aria-label="Прибрати правило" title="Прибрати правило з вкладки"
               onClick={() => api.ruleRemove(r.id).catch(() => {})}><Icon name="x" size={12} /></button>}
           </div>
-          <p>{body}</p>
+          <p>{ai ? cites(body) : body}</p>
           {pen && <span className="bpen">{pen}</span>}
           {more && <p className="bextra">{more}</p>}
         </div>;

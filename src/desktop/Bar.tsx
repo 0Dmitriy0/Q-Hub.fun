@@ -49,7 +49,7 @@ interface BarApi {
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
   watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
-  ruleOpen?(h: Omit<RuleHit, 'score'>): Promise<boolean>;
+  ruleOpen?(h: Omit<RuleHit, 'score' | 'kind'> & { kind: RuleHit['kind'] | 'ai' }): Promise<boolean>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 /* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
@@ -314,7 +314,10 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} onOpen={api.ruleOpen ? x => { api.ruleOpen!({ topic: x.topic, url: x.url, kind: x.kind, n: x.n, h: x.h, s: x.s }).catch(() => {}); } : undefined} />)}</ul>}
         <p className="btip"><Icon name="spark" size={14} />Не те? <kbd>Shift</kbd>+<kbd>Enter</kbd> — спитати ШІ своїми словами</p>
       </> : <>
-        <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
+        <div className="bkind ai brow-h"><Icon name="spark" size={14} />Відповідь ШІ
+          {/* «Окремо» (specs/084): відповідь — вкладкою у вікні правил, як пункт правил */}
+          {!a.error && api.ruleOpen && <button type="button" className="bcopy bopen" title="Відкрити окремо — вікно лишиться поверх гри, коли закриєш Alt+Q"
+            onClick={() => { api.ruleOpen!({ topic: a.q, url: '', kind: 'ai', n: '', h: '', s: a.reply }).catch(() => {}); }}><Icon name="layers" size={14} /><span>Окремо</span></button>}</div>
         {a.error ? <p className="bad">{a.error}</p> : <div className="bans">{cites(a.reply)}<CopyBtn icon text={a.reply} label="Копіювати відповідь" /></div>}
         {!a.error && <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>}
       </>}

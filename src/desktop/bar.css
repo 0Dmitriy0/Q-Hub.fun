@@ -426,3 +426,4 @@ html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !imp
 .rwin-body p.bextra { font-size: 12.5px; color: var(--muted); }
 body.in-rule ::-webkit-scrollbar { width: 10px; }
 body.in-rule ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+.bkindtag.ai { color: #c9b3ff; background: rgba(150, 110, 255, .16); }
