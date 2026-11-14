@@ -138,10 +138,19 @@ export type NewsDraft = { title: string; added: string[]; changed: string[]; rem
 export const NEWS_MAX = 4096;   // ліміт опису embed у Discord
 
 const NEWS_GROUPS = [['added', '✨ Додано'], ['changed', '🔧 Змінено'], ['removed', '🗑️ Прибрано']] as const;
+/* пункт «Назва (клавіша): опис» чи «Назва — опис» → назва жирним, щоб пункти легко пробігти очима.
+   Назва — до першої «: » чи « — » у перших 70 знаках; уже розмічений пункт (є «**») не чіпаємо */
+export function newsItem(s: string): string {
+  const t = s.trim();
+  if (t.includes('**')) return t;
+  const m = /^(.{3,70}?)(: | — )/.exec(t);
+  return m ? `**${m[1]}**${m[2]}${t.slice(m[0].length)}` : t;
+}
+/* у групі з кількох пунктів — порожній рядок між ними: суцільна стіна тексту в Discord погано читається */
 export function newsDescription(d: NewsDraft): string {
   return NEWS_GROUPS.map(([k, name]) => {
-    const items = (d[k] ?? []).map(s => s.trim()).filter(Boolean);
-    return items.length ? `**${name}**\n${items.map(s => '• ' + s).join('\n')}` : '';
+    const items = (d[k] ?? []).map(s => s.trim()).filter(Boolean).map(s => '• ' + newsItem(s));
+    return items.length ? `**${name}**\n${items.join(items.length > 1 ? '\n\n' : '\n')}` : '';
   }).filter(Boolean).join('\n\n');
 }
 
