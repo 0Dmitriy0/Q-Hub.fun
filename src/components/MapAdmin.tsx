@@ -73,7 +73,7 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
   const own = cats.filter(c => !c.builtin);
   const [id, setId] = useState(pick && own.some(c => c.id === pick) ? pick : own[0]?.id || '');
   const cur = own.find(c => c.id === id);
-  const form = (c: MapCategory) => ({ name: c.name, grp: c.grp, color: c.color, icon: c.icon, description: c.description || '', starts_on: c.starts_on || '', ends_on: c.ends_on || '' });
+  const form = (c: MapCategory) => ({ name: c.name, grp: c.grp, color: c.color, icon: c.icon, description: c.description || '', starts_on: c.starts_on || '', ends_on: c.ends_on || '', show_labels: !!c.show_labels });
   const [f, setF] = useState(() => cur ? form(cur) : null);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const groups = [...new Set(cats.map(c => c.grp))];
@@ -87,10 +87,13 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
     /* дати івенту (specs/018): кінець можна не вказувати */
     const starts_on = f!.starts_on || null, ends_on = f!.ends_on || null;
     if (starts_on && ends_on && ends_on < starts_on) return setMsg('Кінець івенту не може бути раніше за початок.');
-    const v = { name, grp, color: f!.color, icon: f!.icon, description: f!.description.trim(), starts_on, ends_on };
+    /* галочку назв (0067, specs/081) шлемо лише коли її змінили — без міграції решта полів зберігається як раніше */
+    const v = { name, grp, color: f!.color, icon: f!.icon, description: f!.description.trim(), starts_on, ends_on,
+      ...(f!.show_labels !== !!cur!.show_labels ? { show_labels: f!.show_labels } : {}) };
     setBusy(true); setMsg('');
     const { error } = await supabase!.from('map_categories').update(v).eq('id', id);
     setBusy(false);
+    if (error && /show_labels/.test(error.message)) return setMsg('Галочки назв ще немає: запусти supabase/migrations/0067_category_labels.sql у Supabase → SQL Editor.');
     if (error) return setMsg(/description|starts_on|ends_on/.test(error.message) ? 'Дат івентів ще немає: запусти supabase/migrations/0034_event_dates.sql у Supabase → SQL Editor.' : dbErr(error.message));
     onSaved({ ...cur!, ...v }); setMsg(`Категорію «${name}» збережено — мітки на мапі вже оновились.`);
   }
@@ -107,6 +110,8 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
         <label className="fld">Початок івенту<input className="min" type="date" value={f.starts_on} onChange={e => setF({ ...f, starts_on: e.target.value })} /></label>
         <label className="fld">Кінець (необов'язково)<input className="min" type="date" value={f.ends_on} onChange={e => setF({ ...f, ends_on: e.target.value })} /></label>
       </div>
+      <label className="mcheck"><input type="checkbox" checked={f.show_labels} onChange={e => setF({ ...f, show_labels: e.target.checked })} /> Показувати назви міток на мапі</label>
+      <p className="muted">Під значками на наближеній мапі. Назва однаково видна по кліку на мітку й у пошуку.</p>
       <label className="mrow mcolor">Колір обводки <input type="color" value={f.color} onChange={e => setF({ ...f, color: e.target.value })} /></label>
       <IconGrid value={f.icon} onChange={v => v && setF({ ...f, icon: v })} label="Іконка категорії" />
       <div className="mrow"><span className="muted">або своя:</span>
@@ -146,6 +151,7 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const [cName, setCName] = useState(''); const [cGrp, setCGrp] = useState('Міні-ігри, квести й контракти');
   const [cColor, setCColor] = useState('#ff6a1f'); const [cIcon, setCIcon] = useState(MAP_ICONS[0]);
+  const [cLabels, setCLabels] = useState(false);   // назви міток нової категорії — за замовчуванням ні (specs/081)
   const groups = [...new Set(cats.map(c => c.grp))];
   /* координати, взяті кліком по мапі, підставляються у форму */
   const [seen, setSeen] = useState<[number, number] | null>(null);
@@ -191,12 +197,14 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
   async function addCat() {
     const n = cName.trim(); if (!n) return setMsg('Впиши назву категорії.');
     let id = slugify(n); if (cats.some(c => c.id === id)) id = id.slice(0, 34) + '-' + Date.now().toString(36).slice(-5);
-    const row = { id, name: n, grp: cGrp.trim() || 'Інше', icon: cIcon, color: cColor, sort: 200 + cats.length, shown: true };
+    /* назви за замовчуванням вимкнено (specs/081); true шлемо лише якщо поставили галочку — false дає сама база */
+    const row = { id, name: n, grp: cGrp.trim() || 'Інше', icon: cIcon, color: cColor, sort: 200 + cats.length, shown: true, ...(cLabels ? { show_labels: true } : {}) };
     setBusy(true); setMsg('');
     const { error } = await supabase!.from('map_categories').insert(row);
     setBusy(false);
+    if (error && /show_labels/.test(error.message)) return setMsg('Галочки назв ще немає: запусти supabase/migrations/0067_category_labels.sql у Supabase → SQL Editor.');
     if (error) return setMsg(dbErr(error.message));
-    onCat(row); setCat(id); setCName(''); setMsg(`Категорію «${n}» створено — додай у неї мітки.`);
+    onCat({ ...row, show_labels: cLabels }); setCat(id); setCName(''); setCLabels(false); setMsg(`Категорію «${n}» створено — додай у неї мітки.`);
   }
 
   return (
@@ -241,6 +249,7 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
         <input className="min" placeholder="Назва, напр. Сміттєві баки" value={cName} onChange={e => setCName(e.target.value)} aria-label="Назва категорії" />
         <input className="min" list="map-groups" placeholder="Група" value={cGrp} onChange={e => setCGrp(e.target.value)} aria-label="Група" />
         <datalist id="map-groups">{groups.map(g => <option key={g} value={g} />)}</datalist>
+        <label className="mcheck"><input type="checkbox" checked={cLabels} onChange={e => setCLabels(e.target.checked)} /> Показувати назви міток на мапі</label>
         <label className="mrow mcolor">Колір обводки <input type="color" value={cColor} onChange={e => setCColor(e.target.value)} /></label>
         <IconGrid value={cIcon} onChange={v => v && setCIcon(v)} label="Іконка категорії" />
         <div className="mrow"><span className="muted">або своя:</span>
