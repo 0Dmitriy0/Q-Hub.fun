@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase';
 import { loadMapData } from '../lib/mapMarks';
 import { buyers, places, type BarPrice, type PlaceHit } from '../desktop/barSearch';
 import { searchRules, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
-import { CopyBtn, placesText, Prices, RuleCard, rulesText } from '../desktop/barParts';
+import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from '../desktop/barParts';
+import { plainText } from '../desktop/richText';
 import RULES from '../data/rules.json';
 import '../desktop/bar.css';
 
@@ -17,7 +18,12 @@ const AT = (RULES as { fetched: string }).fetched;
 const rulesDay = new Date(AT.length === 10 ? AT + 'T12:00:00' : AT).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
 interface Ask { q: string; reply: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean }
-const AI_ONLY = 'Питання до ШІ своїми словами працює в програмі: він відповідає з правил сервера й показує пункт, звідки взяв відповідь. На сайті — пошук без ШІ: натисни Enter.';
+/* у тому самому форматі, що й справжня відповідь ШІ в програмі (specs/085): головна думка, список, жирне — без вигаданих пунктів правил */
+const AI_ONLY = [
+  'Питання до ШІ своїми словами працює **в програмі Q-Hub** — на сайті лише пошук без ШІ.',
+  '- У програмі: Alt+Q поверх гри, **Shift+Enter** — ШІ відповість з правил сервера й законів штату і покаже пункт, звідки взяв відповідь',
+  '- Тут: натисни **Enter** — знайде пункти правил, закони й місця на мапі',
+].join('\n');
 export const EXAMPLES: [string, 'ai' | 'prices'][] = [
   ['адвокат при затриманні', 'ai'], ['обшук', 'ai'], ['КК 1.8', 'ai'], ['хабар', 'ai'], ['зелена зона', 'ai'], ['риба', 'prices'],
 ];
@@ -114,8 +120,9 @@ export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'pr
               </button>)}
             </div>
             <div className="bright">{a && (a.local ? <>
-              <div className="bkind ai"><Icon name="spark" size={14} />Відповідь ШІ</div>
-              <div className="bans">{a.reply}</div>
+              <div className="bkind ai brow-h"><Icon name="spark" size={14} />Відповідь ШІ</div>
+              <div className="bans"><Rich text={a.reply} /><CopyBtn icon text={plainText(a.reply)} label="Копіювати відповідь" /></div>
+              <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>
             </> : <>
               {a.places && a.places.length > 0 && <>
                 <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · у програмі клік показує мітку на мапі поверх гри<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>

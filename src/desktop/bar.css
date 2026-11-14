@@ -82,8 +82,8 @@ body.in-bar input { user-select: text; }
 /* заголовок відповіді: пошук у правилах чи ШІ */
 .bkind { display: inline-flex; align-items: center; gap: 7px; font: 700 11.5px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .bkind.ai, .bkind.ai .ico { color: var(--accent-hi); }
-.brules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.brule { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 11px 14px 12px; border-radius: 12px; background: #18212d; border: 1px solid var(--line); }
+.brules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.brule { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 14px 13px; border-radius: 12px; background: #18212d; border: 1px solid var(--line); }
 .brule-top { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 /* тип джерела пункту (specs/010): правила сервера — помаранчевий, закони штату — синій, накази — зелений */
 .bkindtag { flex: none; font: 700 11px var(--sans); letter-spacing: .02em; padding: 2px 7px; border-radius: 6px; color: var(--accent-hi); background: rgba(255, 106, 31, .12); }
@@ -93,11 +93,11 @@ body.in-bar input { user-select: text; }
 .bpunkt { flex: none; font: 700 12px var(--mono); color: var(--accent-hi); background: rgba(255, 106, 31, .12); padding: 2px 7px; border-radius: 6px; }
 .brule a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brule a:hover { color: var(--fg); text-decoration: underline; }
-.brule p { font-size: 14.5px; line-height: 1.5; white-space: pre-line; }
-.brule p.clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.brule p { white-space: pre-line; }
+.brule .rich, .rwin-rule .rich { font-size: 15px; align-self: stretch; }
 .bmore { border: 0; background: none; padding: 0; color: var(--accent-hi); font: 600 12.5px var(--sans); cursor: pointer; }
 .bmore:hover { text-decoration: underline; }
-.bpen { font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--bad); background: var(--bad-soft); padding: 4px 9px; border-radius: 7px; }
+.bpen { align-self: stretch; font-size: 13px; font-weight: 600; line-height: 1.45; color: #f87171; background: var(--bad-soft); padding: 5px 10px; border-left: 3px solid var(--bad); border-radius: 4px 8px 8px 4px; }
 .brule p.bextra { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .bnone { color: var(--muted); }
 .btip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); padding-top: 2px; }
@@ -105,7 +105,7 @@ body.in-bar input { user-select: text; }
 .btip kbd, .bans kbd { font: 600 11px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; color: var(--fg); }
 /* відповідь ШІ: картка з помаранчевою рискою, пункти правил — позначками */
 .bans { font-size: 15.5px; line-height: 1.6; padding: 14px 16px; border-radius: 12px; background: #18212d; border: 1px solid var(--line); border-left: 3px solid var(--accent); }
-.bcite { background: rgba(255, 106, 31, .13); color: var(--accent-hi); font-size: 13px; font-weight: 600; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.bcite { background: rgba(255, 106, 31, .13); color: var(--accent-hi); font-size: .86em; font-weight: 600; padding: 1px 6px; border-radius: 5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .bfine { font-size: 12px; color: var(--faint); }
 /* ШІ думає: сірі рядки замість тексту */
 .bskel { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
@@ -335,7 +335,7 @@ body.in-bar ::-webkit-scrollbar-track { background: transparent; }
 .brule-top { width: 100%; }
 .bhead { align-items: center; }
 .bhead .bcopy { align-self: center; }
-.bright .brule p, .bright .bpen, .bans, .bright .bbuy b, .bright .bbuy small, .bright .bhead h3, .bright .bnone { user-select: text; cursor: text; }
+.bright .brule p, .bright .rich, .bright .bpen, .bans, .bright .bbuy b, .bright .bbuy small, .bright .bhead h3, .bright .bnone { user-select: text; cursor: text; }
 /* заголовок групи результатів з «Копіювати все» праворуч */
 .bkind.brow-h { display: flex; width: 100%; }
 .bkind.brow-h .bcopy { text-transform: none; letter-spacing: 0; }
@@ -406,7 +406,7 @@ html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !imp
 .rwin-rule + .rwin-rule { padding-top: 12px; border-top: 1px solid var(--line); }
 /* перетягування (specs/084): затиснуте правило блякне, лінія показує, куди ляже; вкладка під курсором підсвічена */
 .rwin.free .rwin-rule { position: relative; cursor: grab; }
-.rwin.free .rwin-rule p { user-select: none; }
+.rwin.free .rwin-rule p, .rwin.free .rwin-rule .rich { user-select: none; }
 .rwin-rule.self { opacity: .4; }
 .rwin-rule.drop-before::before, .rwin-rule.drop-after::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent); }
 .rwin-rule.drop-before::before { top: -8px; }
@@ -436,3 +436,17 @@ body.in-rule ::-webkit-scrollbar-thumb { background: var(--line2); border-radius
 .rwin-body .brule-top > .bkindtag, .rwin-body .brule-top > .bpunkt { flex: none; }
 .rwin-body p, .rwin-body .bpen { overflow-wrap: anywhere; word-break: break-word; }
 .rwin-body .bcite { white-space: normal; overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* текст відповідей і пунктів (specs/085): абзаци, списки, жирне; рядок до ~75 знаків, щоб око не губилося */
+.rich { line-height: 1.6; max-width: 75ch; overflow-wrap: anywhere; color: var(--fg); }
+.rich p, .rich ul, .rich ol { margin: 0; }
+.rich p { white-space: pre-line; }
+.rich > * + * { margin-top: .55em; }
+.rich ul, .rich ol { padding-left: 1.25em; }
+.rich li { padding-left: .15em; }
+.rich li + li { margin-top: .3em; }
+.rich li::marker { color: var(--accent); font-weight: 700; }
+.rich strong { font-weight: 700; color: #fff; }
+.rich.clamp { max-height: calc(1.6em * 4); overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+/* виділення мишею (specs/085): приглушене, у тон акценту, замість яскраво-синього системного */
+.bright ::selection, .rwin ::selection { background: rgba(255, 107, 0, .32); color: #fff; }

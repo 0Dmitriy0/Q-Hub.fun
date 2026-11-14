@@ -12,6 +12,15 @@ describe('помічник Alt+Q без обліку (specs/040)', () => {
     expect(clean({ reply: '  Глива — 150 $ у Фермі. ', actions: [{ kind: 'tx', amount: 5 }] })).toEqual({ reply: 'Глива — 150 $ у Фермі.', actions: [] });
     expect(clean(null)).toEqual({ reply: '', actions: [] });
   });
+  /* specs/085: відповідь читається з першого погляду — головна думка, список, жирне лише для сум і строків */
+  it('підказка: формат відповіді — головна думка, список, мало жирного', () => {
+    expect(SYSTEM).toContain('перше речення — головна думка');
+    expect(SYSTEM).toContain('кожен пункт з нового рядка з «- »');
+    expect(SYSTEM).toContain('не більше трьох на відповідь');
+    expect(SYSTEM).toContain('Без заголовків, таблиць і вкладених списків');
+    expect(SYSTEM).toContain('до чотирьох пунктів списком');
+    expect(SYSTEM).not.toContain('одне-два короткі речення українською');
+  });
   it('підказка: облік прибрано — помічник не обіцяє записати', () => {
     expect(SYSTEM).toContain('облік прибрали');
     expect(SYSTEM).not.toContain('actions');

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import Icon from '../components/Icon';
-import { cites, splitPenalty } from './barParts';
+import { Rich, splitPenalty } from './barParts';
 import { abbrsOf, KIND, numLabel, type RuleKind } from './rulesSearch';
 
 /* окреме вікно з правилами (specs/084, contracts/rule-window.md): до 5 вкладок, у кожній до 5 правил.
@@ -126,7 +126,7 @@ export default function RuleWin() {
             {free && cur.rules.length > 1 && <button type="button" className="rwin-x sm" aria-label="Прибрати правило" title="Прибрати правило з вкладки"
               onClick={() => api.ruleRemove(r.id).catch(() => {})}><Icon name="x" size={12} /></button>}
           </div>
-          <p>{ai ? cites(body) : body}</p>
+          <Rich text={body} cite={ai} />
           {pen && <span className="bpen">{pen}</span>}
           {more && <p className="bextra">{more}</p>}
         </div>;
