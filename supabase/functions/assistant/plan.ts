@@ -28,7 +28,7 @@ const money = (n: number) => Math.round(n).toLocaleString('uk-UA').replace(/ /g,
    у кожного рядка тип джерела: «[Правила сервера · …, п. 1.1]», «[Закон штату · …, ст. 6.5]» */
 export function rulesBlock(rules: unknown): string {
   /* програма до «Довідки» (до 2026-10-30) не знає цього типу й пише «[undefined · …]» — це довідка */
-  const r = typeof rules === 'string' ? rules.trim().slice(0, 8000).replace(/\[undefined · /g, '[Довідка · ') : '';
+  const r = typeof rules === 'string' ? rules.trim().slice(0, 24000).replace(/\[undefined · /g, '[Довідка · ') : '';
   return r ? `Пункти правил сервера й законів штату QuantRP, що можуть стосуватися питання:
 ${r}
 

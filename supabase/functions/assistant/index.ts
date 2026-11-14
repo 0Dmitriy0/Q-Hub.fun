@@ -36,7 +36,7 @@ Deno.serve(async req => {
       model: 'claude-haiku-5-5',
       max_tokens: 2000,
       system: SYSTEM,
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
+      output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
       messages: [{ role: 'user', content: `${context(c)}\n\n${rulesBlock(rules)}Гравець пише: ${text.trim()}` }],
     });
     if (res.stop_reason === 'refusal') return json({ reply: 'З цим не допоможу.', actions: [] });

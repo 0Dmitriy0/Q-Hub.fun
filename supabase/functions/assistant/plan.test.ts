@@ -46,7 +46,7 @@ describe('пункти правил для помічника', () => {
     expect(rulesBlock(undefined)).toBe('');
     expect(rulesBlock({ x: 1 })).toBe('');
   });
-  it('задовге — обрізається до 8000', () => expect(rulesBlock('я'.repeat(20000)).length).toBeLessThan(8100));
+  it('задовге — обрізається до 24000', () => expect(rulesBlock('я'.repeat(30000)).length).toBeLessThan(24100));
 });
 
 describe('номери пунктів у відповіді — лише справжні (specs/010, SC-003)', () => {

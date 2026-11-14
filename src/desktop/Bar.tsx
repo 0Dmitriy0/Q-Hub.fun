@@ -178,7 +178,7 @@ export default function Bar() {
     const text = q.trim(); if (!text || busy) return;
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
-    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 14)));
+    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 40), 24000));
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', error: r.error, unseen: !document.hasFocus() }, ...a].slice(0, 30));
     setSel(0);

@@ -571,7 +571,7 @@ function startUpdates() {
 /* Shift+Enter: спитати помічника (supabase/functions/assistant); rules — пункти правил сервера, які плашка знайшла під питання.
    Помічник лише відповідає: облік програма більше не веде (specs/040), тож дій-записів немає */
 async function quickAsk(text, rules) {
-  const { data, error } = await sb.functions.invoke('assistant', { body: { text: String(text).slice(0, 500), character_id: settings.character, rules: typeof rules === 'string' ? rules.slice(0, 8000) : '' } });
+  const { data, error } = await sb.functions.invoke('assistant', { body: { text: String(text).slice(0, 500), character_id: settings.character, rules: typeof rules === 'string' ? rules.slice(0, 24000) : '' } });
   if (error) {
     const msg = await error.context?.json?.().then(b => b.error).catch(() => null);
     return { error: msg || 'Помічник недоступний. Перевір інтернет і спробуй ще раз.' };
