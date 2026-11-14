@@ -160,8 +160,9 @@ function createBar() {
   bar.on('hide', hideStrip);
   bar.on('hide', () => { if (mapFrom === 'bar') mapw?.hide(); });   // і мапа, відкрита з плашки
   /* вікно з правилом (specs/084): плашка видна — налаштовуєш, сховано — зафіксоване */
-  bar.on('show', () => ruleLock(false));
-  bar.on('hide', () => ruleLock(true));
+  /* око закрите — вікно ховається й з'являється разом з плашкою, як плашка без шпильки */
+  bar.on('show', () => { ruleLock(false); ruleWithBar(true); });
+  bar.on('hide', () => { ruleLock(true); ruleWithBar(false); });
   bar.loadFile(path.join(__dirname, 'ui', 'bar.html'));
 }
 /* фокус пішов з плашки чи мапи: перейшов в іншу з них — лишаються, у гру — ховаються (якщо не закріплено) */
@@ -289,13 +290,30 @@ function createRuleWin() {
   /* Esc — назад у плашку (вікно лишається) */
   rulew.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && bar?.isVisible()) { e.preventDefault(); bar.focus(); } });
   /* місце — після руху, не на кожен піксель */
-  rulew.on('moved', () => { clearTimeout(ruleSaveT); ruleSaveT = setTimeout(() => { if (rulew?.isVisible()) { const { x, y } = rulew.getBounds(); settings.ruleWin = { x, y }; saveSettings(); } }, 400); });
+  rulew.on('moved', () => { clearTimeout(ruleSaveT); ruleSaveT = setTimeout(() => { if (rulew?.isVisible()) { const { x, y } = rulew.getBounds(); settings.ruleWin = { ...ruleOpts(), x, y }; saveSettings(); } }, 400); });
   /* Alt+F4 тощо — як «×»: ховається з вкладками; вихід із програми — закривається */
   rulew.on('close', e => { if (quitting) return; e.preventDefault(); ruleCloseAll(); });
   rulew.loadFile(path.join(__dirname, 'ui', 'rule.html'));
 }
 /* opacity — та сама прозорість, що в плашки (Налаштування → прозорість) */
-const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked, opacity: prefs().opacity });
+/* keep — око: лишати поверх гри, коли Alt+Q закрита (типово так); all — усі вкладки разом, одна під одною. Пам'ятаються */
+const ruleOpts = () => ({ keep: settings.ruleWin?.keep !== false, all: settings.ruleWin?.all === true });
+const ruleView = () => ({ tabs: ruleSt.tabs, active: ruleSt.active, note: ruleSt.note, locked: ruleLocked, opacity: prefs().opacity, ...ruleOpts() });
+function ruleSetOpts(p) {
+  const o = ruleOpts();
+  if (typeof p?.keep === 'boolean') o.keep = p.keep;
+  if (typeof p?.all === 'boolean') o.all = p.all;
+  settings.ruleWin = { ...settings.ruleWin, ...o };
+  saveSettings();
+  rulePush();
+}
+/* око закрите: плашку сховали — вікно теж (вкладки лишаються), показали — вікно назад */
+function ruleWithBar(shown) {
+  if (!rulew || ruleOpts().keep || !ruleSt.tabs.length) return;
+  if (!shown) { rulew.hide(); return; }
+  if (!rulew.isVisible()) { placeRule(); rulew.showInactive(); }
+  rulew.moveTop();
+}
 /* стан у вікно; примітка («найстаріше закрито») — разова */
 function rulePush() {
   if (!rulew) return;
@@ -321,7 +339,8 @@ function placeRule() {
 function ruleSize(h) {
   if (!rulew || !Number.isFinite(h)) return;
   const b = rulew.getBounds(), w = screen.getDisplayMatching(b).workArea;
-  rulew.setBounds(rulewin.fit({ x: b.x, y: b.y, width: rulewin.DEF_W, height: rulewin.fitH(h, w) }, w));
+  const frac = ruleOpts().all ? rulewin.ALL_FRAC : 0.5;
+  rulew.setBounds(rulewin.fit({ x: b.x, y: b.y, width: rulewin.DEF_W, height: rulewin.fitH(h, w, frac) }, w, frac));
 }
 function openRule(hit) {
   const tab = rulewin.cleanHit(hit);
@@ -1288,6 +1307,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('rule-close', e => { if (fromRule(e) && !ruleLocked) ruleCloseAll(); });
   ipcMain.handle('rule-size', (e, h) => { if (fromRule(e)) ruleSize(h); });
+  ipcMain.handle('rule-opts', (e, p) => { if (fromRule(e) && !ruleLocked) ruleSetOpts(p); });
   ipcMain.handle('map-focus-take', e => { if (!fromMap(e)) return null; const f = mapFocus; mapFocus = null; return f; });
   /* скільки питань до ШІ лишилось сьогодні (0027_assistant_limit_50.sql); без міграції — null */
   ipcMain.handle('ai-left', async e => { if (!fromBar(e)) return null; const { data, error } = await sb.rpc('assistant_left'); return error ? null : data; });

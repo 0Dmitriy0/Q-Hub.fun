@@ -401,7 +401,11 @@ html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !imp
 .rwin-lock { flex: none; font: 600 11px var(--sans); color: var(--faint); padding-right: 6px; }
 .rwin-note { flex: none; padding: 5px 12px; font-size: 12px; color: var(--accent-hi); background: rgba(255, 106, 31, .1); }
 .rwin-body { flex: 0 1 auto; min-height: 0; overflow: auto; padding: 11px 14px 13px; }
-.rwin-in { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.rwin-in { display: flex; flex-direction: column; gap: 12px; }
+.rwin-rule { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.rwin-rule + .rwin-rule { padding-top: 12px; border-top: 1px solid var(--line); }
+.rwin-x.on { color: var(--accent-hi); }
+.rwin-x.sm { width: 22px; height: 22px; margin-left: auto; }
 .rwin.locked .rwin-body { overflow: hidden; }
 .rwin-body .brule-top { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .rwin-body a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -43,8 +43,9 @@ function closeTab(st, id) {
 }
 
 /* розмір у межах: не менше заголовка з трьома рядками, не більше половини робочої області; рамка — всередині області */
-function fit(r, work) {
-  const maxW = Math.max(MIN_W, Math.floor(work.width / 2)), maxH = Math.max(MIN_H, Math.floor(work.height / 2));
+/* frac — частка висоти робочої області: одна вкладка — половина, «усі разом» — більше (ALL_FRAC) */
+function fit(r, work, frac = 0.5) {
+  const maxW = Math.max(MIN_W, Math.floor(work.width / 2)), maxH = Math.max(MIN_H, Math.floor(work.height * frac));
   const width = Math.round(Math.min(maxW, Math.max(MIN_W, r.width))), height = Math.round(Math.min(maxH, Math.max(MIN_H, r.height)));
   const x = Math.round(Math.min(work.x + work.width - width, Math.max(work.x, r.x)));
   const y = Math.round(Math.min(work.y + work.height - height, Math.max(work.y, r.y)));
@@ -58,7 +59,8 @@ function seen(r, work) {
   return w >= SEEN_W && h >= SEEN_H;
 }
 /* висота під вміст: не менше заголовка з трьома рядками, не більше половини робочої області */
-const fitH = (h, work) => Math.round(Math.min(Math.max(MIN_H, Math.floor(work.height / 2)), Math.max(MIN_H, Number(h) || DEF_H)));
+const ALL_FRAC = 0.85;
+const fitH = (h, work, frac = 0.5) => Math.round(Math.min(Math.max(MIN_H, Math.floor(work.height * frac)), Math.max(MIN_H, Number(h) || DEF_H)));
 /* де стоїть вікно: збережене місце { x, y }, якщо вікно там видно; інакше праворуч біля краю, на рівні верху плашки
    (без плашки — 15 % висоти). Ширина стала, висота — поточна (під пункт). work — робоча область монітора, bar — рамка плашки чи null */
 function place({ work, bar = null, saved = null, height = DEF_H }) {
@@ -71,4 +73,4 @@ function place({ work, bar = null, saved = null, height = DEF_H }) {
   return fit({ x: work.x + work.width - DEF_W - GAP, y, width: DEF_W, height: h }, work);
 }
 
-module.exports = { MAX_TABS, MIN_W, MIN_H, DEF_W, fitH, cleanHit, empty, addTab, activate, closeTab, fit, place, okRect };
+module.exports = { MAX_TABS, MIN_W, MIN_H, DEF_W, ALL_FRAC, fitH, cleanHit, empty, addTab, activate, closeTab, fit, place, okRect };

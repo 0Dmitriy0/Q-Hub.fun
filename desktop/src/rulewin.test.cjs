@@ -78,6 +78,9 @@ test('fitH: висота під вміст у межах', () => {
   assert.equal(fitH(5000, work), 520);
   assert.equal(fitH(333, work), 333);
   assert.equal(place({ work, height: 5000 }).height, 520);
+  /* «усі разом» — до 85 % висоти */
+  assert.equal(fitH(5000, work, 0.85), 884);
+  assert.equal(fit({ x: 0, y: 0, width: 420, height: 884 }, work, 0.85).height, 884);
 });
 
 test('fit: мін/макс розмір і рамка в межах робочої області', () => {
