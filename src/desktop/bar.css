@@ -377,3 +377,62 @@ button.bpromo { cursor: pointer; font: 600 12px var(--sans); }
 .bveil b { color: var(--fg); font-size: 16px; }
 .bveil p { margin: 0 0 6px; max-width: 420px; font-size: 13px; }
 .bveil .ico { color: var(--accent); }
+
+/* «Окремо» біля пункту (specs/084): поруч із «Копіювати», праворуч у рядку */
+.bcopy.bopen + .bcopy { margin-left: 0; }
+
+/* окреме вікно з правилом (rule.html, specs/084): у стилі плашки — прозоре вікно, той самий фон, рамка, заокруглення й тінь
+   (.bbox), та сама прозорість з налаштувань. Заголовок — ручка перетягування; зафіксоване — без кнопок */
+html:has(> body.in-rule), body.in-rule { margin: 0; background: transparent !important; overflow: hidden; user-select: none; cursor: default; }
+.rwrap { padding: 4px 10px 18px; }
+.rwin { display: flex; flex-direction: column; max-height: calc(100vh - 22px); box-sizing: border-box; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7); overflow: hidden; transition: border-color .15s; }
+.rwin.free { border-color: rgba(255, 107, 0, .55); }
+.rwin-head { flex: none; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 7px 7px 14px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; }
+.rwin-head b { flex: none; font: 700 13px var(--sans); color: var(--fg); }
+.rwin-tabs { display: flex; gap: 4px; min-width: 0; flex: 1; overflow: hidden; }
+.rwin-tab { -webkit-app-region: no-drag; display: inline-flex; align-items: center; gap: 2px; min-width: 0; max-width: 140px; padding: 0 2px 0 8px; height: 24px; border-radius: 6px; border: 0; background: var(--line2); color: var(--muted); font: 600 11.5px var(--mono); cursor: pointer; }
+.rwin-tab.on { background: rgba(255, 107, 0, .22); color: var(--fg); }
+.rwin-tab > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rwin-tab i { display: inline-flex; padding: 3px; border-radius: 4px; color: var(--muted); font-style: normal; }
+.rwin-tab i:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
+.rwin.locked .rwin-tab { cursor: default; padding-right: 8px; }
+.rwin-x { -webkit-app-region: no-drag; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.rwin-x:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
+.rwin-lock { flex: none; font: 600 11px var(--sans); color: var(--faint); padding-right: 6px; }
+.rwin-note { flex: none; padding: 5px 12px; font-size: 12px; color: var(--accent-hi); background: rgba(255, 106, 31, .1); }
+.rwin-body { flex: 0 1 auto; min-height: 0; overflow: auto; padding: 11px 14px 13px; }
+.rwin-in { display: flex; flex-direction: column; gap: 12px; }
+.rwin-rule { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.rwin-rule + .rwin-rule { padding-top: 12px; border-top: 1px solid var(--line); }
+/* перетягування (specs/084): затиснуте правило блякне, лінія показує, куди ляже; вкладка під курсором підсвічена */
+.rwin.free .rwin-rule { position: relative; cursor: grab; }
+.rwin.free .rwin-rule p { user-select: none; }
+.rwin-rule.self { opacity: .4; }
+.rwin-rule.drop-before::before, .rwin-rule.drop-after::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent); }
+.rwin-rule.drop-before::before { top: -8px; }
+.rwin-rule.drop-after::after { bottom: -8px; }
+.rwin-tab.over { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rwin-tab em { font-style: normal; color: var(--accent-hi); }
+.rwin-tab.plus { padding: 0 8px; border: 1px dashed var(--accent); background: transparent; color: var(--accent-hi); }
+.rwin.dragging .rwin-in { min-height: 40px; }
+.rwin-x.on { color: var(--accent-hi); }
+.rwin-x.sm { width: 22px; height: 22px; margin-left: auto; }
+.rwin.locked .rwin-body { overflow: hidden; }
+.rwin-body .brule-top { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+.rwin-body a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rwin-body a:hover { color: var(--fg); text-decoration: underline; }
+.rwin-body h3 { margin: 0; font-size: 13.5px; }
+.rwin-body p { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-line; user-select: text; }
+.rwin-body p.bextra { font-size: 12.5px; color: var(--muted); }
+body.in-rule ::-webkit-scrollbar { width: 10px; }
+body.in-rule ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+.bkindtag.ai { color: #c9b3ff; background: rgba(150, 110, 255, .16); }
+/* без горизонтальної прокрутки у вікні правил: усе переноситься в ширину вікна */
+.rwin-body { overflow-x: hidden; overflow-y: auto; }
+.rwin-in, .rwin-rule { min-width: 0; max-width: 100%; }
+.rwin-rule { align-items: stretch; }
+.rwin-rule > .bpen { align-self: flex-start; max-width: 100%; }
+.rwin-body .brule-top > a { flex: 1 1 auto; min-width: 0; }
+.rwin-body .brule-top > .bkindtag, .rwin-body .brule-top > .bpunkt { flex: none; }
+.rwin-body p, .rwin-body .bpen { overflow-wrap: anywhere; word-break: break-word; }
+.rwin-body .bcite { white-space: normal; overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone; }

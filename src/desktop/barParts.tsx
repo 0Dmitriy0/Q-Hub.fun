@@ -42,7 +42,8 @@ export const rulesText = (hits: RuleHit[]) => hits.map(ruleText).join('\n\n');
 /* місця з мапи: «Заправка №3 — Заправки, X 120 · Y -340» */
 export const placesText = (pl: PlaceHit[]) => pl.map(p => `${p.name} — ${p.cat}, X ${Math.round(p.x)} · Y ${Math.round(p.y)}`).join('\n');
 
-export function RuleCard({ h }: { h: RuleHit }) {
+/* onOpen — «Відкрити окремо» (specs/084): лише в програмі, демо на сайті його не передає — тоді кнопки немає */
+export function RuleCard({ h, onOpen }: { h: RuleHit; onOpen?: (h: RuleHit) => void }) {
   const [open, setOpen] = useState(false);
   const { body, pen, more } = splitPenalty(h.s);
   const long = body.length > 260 || body.split('\n').length > 4;
@@ -54,6 +55,8 @@ export function RuleCard({ h }: { h: RuleHit }) {
       <span className={'bkindtag ' + h.kind}>{KIND[h.kind]}</span>
       {h.n && <span className="bpunkt">{numLabel(h.kind, h.n)}</span>}
       <a href={h.url} target="_blank" rel="noreferrer" title="Відкрити тему на форумі">{h.topic}</a>
+      {onOpen && <button type="button" className="bcopy bopen" onClick={() => onOpen(h)} title="Відкрити окремо — вікно лишиться поверх гри, коли закриєш Alt+Q">
+        <Icon name="layers" size={14} /><span>Окремо</span></button>}
       <CopyBtn icon text={text} label="Копіювати пункт" />
     </div>
     <p className={long && !open ? 'clamp' : ''}>{body}</p>
