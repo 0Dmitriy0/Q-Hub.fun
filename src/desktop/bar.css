@@ -135,6 +135,17 @@ body.in-bar input { user-select: text; }
 .bshot { align-items: stretch; }
 .bshot img { width: 100%; border-radius: 10px; border: 1px solid var(--line2); }
 .bshot p { font-size: 13px; }
+/* мітка Alt+F9 (specs/080): зелений — точку знайдено, червоний — ні; ті самі кольори «добре/погано», що й решта плашки */
+.bpinst { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px; border-left: 3px solid; }
+.bpinst.ok { background: var(--good-soft); border-color: var(--good); }
+.bpinst.bad { background: var(--bad-soft); border-color: var(--bad); }
+.bpinst h3 { display: flex; align-items: center; gap: 8px; }
+.bpinst.ok h3 { color: var(--good); }
+.bpinst.bad h3 { color: var(--bad); }
+.bpinst p { margin: 0; }
+.bpinline { font-size: 13.5px; font-weight: 600; color: var(--fg); }
+.bshot.ok img { border: 2px solid var(--good); }
+.bshot.bad img { border: 2px solid var(--bad); }
 .blabels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .blabels .btn { justify-content: space-between; border-radius: 12px; min-height: 44px; }
 .blabels .btn small { font: 700 12px var(--mono); color: var(--muted); }

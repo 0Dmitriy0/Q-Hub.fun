@@ -14,6 +14,7 @@ import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { cites, CopyBtn, placesText, Prices, RuleCard, rulesText } from './barParts';
 import { streamView } from './streamer';
+import { pinStatus, type PinStatus } from './pinStatus';
 import { PROMO_QUIET, promoCommand, type SitePromo } from '../lib/alerts';
 
 /* Плашка Alt+Q поверх гри — уся програма: рядок як у помічників для RP-серверів; під ним головна з кабінетом (Hub),
@@ -40,14 +41,16 @@ interface BarApi {
   quickAsk(t: string, rules: string): Promise<{ reply: string; error?: string }>;
   quickSize(h: number, w: number): Promise<void>; quickHide(): Promise<void>; onQuickShow(cb: () => void): void; mapOpen(p: { id?: string; x: number; y: number }): Promise<void>;
   onPin(cb: (s: { text: string; bad?: boolean }) => void): void;
-  onPinAsk(cb: (s: PinAskT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
+  onPinAsk(cb: (s: PinAskT) => void): void; onPinMiss?(cb: (s: PinMissT) => void): void; pinDecide(send: boolean, hint?: PinHint): Promise<void>;
   onShot(cb: (s: Shot) => void): void; shotLabel(name: string, label: string, note: string, share: boolean): Promise<{ ok: boolean; shared?: boolean }>;
   shotsStats(): Promise<ShotStats>; shotsOpen(): Promise<void>; visionLogOpen(): Promise<void>;
   watchToggle(id: number | string): Promise<(number | string)[] | null>; watchClear(): Promise<(number | string)[] | null>;
 }
 interface Shot { name: string; preview: string; black: boolean }
 /* player — звичайний гравець (specs/043 US5): пропозиція мітки в довідник, категорія й назва обов'язкові */
-interface PinAskT { reason: string; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null; player?: boolean }
+/* kind — код причини «не знайдено» для підказки (specs/080) */
+interface PinAskT { reason: string; kind?: string | null; preview: string; cats: { id: string; name: string; grp: string }[]; point?: { x: number; y: number } | null; player?: boolean }
+interface PinMissT { reason: string; kind?: string | null; preview: string; mapKey?: string }
 interface PinHint { category: string; note: string; name?: string }
 interface ShotStats { stats: Record<string, number>; labels: Record<string, string>; key: string }
 const api = (window as unknown as { qhub: BarApi }).qhub;
@@ -89,8 +92,9 @@ export default function Bar() {
   const [d, setD] = useState<Data | null>(null);
   const [q, setQ] = useState('');
   const [mode, setMode] = useState<'ai' | 'prices'>('ai');
-  const [view, setView] = useState<'hub' | 'main' | 'settings' | 'shot' | 'pinask'>('main');
+  const [view, setView] = useState<'hub' | 'main' | 'settings' | 'shot' | 'pinask' | 'pinmiss'>('main');
   const [pinQ, setPinQ] = useState<PinAskT | null>(null);
+  const [pinMiss, setPinMiss] = useState<PinMissT | null>(null);
   const [shot, setShot] = useState<Shot | null>(null);
   const [sel, setSel] = useState(0);
   const [asks, setAsks] = useState<Ask[]>([]);
@@ -125,6 +129,8 @@ export default function Bar() {
     api.onPin(s => { setView('main'); setChars(false); setNote(s); setPinQ(null); });
     /* F9 без точки: спитати, чи надсилати знімок */
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
+    /* F9 у гравця без точки: червоний блок без фокусу, сам ховається (specs/080) */
+    api.onPinMiss?.(s => { setPinMiss(s); setPinQ(null); setView('pinmiss'); setChars(false); setNote(null); });
     loadPlaces();
     const pullRules =() => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
     pullRules(); api.onRulesChanged?.(pullRules);
@@ -258,6 +264,7 @@ export default function Bar() {
 
         {expanded && (v === 'hub' ? (streamer && !peek ? <div className="bveil"><Icon name="shield" size={22} /><b>Режим стрімера</b><p>У кабінеті — персонажі, документи й заробіток. Глядачам їх не видно, доки не відкриєш.</p><button className="btn sm" onClick={() => setPeek(true)}>Показати кабінет</button></div> : <Hub />) : v === 'settings' && prefs ? <Settings key={setStart} prefs={prefs} staff={!!d?.staff} save={savePrefs} user={sv.user} version={d?.version} discord={d?.discord} start={setStart} unseen={unseen} onSeen={markSeen} watching={d?.watch?.length ?? 0} onWatchClear={() => { api.watchClear().then(setWatch); }} /> : <div className="bpanes">
           {v === 'pinask' && pinQ ? <PinAsk ask={pinQ} decide={decidePin} /> :
+           v === 'pinmiss' && pinMiss ? <PinMiss miss={pinMiss} /> :
            v === 'shot' && shot ? <ShotView shot={shot} share0={prefs?.shareShots !== false} done={t => { setNote({ text: t }); setTimeout(() => api.quickHide(), 900); }} /> :
            mode === 'prices' ? <Prices hits={hits} setSel={setSel} cur={cur} q={q} watch={d?.watch} onWatch={toggleWatch} /> :
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
@@ -313,6 +320,26 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
 /* навчальний знімок: що на ньому — з таких прикладів програма вчиться бачити тригери в грі */
 /* F9: показати знімок і дати одразу вибрати категорію й опис (підказка адміну).
    Точку знайдено — надіслати з точкою; не знайдено — надіслати без точки (поставить адмін) чи ні */
+/* блок стану мітки (specs/080): зелений із галочкою — точку знайдено, червоний зі знаком уваги — ні; колір не єдиний сигнал */
+function PinState({ st, point }: { st: PinStatus; point?: { x: number; y: number } | null }) {
+  return (
+    <div className={'bpinst ' + st.tone} role="status">
+      <h3><Icon name={st.tone === 'ok' ? 'check' : 'alert'} size={18} />{st.title}</h3>
+      <p className="bpinline">{point ? <>X <b className="mono">{point.x}</b> · Y <b className="mono">{point.y}</b></> : st.line}</p>
+      <p className="muted">{st.help}</p>
+    </div>
+  );
+}
+
+/* гравцю точку не знайдено: лише показати, що й чому (форми немає — без точки мітку не надіслати); керування в грі */
+function PinMiss({ miss }: { miss: PinMissT }) {
+  const st = pinStatus({ point: null, player: true, kind: miss.kind, reason: miss.reason, mapKey: miss.mapKey });
+  return <>
+    <div className="bleft bshot bad"><img src={miss.preview} alt="Знімок, зроблений по F9" /></div>
+    <div className="bright"><PinState st={st} /></div>
+  </>;
+}
+
 function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: PinHint) => void }) {
   const [text, setText] = useState(''); const [pick, setPick] = useState(0); const [note, setNote] = useState('');
   const [name, setName] = useState(''); const [miss, setMiss] = useState('');
@@ -334,17 +361,11 @@ function PinAsk({ ask, decide }: { ask: PinAskT; decide: (send: boolean, hint?: 
     if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); send(e.key === 'Enter'); return; }
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && found.length) { e.preventDefault(); e.stopPropagation(); setPick(p => (p + (e.key === 'ArrowDown' ? 1 : found.length - 1)) % found.length); }
   };
+  const st = pinStatus(ask);
   return <>
-    <div className="bleft bshot"><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
+    <div className={'bleft bshot ' + st.tone}><img src={ask.preview} alt="Знімок, зроблений по F9" /></div>
     <div className="bright" ref={box} onKeyDown={onKey}>
-      {ask.player && ask.point
-        ? <><h3>Нова мітка на мапі</h3>
-            <p className="muted">X <b className="mono">{ask.point.x}</b> · Y <b className="mono">{ask.point.y}</b>. Вибери категорію й назви місце — модератор перевірить, і мітку побачать усі. Знімок бачить лише модератор.</p></>
-        : ask.point
-        ? <><h3>Точку знайдено</h3>
-            <p className="muted">X <b className="mono">{ask.point.x}</b> · Y <b className="mono">{ask.point.y}</b>. Вибери категорію — адміну буде простіше опублікувати мітку. Повернешся в гру, нічого не вибравши, — точка піде без категорії.</p></>
-        : <><h3>Точку не знайдено</h3>
-            <p className="muted">Причина: {ask.reason}. Можна надіслати знімок без точки — її поставить адмін на сайті. Якщо на знімку не карта гри (чат, Discord), не надсилайте.</p></>}
+      <PinState st={st} point={ask.point} />
       <label className="bnote">{ask.player ? 'Категорія' : 'Категорія (необов’язково)'}
         <input ref={first} value={text} onChange={e => { setText(e.target.value); setPick(0); }} placeholder="почни писати: бак, заправка, 24/7…"
           role="combobox" aria-expanded={found.length > 0} aria-controls="pin-cats" aria-activedescendant={chosen ? 'pin-cat-' + chosen.id : undefined} /></label>

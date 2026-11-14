@@ -711,6 +711,15 @@ function showPin(text, bad = false) {
   /* результат F9 ховається сам (фокус повертається грі), якщо плашку не закріпили і не чекаємо відповіді у формі */
   pinTimer = setTimeout(() => { if (bar.isVisible() && !pinAsk && !prefs().pinned) bar.hide(); }, 2500);
 }
+/* гравцю точку не знайдено (specs/080): червоний блок із причиною, підказкою й знімком — поверх гри без фокусу (керування
+   лишається в грі), ховається сам через 6 с, якщо плашку не закріпили; раніше — рядок 12 px, обрізаний «…», на 2,5 с */
+function showPinMiss(m) {
+  clearTimeout(pinTimer);
+  bar.webContents.send('pin-miss', m);
+  if (!bar.isVisible()) { placeBar(); bar.showInactive(); }
+  bar.moveTop();
+  pinTimer = setTimeout(() => { if (bar.isVisible() && !pinAsk && !prefs().pinned) bar.hide(); }, 6000);
+}
 const draftBox = () => (drafts ??= outbox(path.join(dir(), 'drafts'), sendDraft));
 async function pinShot() {
   if (Date.now() - pinAt < 5000) return;   // подвійне натискання — одна чернетка
@@ -732,7 +741,7 @@ async function pinShot() {
   const pt = loc.kind === 'point';
   const player = !STAFF.includes(myRole);
   /* гравцю без точки нема чого надсилати: модератор не ставить точку за знімком — підказати, як інакше */
-  if (player && !pt) return showPin(`Точку не знайдено: ${WHY[loc.kind] || loc.kind}. Відкрий велику карту й віддали її, або постав мітку на мапі програми — ${prefs().mapKey || 'Alt+M'}.`, true);
+  if (player && !pt) return showPinMiss({ kind: loc.kind, reason: WHY[loc.kind] || loc.kind, preview: img.resize({ width: 480 }).toDataURL(), mapKey: prefs().mapKey || 'Alt+M' });
   const { kind, match = {}, ms, scale_text, bar_px, meters } = loc;
   const draft = { taken_at: new Date().toISOString(), x: pt ? loc.x : null, y: pt ? loc.y : null,
     match: { ...match, kind, ms, scale_text, bar_px, meters, screen: [width, height], version: app.getVersion() } };
@@ -742,7 +751,7 @@ async function pinShot() {
   pinAsk = { draft, jpeg: img.toJPEG(80), pt, what, player };
   clearTimeout(pinTimer);
   placeBar(); raiseBar();
-  bar.webContents.send('pin-ask', { reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null, player });
+  bar.webContents.send('pin-ask', { kind: pt ? null : kind, reason: pt ? '' : WHY[kind] || kind, preview: img.resize({ width: 480 }).toDataURL(), cats: await pinCats(), point: pt ? { x: Math.round(loc.x), y: Math.round(loc.y) } : null, player });
 }
 /* категорії мапи для вікна «точку не знайдено» — раз на 30 хв */
 let catsAt = 0, catsCache = [];
