@@ -47,7 +47,7 @@ export default function Download() {
           <span className="p-badge">Тестова збірка</span>
         </div>
         <h1>Програма поверх гри</h1>
-        <p className="h-lead">Ціни скупників, правила сервера, мапа й ШІ-помічник поверх гри. <kbd>Alt+Q</kbd> відкриває рядок: знайди ціну товару, пункт правил чи місце на мапі. Програма рахує ігрову сесію й показує, скільки заробляєш за годину.</p>
+        <p className="h-lead">Ціни скупників, правила сервера, мапа й ШІ-помічник — прямо поверх GTA V. Натисни <kbd>Alt+Q</kbd>, впиши, що шукаєш, і отримай відповідь, не виходячи з гри. А ще програма рахує, скільки ти заробляєш за годину.</p>
         <div className="p-warn" role="note">
           <span className="p-warn-ico" aria-hidden="true">!</span>
           <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться.</span></div>
@@ -65,7 +65,7 @@ export default function Download() {
         <div className="h-head row between">
           <div><span className="h-kicker"><Icon name="bolt" size={16} />Демо</span><h2>Спробуй плашку Alt+Q прямо тут</h2></div>
         </div>
-        <p className="muted p-bar-lead">Це справжня плашка програми — той самий вигляд і той самий пошук у правилах, законах і цінах. Впиши запит і натисни <kbd>Enter</kbd> або обери приклад. Питання до ШІ, історія й мапа поверх гри працюють лише в програмі.</p>
+        <p className="muted p-bar-lead">Та сама плашка, що в програмі: впиши запит і натисни <kbd>Enter</kbd> або обери приклад нижче. ШІ, історія й мапа поверх гри працюють лише в самій програмі.</p>
         <div className="p-bar-ex" role="group" aria-label="Приклади запитів">
           {EXAMPLES.map(([t, m], i) => <button key={t} type="button" className="chip" onClick={() => setPick({ q: t, mode: m, n: i + Date.now() })}>{m === 'prices' ? <Icon name="tag" size={14} /> : <Icon name="search" size={14} />}{t}</button>)}
         </div>

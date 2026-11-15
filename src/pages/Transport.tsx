@@ -125,7 +125,6 @@ export default function Transport() {
     <>
       <section className="wiki-hero">
         <div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />Каталог автосалонів</span>
           <h1>Транспорт штату</h1>
           <p className="muted">Держціна, швидкість, пальне й багажник. Зірки — середня оцінка гравців, свою можна поставити після входу. Натисни на транспорт — відкриється калькулятор тюнінгу.</p>
         </div>

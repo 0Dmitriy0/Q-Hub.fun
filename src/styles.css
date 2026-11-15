@@ -2230,3 +2230,64 @@ html { scroll-padding-top: 76px; }
 
 /* таблиці й списки: рядки трохи вищі — легше влучити пальцем і очима */
 table.t td { padding-top: 10px; padding-bottom: 10px; }
+
+/* РЕДИЗАЙН, етап 2 (2026-11-15): головна й «Програма».
+   Перший екран читається зверху вниз: підпис → заголовок → одне речення → кнопки → промокод (раніше промокод
+   розривав заголовок і опис). Заголовки розділів — на рядок-два, а не на пів екрана. Великі числа — основним шрифтом
+   з рівними цифрами: моноширинний розтягував «2 837» пробілом */
+.h-hero-txt > .qpromo, .h-hero-txt > .site-promo { align-self: stretch; margin-top: 4px; }
+.h-head h2 { font-size: clamp(22px, 2.6vw, 30px); line-height: 1.22; }
+.h-head { gap: 6px; }
+.h-sec { gap: 20px; }
+.h-stat b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.h-stat { padding: 14px 16px; border-radius: var(--r-md); }
+.h-stat .h-lbl { color: var(--muted); }
+.mini-chips button { font: 600 12.5px var(--sans); letter-spacing: 0; text-transform: none; border-radius: 999px; }
+.h-feat h3 { font-size: 15.5px; }
+.h-feat p { font-size: 14px; line-height: 1.5; }
+.p-bar-lead, .h-lead { max-width: 62ch; }
+
+/* РЕДИЗАЙН, етап 3 (2026-11-15): ціни.
+   Шкала «де ціна між мінімумом і максимумом» — головна підказка сторінки, тож вона ширша й кольорова:
+   від 80 % — зелена (вигідно), 50–79 % — жовта, нижче — сіра. Ціна — великим основним шрифтом з рівними цифрами */
+.rtrack { width: 140px; height: 6px; border-radius: 99px; }
+.rfill { border-radius: 99px; }
+.rbar.mid .rfill { background: var(--warn); }
+.rbar.mid .rtxt { color: var(--warn); font-weight: 700; }
+.rtxt { font: 600 12.5px var(--sans); font-variant-numeric: tabular-nums; }
+.pval b, .bp-lead-p b, .bp-calc-out b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.pval b { font-size: 17px; }
+.bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) 120px minmax(140px, auto); }
+.bp-th { grid-template-columns: minmax(0, 1fr) 120px 140px; }
+.pname small { line-height: 1.45; }
+@media (max-width: 640px) { .rtrack { width: 96px; } .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr) minmax(96px, auto); } .bp-list .prow > svg, .bp-list .prow > .spark { display: none; } }
+.bp-list .prow > .spark { justify-self: center; }
+
+/* РЕДИЗАЙН, етап 4 (2026-11-15): довідник.
+   Вікно роботи: розділи — без рамки кожен (рамка в рамці у вікні), розділені повітрям і тонкою лінією;
+   «Заробіток» — першим і виділеним, бо по нього приходять. Ціни транспорту й числа — основним шрифтом з рівними цифрами */
+.wdlg .wdlg-box { background: none; border: 0; border-radius: 0; padding: 0; }
+.wdlg .jd-sec + .jd-sec, .wdlg .jd-cols { padding-top: 14px; border-top: 1px solid var(--line); }
+.wdlg .jd-cols .jd-sec { border-top: 0; padding-top: 0; }
+.wdlg .jd-paybox { padding: 14px 16px; border-radius: var(--r-md); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.wdlg .jd-paybox + .jd-sec { border-top: 0; padding-top: 0; }
+.wdlg .jd-paybox .jd-pay-part .jd-text { font-weight: 700; font-size: 15px; }
+.wdlg .jd-sec p, .wdlg .jd-sec li { font-size: 14.5px; line-height: 1.55; }
+.wdlg .modal-box { gap: 16px; }
+.vprice { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.wiki-stats b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* РЕДИЗАЙН, етап 5 (2026-11-15): мапа, «Мапа в гру», кабінет без входу.
+   Підпис-пігулка над заголовком лишився лише там, де він каже нове (головна, «Програма»): «Особистий кабінет» над
+   «Кабінет гравця» лише повторював заголовок. Кроки інструкції — окремими картками з номером: видно, де ти зараз */
+.mgrp-n { font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; }
+.guide-steps { padding-left: 30px; gap: 10px; }
+.guide-steps li { padding: 12px 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.guide-steps li::marker { color: var(--accent-hi); font-weight: 800; font-variant-numeric: tabular-nums; }
+.guide-steps li.done { background: color-mix(in srgb, var(--good) 6%, var(--surface)); border-color: color-mix(in srgb, var(--good) 30%, transparent); }
+.cab .h-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cab .h-cards .card { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 14px; row-gap: 2px; align-items: center; padding: 16px 18px; }
+.cab .h-cards .card .ibub { grid-row: 1 / 3; }
+.cab .h-cards .card h3 { align-self: end; }
+.cab .h-cards .card p { align-self: start; font-size: 13.5px; }
+@media (max-width: 640px) { .cab .h-cards { grid-template-columns: 1fr; } }
