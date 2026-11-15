@@ -151,7 +151,8 @@ export function odrText(tile: string, min: number[], max: number[]) {
     + `\t\tMed 9998.0\n\t\tLow 9998.0\n\t\tVlow 9998.0\n\t\tAABBMin ${min.map(f7).join(' ')}\n\t\tAABBMax ${max.map(f7).join(' ')}\n\t\tRadius ${r.toFixed(5)}\n\t\tCenter ${c.map(f7).join(' ')}\n\t}\n\tLight null\n\tBound null\n\tJoints null\n}`;
 }
 
-export type GamePin = { x: number; y: number; icon: string; color: string };
+/* s — свій розмір категорії відносно загального (1 або нема — загальний iconM) */
+export type GamePin = { x: number; y: number; icon: string; color: string; s?: number };
 
 const loadImg = (src: string) => new Promise<HTMLImageElement | null>(res => {
   const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src;
@@ -228,12 +229,13 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
 
 /* мітки поверх мапи: кружок кольору категорії з іконкою всередині; дрібні (r < 2) — крапка */
 function drawPins(ctx: CanvasRenderingContext2D, size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>) {
-  const W = size * GAME.cols, H = size * GAME.rows, r = pinPx / 2;
+  const W = size * GAME.cols, H = size * GAME.rows;
   for (const p of pins) {
+    const d = pinPx * (p.s ?? 1), r = d / 2;
     const [px, py] = gamePx(p.x, p.y, size); if (px < 0 || py < 0 || px > W || py > H) continue;
     if (r < 2) { ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); ctx.lineWidth = 0.6; ctx.strokeStyle = '#111'; ctx.stroke(); continue; }
     ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill();
-    ctx.lineWidth = Math.max(1, pinPx / 12); ctx.strokeStyle = p.color; ctx.stroke();
+    ctx.lineWidth = Math.max(1, d / 12); ctx.strokeStyle = p.color; ctx.stroke();
     const im = imgs.get(p.icon); if (im && r >= 4) ctx.drawImage(im, px - r * 0.72, py - r * 0.72, r * 1.44, r * 1.44);
   }
 }
@@ -306,7 +308,7 @@ async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLI
   for (const [k, list] of groups) {
     let m = new IconMesh(), part = 0;
     const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_5_${part++}`, m); m = new IconMesh(); };
-    for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM, p.color, runs.get(p.icon) || []); }
+    for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM * (p.s ?? 1), p.color, runs.get(p.icon) || []); }
     await flush();
   }
   return out;

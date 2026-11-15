@@ -14,12 +14,13 @@ const word = (n: number, one: string, few: string, many: string) =>
   `${n} ${n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many}`;
 
 /* підсумок вибору на кнопці «Скачати» (FR-006): «128 міток · 3 зони · назви · темна · 20 м» */
-export function packSummary(o: { marks: number; areas: number; names: boolean; zones: boolean; theme: GameTheme; iconM: number }): string {
+/* mixed — у частини категорій свій розмір: «20 м, є свої» */
+export function packSummary(o: { marks: number; areas: number; names: boolean; zones: boolean; theme: GameTheme; iconM: number; mixed?: boolean }): string {
   const parts = [word(o.marks, 'мітка', 'мітки', 'міток')];
   if (o.areas) parts.push(word(o.areas, 'поле', 'поля', 'полів'));
   if (o.names) parts.push('назви');
   if (o.zones) parts.push('зелені зони');
-  parts.push(o.theme === 'light' ? 'світла' : 'темна', `${o.iconM} м`);
+  parts.push(o.theme === 'light' ? 'світла' : 'темна', `${o.iconM} м${o.mixed ? ', є свої' : ''}`);
   return parts.join(' · ');
 }
 

@@ -9,7 +9,7 @@ import { recolor, type GameTheme } from '../lib/gameTheme';
 import ZONES from '../data/mapZones.json';
 import Icon from './Icon';
 
-export type PreviewPin = { x: number; y: number; icon: string; color: string };
+export type PreviewPin = { x: number; y: number; icon: string; color: string; s?: number };
 export type PreviewArea = { ring: [number, number][]; color: string };
 
 /* міні-перегляд «Мапи для гри» (specs/026 US1): плитки й вектор мапи сайту в темі мапи для гри, назви й зелені зони —
@@ -47,8 +47,9 @@ export default function GamePreview({ theme, names, zones, pins, areas, iconM, l
         const size = m.getSize(), dpr = Math.min(window.devicePixelRatio || 1, 2);
         cv.width = size.x * dpr; cv.height = size.y * dpr; cv.style.width = size.x + 'px'; cv.style.height = size.y + 'px';
         const ctx = cv.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const { pins: ps, iconM: im } = data.current, r = pinRadius(im, m.getZoom());
+        const { pins: ps, iconM: im } = data.current, r0 = pinRadius(im, m.getZoom());
         for (const p of ps) {
+          const r = r0 * (p.s ?? 1);
           const pt = m.latLngToContainerPoint(ll(p.x, p.y));
           if (pt.x < -r || pt.y < -r || pt.x > size.x + r || pt.y > size.y + r) continue;
           ctx.beginPath();

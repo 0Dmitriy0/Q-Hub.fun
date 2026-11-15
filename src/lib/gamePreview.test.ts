@@ -15,5 +15,6 @@ describe('перегляд «Мапи для гри» (specs/026)', () => {
     expect(packSummary({ marks: 128, areas: 3, names: true, zones: false, theme: 'dark', iconM: 20 })).toBe('128 міток · 3 поля · назви · темна · 20 м');
     expect(packSummary({ marks: 1, areas: 0, names: false, zones: true, theme: 'light', iconM: 7 })).toBe('1 мітка · зелені зони · світла · 7 м');
     expect(packSummary({ marks: 22, areas: 11, names: false, zones: false, theme: 'dark', iconM: 12 })).toBe('22 мітки · 11 полів · темна · 12 м');
+    expect(packSummary({ marks: 5, areas: 0, names: false, zones: false, theme: 'dark', iconM: 20, mixed: true })).toBe('5 міток · темна · 20 м, є свої');
   });
 });
