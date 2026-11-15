@@ -290,12 +290,12 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         + (zoo.length ? `<span class="manimals" aria-label="Звірі на полі">${zoo.map(a => `<i><img src="${esc(asset(a.icon))}" alt="" width="20" height="20">${esc(a.name)}</i>`).join('')}</span>` : '')
         + (isAdmin ? `<span class="mrow"><button type="button" class="medit" data-edit-area="${ar.dbId}">Змінити / перенести</button><button type="button" class="mdel" data-del-area="${ar.dbId}">Видалити зону</button></span>` : '') + '</div>';
       L.polygon(ar.ring.map(([x, y]) => m.unproject(toPx(x, y), ZMAX)), { color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.28 }).bindPopup(html, POPUP).addTo(layers.current[c.id]);
-      /* звірі поля (specs/088): одна плашка з іконками в «середині» поля — розмір у пікселях сталий, тож на будь-якому
+      /* звірі поля (specs/088): одна плашка з іконками в рядок у «середині» поля — розмір у пікселях сталий, тож на будь-якому
          зумі іконки не налазять одна на одну; мітки інших шарів лежать поверх (zIndexOffset) */
       if (zoo.length) {
-        const [ax, ay] = animalSpots(ar.ring, 1, 0)[0], per = Math.min(zoo.length, 4), rows = Math.ceil(zoo.length / 4);
+        const [ax, ay] = animalSpots(ar.ring, 1, 0)[0], per = zoo.length;
         L.marker(m.unproject(toPx(ax, ay), ZMAX), { zIndexOffset: -1000, keyboard: false, title: zoo.map(a => a.name).join(', '),
-          icon: L.divIcon({ className: 'manimal-wrap', iconSize: [per * 22 + 8, rows * 22 + 8], html: `<span class="manimal" style="--c:${c.color};grid-template-columns:repeat(${per},20px)">${zoo.map(a => `<img src="${esc(asset(a.icon))}" alt="${esc(a.name)}" title="${esc(a.name)}" width="20" height="20">`).join('')}</span>` }) })
+          icon: L.divIcon({ className: 'manimal-wrap', iconSize: [per * 22 + 8, 30], html: `<span class="manimal" style="--c:${c.color};grid-template-columns:repeat(${per},20px)">${zoo.map(a => `<img src="${esc(asset(a.icon))}" alt="${esc(a.name)}" title="${esc(a.name)}" width="20" height="20">`).join('')}</span>` }) })
           .bindPopup(html, POPUP).addTo(layers.current[c.id]);
       }
     }
