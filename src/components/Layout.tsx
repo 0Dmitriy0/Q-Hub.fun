@@ -80,7 +80,7 @@ export default function Layout() {
         <div className="who">
           <ThemeToggle />
           {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
-          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Панель помічника: розбір пропозицій і твої інструменти"><Icon name="shield" size={16} />Панель{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
+          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Розбір пропозицій від гравців і твої інструменти"><Icon name="shield" size={16} />{role === 'moderator' ? 'Модерація' : 'Інструменти'}{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
           {session
             ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
             : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}
