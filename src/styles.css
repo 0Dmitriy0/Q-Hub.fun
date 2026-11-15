@@ -1618,6 +1618,8 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .adm-row-main .muted { font-size: 13px; }
 .adm-row-act { display: flex; flex-wrap: wrap; gap: 8px; }
 .adm-row > .err { flex-basis: 100%; margin: 0; }
+.adm-need, .adm-bulk { gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.adm-row > input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
 .adm-form { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 12px; align-items: end; padding: 12px; border-radius: 12px; background: var(--surface2); }
 .adm-form .row, .adm-form .adm-note, .adm-form .err { grid-column: 1 / -1; margin: 0; }
 .adm-note { font-size: 13px; }
@@ -2430,3 +2432,4 @@ table.t td { padding-top: 10px; padding-bottom: 10px; }
 .gd-text p { margin: 0 0 10px; }
 @media (max-width: 640px) { .gd-text.card { padding: 18px 16px; } }
 .gd-text { gap: 8px; }
+.linkbtn { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }

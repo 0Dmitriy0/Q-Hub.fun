@@ -1,7 +1,7 @@
 import { kyParts, kyTs } from './events';
 /* Статистика ціни скупника, як у хабі: межі, положення ціни в межах і точки для графіка.
    Межі вписує редактор (з гри); поки їх немає — беремо мінімум і максимум, що траплялися за період. */
-export interface Pt { t: number; p: number }
+export interface Pt { t: number; p: number; id?: number }
 export interface Range { min: number; max: number; from: 'editor' | 'seen' }
 
 export const DAY = 864e5;

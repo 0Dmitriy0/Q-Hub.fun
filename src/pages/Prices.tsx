@@ -30,7 +30,7 @@ const noLim = (r: Pick<Row, 'min_price' | 'max_price'>) => !(r.min_price > 0 && 
 
 type Data = PriceData<Buyer, Row, Update, Contributor, NextChange>;
 
-interface Hist { buyer_id: string; item_id: number; price: number; at: string }
+interface Hist { id: number; buyer_id: string; item_id: number; price: number; at: string }
 /* непідтверджена ціна (price_pending, 0043): votes різних акаунтів з need, поточною стане після need */
 interface Pending { buyer_id: string; item_id: number; price: number; votes: number; need: number; last_at: string }
 
@@ -148,13 +148,13 @@ export default function Prices() {
   async function loadHist(ids: string[]) {
     if (!supabase || !ids.length) return;
     setHistFor(s => new Set([...s, ...ids]));
-    const { data, error } = await supabase.from('price_history').select('buyer_id,item_id,price,at')
+    const { data, error } = await supabase.from('price_history').select('id,buyer_id,item_id,price,at')
       .in('buyer_id', ids).gte('at', new Date(Date.now() - HIST_DAYS * DAY).toISOString()).order('at').limit(5000);
     if (error) return; /* графік — доповнення: без історії сторінка цін працює як раніше */
     setHist(h => {
       const n = { ...h };
       for (const id of ids) for (const k of Object.keys(n)) if (k.startsWith(id + ':')) delete n[k];
-      for (const r of data as Hist[]) (n[r.buyer_id + ':' + r.item_id] ||= []).push({ t: new Date(r.at).getTime(), p: Number(r.price) });
+      for (const r of data as Hist[]) (n[r.buyer_id + ':' + r.item_id] ||= []).push({ t: new Date(r.at).getTime(), p: Number(r.price), id: r.id });
       return n;
     });
   }
@@ -219,6 +219,19 @@ export default function Prices() {
     const { error } = await supabase!.from('buyer_items').update({ min_price: min, max_price: max }).eq('buyer_id', r.buyer_id).eq('item_id', r.item_id);
     if (error) { alert('Не вдалося зберегти межі.'); return; }
     load();
+  }
+
+  /* лише адмін (0068): хибна точка історії — геть з графіка; непідтверджена ціна — одразу поточна */
+  async function delPoint(r: Row, p: Pt) {
+    if (p.id === undefined || !confirm(`Видалити з історії «${r.items!.name}» ціну ${money(p.p)} від ${when(p.t)}?`)) return;
+    const { error } = await supabase!.rpc('admin_price_history_delete', { p_id: p.id });
+    if (error) { alert(error.code === 'P0001' || error.code === 'P0002' ? error.message : 'Не вдалося видалити точку.'); }
+    loadHist([r.buyer_id]);
+  }
+  async function confirmPend(r: Row, p: Pending) {
+    const { error } = await supabase!.rpc('admin_price_confirm', { p_buyer: r.buyer_id, p_item: r.item_id, p_price: p.price });
+    if (error) { alert(error.code === 'P0002' ? error.message : 'Не вдалося підтвердити ціну.'); }
+    load(); loadHist([r.buyer_id]);
   }
 
   /* і гравці, і редактори вносять ціну однаково — так кожне оновлення має автора і йде в рейтинг.
@@ -419,7 +432,8 @@ export default function Prices() {
                       {!editing && <small className="muted">за {r.items!.unit}</small>}
                       {!editing && session && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
                       {!editing && pend.filter(p => p.buyer_id === r.buyer_id && p.item_id === r.item_id).sort((a, b) => b.votes - a.votes).slice(0, 2).map(p =>
-                        <small key={p.price} className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось">нова: {money(p.price)} · {p.votes} з {p.need}</small>)}
+                        <small key={p.price} className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось">нова: {money(p.price)} · {p.votes} з {p.need}
+                          {isAdmin && <> · <button type="button" className="linkbtn" onClick={() => confirmPend(r, p)}>підтвердити</button></>}</small>)}
                       {!editing && note[key] && <small className="muted pnote">{note[key]}</small>}
                       {msg[key] && <small className="err" role="alert">{msg[key]}</small>}
                     </div>
@@ -435,7 +449,7 @@ export default function Prices() {
                           <div><small>Положення</small><b className="mono">{pos === null ? '—' : pos + '%'}</b></div>
                         </div>
                         <p className="muted note">{range?.from === 'editor' ? 'Межі мінімум і максимум вписав редактор з гри.' : range ? 'Межі — найнижча і найвища ціна, що траплялися за 30 днів. Коли редактор впише межі з гри, вони будуть точнішими.' : 'Меж поки немає: потрібно щонайменше дві різні ціни за 30 днів або межі від редактора.'}</p>
-                        <PriceChart raw={raw} range={range} name={r.items!.name} />
+                        <PriceChart raw={raw} range={range} name={r.items!.name} onDelete={isAdmin ? p => delPoint(r, p) : undefined} />
                         {isStaff && (
                           <form className="row lims" onSubmit={e => { e.preventDefault(); saveLimits(r); }}>
                             <label className="fld"><span>Мінімум скупника</span><input inputMode="numeric" value={lim.min} onChange={e => setLim({ ...lim, min: e.target.value })} style={{ width: 120 }} /></label>
