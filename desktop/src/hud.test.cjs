@@ -1,10 +1,24 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { region, parse, hasBadge, classify, watcher } = require('./hud.cjs');
+const { region, badgeRegion, scaleOrder, HUD_SCALES, parse, hasBadge, classify, watcher } = require('./hud.cjs');
 
 test('HUD: ділянка грошей масштабується з висотою й тримається правого краю', () => {
   assert.deepEqual(region(1920, 1080), { x: 1578, y: 76, width: 140, height: 52 });
   assert.deepEqual(region(2560, 1440), { x: 2104, y: 101, width: 187, height: 69 });
+});
+
+test('HUD 4K: більший HUD (k = 1,08) — ділянка захоплює «$» готівки й увесь рядок банку', () => {
+  /* на знімку 3840×2160 (2026-11-16) «$» готівки — з x ≈ 3101, низ рядка банку — y ≈ 262 */
+  const r = region(3840, 2160, 1.08);
+  assert.deepEqual(r, { x: 3101, y: 164, width: 302, height: 112 });
+  assert.ok(region(3840, 2160).x > 3101, 'з k = 1 ділянка відрізає початок суми');
+  assert.equal(badgeRegion(3840, 2160, 1.08).x, r.x);
+  assert.deepEqual(region(1920, 1080, 1), region(1920, 1080), 'k = 1 — як було');
+});
+
+test('HUD: порядок масштабів — спершу той, що спрацював', () => {
+  assert.deepEqual(scaleOrder(1), HUD_SCALES);
+  assert.deepEqual(scaleOrder(1.08), [1.08, 1, 1.04, 1.12]);
 });
 
 test('HUD: розбір OCR — лише дві суми «$…», решта — null', () => {

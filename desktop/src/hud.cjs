@@ -3,16 +3,22 @@
    Програма раз на 2 с читає цю ділянку (OCR лише цифр) і з різниці між стабільними показами робить записи обліку.
    Тут — чиста логіка без Electron і OCR, щоб її можна було перевірити тестами (hud.test.cjs). */
 
-/* ділянка з грошима для екрана w×h (прямокутник Electron { x, y, width, height }): HUD прив'язаний до правого краю й масштабується з висотою (виміряно на 1920×1080) */
-function region(w, h) {
-  const s = h / 1080;
+/* ділянка з грошима для екрана w×h (прямокутник Electron { x, y, width, height }): HUD прив'язаний до правого краю й масштабується з висотою (виміряно на 1920×1080).
+   k — додатковий масштаб HUD: на 3840×2160 у гравця HUD більший за «висота / 1080» приблизно на 8 % (k ≈ 1,08; знімки 2026-11-16) —
+   з k = 1 ділянка відрізала «$1» зліва й низ рядка банку */
+function region(w, h, k = 1) {
+  const s = h / 1080 * k;
   return { x: Math.round(w - 342 * s), y: Math.round(76 * s), width: Math.round(140 * s), height: Math.round(52 * s) };
 }
 /* ширша ділянка — там, де з'являються значки зміни (праворуч від цифр) */
-function badgeRegion(w, h) {
-  const s = h / 1080;
+function badgeRegion(w, h, k = 1) {
+  const s = h / 1080 * k;
   return { x: Math.round(w - 342 * s), y: Math.round(66 * s), width: Math.round(180 * s), height: Math.round(62 * s) };
 }
+/* масштаби HUD, які пробуємо, коли гроші не читаються: 1 — як завжди (1080p, 1440p), далі — більший HUD (4K) */
+const HUD_SCALES = [1, 1.08, 1.04, 1.12];
+/* порядок спроб: спершу масштаб, що спрацював минулого разу */
+const scaleOrder = last => [last, ...HUD_SCALES.filter(k => k !== last)];
 
 /* текст OCR → { cash, bank } або null. Рядки «$3 820 037» і «$3 162 623»; усе інше (меню закрило HUD, сміття) — null */
 function parse(text) {
@@ -63,4 +69,4 @@ function watcher({ maxJump = 50e6 } = {}) {
   return feed;
 }
 
-module.exports = { region, badgeRegion, parse, hasBadge, classify, watcher };
+module.exports = { region, badgeRegion, HUD_SCALES, scaleOrder, parse, hasBadge, classify, watcher };
