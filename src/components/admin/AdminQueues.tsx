@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../lib/auth';
 import { money } from '../../lib/format';
 import { adminError, when } from '../../lib/admin';
 import { widen } from '../../lib/limits';
@@ -224,53 +223,83 @@ function LimitForm({ r, onCancel, onSubmit }: { r: Limit; onCancel: () => void; 
 
 /* ---------- непідтверджені ціни ---------- */
 function PendingQueue({ onDone }: { onDone: () => void }) {
-  const { session, current, characters } = useAuth();
   const [rows, setRows] = useState<Pending[] | null>(null);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState<Record<string, string>>({});
   const [names, setNames] = useState<Record<string, string>>({});
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [need, setNeed] = useState<number | null>(null);
+  const [needMsg, setNeedMsg] = useState('');
   const load = () => {
     setErr('');
     supabase!.rpc('admin_price_pending').then(({ data, error }) => { if (error) setErr(adminError(error)); else setRows((data || []) as Pending[]); });
     supabase!.from('buyers').select('id,name').then(({ data }) => setNames(Object.fromEntries((data || []).map(b => [b.id, b.name]))));
+    supabase!.from('price_rules').select('confirm_n').maybeSingle().then(({ data }) => setNeed(data?.confirm_n ?? null));
   };
   useEffect(load, []);
   const key = (r: Pending) => `${r.buyer_id}:${r.item_id}:${r.price}`;
-  const gone = (r: Pending) => { setRows(rs => rs!.filter(x => key(x) !== key(r))); onDone(); };
+  const gone = (r: Pending) => { setRows(rs => rs!.filter(x => key(x) !== key(r))); setSel(s => { const n = new Set(s); n.delete(key(r)); return n; }); onDone(); };
+  const toggle = (r: Pending) => setSel(s => { const n = new Set(s); if (n.has(key(r))) n.delete(key(r)); else n.add(key(r)); return n; });
+  const all = !!rows?.length && rows.every(r => sel.has(key(r)));
 
-  /* «Підтвердити» — звичайне ручне внесення адміна з сайту: база одразу ставить його поточною (0043) */
+  /* «Підтвердити» — ціна одразу стає поточною від імені адміна (0068), персонаж не потрібен */
   async function confirm(r: Pending) {
-    const c = current || characters[0];
-    if (!c) { setMsg(m => ({ ...m, [key(r)]: 'Щоб внести ціну, потрібен персонаж зі статіком — додай його в програмі.' })); return; }
-    const { error } = await supabase!.from('price_reports').insert({ kind: 'buyer', buyer_id: r.buyer_id, item_id: r.item_id, price: r.price, character_id: c.id, reporter: session?.user.id });
-    if (error) { setMsg(m => ({ ...m, [key(r)]: error.code === 'P0001' ? error.message : adminError(error) })); return; }
-    gone(r);
+    const { error } = await supabase!.rpc('admin_price_confirm', { p_buyer: r.buyer_id, p_item: r.item_id, p_price: r.price });
+    if (error) { setMsg(m => ({ ...m, [key(r)]: adminError(error) })); if (error.code === 'P0002') onDone(); return false; }
+    gone(r); return true;
   }
   async function reject(r: Pending) {
     const { error } = await supabase!.rpc('admin_price_reject', { p_buyer: r.buyer_id, p_item: r.item_id, p_price: r.price });
-    if (error) { setMsg(m => ({ ...m, [key(r)]: adminError(error) })); if (error.code === 'P0002') onDone(); return; }
-    gone(r);
+    if (error) { setMsg(m => ({ ...m, [key(r)]: adminError(error) })); if (error.code === 'P0002') onDone(); return false; }
+    gone(r); return true;
+  }
+  /* вибрані — по черзі: помилка одного рядка лишає його в списку з поясненням, решта проходить */
+  async function bulk(act: (r: Pending) => Promise<boolean>) {
+    setBusy(true);
+    for (const r of (rows || []).filter(x => sel.has(key(x)))) await act(r);
+    setBusy(false);
+  }
+  async function saveNeed(n: number) {
+    setNeedMsg('');
+    const { error } = await supabase!.from('price_rules').update({ confirm_n: n }).eq('id', true);
+    if (error) { setNeedMsg(adminError(error)); return; }
+    setNeed(n); setNeedMsg('Збережено — діє з наступного внесення.');
+    setRows(rs => rs && rs.map(r => ({ ...r, need: n })));
   }
   return (
     <AdminSection title="Ціни без підтвердження" loading={!rows && !err} error={err} onRetry={load}
-      hint="Нова ціна, яку поки вніс лише один акаунт. «Підтвердити» — внести її від себе (стає поточною одразу); «Відкинути» — прибрати голоси за неї.">
-      {rows && !rows.length ? <p className="adm-empty">Усі ціни підтверджені.</p> : (
+      hint="Нова ціна, яку внесло ще замало акаунтів. Постав галочки й підтверди кілька одразу — вони стануть поточними; «Відкинути» прибирає голоси за ціну.">
+      <div className="row adm-need">
+        <span className="muted" id="adm-need-l">Скільки гравців мають внести ту саму ціну, щоб вона стала поточною:</span>
+        <div className="seg" role="group" aria-labelledby="adm-need-l">
+          {[1, 2, 3, 4, 5].map(n => <button key={n} type="button" aria-pressed={need === n} className={need === n ? 'on' : ''} onClick={() => saveNeed(n)}>{n}</button>)}
+        </div>
+        {needMsg && <small className="muted" role="status">{needMsg}</small>}
+      </div>
+      {rows && !rows.length ? <p className="adm-empty">Усі ціни підтверджені.</p> : (<>
+        <div className="row adm-bulk">
+          <label className="ck"><input type="checkbox" checked={all} onChange={() => setSel(all ? new Set() : new Set((rows || []).map(key)))} /> Вибрати всі</label>
+          <button type="button" className="btn acc sm" disabled={!sel.size || busy} onClick={() => bulk(confirm)}>{busy ? 'Підтверджую…' : `Підтвердити вибрані (${sel.size})`}</button>
+          <button type="button" className="btn ghost sm" disabled={!sel.size || busy} onClick={() => bulk(reject)}>Відкинути вибрані</button>
+        </div>
         <ul className="adm-list">
           {rows?.map(r => (
             <li key={key(r)} className="adm-row">
+              <input type="checkbox" aria-label={`Вибрати ${r.item} — ${money(r.price)}`} checked={sel.has(key(r))} onChange={() => toggle(r)} />
               <div className="adm-row-main">
                 <b>{r.item} — {money(r.price)}</b>
                 <span className="muted">{names[r.buyer_id] || r.buyer_id} · {r.votes} з {r.need} · {r.reporters.join(', ')} · {when(r.last_at)}</span>
               </div>
               <div className="adm-row-act">
-                <button type="button" className="btn acc sm" onClick={() => confirm(r)}>Підтвердити</button>
-                <button type="button" className="btn ghost sm" onClick={() => reject(r)}>Відкинути</button>
+                <button type="button" className="btn acc sm" disabled={busy} onClick={() => confirm(r)}>Підтвердити</button>
+                <button type="button" className="btn ghost sm" disabled={busy} onClick={() => reject(r)}>Відкинути</button>
               </div>
               {msg[key(r)] && <p className="err" role="alert">{msg[key(r)]}</p>}
             </li>
           ))}
         </ul>
-      )}
+      </>)}
     </AdminSection>
   );
 }

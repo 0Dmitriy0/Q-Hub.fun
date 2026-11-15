@@ -48,7 +48,8 @@ function smoothPath(xy: [number, number][]) {
 
 /* графік ціни за вибраний період: плавна лінія з точками на кожній зміні, легка заливка під нею,
    межі мін/макс пунктиром; наведення підсвічує найближчу зміну ціни */
-export function PriceChart({ raw, range, name }: { raw: Pt[]; range: Range | null; name: string }) {
+/* onDelete — лише для адміна: прибрати хибну точку історії; останню (поточну ціну) база не видаляє (0068) */
+export function PriceChart({ raw, range, name, onDelete }: { raw: Pt[]; range: Range | null; name: string; onDelete?: (p: Pt) => void }) {
   const box = useRef<SVGSVGElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [period, setPeriod] = useState<ChartPeriod>('month');
@@ -87,6 +88,7 @@ export function PriceChart({ raw, range, name }: { raw: Pt[]; range: Range | nul
     setHov(best);
   }
   const h = hov !== null ? changes[hov] : null;
+  const lastId = raw.reduce<Pt | null>((a, p) => (!a || p.t >= a.t ? p : a), null)?.id;
 
   return (
     <figure className="chart">
@@ -113,8 +115,11 @@ export function PriceChart({ raw, range, name }: { raw: Pt[]; range: Range | nul
         {h && <div className="tip" style={{ left: `${Math.min(88, Math.max(12, (x(h.t) / W) * 100))}%` }}><b className="mono">{money(h.p)}</b><small>{when(h.t)}</small></div>}
       </div>
       <details className="chart-table"><summary>Зміни ціни таблицею</summary>
-        <table className="t"><thead><tr><th>Коли</th><th className="n">Ціна</th></tr></thead>
-          <tbody>{changes.slice().reverse().map(p => <tr key={p.t + ':' + p.p}><td>{when(p.t)}</td><td className="n">{money(p.p)}</td></tr>)}</tbody></table>
+        <table className="t"><thead><tr><th>Коли</th><th className="n">Ціна</th>{onDelete && <th className="n">Дія</th>}</tr></thead>
+          <tbody>{changes.slice().reverse().map(p => <tr key={p.t + ':' + p.p}><td>{when(p.t)}</td><td className="n">{money(p.p)}</td>
+            {onDelete && <td className="n">{p.id !== undefined && p.id !== lastId
+              ? <button type="button" className="btn ghost sm" aria-label={`Видалити ціну ${money(p.p)} від ${when(p.t)}`} onClick={() => onDelete(p)}>Видалити</button>
+              : <small className="muted">поточна</small>}</td>}</tr>)}</tbody></table>
       </details>
     </figure>
   );
