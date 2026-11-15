@@ -2189,3 +2189,44 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .skip:focus { top: 12px; }
 main:focus { outline: none; }
 html { scroll-padding-top: 76px; }
+
+/* =====================================================================================================================
+   РЕДИЗАЙН, етап 1 (2026-11-15): спільна основа для всіх вкладок.
+   Принципи (impeccable: режим Operate для інструментів, Read для гайдів; vectorlab: typography, spacing, anti-slop):
+   1. Інструмент — у першому екрані: шапки сторінок компактні (заголовок 28–34 px, опис ≤ 2 рядки), без «вітрини».
+   2. Підписи — звичайним регістром і основним шрифтом: моноширинні КАПСЛОКОМ українською читаються погано.
+      Моноширинний лишається лише для чисел (ціни, рівні, час) — там він вирівнює цифри.
+   3. Одна поверхня на блок: без рамки в рамці; глибина — рамкою, тінь — лише в світлій темі й у вікон.
+   4. Фон спокійний: м'які плями кольору лишаються, контурні фігури й крапкова сітка прибрані (Backdrop.tsx).
+   ===================================================================================================================== */
+:root { --fs-label: 12.5px; --r-sm: 10px; --r-md: 14px; --r-lg: 18px; }
+
+/* 2 — підписи: було 10.5–12 px mono uppercase із розрядкою → 12.5 px sans, звичайний регістр */
+.h-lbl, .wiki-stats small, :is(.cab, .deck) .lbl, .bp-calc-out small, .p-hud-cash span, .h-ex span, .ev-stat small,
+.qpromo-tag, .guide-toc h2, .guide-toc summary, .wiki-crumbs, .psub, table.t th, .bp-th, .dmenu-h, .adm-group-t, .bed-h b, .wdiff-blocks section > b {
+  font-family: var(--sans); font-size: var(--fs-label); font-weight: 600; letter-spacing: 0; text-transform: none;
+}
+.h-kicker, .ev-kind, .guide-warn, .wdlg .jd-sec h3 { font: 700 13px/18px var(--sans); letter-spacing: 0; text-transform: none; }
+.h-promo-tag, .p-badge, .bp-tag, .ev-chip, .h-pill { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-weight: 700; }
+.h-pill { font-size: 13px; }
+.wdlg .jd-sec h3 { font-size: 14px; color: var(--fg); }
+
+/* 1 — шапки сторінок: менше повітря зверху, заголовок не на пів екрана, опис коротший по ширині */
+.wiki-hero, .p-hero { padding: 22px 24px; border-radius: var(--r-lg); gap: 16px; }
+.wiki-hero h1, .bp-head h1, .p-hero h1 { font-size: clamp(26px, 3.2vw, 34px); line-height: 1.15; letter-spacing: -.025em; }
+.h-hero h1 { font-size: clamp(30px, 4.4vw, 44px); }
+.wiki-hero p, .bp-head p, .p-hero p { font-size: 15px; line-height: 1.55; max-width: 64ch; }
+.wiki-hero > div:first-child, .bp-head > div:first-child { gap: 8px; }
+.wiki-stats > div { padding: 10px 14px; min-width: 96px; border-radius: var(--r-md); }
+.wiki-stats b { font-size: 22px; }
+.wiki { gap: 18px; }
+
+/* 3 — картки робіт: значок без власної рамки (картка вже рамка), назва — головне, підписи під нею — дрібніше */
+.jcard { gap: 8px; padding: 18px 14px 14px; border-radius: var(--r-lg); }
+.jcard:hover { transform: none; border-color: color-mix(in srgb, var(--accent) 70%, var(--line2)); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+.jico, .wiki .jico { background: none; border: 0; padding: 4px; width: 60px; height: 60px; border-radius: 0; }
+.bp-status { font: 600 12.5px var(--sans); }
+.bp-status b { font-family: var(--mono); }
+
+/* таблиці й списки: рядки трохи вищі — легше влучити пальцем і очима */
+table.t td { padding-top: 10px; padding-bottom: 10px; }

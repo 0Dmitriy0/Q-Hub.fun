@@ -298,9 +298,8 @@ export default function Prices() {
 
       <section className="bp-head">
         <div>
-          <span className="h-kicker"><Icon name="buyer" size={16} />Ціни скупників</span>
-          <h1>Ціни скупників Quant RP</h1>
-          <p className="muted">Скупники міняють ціни в різний час. Побачив нову ціну в грі — онови її тут: вона стане поточною, щойно ту саму внесе ще один гравець, а ти отримаєш бал у рейтингу. Смужка показує, де ціна зараз між мінімумом і максимумом скупника: від {GOOD}% — вигідно здавати. Натисни на товар, щоб побачити графік.</p>
+          <h1>Ціни скупників</h1>
+          <p className="muted">Поточні ціни від гравців. Смужка показує, наскільки ціна близька до максимуму скупника: від {GOOD}% — вигідно здавати.</p>
         </div>
         <div className="row">
           {session ? <a className="btn acc" href="#add-price"><Icon name="camera" />Внести ціни</a> : <button className="btn acc" onClick={signIn}><Icon name="user" />Увійти, щоб вносити ціни</button>}
