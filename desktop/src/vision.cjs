@@ -20,6 +20,8 @@ const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.un
    закритий меню — раз на TICK_MENU, щоб вікно скупника впізнати одразу (заголовок — ~120 мс). Знімок повільний (потік не
    працює, запасний getSources ~780 мс) — як раніше, раз на TICK_EVERY. Вікно скупника — кадр за кадром */
 const TICK_EVERY = 2000, TICK_FAST = 700, TICK_MENU = 350, SLOW_CAPTURE = 300, TICK_POLL = 100;
+/* як часто пробувати інші масштаби HUD, коли гроші не читаються (hud.HUD_SCALES) */
+const HUD_RESCAN = 10e3;
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
 const REREAD_AFTER = 3;         // ціна без назви в стількох кадрах — перечитати назву окремо (T030)
 
@@ -119,6 +121,16 @@ function vision(deps) {
     await Promise.all(ws.map(w => w?.terminate().catch(() => {})));
   }
 
+  /* гроші HUD у масштабі k. k = 1 — як завжди; більший HUD (4K) — ще й лише білі пікселі (whiteOnly): за сумою банку
+     бувають неонові вивіски, і без фільтра «$820 289» читалось як «$8205» (знімки 4K, 2026-11-16) */
+  let hudK = 1, hudScanAt = 0;
+  async function readMoney(img, k) {
+    const { width, height } = img.getSize();
+    let crop = img.crop(hud.region(width, height, k));
+    if (k !== 1) crop = whiteOnly(crop, deps.nativeImage);
+    return hud.parse(await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })));
+  }
+
   /* main кличе tick часто (TICK_POLL): кадр раз на TICK_EVERY, а поки минулий кадр був вікном скупника — одразу після
      попереднього, без очікування (кадр 2,5 с при таймері 2 с займав 4 с). Вікно закрили — знову раз на TICK_EVERY */
   async function tick() {
@@ -141,11 +153,19 @@ function vision(deps) {
       pace = slow ? TICK_EVERY : TICK_FAST;
       await workers();
       const { width, height } = img.getSize(), now = Date.now();
-      const badge = hud.hasBadge(img.crop(hud.badgeRegion(width, height)).toBitmap());
+      const badge = hud.hasBadge(img.crop(hud.badgeRegion(width, height, hudK)).toBitmap());
       let money = null;
       if (!badge) {
-        const crop = img.crop(hud.region(width, height));
-        money = hud.parse(await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })));
+        money = await readMoney(img, hudK);
+        /* не прочиталось — може, HUD іншого розміру (4K): інші масштаби, не частіше HUD_RESCAN (HUD закритий меню теж
+           не читається, і щокадру зайвих OCR не треба). Що спрацювало — запам'ятовуємо */
+        if (!money && now - hudScanAt > HUD_RESCAN) {
+          hudScanAt = now;
+          for (const k of hud.scaleOrder(hudK).slice(1)) {
+            money = await readMoney(img, k);
+            if (money) { log(`hud scale ${hudK} -> ${k}`); hudK = k; break; }
+          }
+        }
       }
       /* баланс HUD — лише для «прибуток за годину сеансу» в смужці (specs/040); облік програма більше не веде.
          watcher відкидає одиничні похибки OCR: баланс береться, коли два кадри поспіль однакові */
