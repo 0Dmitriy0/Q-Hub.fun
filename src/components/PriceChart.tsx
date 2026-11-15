@@ -13,11 +13,11 @@ export function Spark({ pts, now }: { pts: Pt[]; now: number }) {
 
 export function RangeBar({ pos, range }: { pos: number | null; range: Range | null }) {
   if (pos === null || !range) return <span className="rbar-none">меж ще немає</span>;
-  const good = pos >= GOOD;
+  const good = pos >= GOOD, mid = !good && pos >= 50;   // середина шкали — жовтим: ще не вигідно, але й не дно
   return (
-    <span className={'rbar' + (good ? ' good' : '')} title={`${pos}% між мінімумом ${money(range.min)} і максимумом ${money(range.max)}`}>
+    <span className={'rbar' + (good ? ' good' : mid ? ' mid' : '')} title={`${pos}% між мінімумом ${money(range.min)} і максимумом ${money(range.max)}`}>
       <span className="rtrack"><span className="rfill" style={{ width: pos + '%' }} /></span>
-      <span className="rtxt mono">{good ? '▲ ' : ''}{pos}%{good ? ' вигідно' : ''}</span>
+      <span className="rtxt">{good ? '▲ ' : ''}{pos}%{good ? ' вигідно' : ''}</span>
     </span>
   );
 }

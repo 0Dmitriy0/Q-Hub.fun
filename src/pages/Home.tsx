@@ -62,13 +62,13 @@ export default function Home() {
         <div className="h-hero-txt">
           <span className="h-pill"><span className="mdot" aria-hidden="true" />Хаб гравців Quant RP</span>
           <h1>Усе для Quant RP — <span className="h-acc">прямо поверх гри</span></h1>
-          <SitePromo />
-          <p className="h-lead">Мапа штату й ціни скупників від гравців — просто на сайті, а мапу можна поставити й у саму гру. Програма відкриває все це за <kbd>Alt+Q</kbd>, не виходячи з GTA V.</p>
+          <p className="h-lead">Мапа штату, ціни скупників і правила сервера — на сайті й прямо в грі. Програма відкриває все це за <kbd>Alt+Q</kbd>, не виходячи з GTA V.</p>
           <div className="row">
             <Link className="btn acc" to="/mapa"><Icon name="map" />Відкрити мапу</Link>
             <Link className="btn ghost" to="/programa"><Icon name="download" />Завантажити програму</Link>
             <Link className="btn ghost" to="/tsiny"><Icon name="buyer" />Дізнатися ціни</Link>
           </div>
+          <SitePromo />
         </div>
         <HalloweenBanner />
       </section>

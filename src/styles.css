@@ -2230,3 +2230,35 @@ html { scroll-padding-top: 76px; }
 
 /* таблиці й списки: рядки трохи вищі — легше влучити пальцем і очима */
 table.t td { padding-top: 10px; padding-bottom: 10px; }
+
+/* РЕДИЗАЙН, етап 2 (2026-11-15): головна й «Програма».
+   Перший екран читається зверху вниз: підпис → заголовок → одне речення → кнопки → промокод (раніше промокод
+   розривав заголовок і опис). Заголовки розділів — на рядок-два, а не на пів екрана. Великі числа — основним шрифтом
+   з рівними цифрами: моноширинний розтягував «2 837» пробілом */
+.h-hero-txt > .qpromo, .h-hero-txt > .site-promo { align-self: stretch; margin-top: 4px; }
+.h-head h2 { font-size: clamp(22px, 2.6vw, 30px); line-height: 1.22; }
+.h-head { gap: 6px; }
+.h-sec { gap: 20px; }
+.h-stat b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.h-stat { padding: 14px 16px; border-radius: var(--r-md); }
+.h-stat .h-lbl { color: var(--muted); }
+.mini-chips button { font: 600 12.5px var(--sans); letter-spacing: 0; text-transform: none; border-radius: 999px; }
+.h-feat h3 { font-size: 15.5px; }
+.h-feat p { font-size: 14px; line-height: 1.5; }
+.p-bar-lead, .h-lead { max-width: 62ch; }
+
+/* РЕДИЗАЙН, етап 3 (2026-11-15): ціни.
+   Шкала «де ціна між мінімумом і максимумом» — головна підказка сторінки, тож вона ширша й кольорова:
+   від 80 % — зелена (вигідно), 50–79 % — жовта, нижче — сіра. Ціна — великим основним шрифтом з рівними цифрами */
+.rtrack { width: 140px; height: 6px; border-radius: 99px; }
+.rfill { border-radius: 99px; }
+.rbar.mid .rfill { background: var(--warn); }
+.rbar.mid .rtxt { color: var(--warn); font-weight: 700; }
+.rtxt { font: 600 12.5px var(--sans); font-variant-numeric: tabular-nums; }
+.pval b, .bp-lead-p b, .bp-calc-out b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.pval b { font-size: 17px; }
+.bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) 120px minmax(140px, auto); }
+.bp-th { grid-template-columns: minmax(0, 1fr) 120px 140px; }
+.pname small { line-height: 1.45; }
+@media (max-width: 640px) { .rtrack { width: 96px; } .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr) minmax(96px, auto); } .bp-list .prow > svg, .bp-list .prow > .spark { display: none; } }
+.bp-list .prow > .spark { justify-self: center; }
