@@ -1,6 +1,6 @@
-import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PAGES from '../data/pages.json';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { FAMILY, familyLink, useLinks } from '../lib/brand';
@@ -24,6 +24,24 @@ const BASE_DESCRIPTION = typeof document !== 'undefined' ? document.querySelecto
 export default function Layout() {
   const { session, name, avatar, signIn, role } = useAuth();
   const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const navType = useNavigationType();
+  /* нова адреса — з початку сторінки (раніше лишалась прокрутка попередньої: клік у футері відкривав розділ знизу).
+     «Назад» у браузері (POP) і посилання на якір (#…) — не чіпаємо */
+  useEffect(() => {
+    if (navType !== 'POP' && !location.hash) window.scrollTo(0, 0);
+  }, [pathname]);
+  const section = pathname.split('/')[1] || '';
+  /* перехід між розділами: нова сторінка проявляється з легким підйомом (200 мс) — видно, що розділ змінився.
+     Через Web Animations, а не key: сторінка не монтується заново, а вміст видно й без анімації. Перший показ — без руху */
+  const firstSection = useRef(true);
+  useEffect(() => {
+    if (firstSection.current) { firstSection.current = false; return; }
+    /* зсув (transform) на мить робить main опорою для position: fixed — повноекранну мапу лише проявляємо */
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || !!mainRef.current?.querySelector('.mapfull');
+    mainRef.current?.animate(reduce ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+      { duration: reduce ? 120 : 220, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+  }, [section]);
   /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
   const [menu, setMenu] = useState(false);
   const [{ family_url }] = useLinks();
@@ -49,6 +67,7 @@ export default function Layout() {
   }, [pathname]);
   return (
     <div className="app">
+      <a className="skip" href="#main">До вмісту сторінки</a>
       <Backdrop />
       <header className={'top' + (menu ? ' menu-open' : '')}>
         <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={36} height={36} /><b>Q-Hub</b></NavLink>
@@ -68,7 +87,7 @@ export default function Layout() {
         </div>
       </header>
       {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
-      <main><Suspense fallback={<div style={{ minHeight: "70vh" }} aria-busy="true" />}><Outlet /></Suspense></main>
+      <main ref={mainRef} id="main" tabIndex={-1}><Suspense fallback={<div style={{ minHeight: "70vh" }} aria-busy="true" />}><Outlet /></Suspense></main>
       <NickGate />
       <footer className="foot">
         <div className="foot-in">

@@ -534,3 +534,22 @@ html:has(> body.in-timer), body.in-timer { margin: 0; background: transparent !i
 .bfull { width: 100%; box-sizing: border-box; display: flex; align-items: flex-start; gap: 9px; margin-bottom: 8px; padding: 10px 14px; border-radius: 12px; background: rgba(251, 191, 36, .12); border: 1px solid rgba(251, 191, 36, .5); color: var(--fg); font-size: 13.5px; line-height: 1.45; }
 .bfull .ico { flex: none; margin-top: 2px; color: #fbbf24; }
 .bfull b { color: #fde68a; }
+
+/* ---------- рух у плашці (2026-11-15): коротко, щоб не відчувалось затримкою поверх гри ----------
+   Поява плашки — Bar.tsx (onQuickShow, Web Animations). Тут — відгук на наведення й вибір, поява відповіді ШІ, правил і меню.
+   Зменшений рух — лише проявлення без зсувів */
+@keyframes bq-fade { from { opacity: 0; } }
+@keyframes bq-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes bq-pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.brow, .bico, .bseg button, .bmenu button, .bbuy { transition: background-color .12s ease-out, border-color .12s ease-out, color .12s ease-out; }
+.bico:active, .bseg button:active { transform: scale(.94); }
+.bmenu { animation: bq-pop .16s cubic-bezier(.16, 1, .3, 1); transform-origin: top right; }
+.bans { animation: bq-rise .24s cubic-bezier(.16, 1, .3, 1); }
+.brules > li { animation: bq-rise .24s cubic-bezier(.16, 1, .3, 1) both; }
+.brules > li:nth-child(2) { animation-delay: 40ms; } .brules > li:nth-child(3) { animation-delay: 80ms; } .brules > li:nth-child(n + 4) { animation-delay: 110ms; }
+.brange i { transition: left .24s cubic-bezier(.16, 1, .3, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .bmenu, .bans, .brules > li { animation: bq-fade .12s ease-out both; }
+  .bico:active, .bseg button:active { transform: none; }
+  .brange i { transition: none; }
+}
