@@ -68,7 +68,6 @@ export default function WikiEvents() {
     <>
       <section className="wiki-hero">
         <div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />Сезонні й особливі івенти</span>
           <h1>Івенти штату</h1>
           <p className="muted">Що робити, які нагороди й до якого числа — з мапою, де шукати. Щоденні івенти за розкладом — на головній.</p>
         </div>

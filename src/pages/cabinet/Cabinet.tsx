@@ -50,7 +50,6 @@ export default function Cabinet() {
     <div className="cab">
       <section className="wiki-hero">
         <div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />Особистий кабінет</span>
           <h1>Кабінет гравця</h1>
           <p className="muted">Документи з нагадуванням про строк, персонажі й нік у Q-Hub. Бачиш їх лише ти — це перевіряє сама база.</p>
           <div className="row"><button className="btn acc" onClick={signIn}><Icon name="user" />Увійти через Discord</button><Link className="btn ghost" to="/programa"><Icon name="download" />Програма Q-Hub</Link></div>
