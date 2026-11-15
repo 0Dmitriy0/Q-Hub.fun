@@ -129,7 +129,11 @@ export default function Bar() {
   useEffect(() => {
     load();
     /* нове відкриття — як перше за сесію: без минулих відповідей (вони в «Історії»), крім непрочитаної відповіді ШІ (specs/082) */
-    api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0); });
+    api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0);
+      /* поява плашки: коротке опускання з прозорості (140 мс) — без затримки для гравця; зменшений рух — лише проявлення */
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      root.current?.querySelector('.bbox')?.animate(reduce ? [{ opacity: .3 }, { opacity: 1 }] : [{ opacity: .3, transform: 'translateY(-6px) scale(.99)' }, { opacity: 1, transform: 'none' }], { duration: reduce ? 100 : 140, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+    });
     /* Alt+S у грі: знімок готовий — позначити, що на ньому */
     api.onShot(s => { setShot(s); setView('shot'); setNote(null); setChars(false); });
     api.onFullscreen(on => setD(x => (x ? { ...x, fullscreen: on } : x)));
