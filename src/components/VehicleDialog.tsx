@@ -39,6 +39,7 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved, onPropose,
     if (v) { setEdit(false); setTune(emptyTune()); setPr({ stage: '', xenon: String(XENON_DEFAULT) }); dlg.current?.showModal(); }
     else dlg.current?.close();
   }, [v?.id]);
+  const [calcOpen, setCalcOpen] = useState(false);
   if (!v) return <dialog ref={dlg} className="modal vmodal" onClose={onClose} />;
 
   const gov = v.price || 0;
@@ -65,9 +66,27 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved, onPropose,
         {edit && <VehicleEdit v={v} onCancel={() => setEdit(false)} onSaved={nv => { onSaved?.(nv); setEdit(false); }} />}
         <div className="vd-pic">{v.image_url ? <img src={v.image_url} alt={v.name} /> : <Icon name={KIND_ICON[v.kind]} size={56} />}
           {v.speed != null && <span className="vd-chip mono">{v.speed} км/год · {FUEL_WORD[v.fuel || 'petrol']}</span>}</div>
-        <div className="vd-cols">
-          <section>
-            <h3 className="ih"><Icon name="bolt" size={16} />Елементи тюнінгу</h3>
+        {/* головне про транспорт — плитками: ціна, швидкість, багажник, бак… (редизайн 2026-11-15: раніше — довгий список «назва — значення») */}
+        <div className="vd-specs">
+          <div className="vd-spec vd-spec-price"><span>Ціна в салоні</span><b>{priceKind(v) === 'exclusive' ? <span className="muted">Ексклюзивний транспорт — у салоні придбати неможливо.</span>
+                : <><b className={'mono' + (priceKind(v) === 'donate' ? ' donate-c' : '')}>{priceKind(v) === 'donate' && <Icon name="coin" size={15} />}{salonLabel(v)}</b>{priceKind(v) === 'donate' && <small className="muted"> · донатна валюта</small>}</>}</b></div>
+          <div className="vd-spec"><span>Державна ціна</span><b>{gov ? money(gov) : '—'}</b></div>
+          {v.speed != null && <div className="vd-spec"><Icon name="speed" size={18} /><span>Швидкість</span><b>{v.speed} км/год</b></div>}
+          {v.trunk != null && <div className="vd-spec"><Icon name="box" size={18} /><span>Багажник</span><b>{v.trunk} слот(ів)</b></div>}
+          {v.tank != null && <div className="vd-spec"><Icon name="fuel" size={18} /><span>{v.fuel === 'electric' ? 'Батарея' : 'Бак'}</span><b>{v.tank}{v.fuel === 'electric' ? '' : ' л'}</b></div>}
+          {v.seats != null && <div className="vd-spec"><Icon name="user" size={18} /><span>Місць</span><b>{v.seats}</b></div>}
+          {v.min_level != null && <div className="vd-spec"><Icon name="trophy" size={18} /><span>З рівня</span><b>{v.min_level}</b></div>}
+        </div>
+        <div className="vd-feats">
+          <span className="vd-feat"><FuelTag fuel={v.fuel} size={14} /></span>
+          {v.vinyl && <span className="vd-feat good"><Icon name="check" size={14} />Вініли</span>}
+          {v.ua_plate != null && <span className={'vd-feat' + (v.ua_plate ? ' good' : ' off')}><Icon name={v.ua_plate ? 'check' : 'x'} size={14} />Український номер</span>}
+          {v.real_name ? <span className="vd-feat muted">Прототип: {v.real_name}</span> : null}
+        </div>
+        {/* калькулятор тюнінгу — під кнопкою: потрібен не кожному, а займав пів вікна */}
+        <section className="vd-calc">
+          <button type="button" className={'btn ' + (calcOpen ? 'ghost' : 'acc')} aria-expanded={calcOpen} onClick={() => setCalcOpen(o => !o)}><Icon name="bolt" size={16} />{calcOpen ? 'Сховати калькулятор тюнінгу' : 'Порахувати тюнінг'}</button>
+          {calcOpen && <div className="vd-calc-in">
             {gov > 0 ? <>
               <div className="vd-sel"><button type="button" className="btn sm" onClick={() => setTune(t => ({ ...t, items: TUNING.map(x => x[0]) }))}>Виділити все</button>
                 <button type="button" className="btn sm ghost" onClick={() => setTune(emptyTune())}>Зняти все</button></div>
@@ -78,28 +97,8 @@ export default function VehicleDialog({ v, onClose, canEdit, onSaved, onPropose,
                 {noStagePrice && <small className="warn">Ціну чіпа Stage {tune.stage} не вписано — у сумі його немає.</small>}
               </div>
             </> : <p className="muted">Держ. вартість ще не вписана — тюнінг рахується від неї, тож поки порахувати не можна.</p>}
-          </section>
-          <section>
-            <h3 className="ih"><Icon name="shield" size={16} />Інформація</h3>
-            <dl className="vd-info">
-              {v.min_level != null && <><dt>Мінімальний рівень</dt><dd>{v.min_level}</dd></>}
-              <dt>Назва</dt><dd>{v.name}</dd>
-              {v.real_name ? <><dt>Реальна назва</dt><dd>{v.real_name}</dd></> : null}
-              <dt>Вартість у салоні</dt><dd>{priceKind(v) === 'exclusive' ? <span className="muted">Ексклюзивний транспорт — у салоні придбати неможливо.</span>
-                : <><b className={'mono' + (priceKind(v) === 'donate' ? ' donate-c' : '')}>{priceKind(v) === 'donate' && <Icon name="coin" size={15} />}{salonLabel(v)}</b>{priceKind(v) === 'donate' && <small className="muted"> · донатна валюта</small>}</>}</dd>
-              <dt>Державна вартість</dt><dd>{gov ? <b className="mono">{money(gov)}</b> : <span className="muted">невідома</span>}</dd>
-              {v.speed != null && <><dt>Максимальна швидкість</dt><dd>{v.speed} км/год</dd></>}
-            </dl>
-            <dl className="vd-info">
-              <dt>Двигун</dt><dd><FuelTag fuel={v.fuel} size={14} /></dd>
-              {v.tank != null && <><dt>{v.fuel === 'electric' ? 'Батарея' : 'Бак'}</dt><dd>{v.tank}{v.fuel === 'electric' ? '' : ' л'}</dd></>}
-              {v.trunk != null && <><dt>Багажник</dt><dd>{v.trunk} слот(ів)</dd></>}
-              {v.seats != null && <><dt>Місць</dt><dd>{v.seats}</dd></>}
-              {v.vinyl && <><dt>Підтримка вінілів</dt><dd className="good">✓ так</dd></>}
-              {v.ua_plate != null && <><dt>Український номер</dt><dd className={v.ua_plate ? 'good' : 'muted'}>{v.ua_plate ? '✓ можна поставити' : 'не ставиться'}</dd></>}
-            </dl>
-          </section>
-        </div>
+          </div>}
+        </section>
       </div>
     </dialog>
   );

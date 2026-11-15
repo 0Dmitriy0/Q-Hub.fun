@@ -6,6 +6,7 @@ import { makeHash } from '../lib/mapGeo';
 import Icon from './Icon';
 import Profit from './Profit';
 import PageMeta from './wiki/PageMeta';
+import HourlyChart from './wiki/HourlyChart';
 import { jobIconSrc, type JobRow } from '../lib/jobsData';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
@@ -24,6 +25,18 @@ const SECTIONS: [keyof Job, string][] = [
   ['requirements', 'Вимоги'], ['location', 'Де влаштуватися'], ['features', 'Особливості'],
   ['skills', 'Рівні навички'], ['progress', 'Прокачка навички'], ['controls', 'Керування'], ['tips', 'Поради']
 ];
+
+const OPEN = new Set<keyof Job>(['requirements', 'location']);
+
+/* довгий опис — перші 4 рядки й «Показати повністю» */
+function Clamp({ text }: { text: string }) {
+  const [all, setAll] = useState(false);
+  const long = text.length > 260;
+  return <>
+    <p className={'jd-text' + (long && !all ? ' jd-clamp' : '')}>{text}</p>
+    {long && <button type="button" className="jd-toggle" onClick={() => setAll(v => !v)}>{all ? 'Згорнути' : 'Показати повністю'}</button>}
+  </>;
+}
 
 /* робота → шар мапи, який варто відкрити одразу (поля скарбів — зони, не мітки) */
 const JOB_LAYER: Record<string, [string, string]> = { treasure: ['treasure-fields', 'Поля скарбів на мапі'] };
@@ -75,12 +88,17 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
           <button type="button" className="hud-b wdlg-x" onClick={onClose} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
         </div>
         {/* заробіток — першим: це те, заради чого відкривають роботу (редизайн 2026-11-15) */}
-        {job.pay && <section className="jd-sec wdlg-box jd-paybox"><h3>Заробіток</h3><PayBlock target={job.id} pay={job.pay} />
+        {job.pay && <section className="jd-sec wdlg-box jd-paybox"><h3>Заробіток</h3><HourlyChart pay={job.pay} /><PayBlock target={job.id} pay={job.pay} />
           <p className="muted jd-note">Суми — з тестів гравців і можуть бути застарілими. Знаєш точніше — запропонуй правку.</p></section>}
-        <section className="jd-sec wdlg-box"><h3>Опис</h3>{job.description ? <p className="jd-text">{job.description}</p> : <p className="muted">Опис ще додаємо.</p>}</section>
-        <div className="jd-cols">{SECTIONS.filter(([k]) => list(k).length).map(([k, t]) => (
+        <section className="jd-sec wdlg-box"><h3>Опис</h3>{job.description ? <Clamp text={job.description} /> : <p className="muted">Опис ще додаємо.</p>}</section>
+        {/* «Вимоги» й «Де влаштуватися» — одразу; решта (рівні, особливості, поради…) — під заголовком, що розгортається:
+            без цього вікно було стіною тексту (редизайн 2026-11-15) */}
+        <div className="jd-cols">{SECTIONS.filter(([k]) => OPEN.has(k) && list(k).length).map(([k, t]) => (
           <section className="jd-sec wdlg-box" key={k}><h3>{t}</h3><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></section>
         ))}</div>
+        {SECTIONS.filter(([k]) => !OPEN.has(k) && list(k).length).map(([k, t]) => (
+          <details className="jd-sec jd-more" key={k}><summary><span>{t}</span><small>{list(k).length}</small><Icon name="chev" size={16} /></summary><ul>{list(k).map((x, i) => <li key={i}>{x}</li>)}</ul></details>
+        ))}
         <PageMeta createdBy={job.created_by} updatedBy={job.updated_by} createdAt={job.created_at} updatedAt={job.updated_at} version={job.version} hidden={job.hidden} onHistory={job.version !== undefined ? () => setHist(true) : undefined} />
         {!job.hidden && <WikiChecks section="job" target={job.id} version={job.version} changedAt={job.updated_at ?? job.created_at} onPropose={onPropose} />}
         <HistoryDialog section="job" target={job.id} title={job.name} hidden={job.hidden} open={hist} onClose={() => setHist(false)} onChanged={onChanged} />

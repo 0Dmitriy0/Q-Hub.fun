@@ -94,6 +94,9 @@ function Tabs({ promo }: { promo: SitePromo | null }) {
   </div>;
 }
 
+/* швидкі розділи кабінету під рядком порожньої плашки */
+const QUICK: [string, string, string][] = [['dokumenty', 'Документи', 'book'], ['zarobitok', 'Заробіток', 'chart'], ['pravyla', 'Зміни правил', 'shield'], ['nalashtuvannya', 'Персонажі', 'user']];
+
 export default function Bar() {
   const [d, setD] = useState<Data | null>(null);
   const [q, setQ] = useState('');
@@ -285,6 +288,12 @@ export default function Bar() {
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 
+        {/* порожня плашка: швидкий вхід у кабінет — раніше він відкривався лише логотипом, і гравці про нього не знали */}
+        {!expanded && v === 'main' && !q && !note && !(streamer && !peek) && <nav className="bquick" aria-label="Кабінет">
+          <span className="bquick-t">Кабінет:</span>
+          {QUICK.map(([p, l, ico]) => <button key={p} type="button" onClick={() => go('/kabinet/' + p)}><Icon name={ico} size={14} />{l}</button>)}
+          <button type="button" className="bquick-all" onClick={() => go('/kabinet')}>Усе<Icon name="chev" size={14} className="tr" /></button>
+        </nav>}
         <div className="bhint">
           {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
           <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар — ціни, межі й коли їх оновили')}</span>}

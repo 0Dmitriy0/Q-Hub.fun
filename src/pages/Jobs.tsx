@@ -10,6 +10,7 @@ import { jobIcon } from '../components/JobDialog';
 import ProposeForm, { takeIntent, type ProposeTarget } from '../components/wiki/ProposeForm';
 import { jobIconSrc, useJobs, type JobRow } from '../lib/jobsData';
 import { useAuth } from '../lib/auth';
+import { hourlyRates, shortK } from '../lib/payHourly';
 import type { Data } from '../lib/wiki';
 
 const KINDS: [JobKind, string][] = [['all', 'Усі'], ['legal', 'Легальні'], ['illegal', 'Нелегальні']];
@@ -69,6 +70,7 @@ export default function Jobs() {
           <img className="jico" src={jobIconSrc(j)} alt="" width={64} height={64} loading="lazy" onError={jobIcon} />
           <span className="jname">{j.name}</span>
           <span className="jmeta"><span className="jtag lvl"><Icon name="trophy" size={13} />з {j.level} рівня</span><Profit n={j.profit} /></span>
+          {(() => { const r = hourlyRates(j.pay ?? ''); if (!r.length) return null; const best = r.reduce((m, x) => (x.max > m.max ? x : m)); return <span className="jhour"><b>{shortK(best.min, best.max)} $</b> / год</span>; })()}
           {!j.legal && <span className="jtag ill jcorner">Нелегальна</span>}
         </button>
       ))}</div>
