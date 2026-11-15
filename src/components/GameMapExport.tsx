@@ -20,6 +20,13 @@ export const IN_GAME_GROUPS = new Set(['Магазини', 'Структури',
 const inGame = (c: MapCategory) => IN_GAME_GROUPS.has(c.grp);
 const SIZES = [5, 7, 12, 20];
 
+/* свій розмір значка для окремих категорій (id → метри) — у браузері гравця, щоб не виставляти знову при наступному скачуванні */
+const SIZE_KEY = 'qhub-game-cat-sizes';
+function readCatSizes(): Record<string, number> {
+  try { const v = JSON.parse(localStorage.getItem(SIZE_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+function saveCatSizes(v: Record<string, number>) { try { localStorage.setItem(SIZE_KEY, JSON.stringify(v)); } catch { /* без сховища — лише на цей раз */ } }
+
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур).
    specs/026: зліва (на телефоні — зверху) перегляд того, що буде на мінікарті, справа вибір, кнопка «Скачати» з підсумком завжди видно */
 export default function GameMapExport({ groups, marks, areas, catById, isOn, loading = false }: {
@@ -30,6 +37,10 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   const on = (c: MapCategory) => sel[c.id] ?? (PRESET.has(c.id) || isOn(c));
   const list = groups.filter(g => !IN_GAME_GROUPS.has(g.grp));
   const [iconM, setIconM] = useState(20);
+  const [catM, setCatMState] = useState<Record<string, number>>(readCatSizes);
+  /* m — метри; 0 — як загальний розмір */
+  const setCatM = (id: string, m: number) => setCatMState(s => { const n = { ...s }; if (m) n[id] = m; else delete n[id]; saveCatSizes(n); return n; });
+  const sizeOf = (id: string) => catM[id] || iconM;
   const [theme, setThemeState] = useState<GameTheme>(readGameTheme);
   const setTheme = (t: GameTheme) => { setThemeState(t); saveGameTheme(t); };
   const [shut, setShut] = useState<Record<string, boolean>>({});   // згорнуті групи
@@ -46,7 +57,11 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   const big = (c: MapCategory) => on(c) && (count[c.id] || 0) > BIG_CAT && !isLayer(c.id);
 
   /* перегляд бере той самий вибір, що й архів */
-  const pins = useMemo(() => picked.map(m => { const c = catById[m.category]; return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color }; }), [picked.map(m => m.id).join(), catById]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const pins = useMemo(() => picked.map(m => {
+    const c = catById[m.category], own = catM[c.id];
+    return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color, ...(own && own !== iconM ? { s: own / iconM } : {}) };
+  }), [picked.map(m => m.id).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const mixed = picked.some(m => { const own = catM[m.category]; return !!own && own !== iconM; });
   const shownAreas = useMemo(() => pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })), [pickedAreas.map(a => a.id).join(), catById]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function go(withMarks = true) {
@@ -81,11 +96,11 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
           </section>
 
           <section className="gx-card">
-            <h3>Розмір значка</h3>
-            <div className="mseg" role="radiogroup" aria-label="Розмір значка на мінікарті, метрів">
+            <h3>Розмір значка для всіх</h3>
+            <div className="mseg" role="radiogroup" aria-label="Розмір значка на мінікарті для всіх категорій, метрів">
               {SIZES.map(v => <button key={v} type="button" role="radio" aria-checked={iconM === v} onClick={() => setIconM(v)}>{v} м</button>)}
             </div>
-            <p className="muted gx-note">{iconM === 20 ? 'Рекомендовано: значки добре видно на мінікарті.' : 'Наблизь перегляд, щоб побачити, як значки виглядатимуть у місті.'}</p>
+            <p className="muted gx-note">{iconM === 20 ? 'Рекомендовано: значки добре видно на мінікарті.' : 'Наблизь перегляд, щоб побачити, як значки виглядатимуть у місті.'} Окремій категорії можна дати свій розмір — у списку нижче, праворуч від неї.</p>
           </section>
 
           <div className="gx-all">
@@ -108,16 +123,26 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
                   <div id={id} className="gx-cats">
                     {cats.map(c => (
                       <div key={c.id}>
-                        <label className="mcheck">
-                          <input type="checkbox" checked={on(c)} onChange={e => set([c.id], e.target.checked)} />
-                          <img src={c.icon} alt="" width={18} height={18} loading="lazy" />{c.name}<span className="cnt">{loading && !isLayer(c.id) ? '…' : count[c.id] || 0}</span>
-                        </label>
-                        {/* specs/017 FR-014: велика категорія (напр. 700+ гарбузів) закриє на мінікарті все інше */}
-                        {big(c) && iconM > 12 && (
+                        <div className="gx-cat">
+                          <label className="mcheck">
+                            <input type="checkbox" checked={on(c)} onChange={e => set([c.id], e.target.checked)} />
+                            <img src={c.icon} alt="" width={18} height={18} loading="lazy" />{c.name}<span className="cnt">{loading && !isLayer(c.id) ? '…' : count[c.id] || 0}</span>
+                          </label>
+                          {/* шари (назви, зони) — готові файли, розміру значка в них немає */}
+                          {on(c) && !isLayer(c.id) && (
+                            <select className={'gx-size' + (catM[c.id] ? ' own' : '')} value={catM[c.id] || 0} onChange={e => setCatM(c.id, Number(e.target.value))}
+                              aria-label={`Розмір значка «${c.name}»`} title="Розмір значка цієї категорії">
+                              <option value={0}>{iconM} м · як усі</option>
+                              {SIZES.map(v => <option key={v} value={v}>{v} м</option>)}
+                            </select>
+                          )}
+                        </div>
+                        {/* specs/017 FR-014: велика категорія (напр. 700+ гарбузів) закриє на мінікарті все інше — зменшуємо саме її */}
+                        {big(c) && sizeOf(c.id) > 12 && (
                           <p className="gx-warn">
-                            <Icon name="alert" size={15} /><span>{count[c.id]} міток — на мінікарті вони закриють інші. Менший значок:</span>
-                            <button type="button" className="gx-mini" onClick={() => setIconM(7)}>7 м</button>
-                            <button type="button" className="gx-mini" onClick={() => setIconM(12)}>12 м</button>
+                            <Icon name="alert" size={15} /><span>{count[c.id]} міток — на мінікарті вони закриють інші. Менший значок для цієї категорії:</span>
+                            <button type="button" className="gx-mini" onClick={() => setCatM(c.id, 7)}>7 м</button>
+                            <button type="button" className="gx-mini" onClick={() => setCatM(c.id, 12)}>12 м</button>
                           </p>
                         )}
                       </div>
@@ -137,7 +162,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
           <button type="button" className="btn acc gx-go" disabled={!!busy || empty} onClick={() => go()}>
             <Icon name="download" size={18} />
             <span><b>{busy || (empty ? 'Вибери хоча б щось' : 'Скачати мапу для гри')}</b>
-              {!busy && !empty && <small>{packSummary({ marks: picked.length, areas: pickedAreas.length, names: layers.includes('names'), zones: layers.includes('zones'), theme, iconM })}</small>}</span>
+              {!busy && !empty && <small>{packSummary({ marks: picked.length, areas: pickedAreas.length, names: layers.includes('names'), zones: layers.includes('zones'), theme, iconM, mixed })}</small>}</span>
           </button>
           {empty && !busy && <button type="button" className="btn ghost sm" onClick={() => go(false)}>Скачати лише мапу, без міток</button>}
         </div>
