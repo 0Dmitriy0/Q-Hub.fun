@@ -8,6 +8,7 @@ import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
 import { supabase } from './supabase';
 import { asset } from './app';
+import { sortAnimals } from './huntAnimals';
 
 /* спільне для повної мапи (/mapa) і мапи-прев'ю на головній */
 
@@ -67,7 +68,7 @@ export async function loadMapData(): Promise<MapData | null> {
     marks: [...BUILTIN_MARKS, ...rows.filter(r => !r.hidden).map(r => ({   // сховані («Точка застаріла», 0060) модератор бачить лише в черзі й історії
  id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number) }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
-    areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][] })),
+    areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][], animals: sortAnimals((r.animals as unknown[] | null | undefined) ?? []) })),
     owners: o.error ? null : Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string]))
   };
 }
