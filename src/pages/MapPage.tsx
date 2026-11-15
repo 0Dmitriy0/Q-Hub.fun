@@ -16,7 +16,7 @@ import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
-import MapAdmin, { CatEdit, MarkEdit } from '../components/MapAdmin';
+import MapAdmin, { CatEdit, MarkEdit, dbErr } from '../components/MapAdmin';
 import GameMapExport from '../components/GameMapExport';
 import MapShot from '../components/MapShot';
 import MapDrafts from '../components/MapDrafts';
@@ -98,6 +98,11 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const [dbMissing, setDbMissing] = useState(false);
   const [owners, setOwners] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<MapMark | null>(null);
+  /* перенесення мітки адміном: тягнути або клікнути на нове місце, потім «Зберегти» */
+  const [moving, setMoving] = useState<{ mk: MapMark; pt: [number, number] } | null>(null);
+  const [moveBusy, setMoveBusy] = useState(false);
+  const moveRef = useRef(false);
+  const moveMarker = useRef<L.Marker | null>(null);
   /* комп'ютер: мапа на весь екран під шапкою, панель фільтрів поверх мапи і згортається.
      телефон: звичайна сторінка — мапа зверху, фільтри під нею */
   const mq = typeof matchMedia === 'function' ? matchMedia('(min-width: 861px)') : null;
@@ -222,6 +227,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     /* координати курсора лишаються після виходу з мапи — щоб їх можна було скопіювати кнопкою в HUD */
     m.on('mousemove', e => setPos(game(e)));
     m.on('click', e => {
+      if (moveRef.current) { const g = game(e); setMoving(v => (v ? { ...v, pt: g } : v)); return; }
       if (drawRef.current) { const g = game(e); setRing(r => [...r, g]); return; }
       if (!pickRef.current) return;
       const g = game(e);
@@ -270,7 +276,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         + (mk.link ? `<a class="mgo" data-nav href="${mk.link.href}">${mk.link.label}</a>` : '')
         /* «Точка застаріла?» (0060) — гравцям і модераторам; адмін і так прибирає мітку сам */
         + (!isAdmin && wiki && staleOk && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-stale="${mk.dbId}">Точка застаріла?</button></span>` : '')
-        + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
+        + (isAdmin && mk.dbId ? `<span class="mrow"><button type="button" class="medit" data-edit="${mk.dbId}">Змінити</button><button type="button" class="medit" data-move="${mk.dbId}">Перенести</button><button type="button" class="medit" data-owner="${mk.dbId}">Власник</button><button type="button" class="mdel" data-del="${mk.dbId}">Видалити</button></span>` : '') + '</div>';
       markers.current[mk.id] = L.marker(m.unproject(toPx(mk.x, mk.y), ZMAX), { icon, title: mk.name || c.name, keyboard: true }).bindPopup(html, POPUP).addTo(layers.current[c.id]);
       /* назва під міткою — лише в категоріях з галочкою «назви» (specs/081); на дальньому зумі ховається (.mlabels-on) */
       if (labelShown(mk, c)) markers.current[mk.id].bindTooltip(esc(mk.name), { permanent: true, direction: 'bottom', offset: [0, 16], className: 'mlabel' });
@@ -330,6 +336,27 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     draftMarker.current = L.marker(ll, { icon, draggable: isAdmin, title: 'Точка чернетки', zIndexOffset: 1000 }).addTo(m);
     draftMarker.current.on('dragend', () => { const p = m.project(draftMarker.current!.getLatLng(), ZMAX); setDraftPt(toGame(p.x, p.y)); });
   }, [draftPt, isAdmin]);
+  /* мітка, яку переносять: стара — напівпрозора на місці, нова — та сама іконка, яку можна тягнути */
+  useEffect(() => {
+    const m = map.current; moveRef.current = !!moving;
+    if (!m || !moving) { moveMarker.current?.remove(); moveMarker.current = null; return; }
+    const ll = m.unproject(toPx(moving.pt[0], moving.pt[1]), ZMAX);
+    if (moveMarker.current) { moveMarker.current.setLatLng(ll); return; }
+    const c = catById[moving.mk.category];
+    moveMarker.current = L.marker(ll, { icon: c ? pinIcon(c, moving.mk.icon) : undefined, draggable: true, title: 'Тягни мітку на нове місце', zIndexOffset: 2000 }).addTo(m);
+    moveMarker.current.getElement()?.classList.add('mmoving');
+    moveMarker.current.on('dragend', () => { const p = m.project(moveMarker.current!.getLatLng(), ZMAX); setMoving(v => (v ? { ...v, pt: toGame(p.x, p.y) } : v)); });
+  }, [moving]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!moving) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoving(null); };
+    window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc);
+  }, [!!moving]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const old = moving ? markers.current[moving.mk.id] : null;
+    old?.setOpacity(0.35);
+    return () => { old?.setOpacity(1); };
+  }, [moving?.mk.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   /* контур нової зони: лінія через точки й пунктир до першої (замкнеться при збереженні) */
   useEffect(() => {
     const m = map.current; if (!m) return;
@@ -468,6 +495,19 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     setProposeMode('hide');
     setPropose({ section: 'map_point', id: String(id), data: { name: mk.name || c?.name || '', category_id: mk.category, x: mk.x, y: mk.y }, title: mk.name || c?.name || 'мітка' });
   }
+  function startMove(id: number) {
+    const mk = marks.find(x => x.dbId === id); if (!mk) return;
+    map.current?.closePopup(); setMoving({ mk, pt: [mk.x, mk.y] });
+  }
+  async function saveMove() {
+    if (!moving) return;
+    const x = Math.round(moving.pt[0] * 10) / 10, y = Math.round(moving.pt[1] * 10) / 10, id = moving.mk.dbId!;
+    setMoveBusy(true);
+    const { error } = await supabase!.from('map_points').update({ x, y }).eq('id', id);
+    setMoveBusy(false);
+    if (error) { alert('Не вдалося перенести: ' + dbErr(error.message)); return; }
+    setMoving(null); setMarks(ms => ms.map(m => (m.dbId === id ? { ...m, x, y } : m)));
+  }
   function startEdit(id: number) {
     const mk = marks.find(x => x.dbId === id); if (!mk) return;
     map.current?.closePopup(); setTools(true); setTab('admin'); setEditing(mk);
@@ -500,12 +540,18 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           const ea = t.closest('button[data-edit-area]'); if (ea) startAreaEdit(Number(ea.getAttribute('data-edit-area')));
           const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
           const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
+          const mv = t.closest('button[data-move]'); if (mv) startMove(Number(mv.getAttribute('data-move')));
           const st = t.closest('button[data-stale]'); if (st) staleMark(Number(st.getAttribute('data-stale')));
         }}>
         <div ref={box} className="mapel" role="region" aria-label="Мапа штату" tabIndex={-1} />
         {embed && offline !== null && <span className="mpick">{offline ? `Немає зв'язку — мітки ${asOf(offline)}` : `Немає зв'язку — мітки з'являться, щойно буде інтернет`}</span>}
         {picking && <span className="mpick">{pickFor.current === 'propose' ? 'Клікни на мапі туди, де має бути мітка' : 'Клікни на мапі, щоб взяти координати'}</span>}
         {drawing && <span className="mpick">Клікай точки межі зони · точок: {ring.length}</span>}
+        {moving && <div className="mpick mmove-bar" role="group" aria-label="Перенесення мітки">
+          <span>Тягни мітку «{moving.mk.name || catById[moving.mk.category]?.name}» або клікни на нове місце · <span className="mono">X {Math.round(moving.pt[0])} · Y {Math.round(moving.pt[1])}</span></span>
+          <button type="button" className="btn sm acc" disabled={moveBusy || (moving.pt[0] === moving.mk.x && moving.pt[1] === moving.mk.y)} onClick={saveMove}>{moveBusy ? 'Зберігаю…' : 'Зберегти місце'}</button>
+          <button type="button" className="btn sm ghost" disabled={moveBusy} onClick={() => setMoving(null)}>Скасувати</button>
+        </div>}
         {!wide && pos && <span className="mcoord mono">X {Math.round(pos[0])} · Y {Math.round(pos[1])}</span>}
         <span className="mbrand"><img src={asset('/brand/q-hub-logo.svg') + '?v=2'} alt="" width="22" height="22" />Q-Hub</span>
         {/* HUD за макетом Stitch (design/stitch/mapa.html): координати й пошук зліва, шари, масштаб і мапа для гри справа */}
