@@ -14,6 +14,12 @@ describe('копія мапи для роботи без інтернету (spe
     store.set('qhub:map:copy', '{"at":"x","cats":[]}'); expect(readCopy()).toBeNull();
     store.set('qhub:map:copy', 'не json'); expect(readCopy()).toBeNull();
   });
+  it('копія до specs/088 (зони без animals) читається з порожніми звірами, а не ламає мапу', () => {
+    store.set('qhub:map:copy', JSON.stringify({ at: '2026-11-15T10:00:00.000Z', cats: [], marks: [], owners: null,
+      areas: [{ id: 'area-1', dbId: 1, category: 'hunting-fields', name: 'Поле полювання 1', note: '', ring: [[0, 0], [1, 0], [0, 1]] },
+        { id: 'area-2', dbId: 2, category: 'hunting-fields', name: 'Поле полювання 2', note: '', ring: [[0, 0], [1, 0], [0, 1]], animals: ['boar', 'wolf', 'deer'] }] }));
+    expect(readCopy()?.areas?.map(a => a.animals)).toEqual([[], ['deer', 'boar']]);
+  });
   it('оновлювати з 5 хв', () => {
     expect(stale(0, 4 * 60e3)).toBe(false);
     expect(stale(0, 5 * 60e3)).toBe(true);
