@@ -2262,3 +2262,17 @@ table.t td { padding-top: 10px; padding-bottom: 10px; }
 .pname small { line-height: 1.45; }
 @media (max-width: 640px) { .rtrack { width: 96px; } .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr) minmax(96px, auto); } .bp-list .prow > svg, .bp-list .prow > .spark { display: none; } }
 .bp-list .prow > .spark { justify-self: center; }
+
+/* РЕДИЗАЙН, етап 4 (2026-11-15): довідник.
+   Вікно роботи: розділи — без рамки кожен (рамка в рамці у вікні), розділені повітрям і тонкою лінією;
+   «Заробіток» — першим і виділеним, бо по нього приходять. Ціни транспорту й числа — основним шрифтом з рівними цифрами */
+.wdlg .wdlg-box { background: none; border: 0; border-radius: 0; padding: 0; }
+.wdlg .jd-sec + .jd-sec, .wdlg .jd-cols { padding-top: 14px; border-top: 1px solid var(--line); }
+.wdlg .jd-cols .jd-sec { border-top: 0; padding-top: 0; }
+.wdlg .jd-paybox { padding: 14px 16px; border-radius: var(--r-md); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.wdlg .jd-paybox + .jd-sec { border-top: 0; padding-top: 0; }
+.wdlg .jd-paybox .jd-pay-part .jd-text { font-weight: 700; font-size: 15px; }
+.wdlg .jd-sec p, .wdlg .jd-sec li { font-size: 14.5px; line-height: 1.55; }
+.wdlg .modal-box { gap: 16px; }
+.vprice { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.wiki-stats b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; }
