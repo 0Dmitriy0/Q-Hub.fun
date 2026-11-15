@@ -42,9 +42,8 @@ function GuideList({ guides, propose }: { guides: GuideRow[]; propose: Propose }
     <>
       <section className="wiki-hero">
         <div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />База знань штату QuantRP</span>
           <h1>Гайди</h1>
-          <p className="muted">Те, чого немає в картках робіт і авто: перші кроки, банди, сім'ї та їхні квести, корисні хитрощі. Пишуть гравці — і ти можеш.</p>
+          <p className="muted">Перші кроки, банди, сім'ї та їхні квести, корисні хитрощі — те, чого немає в картках. Пишуть гравці, і ти теж можеш.</p>
         </div>
       </section>
       {propose && (

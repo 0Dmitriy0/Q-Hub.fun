@@ -42,9 +42,8 @@ export default function Jobs() {
     <>
       <section className="wiki-hero">
         <div>
-          <span className="h-pill"><span className="mdot" aria-hidden="true" />База знань штату QuantRP</span>
           <h1>Роботи та професії</h1>
-          <p className="muted">Легальні й нелегальні роботи QuantRP: з якого рівня, де влаштуватися, як прокачати навичку. Натисни на роботу, щоб відкрити подробиці.</p>
+          <p className="muted">З якого рівня можна, де влаштуватися й скільки платять. Натисни на роботу — відкриються подробиці.</p>
         </div>
         <div className="wiki-stats">
           <div><b className="mono">{counts.all}</b><small>Усього робіт</small></div>
@@ -69,7 +68,7 @@ export default function Jobs() {
         <button type="button" key={j.id} className={'card jcard' + (j.legal ? '' : ' ill')} onClick={() => setOpenId(j.id)} aria-haspopup="dialog">
           <img className="jico" src={jobIconSrc(j)} alt="" width={64} height={64} loading="lazy" onError={jobIcon} />
           <span className="jname">{j.name}</span>
-          <span className="jmeta"><span className="jtag lvl"><Icon name="trophy" size={13} />{j.level} рів.</span><Profit n={j.profit} /></span>
+          <span className="jmeta"><span className="jtag lvl"><Icon name="trophy" size={13} />з {j.level} рівня</span><Profit n={j.profit} /></span>
           {!j.legal && <span className="jtag ill jcorner">Нелегальна</span>}
         </button>
       ))}</div>

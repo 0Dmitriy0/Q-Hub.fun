@@ -70,7 +70,7 @@ export default function WikiEvents() {
         <div>
           <span className="h-pill"><span className="mdot" aria-hidden="true" />Сезонні й особливі івенти</span>
           <h1>Івенти штату</h1>
-          <p className="muted">Хелловін, батл пас та інші івенти QuantRP: що робити, нагороди, дати й готова мапа з мітками, де шукати. Щоденні івенти за розкладом — на головній, у вкладці «Розклад».</p>
+          <p className="muted">Що робити, які нагороди й до якого числа — з мапою, де шукати. Щоденні івенти за розкладом — на головній.</p>
         </div>
         <div className="wiki-stats">
           <div><b className="mono">{a.now.length + (a.banner ? 1 : 0)}</b><small>Тривають</small></div>
