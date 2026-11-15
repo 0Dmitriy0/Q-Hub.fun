@@ -1,4 +1,5 @@
 /* Дані мапи: категорії й мітки з бази плюс вбудовані (роботи, скупники) з даних сайту. */
+import type { AnimalId } from './huntAnimals';
 export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean; description?: string; starts_on?: string | null; ends_on?: string | null; show_labels?: boolean }
 export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; icon?: string; label?: boolean; photo?: string; author?: string; link?: { href: string; label: string } }
 
@@ -45,7 +46,7 @@ export function parseBulk(text: string, conv?: (x: number, y: number) => [number
 }
 
 /* зона на мапі (0021): багатокутник у метрах гри, напр. поле скарбів */
-export interface MapArea { id: string; dbId: number; category: string; name: string; note: string; ring: [number, number][] }
+export interface MapArea { id: string; dbId: number; category: string; name: string; note: string; ring: [number, number][]; animals: AnimalId[] }
 export const AREA_MAX = 500;
 
 /* контур, який прийме база: 3–500 точок у межах мапи; інакше — що не так */

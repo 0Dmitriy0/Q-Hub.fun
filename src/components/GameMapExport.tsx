@@ -6,6 +6,7 @@ import { BIG_CAT, MANY_PINS, packSummary } from '../lib/gamePreview';
 import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import GamePreview from './GamePreview';
+import { ANIMAL_BY_ID, animalSpots } from '../lib/huntAnimals';
 import Icon from './Icon';
 
 /* шари мапи (не мітки): у грі це готові файли назв і зон */
@@ -57,10 +58,16 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   const big = (c: MapCategory) => on(c) && (count[c.id] || 0) > BIG_CAT && !isLayer(c.id);
 
   /* перегляд бере той самий вибір, що й архів */
-  const pins = useMemo(() => picked.map(m => {
+  /* звірі полів полювання (specs/088) — звичайними значками сіткою всередині поля, розміром значка своєї категорії,
+     крок трохи більший за значок; у підсумку «міток» їх не рахуємо (там лише picked) */
+  const animalPins = useMemo(() => pickedAreas.flatMap(a => {
+    const c = catById[a.category], own = catM[c.id], spots = animalSpots(a.ring, a.animals.length, (own || iconM) * 1.15);
+    return a.animals.map((id, i) => ({ x: spots[i][0], y: spots[i][1], icon: ANIMAL_BY_ID[id].icon, color: c.color, ...(own && own !== iconM ? { s: own / iconM } : {}) }));
+  }), [pickedAreas.map(a => a.id + ':' + a.animals.join()).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const pins = useMemo(() => [...picked.map(m => {
     const c = catById[m.category], own = catM[c.id];
     return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color, ...(own && own !== iconM ? { s: own / iconM } : {}) };
-  }), [picked.map(m => m.id).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }), ...animalPins], [picked.map(m => m.id).join(), catById, catM, iconM, animalPins]);   // eslint-disable-line react-hooks/exhaustive-deps
   const mixed = picked.some(m => { const own = catM[m.category]; return !!own && own !== iconM; });
   const shownAreas = useMemo(() => pickedAreas.map(a => ({ ring: a.ring, color: catById[a.category].color })), [pickedAreas.map(a => a.id).join(), catById]);   // eslint-disable-line react-hooks/exhaustive-deps
 

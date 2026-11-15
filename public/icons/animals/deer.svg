@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><ellipse cx="256" cy="462" rx="120" ry="20" fill="#000" opacity=".18"/>
+<g id="deer-antler" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M222 166C204 116 182 82 150 52M192 106c-30 2-56-8-82-24M172 78c-2-20 2-38 12-54" stroke="#1f2329" stroke-width="32"/><path d="M222 166C204 116 182 82 150 52M192 106c-30 2-56-8-82-24M172 78c-2-20 2-38 12-54" stroke="#dcc49a" stroke-width="14"/></g>
+<use href="#deer-antler" transform="matrix(-1 0 0 1 512 0)"/>
+<g stroke="#1f2329" stroke-width="10" stroke-linejoin="round">
+<ellipse cx="146" cy="222" rx="58" ry="25" transform="rotate(-24 146 222)" fill="#a96d37"/><ellipse cx="366" cy="222" rx="58" ry="25" transform="rotate(24 366 222)" fill="#a96d37"/>
+<path d="M256 152c56 0 82 42 76 102-4 50-20 98-40 136-12 24-60 24-72 0-20-38-36-86-40-136-6-60 20-102 76-102z" fill="#b5763c"/></g>
+<ellipse cx="146" cy="222" rx="34" ry="11" transform="rotate(-24 146 222)" fill="#e8c9a4"/><ellipse cx="366" cy="222" rx="34" ry="11" transform="rotate(24 366 222)" fill="#e8c9a4"/>
+<ellipse cx="256" cy="378" rx="42" ry="34" fill="#ecdac0"/><ellipse cx="256" cy="392" rx="23" ry="15" fill="#1f2329"/>
+<circle cx="212" cy="262" r="15" fill="#1f2329"/><circle cx="300" cy="262" r="15" fill="#1f2329"/><circle cx="217" cy="256" r="5" fill="#fff"/><circle cx="305" cy="256" r="5" fill="#fff"/></svg>

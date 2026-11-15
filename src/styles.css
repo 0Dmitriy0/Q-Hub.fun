@@ -677,6 +677,14 @@ body.map-open .foot { display: none; }
 .leaflet-tooltip.mlabel { display: none; padding: 1px 7px; border: 0; border-radius: 999px; background: rgba(10, 12, 15, .82); color: #f1f3f5; font: 600 11.5px var(--sans); white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
 .leaflet-tooltip.mlabel::before { display: none; }
 .mlabels-on .leaflet-tooltip.mlabel { display: block; }
+/* звірі на полі полювання (specs/088): плашка з іконками в полі й список у картці поля */
+.manimal { display: grid; gap: 2px; width: max-content; padding: 3px; border-radius: 12px; background: rgba(244, 241, 234, .92); border: 2px solid var(--c, var(--accent)); box-shadow: 0 3px 10px rgba(0, 0, 0, .45); cursor: pointer; }
+.manimal img { display: block; width: 20px; height: 20px; }
+.mpop .manimals { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--fg); }
+.mpop .manimals i { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-size: 13px; }
+.manimal-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.manimal-pick > span { width: 100%; font-size: 13px; }
+.manimal-pick .btn { display: inline-flex; align-items: center; gap: 4px; }
 .mcheck { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 .mcheck input { accent-color: var(--accent); width: 16px; height: 16px; }
 /* «Карта для гри»: галочки категорій */
