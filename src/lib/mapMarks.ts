@@ -9,6 +9,7 @@ import { JOBS } from '../data/jobs';
 import { supabase } from './supabase';
 import { asset } from './app';
 import { sortAnimals } from './huntAnimals';
+import { BRAND_SRC, brandBox } from './mapBrand';
 
 /* спільне для повної мапи (/mapa) і мапи-прев'ю на головній */
 
@@ -88,6 +89,9 @@ export function baseMap(el: HTMLElement, opts: L.MapOptions = {}, theme: () => G
   followTheme(tiles, () => tiles.setUrl(url(), true)).addTo(m);
   const vec = vectorLayer(ZMAX, PX_PER_M, ZMAX + 2, bounds, theme).addTo(m);
   const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
+  /* логотип Q-Hub з назвою на місцевості під «ГОРА ЧІЛІАД» (mapBrand): масштабується з мапою, під мітками й не ловить кліків */
+  const b = brandBox();
+  L.imageOverlay(asset(BRAND_SRC), L.latLngBounds(ll(b.x0, b.y0), ll(b.x1, b.y1)), { interactive: false, className: 'mbrand-map' }).addTo(m);
   return { m, bounds, ll, retheme: () => { tiles.setUrl(url()); vec.redraw(); } };
 }
 

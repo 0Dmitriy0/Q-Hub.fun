@@ -2,6 +2,7 @@ import { OCEAN, mapUrl } from './mapGeo';
 import { triPath } from './mapChunk';
 import { recolorMesh, themed, type GameTheme } from './gameTheme';
 import { ytd, type YtdFormat } from './ytd';
+import { BRAND_SRC, brandBox } from './mapBrand';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -221,6 +222,9 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
   }
   /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
   if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
+  /* логотип Q-Hub з назвою під «ГОРА ЧІЛІАД» (mapBrand) — у метрах, як на мапі сайту */
+  const logo = await loadImg(BRAND_SRC);
+  if (logo) { const b = brandBox(), [lx, ly] = gamePx(b.x0, b.y0, size), [rx, ry] = gamePx(b.x1, b.y1, size); ctx.drawImage(logo, lx, ly, rx - lx, ry - ly); }
   /* значок на текстурі того ж розміру в метрах, що й на векторній мінікарті: на 512 px це крапка 3 px кольору категорії,
      іконка всередині малюється лише коли їй вистачає пікселів */
   drawPins(ctx, size, pins, pinPx, imgs);
