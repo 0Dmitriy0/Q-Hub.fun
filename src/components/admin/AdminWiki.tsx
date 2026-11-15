@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { dbError } from '../../lib/wiki';
 import { useAuth } from '../../lib/auth';
 import AdminSection from './AdminSection';
 
-/* «Довідник» в адмінці (specs/043): розбір пропозицій, прибрані сторінки й заборони — в одному місці, у панелі /panel (specs/061).
-   Тут — скільки чекає, переходи в панель і налаштування довідника, які бачить тільки admin (рішення власника 2026-11-06) */
-export default function AdminWiki({ pending }: { pending: number | null }) {
-  return (
-    <>
-      <AdminSection title="Пропозиції від гравців" hint="Розбір, прибрані сторінки й заборони — у панелі модераторів: там те саме бачать і модератори.">
-        <div className="row">
-          <Link to="/panel/rozbir" className="btn acc sm">{pending ? `Розібрати (${pending})` : 'Відкрити розбір'}</Link>
-          <Link to="/panel/rishennia" className="btn ghost sm">Мої рішення</Link>
-          <Link to="/panel/prybrani" className="btn ghost sm">Прибрані й заборони</Link>
-        </div>
-      </AdminSection>
-      <Settings />
-    </>
-  );
+/* налаштування довідника в адмінці (лише admin). Розбір, «Мої рішення», «Прибрані й заборони» — вкладки тієї ж сторінки (Admin.tsx) */
+export default function AdminWiki() {
+  return <Settings />;
 }
 
 /* налаштування довідника (лише admin) і прибирання старих скрінів-доказів (FR-024) */
