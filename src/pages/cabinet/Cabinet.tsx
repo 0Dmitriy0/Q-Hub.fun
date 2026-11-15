@@ -117,6 +117,7 @@ export default function Cabinet() {
 function Deck({ tab, home, body, counts }: { tab: [string, string, string, string]; home: boolean; body: ReactNode; counts: Record<string, number> }) {
   return (
     <div className="deck">
+      {home && <div className="dhello"><h1>Твій кабінет</h1><p>Документи з нагадуванням про строк, заробіток за годину й по днях, що змінилось у правилах, персонажі. Відкривається логотипом Q-Hub у плашці.</p></div>}
       <nav className="dtiles" aria-label="Кабінет">{TABS.slice(1).map(([p, l, d, ico]) => (
         <NavLink key={p} to={'/kabinet/' + p}><span className="dbub"><Icon name={ico} /></span><span><b>{l}</b><small>{d}</small></span>
           {counts[p] > 0 ? <span className="cnt" aria-label={`нових змін: ${counts[p]}`}>{counts[p]}</span> : <Icon name="chev" className="tr dgo" size={16} />}</NavLink>))}

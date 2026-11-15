@@ -2291,3 +2291,87 @@ table.t td { padding-top: 10px; padding-bottom: 10px; }
 .cab .h-cards .card h3 { align-self: end; }
 .cab .h-cards .card p { align-self: start; font-size: 13.5px; }
 @media (max-width: 640px) { .cab .h-cards { grid-template-columns: 1fr; } }
+
+/* РЕДИЗАЙН, етап 6 (2026-11-15): роботи — заробіток за годину графіком, менше тексту.
+   Велике число «≈50–75 тис. $ / год» і смужки на спільній шкалі (до 200 тис.) — роботи легко порівняти;
+   діапазон — світлішим продовженням смужки. Опис — 4 рядки й «Показати повністю»; довгі списки — розгортаються */
+.hrc { display: flex; flex-direction: column; gap: 10px; margin: 2px 0 10px; }
+.hrc-head { display: flex; align-items: baseline; gap: 8px; }
+.hrc-head b { font: 800 26px/1.1 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--fg); }
+.hrc-head span { color: var(--muted); font-weight: 600; }
+.hrc-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.hrc-bars li { display: grid; grid-template-columns: minmax(84px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.hrc-l { font-size: 13px; font-weight: 600; color: var(--muted); }
+.hrc-track { position: relative; height: 10px; border-radius: 99px; background: color-mix(in srgb, var(--fg) 8%, transparent); overflow: hidden; }
+.hrc-fill, .hrc-range { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 99px; }
+.hrc-fill { background: var(--accent); }
+.hrc-range { background: color-mix(in srgb, var(--accent) 40%, transparent); }
+.hrc-v { font: 700 13px var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wdlg .jd-paybox .jd-pay .jd-text { font-weight: 500; font-size: 14px; color: var(--muted); }
+.hrc + .jd-pay { padding-top: 10px; border-top: 1px dashed color-mix(in srgb, var(--accent) 25%, transparent); }
+@media (max-width: 520px) { .hrc-bars li { grid-template-columns: 1fr auto; } .hrc-track { grid-column: 1 / -1; grid-row: 2; } }
+
+.jd-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.jd-toggle { align-self: flex-start; margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent-hi); font: 700 13.5px var(--sans); cursor: pointer; }
+.jd-toggle:hover { text-decoration: underline; }
+.wdlg .jd-more { border-top: 1px solid var(--line); padding-top: 4px; }
+.wdlg .jd-more + .jd-more { padding-top: 4px; }
+.jd-more summary { display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; list-style: none; font-weight: 700; font-size: 14.5px; }
+.jd-more summary::-webkit-details-marker { display: none; }
+.jd-more summary small { padding: 1px 8px; border-radius: 99px; background: var(--surface2); color: var(--muted); font-size: 12px; font-weight: 700; }
+.jd-more summary .ico { margin-left: auto; color: var(--muted); transform: rotate(-90deg); transition: transform var(--t) var(--ease-out); }
+.jd-more[open] summary .ico { transform: none; }
+.jd-more summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.jd-more ul { margin: 0 0 10px; }
+
+.jhour { font-size: 12.5px; color: var(--muted); }
+.jhour b { color: var(--accent-hi); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* РЕДИЗАЙН, етап 6: транспорт — головне плитками, ознаки чіпами, калькулятор під кнопкою */
+.vd-specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.vd-spec { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface2); border: 1px solid var(--line); }
+.vd-spec > .ico { grid-row: 1 / 3; color: var(--accent-hi); }
+.vd-spec span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.vd-spec b { font: 800 16px/1.3 var(--sans); font-variant-numeric: tabular-nums; }
+.vd-spec:not(:has(> .ico)) { grid-template-columns: 1fr; }
+.vd-spec-price { grid-column: span 2; background: color-mix(in srgb, var(--accent) 8%, var(--surface2)); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.vd-spec-price b { font-size: 20px; color: var(--accent-hi); }
+.vd-spec-price b .muted { font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.vd-feats { display: flex; flex-wrap: wrap; gap: 6px; }
+.vd-feat { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.vd-feat.good { color: var(--good); background: var(--good-soft); border-color: transparent; }
+.vd-feat.off { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.vd-calc { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.vd-calc > .btn { align-self: flex-start; }
+.vd-calc-in { display: flex; flex-direction: column; gap: 12px; animation: q-rise var(--t-in) var(--ease-out); }
+@media (max-width: 520px) { .vd-spec-price { grid-column: 1 / -1; } }
+
+/* кабінет у плашці: привітання з поясненням, що тут є (раніше — лише плитки без слова) */
+.dhello { display: flex; flex-direction: column; gap: 4px; }
+.dhello h1 { font-size: 22px; letter-spacing: -.02em; }
+.dhello p { color: var(--muted); font-size: 14px; max-width: 70ch; }
+.dtiles a { padding: 14px 16px; border-radius: var(--r-md); }
+.dtiles .dbub { width: 40px; height: 40px; }
+
+/* РЕДИЗАЙН, етап 7 (2026-11-15): адмінка й панель.
+   - активний пункт меню — м'яке підсвічування з помаранчевою рискою зліва, а не суцільна помаранчева плашка
+     (вона кричала голосніше за вміст і за кнопки дії);
+   - вимкнена головна кнопка — нейтрально-сіра, а не брудно-коричнева: видно, що зараз натиснути нічого;
+   - поля й кнопки в робочих розділах щільніші, картки гравців — без зайвих відступів;
+   - великі числа на плитках — основним шрифтом із рівними цифрами */
+.adm-link { position: relative; }
+.adm-link.on { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--fg); }
+.adm-link.on::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.adm-link.on .ico { color: var(--accent-hi); }
+.adm-link.on .nav-count { background: var(--accent); color: var(--accent-fg); }
+.adm-group-t { color: var(--faint); padding: 0 10px; }
+.btn.acc:disabled { background: var(--surface2); color: var(--faint); box-shadow: none; border-color: var(--line2); opacity: 1; }
+.adm-main .fld input, .adm-main .fld select, .adm-main .fld textarea, .pnl .fld input, .pnl .fld select { min-height: 40px; font-size: 14.5px; border-radius: 10px; }
+.adm-main .btn.sm { min-height: 34px; }
+.adm-card { gap: 8px; padding: 14px 16px; }
+.adm-card .adm-form-row { gap: 8px; }
+.adm-team { padding-top: 8px; gap: 6px; }
+.adm-tile b, .adm-tile-go b { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.adm-sec { padding: 18px 20px; gap: 14px; }
+.adm-sec-h p { color: var(--muted); }
+.adm-table td.mono, .adm-table .mono { font-variant-numeric: tabular-nums; }
