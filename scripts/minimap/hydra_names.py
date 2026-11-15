@@ -69,45 +69,7 @@ def comps(T):   # зв'язні шматки за спільними верши�
     root = np.array([find(a) for a in ids[:, 0]])
     return [np.where(root == r)[0] for r in np.unique(root)]
 
-# ---- логотип Q-Hub під «ГОРА "ЧІЛІАД"» (public/brand/q-hub-logo.svg): скруглений квадрат і «Q», з тінню як у тексту Hydra ----
-import mapbox_earcut as earcut
-from shapely.geometry import box
-LOGO_X, LOGO_Y, LOGO_M = 675.0, 5478.0, 64.0   # центр і розмір, м; назва «"ЧІЛІАД"» — y 5537, висота 35 м
-def svg_q():
-    d = re.search(r' d="([^"]+)"', open(os.path.join(os.path.dirname(__file__), '../../public/brand/q-hub-logo.svg')).read()).group(1)
-    tok = re.findall(r'[MHLQZ]|-?[\d.]+', d); rings = []; cur = []; i = 0; x = y = 0.0
-    while i < len(tok):
-        c = tok[i]; i += 1
-        if c == 'M': x, y = float(tok[i]), float(tok[i + 1]); i += 2; cur = [(x, y)]
-        elif c == 'H': x = float(tok[i]); i += 1; cur.append((x, y))
-        elif c == 'L': x, y = float(tok[i]), float(tok[i + 1]); i += 2; cur.append((x, y))
-        elif c == 'Q':
-            cx, cy, ex, ey = map(float, tok[i:i + 4]); i += 4
-            for t in np.linspace(0, 1, 7)[1:]: cur.append(((1 - t) ** 2 * x + 2 * (1 - t) * t * cx + t * t * ex, (1 - t) ** 2 * y + 2 * (1 - t) * t * cy + t * t * ey))
-            x, y = ex, ey
-        elif c == 'Z': rings.append(cur); cur = []
-    # у SVG: translate(130.69 346.752) scale(0.256 -0.256) у квадраті 512
-    return [[(130.69 + 0.256 * a, 346.752 - 0.256 * b) for a, b in r] for r in rings]
-def tri(poly):   # shapely-полігон (з дірками) -> трикутники (N,3,2)
-    out = []
-    for g in getattr(poly, 'geoms', [poly]):
-        rings = [np.array(g.exterior.coords[:-1])] + [np.array(h.coords[:-1]) for h in g.interiors]
-        v = np.concatenate(rings); ends = np.cumsum([len(r) for r in rings]).astype(np.uint32)
-        out.append(v[np.array(earcut.triangulate_float64(v, ends)).reshape(-1, 3)])
-    return np.concatenate(out)
-def logo_tris(z):
-    k = LOGO_M / 512
-    to = lambda P: np.stack([LOGO_X + (P[..., 0] - 256) * k, LOGO_Y - (P[..., 1] - 256) * k], -1)
-    sq = box(0, 0, 512, 512).buffer(-146).buffer(146, resolution=8)
-    rings = svg_q(); outer = Polygon(rings[1], [rings[2]]); tail = Polygon(rings[0])
-    q = outer.union(tail)
-    def pack(P, col, zz, dx=0.0, dy=0.0):
-        T = to(P); T[..., 0] += dx; T[..., 1] += dy
-        return np.concatenate([T, np.full(T.shape[:2] + (1,), zz), np.broadcast_to(np.array(col, float), T.shape[:2] + (3,))], -1)
-    sh = LOGO_M * 0.06
-    return np.concatenate([pack(tri(sq), (13, 13, 13), z, sh, -sh), pack(tri(sq), (255, 106, 31), z + 0.05), pack(tri(q), (20, 7, 0), z + 0.1)])
-LOGO = logo_tris(36.0)
-LOGO_K = f'{int((LOGO_X + 4500) // 1175)}_{int((8000 - LOGO_Y) // 1388)}'
+# логотип Q-Hub під «ГОРА "ЧІЛІАД"» більше не вшивається в назви: великий логотип малює сама мапа (src/lib/mapBrand.ts)
 greenish = lambda c: c[1] > c[0] + 25 and c[1] > c[2] and c[1] > 60
 area = lambda T: 0.5 * np.abs((T[:, 1, 0] - T[:, 0, 0]) * (T[:, 2, 1] - T[:, 0, 1]) - (T[:, 2, 0] - T[:, 0, 0]) * (T[:, 1, 1] - T[:, 0, 1])).sum()
 names = {}; allT = []; rings = 0
@@ -123,7 +85,6 @@ for f in sorted(glob.glob('new/*/supertile_fore_*_tile_2_2/*.mesh')):
         if greenish(T[ix[0], 0, 3:6]) and (hollow or all(EDGE.contains(Point(p[0], p[1])) for p in Tc[:, :, :2].reshape(-1, 2))):
             keep[ix] = False; rings += 1
     T = T[keep]
-    if k == LOGO_K: T = np.concatenate([T, LOGO])
     if not len(T): continue
     T = T[np.argsort(T[:, :, 2].mean(1), kind='stable')]   # спершу тінь, потім літери
     allT.append(T)
