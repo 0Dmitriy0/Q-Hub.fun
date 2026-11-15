@@ -117,18 +117,17 @@ export default function Cabinet() {
 function Deck({ tab, home, body, counts }: { tab: [string, string, string, string]; home: boolean; body: ReactNode; counts: Record<string, number> }) {
   return (
     <div className="deck">
-      {home && <div className="dhello"><h1>Твій кабінет</h1><p>Документи з нагадуванням про строк, заробіток за годину й по днях, що змінилось у правилах, персонажі. Відкривається логотипом Q-Hub у плашці.</p></div>}
-      <nav className="dtiles" aria-label="Кабінет">{TABS.slice(1).map(([p, l, d, ico]) => (
+      {home && <div className="dhello"><h1>Твій кабінет</h1><p>Що потребує уваги зараз — документи, ціни скупників, івенти. Розділи — нижче, книга в плашці відкриває цю сторінку.</p></div>}
+      <nav className={'dtiles' + (home ? '' : ' sm')} aria-label="Кабінет">{TABS.slice(1).map(([p, l, d, ico]) => (
         <NavLink key={p} to={'/kabinet/' + p}><span className="dbub"><Icon name={ico} /></span><span><b>{l}</b><small>{d}</small></span>
           {counts[p] > 0 ? <span className="cnt" aria-label={`нових змін: ${counts[p]}`}>{counts[p]}</span> : <Icon name="chev" className="tr dgo" size={16} />}</NavLink>))}
       </nav>
       {!home && <><div className="dtitle"><h1>{tab[1]}</h1><small>{tab[2]}</small></div>{body}</>}
-      {home && <>
-        <h2 className="dsect">Довідник на сайті</h2>
-        <div className="dsite">{SITE.map(([p, l, d, ico]) => (
-          <button key={p} onClick={() => desktop?.site?.(p)}><span className="dbub"><Icon name={ico} /></span><b>{l}</b><small>{d}</small></button>))}
-        </div>
-      </>}
+      {/* головна кабінету в плашці — дашборд (документи, що спливають, скупники, івенти), а не лише кнопки (рішення власника 2026-11-15) */}
+      {home && <div className="ddash">{body}</div>}
+      {home && <div className="dsite-row"><span>На сайті:</span>{SITE.map(([p, l, , ico]) => (
+        <button key={p} type="button" onClick={() => desktop?.site?.(p)}><Icon name={ico} size={15} />{l}</button>))}
+      </div>}
     </div>
   );
 }

@@ -18,9 +18,10 @@ export default function ReviewQueue({ inUrl = false, onBanned }: { inUrl?: boole
   const openId = inUrl ? params.get('id') || '' : lid;
   const go = (f: QueueFilter, id: string) => {
     if (!inUrl) { setLf(f); setLid(id); return; }
-    const n: Record<string, string> = {};
-    if (f !== 'all') n.f = f;
-    if (id) n.id = id;
+    /* решту адреси (?tab=review у адмінці/модерації) лишаємо — міняємо лише фільтр і відкриту пропозицію */
+    const n = new URLSearchParams(params);
+    if (f !== 'all') n.set('f', f); else n.delete('f');
+    if (id) n.set('id', id); else n.delete('id');
     setParams(n, { replace: true });
   };
 
@@ -69,7 +70,7 @@ export default function ReviewQueue({ inUrl = false, onBanned }: { inUrl?: boole
           {msg && !open && <p className={good ? 'good' : 'err'} role="status">{msg}</p>}
           {shown.length === 0 ? (
             <p className="adm-empty">{all.length === 0 ? 'Усе розібрано. Нових пропозицій немає.' : 'У цьому виді нічого немає.'}
-              {inUrl && all.length === 0 && <> <Link to="/panel">На головну панелі</Link></>}</p>
+              {inUrl && all.length === 0 && <> <Link to="?">На огляд</Link></>}</p>
           ) : (
             <ul className="adm-list">
               {shown.slice(0, SHOW).map(p => (

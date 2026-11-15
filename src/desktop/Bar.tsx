@@ -94,9 +94,6 @@ function Tabs({ promo }: { promo: SitePromo | null }) {
   </div>;
 }
 
-/* швидкі розділи кабінету під рядком порожньої плашки */
-const QUICK: [string, string, string][] = [['dokumenty', 'Документи', 'book'], ['zarobitok', 'Заробіток', 'chart'], ['pravyla', 'Зміни правил', 'shield'], ['nalashtuvannya', 'Персонажі', 'user']];
-
 export default function Bar() {
   const [d, setD] = useState<Data | null>(null);
   const [q, setQ] = useState('');
@@ -271,7 +268,9 @@ export default function Bar() {
               <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}
           </div>
           <span className="bsep" aria-hidden="true" />
-          <button className={'bico' + (prefs?.pinned ? ' on' : '')} title={prefs?.pinned ? 'Відкріпити: ховати, коли повертаюсь у гру' : 'Закріпити поверх гри'} aria-pressed={!!prefs?.pinned} onClick={() => savePrefs({ pinned: !prefs?.pinned })}><Icon name="pin" size={17} /></button>
+          {/* кабінет (документи, заробіток, зміни правил, персонажі) — книгою на видноті: за логотипом його не знаходили (2026-11-15).
+              Шпилька «не ховати» лишилась у налаштуваннях плашки → «Не ховати, коли повертаюсь у гру» */}
+          <button className={'bico' + (v === 'hub' ? ' on' : '')} title={v === 'hub' ? 'Згорнути кабінет' : 'Кабінет: документи, заробіток, правила, персонажі'} aria-label="Кабінет" aria-pressed={v === 'hub'} onClick={() => (v === 'hub' ? setView('main') : go('/kabinet'))}><Icon name="book" size={17} /></button>
           <button className="bico" title={`Таймер заробітку (${prefs?.timerKey || "Alt+T"})`} aria-label="Таймер заробітку" onClick={() => { api.timerToggle().catch(() => {}); }}><Icon name="clock" size={17} /></button>
           <button className={'bico' + (histOn ? ' on' : '')} title="Історія: пошуки й питання до ШІ" aria-pressed={histOn} onClick={toggleHistory}><Icon name="history" size={17} /></button>
           <button className={'bico' + (mapOn ? ' on' : '')} title={`Мапа Q-Hub · ${prefs?.mapKey || 'Alt+M'}`} aria-label="Мапа Q-Hub" aria-pressed={mapOn} onClick={toggleMap}><Icon name="map" size={17} /></button>
@@ -288,12 +287,6 @@ export default function Bar() {
            <Ai asks={asks} sel={sel} setSel={setSel} busy={busy} q={q} left={histOn ? <History onPick={pickHist} onClose={() => { setHistOn(false); input.current?.focus(); }} /> : null} />}
         </div>)}
 
-        {/* порожня плашка: швидкий вхід у кабінет — раніше він відкривався лише логотипом, і гравці про нього не знали */}
-        {!expanded && v === 'main' && !q && !note && !(streamer && !peek) && <nav className="bquick" aria-label="Кабінет">
-          <span className="bquick-t">Кабінет:</span>
-          {QUICK.map(([p, l, ico]) => <button key={p} type="button" onClick={() => go('/kabinet/' + p)}><Icon name={ico} size={14} />{l}</button>)}
-          <button type="button" className="bquick-all" onClick={() => go('/kabinet')}>Усе<Icon name="chev" size={14} className="tr" /></button>
-        </nav>}
         <div className="bhint">
           {!note && !busy && !q && unseen > 0 && v === 'main' ? <button className="bnew" onClick={() => { setSetStart('changes'); setView('settings'); }}><Icon name="spark" size={14} />Програму оновлено — що нового</button> :
           <span className={note?.bad ? 'bad' : note ? 'good' : ''}>{note?.text ?? (busy ? 'ШІ думає…' : mode === 'ai' ? (aiNext ? 'Enter зараз спитає ШІ' : 'Шукає в правилах сервера й законах штату, без ШІ') : 'Назви скупника чи товар — ціни, межі й коли їх оновили')}</span>}

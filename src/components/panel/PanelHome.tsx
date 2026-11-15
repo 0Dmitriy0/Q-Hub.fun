@@ -31,14 +31,14 @@ function Waiting() {
     <AdminSection title="Чекає на тебе" error={err} onRetry={load} loading={!s && !err}
       hint="Пропозиції від гравців, які ще ніхто не розібрав. Натисни рядок — відкриється розбір саме цього виду.">
       {s && (s.total === 0 ? (
-        <p className="adm-empty">Усе розібрано. Нових пропозицій немає. <Link to="/panel/rishennia">Мої рішення</Link> · <Link to="/panel/prybrani">Прибрані сторінки</Link></p>
+        <p className="adm-empty">Усе розібрано. Нових пропозицій немає. <Link to="?tab=decisions">Мої рішення</Link> · <Link to="?tab=hidden">Прибрані сторінки</Link></p>
       ) : (
         <ul className="pnl-wait">
-          <li><Link to="/panel/rozbir"><b className="num">{s.total}</b><span><b>Усього на розгляді</b>{s.oldest_at && <small className="muted">найстаріша — {age(s.oldest_at)}</small>}</span></Link></li>
+          <li><Link to="?tab=review"><b className="num">{s.total}</b><span><b>Усього на розгляді</b>{s.oldest_at && <small className="muted">найстаріша — {age(s.oldest_at)}</small>}</span></Link></li>
           {ORDER.filter(k => s.by[k]).map(k => (
-            <li key={k}><Link to={'/panel/rozbir?f=' + k}><b className="num">{s.by[k]}</b><span><b>{KIND_LABEL[k]}</b></span></Link></li>))}
+            <li key={k}><Link to={'?tab=review&f=' + k}><b className="num">{s.by[k]}</b><span><b>{KIND_LABEL[k]}</b></span></Link></li>))}
           {s.conflicts > 0 && (
-            <li className="warn-row"><Link to="/panel/rozbir?f=conflict"><b className="num">{s.conflicts}</b><span><b>Конфлікти</b><small className="muted">Картку змінили, поки пропозиція чекала — перевір уважно.</small></span></Link></li>)}
+            <li className="warn-row"><Link to="?tab=review&f=conflict"><b className="num">{s.conflicts}</b><span><b>Конфлікти</b><small className="muted">Картку змінили, поки пропозиція чекала — перевір уважно.</small></span></Link></li>)}
         </ul>
       ))}
     </AdminSection>

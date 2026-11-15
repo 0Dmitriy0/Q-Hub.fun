@@ -37,7 +37,7 @@ export default function AdminOverview({ counts, onOpen, onReload }: { counts: Ad
 
   /* «Потребує уваги»: лише ненульове, у порядку важливості */
   const todo: { n: number; text: string; go: () => void; to?: string }[] = c ? [
-    { n: c.wiki, text: 'пропозицій довідника від гравців', go: () => {}, to: '/panel/rozbir' },
+    { n: c.wiki, text: 'пропозицій довідника від гравців', go: () => {}, to: '?tab=review' },
     { n: c.unknown, text: 'невідомих товарів з вікна скупника', go: () => onOpen('queues') },
     { n: c.limits, text: 'цін поза межами скупника', go: () => onOpen('queues') },
     { n: c.pending, text: 'цін без другого підтвердження', go: () => onOpen('queues') },
@@ -79,10 +79,10 @@ export default function AdminOverview({ counts, onOpen, onReload }: { counts: Ad
             <b>{c ? queues : '…'}</b>
             <small className="muted">{c ? (queues ? 'чекають розбору' : 'порожні') : ''}</small>
           </button>
-          <Link className="adm-tile adm-tile-go" to="/panel/rozbir">
+          <Link className="adm-tile adm-tile-go" to="?tab=review">
             <span className="muted">Довідник від гравців</span>
             <b>{c ? c.wiki : '…'}</b>
-            <small className="muted">{c ? (c.wiki ? 'на розгляді — розбір у панелі' : 'черга порожня') : ''}</small>
+            <small className="muted">{c ? (c.wiki ? 'на розгляді — відкрити розбір' : 'черга порожня') : ''}</small>
           </Link>
         </div>
       </AdminSection>

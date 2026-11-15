@@ -2375,3 +2375,58 @@ table.t td { padding-top: 10px; padding-bottom: 10px; }
 .adm-sec { padding: 18px 20px; gap: 14px; }
 .adm-sec-h p { color: var(--muted); }
 .adm-table td.mono, .adm-table .mono { font-variant-numeric: tabular-nums; }
+
+/* кабінет у плашці — головна як дашборд (2026-11-15): розділи — компактним рядком згори, під ним те, що потребує уваги
+   (документи, що спливають, скупники, що платять найбільше, івенти) двома колонками; сайт — рядком посилань унизу */
+.deck .ddash .dash { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.deck .ddash .dash > .grid { display: flex; flex-direction: column; gap: 10px; }
+.deck .ddash .sect { font-size: 15px; margin: 2px 0 0; }
+.deck .ddash .card { border-radius: var(--r-md); }
+.deck .ddash .list.cards { display: flex; flex-direction: column; gap: 8px; }
+.deck .ddash .list.cards .card { padding: 10px 14px; }
+.deck .ddash .mono { font-family: var(--sans); font-weight: 800; font-variant-numeric: tabular-nums; }
+.deck .ddash .doc-due { display: flex; gap: 12px; align-items: center; border-color: color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.deck .dtiles a { padding: 12px 14px; }
+.dsite-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
+.dsite-row > span { font-size: 12.5px; font-weight: 700; color: var(--faint); margin-right: 2px; }
+.dsite-row button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--line2); border-radius: 99px; background: transparent; color: var(--muted); font: 600 13px var(--sans); cursor: pointer; }
+.dsite-row button .ico { color: var(--accent); }
+.dsite-row button:hover { color: var(--fg); background: var(--surface2); }
+@media (max-width: 900px) { .deck .ddash .dash { grid-template-columns: 1fr; } }
+
+/* калькулятор тюнінгу: ціна під назвою, а не поруч (у вузькій плитці «2 000 000 $» обрізалась), рівні цифри основним шрифтом */
+.tp-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.tp-it { grid-template-columns: 18px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; row-gap: 1px; padding: 9px 12px; text-align: left; }
+.tp-it .tp-ck { grid-row: 1 / 3; }
+.tp-n { font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.tp-p { grid-column: 2; font-family: var(--sans); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.tp-it.on .tp-p { color: var(--accent-hi); }
+.tp-st small, .vd-total b, .vd-chip { font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.vd-total b { font-weight: 800; }
+.vd-total > span:first-child b { font-size: 20px; color: var(--accent-hi); }
+.vd-sel { display: flex; gap: 8px; }
+.vd-sel .btn { flex: 0 0 auto; }
+
+/* гайди (2026-11-15): стаття читається як стаття — вузька колонка ~70 знаків, заголовки розділів з помаранчевою рискою,
+   пункти з акуратними маркерами й повітрям, поради/увага — помітними блоками; «Усі гайди» — маленьке посилання, а не смуга */
+.ev-page > .ev-back { align-self: flex-start; }
+.gd-head { gap: 16px; }
+.gd-head .ibub { width: 52px; height: 52px; border-radius: 16px; }
+.gd-head h1 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -.025em; }
+.gd-head p { font-size: 16px; line-height: 1.5; max-width: 64ch; }
+.gd-text.card { padding: 26px 30px; }
+.gd-text { font-size: 15.5px; line-height: 1.65; }
+.gd-text > * { max-width: 72ch; }
+.gd-text > .ev-sub { position: relative; margin: 26px 0 10px; padding-left: 14px; font-size: 19px; letter-spacing: -.01em; }
+.gd-text > .ev-sub:first-child { margin-top: 0; }
+.gd-text > .ev-sub::before { content: ''; position: absolute; left: 0; top: .18em; bottom: .18em; width: 4px; border-radius: 4px; background: var(--accent); }
+.gd-text .gd-list { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 0 0 6px; }
+.gd-text ul.gd-list > li { position: relative; padding-left: 20px; }
+.gd-text ul.gd-list > li::before { content: ''; position: absolute; left: 4px; top: .62em; width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 75%, transparent); }
+.gd-text ol.gd-list { counter-reset: gd; }
+.gd-text ol.gd-list > li { position: relative; padding-left: 34px; counter-increment: gd; }
+.gd-text ol.gd-list > li::before { content: counter(gd); position: absolute; left: 0; top: .1em; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-hi); font: 800 12.5px/24px var(--sans); text-align: center; }
+.gd-text .ev-tip { margin: 14px 0; padding: 14px 16px; border-radius: var(--r-md); }
+.gd-text p { margin: 0 0 10px; }
+@media (max-width: 640px) { .gd-text.card { padding: 18px 16px; } }
+.gd-text { gap: 8px; }
