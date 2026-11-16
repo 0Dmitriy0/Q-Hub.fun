@@ -60,6 +60,6 @@ test('лише /map/… і без виходу з теки кешу — інак
 });
 
 test('тип за розширенням: .bin — octet-stream', async () => {
-  const q = createQmap({ site: 'https://q-hub.fun', dir: tmp(), fetch: site({ '/map/game/names.bin': 'B' }).get });
-  assert.strictEqual((await q.handle(req('qmap://site/map/game/names.bin?v=A'))).headers.get('content-type'), 'application/octet-stream');
+  const q = createQmap({ site: 'https://q-hub.fun', dir: tmp(), fetch: site({ '/map/v/12_3.bin': 'B' }).get });
+  assert.strictEqual((await q.handle(req('qmap://site/map/v/12_3.bin?v=A'))).headers.get('content-type'), 'application/octet-stream');
 });

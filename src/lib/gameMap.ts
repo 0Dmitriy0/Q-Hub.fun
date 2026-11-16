@@ -3,6 +3,8 @@ import { triPath } from './mapChunk';
 import { recolorMesh, themed, type GameTheme } from './gameTheme';
 import { ytd, type YtdFormat } from './ytd';
 import { BRAND_SRC, brandBox } from './mapBrand';
+import { labelRuns, mergeRuns, renderLabel, splitBySupertile, type LabelRun, type MapLabel } from './mapLabel';
+import { FONT_BY_ID, loadLabelFont } from './labelFonts';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -109,6 +111,8 @@ export class IconMesh {
   }
   /* чотирикутник одного кольору (штрих межі зони) */
   addQuad(c: [number, number][], z: number, color: string) { const col = hex(color); this.quad(...(c.map(([x, y]) => [x, y, z, ...col]) as [number[], number[], number[], number[]])); }
+  /* прямокутник одного кольору (смужка напису, specs/089) */
+  addRect(x0: number, y0: number, x1: number, y1: number, z: number, c: [number, number, number]) { this.quad([x0, y0, z, ...c], [x1, y0, z, ...c], [x1, y1, z, ...c], [x0, y1, z, ...c]); }
   get size() { return this.v.length; }
 }
 
@@ -180,10 +184,10 @@ async function drawTris(ctx: CanvasRenderingContext2D, size: number, file: strin
 }
 
 /* мапа одним полотном 2x3 тайли по size px: (море з рівнями глибини,) суша, потім шари й мітки (якщо передані) */
-async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], sea = false, theme: GameTheme = 'dark'): Promise<HTMLCanvasElement> {
+async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], sea = false, theme: GameTheme = 'dark', labels: MapLabel[] = []): Promise<HTMLCanvasElement> {
   const raw = await fetch(mapUrl('/map/game/export.json')).then(r => r.json());
   /* тема (specs/021): світла — та сама мапа зі світлою палітрою */
-  const meta = { ...raw, palette: themed(raw.palette, theme), seaPalette: raw.seaPalette && themed(raw.seaPalette, theme), namesPalette: raw.namesPalette && themed(raw.namesPalette, theme) };
+  const meta = { ...raw, palette: themed(raw.palette, theme), seaPalette: raw.seaPalette && themed(raw.seaPalette, theme) };
   const W = size * GAME.cols, H = size * GAME.rows;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
@@ -220,8 +224,11 @@ async function drawMap(size: number, pins: GamePin[], pinPx: number, imgs: Map<s
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, .28)`; ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, .9)`; ctx.lineWidth = Math.max(0.8, size / 640);
     ctx.fill('evenodd'); ctx.stroke();
   }
-  /* назви — ті самі трикутники тексту Hydra, що й у векторі мінікарти (names.bin) */
-  if (layers.includes('names') && meta.namesPalette) await drawTris(ctx, size, mapUrl('/map/game/names.bin'), meta.namesPalette, meta.q);
+  /* назви — написи адміна (specs/089): той самий рендер, що на мапі сайту, у метрах гри (розмір значків на них не впливає) */
+  if (layers.includes('names')) for (const l of labels) {
+    const r = renderLabel(l, Math.max(size / GAME.tile, 0.5) * 2), [lx, ly] = gamePx(r.box.x0, r.box.y0, size), [rx, ry] = gamePx(r.box.x1, r.box.y1, size);
+    ctx.imageSmoothingQuality = 'high'; ctx.drawImage(r.canvas, lx, ly, rx - lx, ry - ly);
+  }
   /* логотип Q-Hub з назвою під «ГОРА ЧІЛІАД» (mapBrand) — у метрах, як на мапі сайту */
   const logo = await loadImg(BRAND_SRC);
   if (logo) { const b = brandBox(), [lx, ly] = gamePx(b.x0, b.y0, size), [rx, ry] = gamePx(b.x1, b.y1, size); ctx.drawImage(logo, lx, ly, rx - lx, ry - ly); }
@@ -270,9 +277,9 @@ async function tiles(cv: HTMLCanvasElement, size: number, prefix: string, fmt: Y
    Формати — як у самій грі (src/lib/ytd.ts): DXT1 для minimap_R_C і lod, DXT5 для sea */
 const TEX = 512, SEA = 1024, LOD = 128;
 const SEA_SHORE = 1, SEA_DEEP = 0;
-async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], theme: GameTheme = 'dark'): Promise<ZipEntry[]> {
-  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true, theme), TEX, 'minimap_', 'DXT1');
-  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true, theme);
+async function textures(pins: GamePin[], pinPx: number, imgs: Map<string, HTMLImageElement | null>, layers: GameLayer[], areas: GameArea[], theme: GameTheme = 'dark', labels: MapLabel[] = []): Promise<ZipEntry[]> {
+  const files = await tiles(await drawMap(TEX, pins, pinPx, imgs, layers, areas, true, theme, labels), TEX, 'minimap_', 'DXT1');
+  const sea = await drawMap(SEA, pins, pinPx * SEA / TEX, imgs, layers, areas, true, theme, labels);
   files.push(...await tiles(sea, SEA, 'minimap_sea_', 'DXT5'));
   const l = document.createElement('canvas'); l.width = l.height = LOD; const lc = l.getContext('2d', { willReadFrequently: true })!;
   const k = LOD / Math.max(sea.width, sea.height), w = sea.width * k, h = sea.height * k;
@@ -332,8 +339,36 @@ async function areaFiles(areas: GameArea[]): Promise<ZipEntry[]> {
 }
 
 /* необов'язкові шари для гри: готові файли (scripts/minimap) — назви місць і зелені зони */
-export const GAME_LAYERS = { names: '/map/game/names.zip', zones: '/map/game/zones.zip' } as const;
-export type GameLayer = keyof typeof GAME_LAYERS;
+/* назви (names) — більше не готовий файл, а написи адміна (labelFiles, specs/089); готовий шар лишився один — зелені зони */
+export const GAME_LAYERS = { zones: '/map/game/zones.zip' } as const;
+export type GameLayer = 'names' | keyof typeof GAME_LAYERS;
+
+/* написи на радарі мінікарти: той самий рендер, що на сайті, пікселі → смужки (як значки), 1,5 px на метр гри; обводка — не тонша
+   за 1 м, щоб на радарі не зникала. Шар назв (tile_3_N — найвищий у toSlots), висота 20,5 — над значками; усе в частині — одним
+   файлом, доки вершин < 60 000 (у кожній частині лише 8 вільних номерів) */
+export const RADAR_PX_PER_M = 1.5;
+async function labelFiles(labels: MapLabel[]): Promise<ZipEntry[]> {
+  const groups = new Map<string, LabelRun[]>();
+  for (const l of labels) {
+    const r = renderLabel({ ...l, outlineW: l.outlineW > 0 ? Math.max(l.outlineW, 1) : 0 }, RADAR_PX_PER_M);
+    const { width: w, height: h } = r.canvas, px = r.canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
+    for (const [k, rs] of splitBySupertile(mergeRuns(labelRuns(px, w, h, r.box, r.pxPerM)))) { let a = groups.get(k); if (!a) groups.set(k, (a = [])); a.push(...rs); }
+  }
+  const out: ZipEntry[] = [];
+  for (const [k, runs] of groups) {
+    let m = new IconMesh(), part = 0;
+    const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_3_${part++}`, m); m = new IconMesh(); };
+    for (const u of runs) { if (m.size > 60000) await flush(); m.addRect(u.x0, u.y0, u.x1, u.y1, 20.5, u.c); }
+    await flush();
+  }
+  return out;
+}
+
+/* шрифти всіх написів — до збирання: архів із запасним шрифтом замість вибраного адміном не потрібен */
+export async function ensureLabelFonts(labels: MapLabel[]) {
+  const want = new Map(labels.map(l => [`${l.font}:${l.weight}`, l]));
+  for (const l of want.values()) if (!await loadLabelFont(l.font, l.weight)) throw new Error(`Не вдалося завантажити шрифт ${FONT_BY_ID[l.font]?.name ?? l.font} — перевір інтернет і спробуй ще.`);
+}
 
 async function zipAt(url: string) {
   const res = await fetch(mapUrl(url)); if (!res.ok) throw new Error('немає файлів мапи');
@@ -347,7 +382,7 @@ async function inflate(e: ZipEntry): Promise<Uint8Array> {
 }
 
 /* шари в кожній частині отримують вільні номери за зростанням, знизу вгору: зелені зони (tile_4_N у zones.zip),
-   значки (tile_5_N), назви (tile_3_N у names.zip); міняються шляхи і посилання на .mesh усередині .odr */
+   значки (tile_5_N), назви (tile_3_N — написи адміна, labelFiles); міняються шляхи і посилання на .mesh усередині .odr */
 const RANK: Record<string, number> = { 4: 0, 5: 1, 3: 2 };
 async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntry[]> {
   const re = /supertile_fore_(\d+_\d+)_tile_(\d)_(\d+)/, map = new Map<string, string | null>();
@@ -368,16 +403,18 @@ async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntr
 }
 
 /* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
-export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[]; theme?: GameTheme }, step?: (s: string) => void): Promise<Blob> {
-  const areas = opt.areas ?? [], theme = opt.theme ?? 'dark';
+export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layers: GameLayer[]; areas?: GameArea[]; theme?: GameTheme; labels?: MapLabel[] }, step?: (s: string) => void): Promise<Blob> {
+  const areas = opt.areas ?? [], theme = opt.theme ?? 'dark', labels = opt.layers.includes('names') ? opt.labels ?? [] : [];
+  step?.('Завантажую шрифти назв…');
+  await ensureLabelFonts(labels);
   step?.('Завантажую мапу…');
   const base = await themeZip(await zipAt('/map/game/base.zip'), theme);
   const raw: ZipEntry[] = [];
-  for (const l of opt.layers) raw.push(...await themeZip(await zipAt(GAME_LAYERS[l]), theme));
+  for (const l of opt.layers) if (l !== 'names') raw.push(...await themeZip(await zipAt(GAME_LAYERS[l]), theme));
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
-  raw.push(...await areaFiles(areas), ...await iconFiles(pins, opt.iconM, imgs));
+  raw.push(...await areaFiles(areas), ...await iconFiles(pins, opt.iconM, imgs), ...await labelFiles(labels));
   /* зони, значки й назви — у вільні номери кожної частини, знизу вгору */
   const extra = await toSlots(raw, new Set(base.map(e => e.name)));
   /* .odd кожної частини, де з'явились нові .odr: усі її .odr за алфавітом */
@@ -391,7 +428,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   }
   const replaced = new Set(odds.map(e => e.name));
   step?.('Малюю текстури…');
-  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas, theme);
+  const tex = await textures(pins, opt.iconM * TEX / GAME.tile, imgs, opt.layers, areas, theme, labels);
   step?.('Пакую архів…');
   return new Blob([makeZip([...all.filter(e => !replaced.has(e.name)), ...odds, ...tex]) as BlobPart], { type: 'application/zip' });
 }
@@ -429,13 +466,14 @@ async function brand(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.fillText(sub, tx, y + pad + logo - small * 0.15);
 }
 
-export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
-  const size = opt.size ?? 1024, areas = opt.areas ?? [];
+export async function mapShot(pins: ShotPin[], opt: { pinPx: number; layers: GameLayer[]; areas?: GameArea[]; size?: number; labels?: MapLabel[] }, step?: (s: string) => void): Promise<{ png: Blob; svg: Blob; w: number; h: number }> {
+  const size = opt.size ?? 1024, areas = opt.areas ?? [], labels = opt.layers.includes('names') ? opt.labels ?? [] : [];
+  await ensureLabelFonts(labels);
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
   step?.('Малюю мапу…');
-  const map = await drawMap(size, [], 0, imgs, opt.layers, areas, true);
+  const map = await drawMap(size, [], 0, imgs, opt.layers, areas, true, 'dark', labels);
   const W = map.width, H = map.height;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;

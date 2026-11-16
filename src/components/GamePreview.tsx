@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { OCEAN, PX_PER_M, TILE, ZMAX } from '../lib/mapGeo';
-import { baseMap } from '../lib/mapMarks';
-import { namesLayer } from '../lib/mapVector';
+import { OCEAN } from '../lib/mapGeo';
+import { baseMap, labelLayer } from '../lib/mapMarks';
+import type { MapLabel } from '../lib/mapLabel';
 import { GAME_BOUNDS, pinRadius } from '../lib/gamePreview';
 import { recolor, type GameTheme } from '../lib/gameTheme';
 import ZONES from '../data/mapZones.json';
@@ -14,9 +14,9 @@ export type PreviewArea = { ring: [number, number][]; color: string };
 
 /* міні-перегляд «Мапи для гри» (specs/026 US1): плитки й вектор мапи сайту в темі мапи для гри, назви й зелені зони —
    ті самі шари, поля — відтінком кольору категорії, мітки — кружок кольору категорії з іконкою, діаметром iconM метрів,
-   як на мінікарті (drawPins у gameMap.ts). Мітки малюються на одному полотні поверх мапи: тисячі міток не гальмують галочки */
-export default function GamePreview({ theme, names, zones, pins, areas, iconM, loading }: {
-  theme: GameTheme; names: boolean; zones: boolean; pins: PreviewPin[]; areas: PreviewArea[]; iconM: number; loading: boolean;
+   як на мінікарті (drawPins у gameMap.ts). Назви — написи адміна (specs/089), ті самі, що на мапі сайту й в архіві. Мітки малюються на одному полотні поверх мапи: тисячі міток не гальмують галочки */
+export default function GamePreview({ theme, names, zones, pins, areas, labels, iconM, loading }: {
+  theme: GameTheme; names: boolean; zones: boolean; pins: PreviewPin[]; areas: PreviewArea[]; labels: MapLabel[]; iconM: number; loading: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const api = useRef<{ m: L.Map; ll: (x: number, y: number) => L.LatLng; retheme: () => void; names: L.LayerGroup; zones: L.LayerGroup; areas: L.LayerGroup; draw: () => void; home: () => void } | null>(null);
@@ -31,10 +31,8 @@ export default function GamePreview({ theme, names, zones, pins, areas, iconM, l
     try { made = baseMap(el, { zoomAnimation: false, minZoom: 0.5, zoomSnap: 0.25, wheelPxPerZoomLevel: 90 }, () => themeRef.current); }
     catch { setFailed(true); return; }
     const { m, ll, retheme } = made;
-    const full = TILE * 2 ** ZMAX;
     const np = m.createPane('names'); np.style.zIndex = '450'; np.style.pointerEvents = 'none';
     const namesG = L.layerGroup().addTo(m);
-    namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX)), () => themeRef.current).addTo(namesG);
     const zonesG = L.layerGroup().addTo(m), areasG = L.layerGroup().addTo(m);
     for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: 'rgba(140, 230, 150, .7)', weight: 1, fillColor: 'rgb(60, 200, 90)', fillOpacity: 0.2, interactive: false }).addTo(zonesG);
 
@@ -79,12 +77,12 @@ export default function GamePreview({ theme, names, zones, pins, areas, iconM, l
     return () => { ro.disconnect(); cancelAnimationFrame(raf); m.remove(); api.current = null; };
   }, []);
 
-  /* тема — плитки, вектор і назви перемальовуються в новій темі */
+  /* тема — плитки й вектор перемальовуються в новій темі (колір написів задає адмін, тема його не міняє) */
   useEffect(() => {
     if (themeRef.current === theme) return;
     themeRef.current = theme;
     const a = api.current; if (!a) return;
-    a.retheme(); a.names.eachLayer(l => (l as L.GridLayer).redraw());
+    a.retheme();
   }, [theme]);
 
   useEffect(() => {
@@ -97,6 +95,12 @@ export default function GamePreview({ theme, names, zones, pins, areas, iconM, l
     a.areas.clearLayers();
     for (const ar of areas) L.polygon(ar.ring.map(([x, y]) => a.ll(x, y)), { color: ar.color, opacity: 0.9, weight: 1.5, fillColor: ar.color, fillOpacity: 0.28, interactive: false }).addTo(a.areas);
   }, [areas]);
+
+  useEffect(() => {
+    const a = api.current; if (!a) return;
+    a.names.clearLayers();
+    for (const l of labels) labelLayer(l, a.ll).addTo(a.names);
+  }, [labels]);
 
   useEffect(() => { data.current = { pins, iconM }; api.current?.draw(); }, [pins, iconM]);
 
