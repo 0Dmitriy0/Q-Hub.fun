@@ -51,15 +51,23 @@ export function renderLabel(l: MapLabel, pxPerM: number): { canvas: HTMLCanvasEl
 }
 
 /* пікселі canvas (RGBA w×h) → горизонтальні смужки одного кольору в метрах гри; колір квантований кроком 24, як у значків
-   (gameMap.iconRuns), напівпрозоре (alpha < 128) відкидається */
-export function labelRuns(px: Uint8ClampedArray, w: number, h: number, box: Pick<LabelBox, 'x0' | 'y0'>, pxPerM: number): LabelRun[] {
+   (gameMap.iconRuns), напівпрозоре (alpha < 128) відкидається.
+   palette — кольори напису (літери й обводка): кожен піксель стає найближчим з них. Без цього згладжені пікселі на межі
+   літери й обводки давали проміжні відтінки — на радарі гри напис виходив брудним і нечітким, а смужок було в рази більше */
+export function labelRuns(px: Uint8ClampedArray, w: number, h: number, box: Pick<LabelBox, 'x0' | 'y0'>, pxPerM: number, palette?: [number, number, number][]): LabelRun[] {
   const q = (v: number) => Math.min(255, Math.round(v / 24) * 24), out: LabelRun[] = [];
+  const near = (i: number): [number, number, number] => {
+    let best = palette![0], bd = Infinity;
+    for (const p of palette!) { const d = (px[i] - p[0]) ** 2 + (px[i + 1] - p[1]) ** 2 + (px[i + 2] - p[2]) ** 2; if (d < bd) { bd = d; best = p; } }
+    return best;
+  };
+  const col = (i: number): [number, number, number] => (palette?.length ? near(i) : [q(px[i]), q(px[i + 1]), q(px[i + 2])]);
   for (let y = 0; y < h; y++) {
     let x = 0;
     while (x < w) {
       const i = (y * w + x) * 4; if (px[i + 3] < 128) { x++; continue; }
-      const c: [number, number, number] = [q(px[i]), q(px[i + 1]), q(px[i + 2])]; let x2 = x + 1;
-      while (x2 < w) { const j = (y * w + x2) * 4; if (px[j + 3] < 128 || q(px[j]) !== c[0] || q(px[j + 1]) !== c[1] || q(px[j + 2]) !== c[2]) break; x2++; }
+      const c = col(i); let x2 = x + 1;
+      while (x2 < w) { const j = (y * w + x2) * 4; if (px[j + 3] < 128) break; const d = col(j); if (d[0] !== c[0] || d[1] !== c[1] || d[2] !== c[2]) break; x2++; }
       out.push({ x0: box.x0 + x / pxPerM, x1: box.x0 + x2 / pxPerM, y0: box.y0 - y / pxPerM, y1: box.y0 - (y + 1) / pxPerM, c });
       x = x2;
     }

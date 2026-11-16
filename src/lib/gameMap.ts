@@ -348,12 +348,18 @@ export type GameLayer = 'names' | keyof typeof GAME_LAYERS;
    зон і перед значками, висота 16,8 — між пунктиром зон (16,6) і значками (17,0); усе в частині — одним
    файлом, доки вершин < 60 000 (у кожній частині лише 8 вільних номерів) */
 export const RADAR_PX_PER_M = 1.5, LABEL_Z = 16.8;
+/* чіткість напису на радарі: літера заввишки ~100 смужок, від 3 до 6 px на метр. Раніше всі написи йшли 1,5 px на метр —
+   напис кеглем 25 м складався з ~40 рядків і зблизька в грі був східцями */
+export const RADAR_MIN_PX_PER_M = 3, RADAR_MAX_PX_PER_M = 6;
+export const radarPxPerM = (sizeM: number) => Math.min(RADAR_MAX_PX_PER_M, Math.max(RADAR_MIN_PX_PER_M, 100 / Math.max(sizeM, 1)));
 async function labelFiles(labels: MapLabel[]): Promise<ZipEntry[]> {
   const groups = new Map<string, LabelRun[]>();
   for (const l of labels) {
-    const r = renderLabel({ ...l, outlineW: l.outlineW > 0 ? Math.max(l.outlineW, 1) : 0 }, RADAR_PX_PER_M);
+    const r = renderLabel({ ...l, outlineW: l.outlineW > 0 ? Math.max(l.outlineW, 1) : 0 }, radarPxPerM(l.size));
     const { width: w, height: h } = r.canvas, px = r.canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
-    for (const [k, rs] of splitBySupertile(mergeRuns(labelRuns(px, w, h, r.box, r.pxPerM)))) { let a = groups.get(k); if (!a) groups.set(k, (a = [])); a.push(...rs); }
+    /* лише два кольори — літери й обводка: межі різкі, без проміжних відтінків згладжування */
+    const pal = l.outlineW > 0 ? [hex(l.color), hex(l.outlineColor)] : [hex(l.color)];
+    for (const [k, rs] of splitBySupertile(mergeRuns(labelRuns(px, w, h, r.box, r.pxPerM, pal)))) { let a = groups.get(k); if (!a) groups.set(k, (a = [])); a.push(...rs); }
   }
   const out: ZipEntry[] = [];
   for (const [k, runs] of groups) {
@@ -369,6 +375,32 @@ async function labelFiles(labels: MapLabel[]): Promise<ZipEntry[]> {
 export async function ensureLabelFonts(labels: MapLabel[]) {
   const want = new Map(labels.map(l => [`${l.font}:${l.weight}`, l]));
   for (const l of want.values()) if (!await loadLabelFont(l.font, l.weight)) throw new Error(`Не вдалося завантажити шрифт ${FONT_BY_ID[l.font]?.name ?? l.font} — перевір інтернет і спробуй ще.`);
+}
+
+/* нові локації проєкту (Деморган, військова база) в base.zip лежать у найстаршому номері tile_2_2 на висоті 29–30 —
+   гра малює їх останніми, тож вони закривали написи й значки («ДЕМОРГАН» під будівлями, «КПП-2» під дорогою).
+   Переносимо шар одразу після самої мапи (tile_0_1) і опускаємо на висоту решти мапи — все наше лягає поверх.
+   Працює за обома правилами порядку: і за номером файлу, і за висотою */
+const LOC_FROM = /supertile_fore_(\d+_\d+)_tile_2_2/, LOC_DROP = 16.6;
+export function lowerZ(text: string): string {
+  const f = (z: string) => (+z >= 20 ? (+z - LOC_DROP).toFixed(7) : z);
+  return text
+    .replace(/^(\s*-?[\d.]+ -?[\d.]+ )(-?[\d.]+)( \/ )/gm, (_, a: string, z: string, b: string) => a + f(z) + b)
+    .replace(/^(\s*(?:Min|Max|AABBMin|AABBMax|Center) -?[\d.]+ -?[\d.]+ )(-?[\d.]+)(\s*)$/gm, (_, a: string, z: string, b: string) => a + f(z) + b);
+}
+export async function lowerLocations(base: ZipEntry[]): Promise<{ entries: ZipEntry[]; parts: string[] }> {
+  const names = new Set(base.map(e => e.name)), parts = new Set<string>(), enc = new TextEncoder(), dec = new TextDecoder(), out: ZipEntry[] = [];
+  for (const e of base) {
+    const m = LOC_FROM.exec(e.name), to = m && `supertile_fore_${m[1]}_tile_0_1`;
+    /* номер 0_1 у цій частині вже зайнятий — лишаємо як було */
+    if (!m || !to || names.has(slotFile(m[1], '0_1'))) { out.push(e); continue; }
+    parts.add(m[1]);
+    const name = e.name.split(m[0]).join(to);
+    if (!/\.(odr|mesh)$/.test(name)) { out.push({ ...e, name }); continue; }
+    const raw = enc.encode(lowerZ(dec.decode(await inflate(e)).split(m[0]).join(to))), z = await deflate(raw);
+    out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
+  }
+  return { entries: out, parts: [...parts] };
 }
 
 async function zipAt(url: string) {
@@ -409,7 +441,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   step?.('Завантажую шрифти назв…');
   await ensureLabelFonts(labels);
   step?.('Завантажую мапу…');
-  const base = await themeZip(await zipAt('/map/game/base.zip'), theme);
+  const low = await lowerLocations(await themeZip(await zipAt('/map/game/base.zip'), theme)), base = low.entries;
   const raw: ZipEntry[] = [];
   for (const l of opt.layers) if (l !== 'names') raw.push(...await themeZip(await zipAt(GAME_LAYERS[l]), theme));
   step?.('Готую значки…');
@@ -419,7 +451,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   /* зони, значки й назви — у вільні номери кожної частини, знизу вгору */
   const extra = await toSlots(raw, new Set(base.map(e => e.name)));
   /* .odd кожної частини, де з'явились нові .odr: усі її .odr за алфавітом */
-  const touched = new Set<string>();
+  const touched = new Set<string>(low.parts);   // частини з перенесеним шаром локацій — їхній .odd теж переписати
   for (const e of extra) { const m = /^minimap_([\d_]+)\/[^/]+\.odr$/.exec(e.name); if (m) touched.add(m[1]); }
   const all = [...base, ...extra], enc = new TextEncoder(), odds: ZipEntry[] = [];
   for (const k of touched) {
