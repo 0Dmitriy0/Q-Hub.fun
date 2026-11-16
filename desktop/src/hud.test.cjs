@@ -30,6 +30,20 @@ test('HUD: розбір OCR — лише дві суми «$…», решта �
   assert.equal(parse('$38199$37\n$3162723'), null);
 });
 
+test('HUD: значок банку, прочитаний як цифра, суму не псує й кадр не відкидає', () => {
+  /* жива гра 2026-11-16: «$92 683 / 1 $2206 224» — значок перед «$» банку став «1» */
+  assert.deepEqual(parse('$92 683\n1 $2206 224\n'), { cash: 92683, bank: 2206224 });
+  assert.deepEqual(parse('$92 683\n0 $2 206 224'), { cash: 92683, bank: 2206224 });
+  assert.deepEqual(parse('$92 683\n1\n$2206 224'), { cash: 92683, bank: 2206224 });   // значок окремим рядком
+  assert.deepEqual(parse('$92 683\n10 $2206 224'), { cash: 92683, bank: 2206224 });
+  assert.equal(parse('1 $92 683\n$2206 224'), null);             // перед готівкою значка немає — це не HUD
+  assert.equal(parse('$92 683\n123 $2206 224'), null);           // три зайві цифри — вже не значок
+  assert.equal(parse('$92 683\n123\n$2206 224'), null);          // третій рядок із числом — не значок
+  assert.equal(parse('4'), null);
+  assert.equal(parse('8 0'), null);
+  assert.equal(parse('$92 683\n1'), null);                       // банку не видно
+});
+
 test('HUD: значок зміни видно за червоним чи зеленим фоном', () => {
   const px = (r, g, b, n) => Buffer.from(Array.from({ length: n }, () => [b, g, r, 255]).flat());
   assert.equal(hasBadge(px(240, 240, 240, 500)), false);       // білий текст

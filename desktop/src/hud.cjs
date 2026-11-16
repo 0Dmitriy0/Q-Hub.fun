@@ -22,10 +22,14 @@ const scaleOrder = last => [last, ...HUD_SCALES.filter(k => k !== last)];
 
 /* текст OCR → { cash, bank } або null. Рядки «$3 820 037» і «$3 162 623»; усе інше (меню закрило HUD, сміття) — null */
 function parse(text) {
-  const nums = String(text || '').split(/\n/).map(l => l.replace(/\s/g, '')).filter(Boolean)
-    .map(l => (/^\$\d{1,10}$/.test(l) ? Number(l.slice(1)) : null));
-  if (nums.length !== 2 || nums.some(n => n === null)) return null;
-  return { cash: nums[0], bank: nums[1] };
+  /* значок банку ліворуч від «$» розпізнавання цифр інколи читає як «1» чи «0» — окремим рядком або на початку рядка банку
+     («$92 683 / 1 $2206 224», жива гра 2026-11-16: так не читалось ~40 % кадрів, і кожен такий кадр програма вважала меню —
+     specs/090, H7). Тож рядок до двох знаків без «$» — не гроші, а перед «$» банку дозволено до двох зайвих цифр.
+     Рядок готівки — суворо, як і був: зайва цифра там змінила б суму */
+  const rows = String(text || '').split(/\n/).map(l => l.replace(/\s/g, '')).filter(l => l.includes('$') || l.length > 2);
+  if (rows.length !== 2) return null;
+  const cash = /^\$(\d{1,10})$/.exec(rows[0]), bank = /^\d{0,2}\$(\d{1,10})$/.exec(rows[1]);
+  return cash && bank ? { cash: Number(cash[1]), bank: Number(bank[1]) } : null;
 }
 
 /* чи видно значок зміни: червоний чи зелений фон серед пікселів BGRA (Electron nativeImage.toBitmap) */

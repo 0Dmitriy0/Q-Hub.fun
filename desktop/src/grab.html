@@ -17,10 +17,23 @@ window.grab.onStart(async ({ id, w, h, fps }) => {
     window.grab.started({ ok: true });
   } catch (e) { stream = null; window.grab.started({ ok: false, err: String(e) }); }
 });
-window.grab.onFrame(n => {
+/* лише ділянки кадру (specs/090, H1): поки HUD читається, «зору» потрібні гроші, значок і зменшений кадр — не весь екран.
+   Ділянка 1:1 — ті самі пікселі, що й у повному кадрі; outW — зменшити до такої ширини (перевірка на чорний) */
+const cuts = new Map();
+const bgra = d => { for (let i = 0; i < d.length; i += 4) { const r = d[i]; d[i] = d[i + 2]; d[i + 2] = r; } return new Uint8Array(d.buffer); };
+function cutOut(r) {
+  const dw = r.outW || r.w, dh = r.outW ? Math.max(1, Math.round(r.h * r.outW / r.w)) : r.h;
+  let c = cuts.get(r.key);
+  if (!c) { const cv = new OffscreenCanvas(dw, dh); c = { cv, cx: cv.getContext('2d', { willReadFrequently: true }) }; cuts.set(r.key, c); }
+  if (c.cv.width !== dw || c.cv.height !== dh) { c.cv.width = dw; c.cv.height = dh; }
+  c.cx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, dw, dh);
+  return { key: r.key, width: dw, height: dh, data: bgra(c.cx.getImageData(0, 0, dw, dh).data) };
+}
+window.grab.onFrame((n, parts) => {
   try {
     const w = v.videoWidth, h = v.videoHeight;
     if (!stream || !w || !h) return window.grab.frame(n, null);
+    if (parts) return window.grab.frame(n, { width: w, height: h, parts: parts.map(cutOut) });
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     ctx.drawImage(v, 0, 0, w, h);
     const d = ctx.getImageData(0, 0, w, h).data;
