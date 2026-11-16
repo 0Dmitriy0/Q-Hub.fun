@@ -86,6 +86,27 @@ test('таймер зміни цін: справжні результати OCR 
   assert.strictEqual(parseChange('2 год. 75 хв.'), null);
 });
 
+test('таймер зміни цін: години не розібрано — не надсилаємо самі хвилини', () => {
+  /* справжні кадри (shots 2026-10-23): раніше виходило 39 і 9 хв — на сайт ішов час без годин */
+  assert.strictEqual(parseChange('ЗМІНА ЦІН HA\nТОВАРИ ЧЕРЕЗ\nZ год. 39 xe.\n'), 159);
+  assert.strictEqual(parseChange('ЗМІНА ЦІН HA\nТОВАРИ ЧЕРЕЗ\n3roa. 9 хв.\n'), 189);
+  assert.strictEqual(parseChange('ц ЗМІНА ЦІН НА\nй ТОВАРИ ЧЕРЕЗ\n2год. 29 xe. #\n'), 149);
+  assert.strictEqual(parseChange('ЗМІНА ЦІН НА\nТОВАРИ ЧЕРЕЗ\n2 ron. 25 xe. і\n'), 145);
+  /* одиниця як «l» чи «|» впритул до «год» */
+  assert.strictEqual(parseChange('l год. 4 хв.'), 64);
+  assert.strictEqual(parseChange('|год. 5 хв.'), 65);
+  /* число годин не читається — нічого, а не «4 хв» */
+  assert.strictEqual(parseChange('ЗМІНА ЦІН НА\nТОВАРИ ЧЕРЕЗ\n? год. 4 хв.\n'), null);
+  assert.strictEqual(parseChange('Trop. 4 хв.'), null);
+  assert.strictEqual(parseChange('Top. 4 хв.'), null);
+  assert.strictEqual(parseChange('2 год. ?? хв.'), null);
+  /* чуже вікно в тому ж місці екрана («Історія угод») — не таймер */
+  assert.strictEqual(parseChange('CTOPIA УГОД\nNUUTU\n'), null);
+  /* рамка вікна перед числом не стає цифрою */
+  assert.strictEqual(parseChange('| 2 год. 55 хв. Е'), 175);
+  assert.strictEqual(parseChange('| 45 хв.'), 45);
+});
+
 test('час зміни надсилається після двох кадрів і лише при новому циклі', () => {
   const pick = changePicker(), at = 10 * 36e5;
   assert.strictEqual(pick('food', at), false);            // перший кадр

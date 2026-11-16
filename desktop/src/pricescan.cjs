@@ -140,17 +140,41 @@ function listParts(w, h) {
   const s = h / 1080, sc = (r, height) => ({ x: Math.round(r.x * s), y: Math.round((r.y || 0) * s), width: Math.round(r.width * s), height: height ?? Math.round(r.height * s) });
   return [{ col: 0, r: sc(LIST_HEAD) }, ...LIST_COLS.map((r, col) => ({ col, r: sc(r, h) }))];
 }
-/* «2 год. 55 хв.» → 175 хв; «55 хв.» → 55; «1 год.» → 60; не схоже на таймер → null. OCR іноді зливає число з «год» */
-function parseChange(t) {
+/* «2 год. 55 хв.» → 175 хв; «55 хв.» → 55; «1 год.» → 60; не схоже на таймер → null.
+   Головне правило: краще нічого, ніж хибний час. Раніше, коли години не розбирались («Z год. 39 хв.» — двійка як Z,
+   «3roa. 9 хв.» — «год» як «roa»), лишались самі хвилини, і на сайт ішло «через 39 хв» замість 2 год. 39 хв.
+   Тепер: є слово «год», а число перед ним не читається — весь таймер не читається (null), чекаємо наступного кадру */
+const DIGIT = { з: '3', z: '2', l: '1', i: '1', і: '1', '|': '1', '!': '1', ']': '1', s: '5', о: '0', б: '6' };
+const NUM = '[0-9зzliі|!\\]sоб]';
+const num = t => { const n = [...t].map(c => DIGIT[c] ?? c).join(''); return /^\d{1,2}$/.test(n) ? Number(n) : null; };
+/* один рядок таймера: хвилини або undefined (у рядку таймера немає), null (таймер є, але не читається) */
+function changeLine(line) {
   /* OCR плутає схожі літери: «3rop. 12xe.», «xB.», «З год.» (кирилична З замість трійки) — зводимо до «3 год. 12 хв.» */
-  const s = String(t || '').toLowerCase().replace(/\s+/g, ' ')
-    .replace(/x/g, 'х').replace(/b/g, 'в').replace(/o/g, 'о').replace(/r(?=о)/g, 'г');
-  const h = s.match(/(\d{1,2}|з)\s*го[дnp]/), m = s.match(/(\d{1,2})\s*х/);
-  if (!h && !m) return null;
-  const hh = h ? (h[1] === 'з' ? 3 : Number(h[1])) : 0, mm = m ? Number(m[1]) : 0;
-  if (mm > 59) return null;
+  const s = line.toLowerCase().replace(/\s+/g, ' ').replace(/x/g, 'х').replace(/b/g, 'в').replace(/o/g, 'о').replace(/r(?=о)/g, 'г');
+  const hAt = s.search(/го[а-яіїєa-z]/), mAt = s.indexOf('х', hAt < 0 ? 0 : hAt + 3);
+  if (hAt < 0 && mAt < 0) return undefined;
+  let hh = 0, mm = 0;
+  if (hAt >= 0) {
+    /* число — одразу перед «год»; рамка вікна ліворуч («| 2 год.») відділена пробілом і в число не йде */
+    const m = new RegExp('(?:^|[^0-9a-zа-яіїє])(' + NUM + '{1,2}) ?$').exec(s.slice(0, hAt));
+    hh = m ? num(m[1]) : null;
+    if (hh === null || hh < 1) return null;
+  }
+  if (mAt >= 0) {
+    const from = hAt < 0 ? 0 : hAt + 3, m = new RegExp('(' + NUM + '{1,2}) ?$').exec(s.slice(from, mAt));
+    mm = m ? num(m[1]) : null;
+    if (mm === null || mm > 59) return null;
+    /* самі хвилини мають стояти на початку рядка: перед ними слово — це залишок годин, які OCR не розібрав («Top. 4 хв.») */
+    if (hAt < 0 && /[a-zа-яіїє]{2}/.test(s.slice(0, m.index))) return null;
+  }
   const mins = hh * 60 + mm;
   return mins >= 1 && mins <= 24 * 60 ? mins : null;
+}
+function parseChange(t) {
+  /* таймер — нижній рядок блоку; рядки без «год»/«хв» (заголовок «ЗМІНА ЦІН НА ТОВАРИ ЧЕРЕЗ», сміття рамки) пропускаємо */
+  const lines = String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) { const v = changeLine(lines[i]); if (v !== undefined) return v; }
+  return null;
 }
 /* коли надсилати час зміни: два кадри поспіль показали той самий момент (±1 хв), і він відрізняється від уже надісланого
    більш ніж на 2 хв — тобто почався новий цикл цін (поки відлік іде, момент зміни той самий і повторно не шлеться) */
