@@ -344,9 +344,10 @@ export const GAME_LAYERS = { zones: '/map/game/zones.zip' } as const;
 export type GameLayer = 'names' | keyof typeof GAME_LAYERS;
 
 /* написи на радарі мінікарти: той самий рендер, що на сайті, пікселі → смужки (як значки), 1,5 px на метр гри; обводка — не тонша
-   за 1 м, щоб на радарі не зникала. Шар назв (tile_3_N — найвищий у toSlots), висота 20,5 — над значками; усе в частині — одним
+   за 1 м, щоб на радарі не зникала. Назви — під мітками (рішення власника 2026-11-16): шар tile_3_N у toSlots іде після зелених
+   зон і перед значками, висота 16,8 — між пунктиром зон (16,6) і значками (17,0); усе в частині — одним
    файлом, доки вершин < 60 000 (у кожній частині лише 8 вільних номерів) */
-export const RADAR_PX_PER_M = 1.5;
+export const RADAR_PX_PER_M = 1.5, LABEL_Z = 16.8;
 async function labelFiles(labels: MapLabel[]): Promise<ZipEntry[]> {
   const groups = new Map<string, LabelRun[]>();
   for (const l of labels) {
@@ -358,7 +359,7 @@ async function labelFiles(labels: MapLabel[]): Promise<ZipEntry[]> {
   for (const [k, runs] of groups) {
     let m = new IconMesh(), part = 0;
     const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_3_${part++}`, m); m = new IconMesh(); };
-    for (const u of runs) { if (m.size > 60000) await flush(); m.addRect(u.x0, u.y0, u.x1, u.y1, 20.5, u.c); }
+    for (const u of runs) { if (m.size > 60000) await flush(); m.addRect(u.x0, u.y0, u.x1, u.y1, LABEL_Z, u.c); }
     await flush();
   }
   return out;
@@ -382,8 +383,8 @@ async function inflate(e: ZipEntry): Promise<Uint8Array> {
 }
 
 /* шари в кожній частині отримують вільні номери за зростанням, знизу вгору: зелені зони (tile_4_N у zones.zip),
-   значки (tile_5_N), назви (tile_3_N — написи адміна, labelFiles); міняються шляхи і посилання на .mesh усередині .odr */
-const RANK: Record<string, number> = { 4: 0, 5: 1, 3: 2 };
+   назви (tile_3_N — написи адміна, labelFiles; під мітками), значки (tile_5_N); міняються шляхи і посилання на .mesh усередині .odr */
+export const RANK: Record<string, number> = { 4: 0, 3: 1, 5: 2 };
 async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntry[]> {
   const re = /supertile_fore_(\d+_\d+)_tile_(\d)_(\d+)/, map = new Map<string, string | null>();
   const keys = [...new Set(entries.map(e => re.exec(e.name)?.[0]).filter((x): x is string => !!x))]

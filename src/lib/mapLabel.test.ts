@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { supertileOf } from './gameMap';
+import { LABEL_Z, RANK, supertileOf } from './gameMap';
 import { mergeRuns, supertileAt, labelBox, labelFromRow, labelHeight, labelRuns, labelToRow, splitBySupertile } from './mapLabel';
 import { fontWeight, LABEL_FONTS } from './labelFonts';
 
@@ -58,6 +58,13 @@ describe('напис мапи: смужки для радара', () => {
 
 it('частини мапи — та сама формула, що в gameMap', () => {
   for (const [x, y] of [[0, 0], [199.9, 5000], [200, 5000], [-4140, 8400], [4800, -3500]]) expect(supertileAt(x, y)).toEqual(supertileOf(x, y));
+});
+
+it('на радарі назви — під мітками: після зелених зон (tile_4), перед значками (tile_5), і нижче за значки', () => {
+  expect(RANK[4]).toBeLessThan(RANK[3]);
+  expect(RANK[3]).toBeLessThan(RANK[5]);
+  expect(LABEL_Z).toBeGreaterThan(16.6);
+  expect(LABEL_Z).toBeLessThan(17.0);
 });
 
 describe('напис мапи: рядок бази', () => {
