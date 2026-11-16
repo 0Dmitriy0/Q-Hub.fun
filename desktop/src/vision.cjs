@@ -350,7 +350,9 @@ function vision(deps) {
     const part = whiteOnly(img.crop(r), deps.nativeImage);
     const key = keyOf([{ r, img: part }]);
     if (lastChange?.key === key) return lastChange.mins;
-    const mins = parseChange(await read(text, part.resize({ width: r.width * 3, quality: 'best' })));
+    const raw = await read(text, part.resize({ width: r.width * 3, quality: 'best' })), mins = parseChange(raw);
+    /* таймер видно, але не розібрано — сирий текст у журнал: за ним видно, яку літеру OCR сплутав (кадр з тими самими пікселями не повторюється) */
+    if (mins === null && /го[а-яa-z]|\d\s*[хx]/i.test(raw)) log(`next ?: не розібрано «${raw.replace(/\s+/g, ' ').trim().slice(0, 60)}»`);
     lastChange = { key, mins };
     return mins;
   }
