@@ -6,7 +6,7 @@ import type { MapLabel } from '../lib/mapLabel';
 import { BIG_CAT, MANY_PINS, packSummary } from '../lib/gamePreview';
 import ZONES from '../data/mapZones.json';
 import GamePreview from './GamePreview';
-import { ANIMAL_BY_ID, animalSpots } from '../lib/huntAnimals';
+import { ANIMAL_BY_ID, animalLayout } from '../lib/huntAnimals';
 import Icon from './Icon';
 
 /* шари мапи (не мітки): назви — написи адміна (specs/089), зелені зони — готовий файл */
@@ -58,11 +58,11 @@ export default function GameMapExport({ groups, marks, areas, labels, catById, i
   const big = (c: MapCategory) => on(c) && (count[c.id] || 0) > BIG_CAT && !isLayer(c.id);
 
   /* перегляд бере той самий вибір, що й архів */
-  /* звірі полів полювання (specs/088) — звичайними значками сіткою всередині поля, розміром значка своєї категорії,
+  /* звірі полів полювання (specs/088) — значками сіткою всередині поля, до трьох розмірів значка своєї категорії (animalLayout: на великому полі звичайний значок губився),
      крок трохи більший за значок; у підсумку «міток» їх не рахуємо (там лише picked) */
   const animalPins = useMemo(() => pickedAreas.flatMap(a => {
-    const c = catById[a.category], own = catM[c.id], spots = animalSpots(a.ring, a.animals.length, (own || iconM) * 1.15);
-    return a.animals.map((id, i) => ({ x: spots[i][0], y: spots[i][1], icon: ANIMAL_BY_ID[id].icon, color: c.color, ...(own && own !== iconM ? { s: own / iconM } : {}) }));
+    const c = catById[a.category], base = catM[c.id] || iconM, { spots, k } = animalLayout(a.ring, a.animals.length, base);
+    return a.animals.map((id, i) => ({ x: spots[i][0], y: spots[i][1], icon: ANIMAL_BY_ID[id].icon, color: c.color, s: base * k / iconM }));
   }), [pickedAreas.map(a => a.id + ':' + a.animals.join()).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
   const pins = useMemo(() => [...picked.map(m => {
     const c = catById[m.category], own = catM[c.id];

@@ -40,3 +40,21 @@ describe('huntAnimals', () => {
     for (const p of animalSpots(u, 3, 20)) expect(inRing(p, u)).toBe(true);
   });
 });
+
+import { ANIMAL_SCALES, animalLayout } from './huntAnimals';
+describe('звірі на мапі для гри — більші за мітку', () => {
+  it('на справжніх полях — утричі більші й усі всередині поля', () => {
+    for (const f of fields) for (const n of [3, 5]) {
+      const { spots, k } = animalLayout(f.ring, n, 20);
+      expect(k).toBe(ANIMAL_SCALES[0]);
+      expect(spots).toHaveLength(n);
+      for (const p of spots) expect(inRing(p, f.ring)).toBe(true);
+    }
+  });
+  it('у тісному полі множник зменшується, але іконки лишаються', () => {
+    const small: Pt[] = [[0, 0], [150, 0], [150, 60], [0, 60]];
+    const { spots, k } = animalLayout(small, 4, 20);
+    expect(k).toBeLessThan(ANIMAL_SCALES[0]);
+    expect(spots).toHaveLength(4);
+  });
+});

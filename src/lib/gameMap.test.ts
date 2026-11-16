@@ -76,3 +76,39 @@ describe('зони з бази (поля скарбів) — пунктирна 
   });
   it('повторені точки не ламають контур', () => expect(areaDashes([[0, 0], [0, 0], [32, 0], [32, 32]]).every(q => q.flat().every(Number.isFinite))).toBe(true));
 });
+
+/* нові локації (Деморган, військова база) — одразу над мапою, щоб написи й значки не ховались під ними */
+import { lowerLocations, lowerZ, radarPxPerM } from './gameMap';
+describe('шар нових локацій — під написами й значками', () => {
+  const mesh = '\t\t\tMin 1.0000000 2.0000000 13.0000000\n\t\t\tMax 5.0000000 6.0000000 30.2000000\n\t\t\t\t1.0000000 2.0000000 30.0000000 / 154 85 48 255\n\t\t\t\t5.0000000 6.0000000 13.1000000 / 36 38 42 255';
+  it('висоту 29–30 опускає до рівня мапи, решту не чіпає', () => {
+    const t = lowerZ(mesh);
+    expect(t).toContain('1.0000000 2.0000000 13.4000000 / 154 85 48 255');
+    expect(t).toContain('5.0000000 6.0000000 13.1000000 / 36 38 42 255');
+    expect(t).toContain('Max 5.0000000 6.0000000 13.6000000');
+    expect(t).toContain('Min 1.0000000 2.0000000 13.0000000');
+  });
+  it('tile_2_2 стає tile_0_1 — у шляхах і всередині .odr', async () => {
+    const enc = new TextEncoder(), dec = new TextDecoder(), f = (name: string, text = '') => ({ name, data: enc.encode(text) });
+    const { entries, parts } = await lowerLocations([
+      f('minimap_5_3/supertile_fore_5_3_tile_0_0.odr', 'base'),
+      f('minimap_5_3/supertile_fore_5_3_tile_2_2.odr', 'supertile_fore_5_3_tile_2_2\supertile_fore_5_3_tile_2_2_high.mesh 0'),
+      f('minimap_5_3/supertile_fore_5_3_tile_2_2/supertile_fore_5_3_tile_2_2_high.mesh', mesh),
+    ]);
+    expect(parts).toEqual(['5_3']);
+    expect(entries.map(e => e.name)).toEqual(['minimap_5_3/supertile_fore_5_3_tile_0_0.odr', 'minimap_5_3/supertile_fore_5_3_tile_0_1.odr', 'minimap_5_3/supertile_fore_5_3_tile_0_1/supertile_fore_5_3_tile_0_1_high.mesh']);
+    expect(entries.some(e => /tile_2_2/.test(e.name))).toBe(false);
+    if (!entries[1].method) expect(dec.decode(entries[1].data)).toBe('supertile_fore_5_3_tile_0_1\supertile_fore_5_3_tile_0_1_high.mesh 0');
+  });
+  it('зайнятий tile_0_1 — шар лишається де був', async () => {
+    const enc = new TextEncoder(), f = (name: string) => ({ name, data: enc.encode('x') });
+    const { entries, parts } = await lowerLocations([f('minimap_1_3/supertile_fore_1_3_tile_0_1.odr'), f('minimap_1_3/supertile_fore_1_3_tile_2_2.odr')]);
+    expect(parts).toEqual([]);
+    expect(entries.map(e => e.name)).toContain('minimap_1_3/supertile_fore_1_3_tile_2_2.odr');
+  });
+  it('чіткість напису: дрібний — до 6 px на метр, великий — не менше 3', () => {
+    expect(radarPxPerM(5)).toBe(6);
+    expect(radarPxPerM(25)).toBe(4);
+    expect(radarPxPerM(200)).toBe(3);
+  });
+});

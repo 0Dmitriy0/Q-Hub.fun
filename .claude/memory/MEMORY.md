@@ -21,3 +21,4 @@
 - [Перезапуск програми після зміни](relaunch-app-after-change.md) — закрити Q-Hub власника, зібрати й `npm.cmd start` з коду після кожної зміни програми
 - [Вікно поверх гри забирає ввід](overlay-steals-game-input.md) — RAGE MP втрачає керування навіть без фокусу; після показу з клавіші — game.giveBack()
 - [«Роботи»/«Скупники» — мітки з бази](builtin-cats-db-marks.md) — 0071: dbMarks + markCats(), рядки jobs/buyers сховані RLS; 0072: точки з коду в базі, job_id → довідник
+- [Радар гри: порядок шарів за номером файлу](game-radar-layer-order.md) — не за висотою z; локації base.zip з tile_2_2 → tile_0_1 у lowerLocations(); 9 номерів на частину

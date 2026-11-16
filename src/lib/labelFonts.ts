@@ -32,7 +32,8 @@ export const LABEL_FONTS: LabelFont[] = [
   { id: 'neucha', name: 'Neucha', weights: [400] },
 ];
 export const FONT_BY_ID: Record<string, LabelFont> = Object.fromEntries(LABEL_FONTS.map(f => [f.id, f]));
-export const DEFAULT_FONT = 'roboto-condensed';
+/* шрифт нового напису (рішення власника 2026-11-16) — той самий іде й у мапу для гри: радар і текстури малюються шрифтом напису */
+export const DEFAULT_FONT = 'unbounded';
 
 /* найближча доступна товщина шрифту (у базі могла лишитись товщина, якої в шрифту немає) */
 export function fontWeight(id: string, weight: number): number {
