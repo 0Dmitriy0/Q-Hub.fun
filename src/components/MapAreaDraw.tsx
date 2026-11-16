@@ -18,6 +18,7 @@ function AnimalPicker({ value, onChange }: { value: AnimalId[]; onChange: (v: An
   );
 }
 const noAnimalsCol = (m: string) => /animals/i.test(m) && /column|schema cache/i.test(m);
+const NO_AT = 'У базі ще немає місця звірів — запусти міграцію 0074_map_area_animals_at.sql у Supabase → SQL Editor.';
 const NO_COL = 'У базі ще немає звірів у зонах — запусти міграцію 0069_map_area_animals.sql у Supabase → SQL Editor.';
 
 /* малювання зони адміном: «Нова зона» → кліки по мапі вздовж межі → «Зберегти зону» (specs/002-map-areas).
@@ -69,8 +70,8 @@ export default function MapAreaDraw({ cats, ring, drawing, onDraw, onUndo, onCle
 
 /* зміна зони адміном: назва, примітка, категорія й контур. Контур правлять на мапі (MapPage): тягнути точки,
    середини ребер (нова точка), подвійний клік — прибрати точку, ручка в центрі — перенести всю зону */
-export function MapAreaEdit({ area, cats, ring, onReset, onCancel, onDone }: {
-  area: MapArea; cats: MapCategory[]; ring: [number, number][];
+export function MapAreaEdit({ area, cats, ring, zooAt, onZooAuto, onReset, onCancel, onDone }: {
+  area: MapArea; cats: MapCategory[]; ring: [number, number][]; zooAt: [number, number] | null; onZooAuto: () => void;
   onReset: () => void; onCancel: () => void; onDone: (a: MapArea) => void;
 }) {
   const own = cats.filter(c => !c.builtin);
@@ -86,10 +87,12 @@ export function MapAreaEdit({ area, cats, ring, onReset, onCancel, onDone }: {
     setBusy(true); setMsg('');
     const r = ring.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10] as [number, number]);
     /* звірів шлемо лише для поля полювання — інші зони зберігаються й до міграції 0069 */
-    const { error } = await supabase!.from('map_areas').update({ category_id: cat, name: name.trim(), note: note.trim(), ring: r, ...(hunt ? { animals } : {}) }).eq('id', area.dbId);
+    /* місце звірів шлемо, лише коли його чіпали — решта правок зберігається й до міграції 0074 */
+    const at = hunt && animals.length ? zooAt : null, atSet = (at?.join() ?? '') !== (area.animalsAt?.join() ?? '');
+    const { error } = await supabase!.from('map_areas').update({ category_id: cat, name: name.trim(), note: note.trim(), ring: r, ...(hunt ? { animals } : {}), ...(atSet ? { animals_at: at } : {}) }).eq('id', area.dbId);
     setBusy(false);
-    if (error) return setMsg(noAnimalsCol(error.message) ? NO_COL : /row-level|permission/i.test(error.message) ? 'Це може лише адмін.' : error.message);
-    onDone({ ...area, category: cat, name: name.trim(), note: note.trim(), ring: r, ...(hunt ? { animals } : {}) });
+    if (error) return setMsg(/animals_at/i.test(error.message) && /column|schema cache/i.test(error.message) ? NO_AT : noAnimalsCol(error.message) ? NO_COL : /row-level|permission/i.test(error.message) ? 'Це може лише адмін.' : error.message);
+    onDone({ ...area, category: cat, name: name.trim(), note: note.trim(), ring: r, ...(hunt ? { animals } : {}), animalsAt: at });
   }
 
   return (
@@ -100,6 +103,10 @@ export function MapAreaEdit({ area, cats, ring, onReset, onCancel, onDone }: {
       <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка до зони" maxLength={600} />
       <Select label="Категорія зони" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
       {hunt && <AnimalPicker value={animals} onChange={setAnimals} />}
+      {hunt && area.animals.length > 0 && <div className="mrow">
+        <span className="muted">Звірі: тягни плашку на мапі. Кружки — значки на мапі для гри.</span>
+        <button type="button" className="btn sm ghost" disabled={!zooAt} onClick={onZooAuto}>Місце звірів — само</button>
+      </div>}
       <div className="mrow">
         <button type="button" className="btn sm ghost" disabled={!moved} onClick={onReset}>Повернути контур</button>
         <span className="muted mono">точок: {ring.length}</span>

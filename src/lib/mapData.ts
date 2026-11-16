@@ -50,7 +50,7 @@ export function parseBulk(text: string, conv?: (x: number, y: number) => [number
 }
 
 /* зона на мапі (0021): багатокутник у метрах гри, напр. поле скарбів */
-export interface MapArea { id: string; dbId: number; category: string; name: string; note: string; ring: [number, number][]; animals: AnimalId[] }
+export interface MapArea { id: string; dbId: number; category: string; name: string; note: string; ring: [number, number][]; animals: AnimalId[]; animalsAt?: [number, number] | null }
 export const AREA_MAX = 500;
 
 /* контур, який прийме база: 3–500 точок у межах мапи; інакше — що не так */

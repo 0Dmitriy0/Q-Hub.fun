@@ -23,7 +23,7 @@ const SIZES = [5, 7, 12, 20];
 
 /* свій розмір значка для окремих категорій (id → метри) — у браузері гравця, щоб не виставляти знову при наступному скачуванні */
 const SIZE_KEY = 'qhub-game-cat-sizes';
-function readCatSizes(): Record<string, number> {
+export function readCatSizes(): Record<string, number> {
   try { const v = JSON.parse(localStorage.getItem(SIZE_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
 }
 function saveCatSizes(v: Record<string, number>) { try { localStorage.setItem(SIZE_KEY, JSON.stringify(v)); } catch { /* без сховища — лише на цей раз */ } }
@@ -61,9 +61,9 @@ export default function GameMapExport({ groups, marks, areas, labels, catById, i
   /* звірі полів полювання (specs/088) — значками сіткою всередині поля, до п’яти розмірів значка своєї категорії (animalLayout: на великому полі звичайний значок губився),
      крок трохи більший за значок; у підсумку «міток» їх не рахуємо (там лише picked) */
   const animalPins = useMemo(() => pickedAreas.flatMap(a => {
-    const c = catById[a.category], base = catM[c.id] || iconM, { spots, k } = animalLayout(a.ring, a.animals.length, base);
+    const c = catById[a.category], base = catM[c.id] || iconM, { spots, k } = animalLayout(a.ring, a.animals.length, base, a.animalsAt);
     return a.animals.map((id, i) => ({ x: spots[i][0], y: spots[i][1], icon: ANIMAL_BY_ID[id].icon, color: c.color, s: base * k / iconM }));
-  }), [pickedAreas.map(a => a.id + ':' + a.animals.join()).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }), [pickedAreas.map(a => a.id + ':' + a.animals.join() + '@' + (a.animalsAt || '')).join(), catById, catM, iconM]);   // eslint-disable-line react-hooks/exhaustive-deps
   const pins = useMemo(() => [...picked.map(m => {
     const c = catById[m.category], own = catM[c.id];
     return { x: m.x, y: m.y, icon: m.icon || c.icon, color: c.color, ...(own && own !== iconM ? { s: own / iconM } : {}) };

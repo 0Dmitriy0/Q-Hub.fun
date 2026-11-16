@@ -27,6 +27,17 @@ do $$ begin
   begin update public.map_areas set animals = null where name = 'Поле полювання 2'; raise exception 'null прийнято';
   exception when not_null_violation or check_violation then null; end;
 end $$;
+-- місце звірів (0074): пара чисел або null
+update public.map_areas set animals_at = '[120.5, -340]' where name = 'Поле полювання 1';
+do $$ begin
+  assert (select animals_at from public.map_areas where name = 'Поле полювання 1') = '[120.5, -340]'::jsonb, 'адмін не поставив місце звірів';
+  assert (select animals_at from public.map_areas where name = 'Поле полювання 2') is null, 'місце звірів за замовчуванням має бути порожнім';
+  begin update public.map_areas set animals_at = '[1]' where name = 'Поле полювання 2'; raise exception 'одне число прийнято';
+  exception when check_violation then null; end;
+  begin update public.map_areas set animals_at = '["a", 2]' where name = 'Поле полювання 2'; raise exception 'текст прийнято';
+  exception when check_violation then null; end;
+  update public.map_areas set animals_at = null where name = 'Поле полювання 1';
+end $$;
 reset role;
 
 -- гість бачить, не змінює
