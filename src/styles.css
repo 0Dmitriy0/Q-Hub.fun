@@ -490,6 +490,12 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jd-pay-by { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
 .jd-pay-stale { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 5px; background: var(--warn-soft); color: var(--warn); font-weight: 600; }
 .jd-pay-by:empty { display: none; }
+/* мітка роботи на мапі — блок адміна у вікні роботи (0072) */
+.jd-pins { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.jd-pins h3 { align-self: stretch; }
+.jd-pins h3 small { font-weight: 500; font-size: 12px; margin-left: 6px; }
+.jd-sec.jd-pins ul { padding: 0; list-style: none; align-self: stretch; }
+.jd-pins li { justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .jd-admin { flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px dashed var(--line2); font-size: 13px; }
 .jd-src a { color: var(--accent-hi); }
 

@@ -6,6 +6,8 @@ import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 import IconGrid from './IconGrid';
+import { dbLink } from '../lib/mapMarks';
+import { jobIconSrc, useJobs } from '../lib/jobsData';
 
 export const dbErr = (m: string) => /map_points_category_id_fkey|foreign key/i.test(m)
   ? 'Щоб ставити мітки в «Роботи» й «Скупники», запусти supabase/migrations/0071_jobs_buyers_db_marks.sql у Supabase → SQL Editor.'
@@ -15,17 +17,27 @@ export const dbErr = (m: string) => /map_points_category_id_fkey|foreign key/i.t
   ? 'У базі ще немає таблиць мапи. Запусти q-hub-map.sql у Supabase → SQL Editor.'
   : /row-level security|permission/i.test(m) ? 'Це може лише адмін.' : m;
 
-const colErr = (m: string) => /show_label/i.test(m) ? 'У базі ще немає колонки для підпису мітки. Запусти q-hub-map-label.sql у Supabase → SQL Editor.'
+const colErr = (m: string) => /job_id/i.test(m) ? 'Прив\'язки мітки до роботи ще немає: запусти supabase/migrations/0072_job_marks_in_db.sql у Supabase → SQL Editor.'
+  : /show_label/i.test(m) ? 'У базі ще немає колонки для підпису мітки. Запусти q-hub-map-label.sql у Supabase → SQL Editor.'
   : /icon/i.test(m) ? 'У базі ще немає колонки для іконки мітки. Запусти q-hub-map-icon.sql у Supabase → SQL Editor.' : dbErr(m);
 
 export { IconGrid };
+
+/* робота довідника для мітки в «Роботах» (0072): мітка веде на опис роботи, а у вікні роботи з'являється «Мітка на мапі» */
+function JobPick({ value, onChange }: { value: string; onChange: (id: string, icon: string, name: string) => void }) {
+  const { jobs } = useJobs();
+  const opts = [{ value: '-', label: 'Без роботи' }, ...[...jobs].sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(j => ({ value: j.id, label: j.name, hint: j.legal ? 'легальна' : 'нелегальна' }))];
+  return <Select label="Робота з довідника" value={value || '-'} searchable options={opts}
+    onChange={v => { const j = jobs.find(x => x.id === v); onChange(v === '-' ? '' : v, j ? jobIconSrc(j) : '', j?.name || ''); }} placeholder="Яка робота" />;
+}
 
 /* редагування мітки: інша категорія і/або своя іконка */
 export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats: MapCategory[]; onDone: (m: MapMark) => void; onCancel: () => void }) {
   const own = markCats(cats);
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
-  const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
+  const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.noteAuto ? '' : mark.note);
   const [label, setLabel] = useState(mark.label !== false);
+  const [job, setJob] = useState(mark.job || '');
   const [photo, setPhoto] = useState(mark.photo || '');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const catIcon = cats.find(c => c.id === cat)?.icon || '';
@@ -38,10 +50,13 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   }
   async function save() {
     setBusy(true); setMsg('');
-    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}) }).eq('id', mark.dbId!);
+    /* робота — лише в «Роботах»; поле шлемо, коли змінилось — без 0072 решта правок зберігається як раніше */
+    const jobV = cat === 'jobs' ? job : '';
+    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}), ...(jobV !== (mark.job || '') ? { job_id: jobV || null } : {}) }).eq('id', mark.dbId!);
     setBusy(false);
     if (error) return setMsg(colErr(error.message));
-    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label, photo: photo || undefined });
+    const auto = !note.trim() && !!mark.noteAuto && jobV === mark.job;
+    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: auto ? mark.note : note.trim(), noteAuto: auto, label, photo: photo || undefined, job: jobV || undefined, link: dbLink(cat, icon, jobV) });
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити мітку">
@@ -58,6 +73,7 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
         <small className="muted">Обріж кадр так, щоб не було чату, ніків і HUD — лише місце й об'єкт.</small>
       </div>
       <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
+      {cat === 'jobs' && <JobPick value={job} onChange={(id, ic) => { setJob(id); if (id && ic && (!icon || /^\/icons\/(jobs\/|map\/jobs\.svg)/.test(icon))) setIcon(ic); }} />}
       <p className="muted">Іконка: перша — як у категорії, або будь-яка інша лише для цієї мітки</p>
       <IconGrid value={icon} onChange={setIcon} catIcon={catIcon} label="Іконка мітки" />
       <div className="mrow">
@@ -137,6 +153,7 @@ export default function MapAdmin({ part, cats, marks, picked, picking, onPick, o
   const [name, setName] = useState(''); const [note, setNote] = useState(''); const [owner, setOwner] = useState('');
   const [x, setX] = useState(''); const [y, setY] = useState('');
   const [mIcon, setMIcon] = useState<string | null>(null); const [mLabel, setMLabel] = useState(true);
+  const [mJob, setMJob] = useState('');
   const [bulk, setBulk] = useState('');
   /* звідки координати: з гри (як у нас), пікселі з мапи QuantFun чи координати редактора Open Hydra Map (specs/017) —
      тоді переводимо самі; з Open Hydra Map мітки йдуть партією: видно гравцям лише після «Опублікувати», відкат — одною дією */
@@ -160,10 +177,10 @@ export default function MapAdmin({ part, cats, marks, picked, picking, onPick, o
   const [seen, setSeen] = useState<[number, number] | null>(null);
   if (picked && picked !== seen) { setSeen(picked); setX(String(Math.round(picked[0] * 10) / 10)); setY(String(Math.round(picked[1] * 10) / 10)); }
 
-  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number; owner_static: number | null; icon?: string | null; show_label?: boolean }): MapMark =>
-    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y, owner: r.owner_static, icon: r.icon || undefined, label: r.show_label !== false });
+  const toMark = (r: { id: number; category_id: string; name: string; note: string; x: number; y: number; owner_static: number | null; icon?: string | null; show_label?: boolean; job_id?: string | null }): MapMark =>
+    ({ id: 'db-' + r.id, dbId: r.id, category: r.category_id, name: r.name, note: r.note, x: r.x, y: r.y, owner: r.owner_static, icon: r.icon || undefined, label: r.show_label !== false, job: r.job_id || undefined, link: dbLink(r.category_id, r.icon, r.job_id) });
 
-  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number; owner_static?: number | null; icon?: string; show_label?: boolean }[]) {
+  async function insert(rows: { category_id: string; name: string; note: string; x: number; y: number; owner_static?: number | null; icon?: string; show_label?: boolean; job_id?: string }[]) {
     setBusy(true); setMsg('');
     const { data, error } = await supabase!.from('map_points').insert(rows).select('*');
     setBusy(false);
@@ -178,7 +195,7 @@ export default function MapAdmin({ part, cats, marks, picked, picking, onPick, o
     if (xv < -6000 || xv > 6800 || yv < -4400 || yv > 8500) return setMsg(`Точка X ${xv}, Y ${yv} поза мапою — перевір, чи правильно вибрано «${src === 'qf' ? 'QuantFun' : 'З гри'}».`);
     const st = owner.trim() ? Number(owner.trim().replace('#', '')) : null;
     if (st !== null && !(Number.isInteger(st) && st > 0)) return setMsg('Статік власника — ціле число, напр. 12345.');
-    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }) }])) { setName(''); setNote(''); setOwner(''); if (conv) { setX(''); setY(''); } }
+    if (await insert([{ category_id: cat, name: name.trim(), note: note.trim(), x: xv, y: yv, owner_static: st, ...(mIcon ? { icon: mIcon } : {}), ...(mLabel ? {} : { show_label: false }), ...(cat === 'jobs' && mJob ? { job_id: mJob } : {}) }])) { setName(''); setNote(''); setOwner(''); setMJob(''); if (conv) { setX(''); setY(''); } }
   }
   /* попередній перегляд набору: рядки, помилки (зокрема поза мапою) і дублі — ближче 10 м до наявної мітки категорії */
   const pre = parseBulk(bulk, conv);
@@ -215,6 +232,7 @@ export default function MapAdmin({ part, cats, marks, picked, picking, onPick, o
       {part === 'marks' && <><section>
         <h4>Нова мітка</h4>
         <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
+        {cat === 'jobs' && <JobPick value={mJob} onChange={(id, ic, n) => { setMJob(id); if (id && ic && !mIcon) setMIcon(ic); if (id && n && !name.trim()) setName(n); }} />}
         <input className="min" placeholder="Назва (необов'язково)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" />
         <label className="mcheck"><input type="checkbox" checked={mLabel} onChange={e => setMLabel(e.target.checked)} /> Показувати назву на мапі</label>
         <input className="min" placeholder="Примітка (необов'язково)" value={note} onChange={e => setNote(e.target.value)} aria-label="Примітка" />

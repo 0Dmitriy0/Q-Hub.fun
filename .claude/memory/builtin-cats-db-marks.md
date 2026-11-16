@@ -1,6 +1,6 @@
 ---
 name: builtin-cats-db-marks
-description: «Роботи» й «Скупники» на мапі — вбудовані (код), але з 0071 приймають мітки з бази; рядки jobs/buyers у map_categories сховані RLS
+description: «Роботи» й «Скупники» — вбудовані категорії, мітки з бази (0071/0072, job_id → довідник); рядки jobs/buyers у map_categories сховані RLS
 metadata:
   type: project
 ---
@@ -12,3 +12,5 @@ metadata:
 **Why:** 2026-11-16 на проєкті з'явилася робота «Пілот», а поставити мітку не було куди — роботи жили лише в `src/data/mapPoints.ts`.
 
 **How to apply:** нова вбудована категорія, що має приймати мітки, = `dbMarks: true` у `BUILTIN` + рядок у `map_categories` + її id у політиці читання (`id not in (...)`). Мітка роботи з іконкою `/icons/jobs/<id>.svg` отримує посилання на опис роботи `?job=<id>`. `map_test.sql` рахує категорії: від postgres — усі (42), від гостя — без службових (40).
+
+**0072 (2026-11-16):** точки з `src/data/mapPoints.ts` перенесено в `map_points` (created_by is null — так сід впізнає себе при повторі), `job_id` → `jobs(id)` (on delete set null). `loadMapData` бачить колонку `job_id` → `BUILTIN_MARKS` не малює (інакше двійники); підпис «Легальна · з N рівня» рахується з `jobs` (`noteAuto`, у базу не пишеться). Вікно роботи (`JobDialog`) бере «Мітку на мапі» з `job_id`, адмін там прив'язує/відв'язує мітку (`PinAdmin`); у `MarkEdit`/«Нова мітка» для «Робіт» — `JobPick`. Стара збірка програми після 0072 показує точки робіт двічі, доки не вийде пак. Тести: `map_test.sql` рахує точки без `jobs`/`buyers`, `run.sh` — QuantFun так само.

@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { dbError } from '../lib/wiki';
 import PicUpload from './PicUpload';
 import IconGrid from './IconGrid';
+import Select from './Select';
 import HistoryDialog from './wiki/HistoryDialog';
 import PayBlock from './wiki/PayBlock';
 import WikiChecks from './wiki/WikiChecks';
@@ -38,6 +39,42 @@ function Clamp({ text }: { text: string }) {
   </>;
 }
 
+type Pin = { id: number; name: string; x: number; y: number; job: string | null };
+/* мітки робіт на мапі (0072: map_points.job_id). null — колонки ще немає, тоді точка з коду (src/data/mapPoints.ts) */
+async function loadPins(): Promise<Pin[] | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('map_points').select('*').eq('category_id', 'jobs').order('name');
+  /* немає колонки (база без 0072) або жодної мітки робіт — лишаємо точку з коду */
+  if (error || !data?.length || !('job_id' in data[0])) return null;
+  return (data as Record<string, unknown>[]).filter(r => !r.hidden)
+    .map(r => ({ id: r.id as number, name: (r.name as string) || '', x: r.x as number, y: r.y as number, job: (r.job_id as string | null) || null }));
+}
+
+/* адмін у вікні роботи: прив'язати мітку з «Робіт» на мапі або відв'язати; нову мітку ставлять на мапі (Мітки → «Роботи») */
+function PinAdmin({ job, pins, onChanged }: { job: JobRow; pins: Pin[]; onChanged: () => void }) {
+  const [err, setErr] = useState('');
+  const mine = pins.filter(p => p.job === job.id);
+  const free = pins.filter(p => p.job !== job.id);
+  const link = async (id: number, to: string | null) => {
+    const { error } = await supabase!.from('map_points').update({ job_id: to }).eq('id', id);
+    if (error) setErr(dbError(error)); else { setErr(''); onChanged(); }
+  };
+  return (
+    <section className="jd-sec wdlg-box jd-pins" aria-label="Мітка роботи на мапі">
+      <h3>Мітка на мапі <small className="muted">адмін</small></h3>
+      {mine.length ? <ul>{mine.map(p => <li key={p.id} className="row">
+        <Link to={'/mapa' + makeHash(p.x, p.y, 5)}>{p.name || 'Мітка #' + p.id}</Link>
+        <button type="button" className="btn ghost sm" onClick={() => link(p.id, null)}>Відв'язати</button></li>)}</ul>
+        : <p className="muted">Мітки ще немає — прив'яжи наявну з «Робіт» або постав нову на мапі (Мітки → «Роботи» → ця робота).</p>}
+      {!!free.length && <Select label="Прив'язати мітку з мапи" value="" searchable placeholder="Яку мітку"
+        options={free.map(p => ({ value: p.id, label: p.name || 'Мітка #' + p.id, hint: p.job ? 'зараз: ' + p.job : 'без роботи' }))}
+        onChange={id => link(id, job.id)} />}
+      <Link className="btn ghost sm" to="/mapa?show=jobs"><Icon name="map" size={15} />Поставити нову на мапі</Link>
+      {err && <p className="bad" role="alert">{err}</p>}
+    </section>
+  );
+}
+
 /* робота → шар мапи, який варто відкрити одразу (поля скарбів — зони, не мітки) */
 const JOB_LAYER: Record<string, [string, string]> = { treasure: ['treasure-fields', 'Поля скарбів на мапі'] };
 
@@ -56,11 +93,14 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
   const { role } = useAuth();
   /* іконка й видалення назавжди — лише admin (0062); у базі це теж перевіряється */
   const admin = role === 'admin' && !!supabase && job?.version !== undefined;
+  const [pins, setPins] = useState<Pin[] | null>(null);
+  const reloadPins = () => loadPins().then(setPins).catch(() => setPins(null));
+  useEffect(() => { if (job) reloadPins(); }, [job?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setErr(''); setPick(false); if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
   if (!job) return <dialog ref={dlg} className="modal jmodal" onClose={onClose} />;
   const list = (k: keyof Job) => (job[k] as string[] | undefined) || [];
-  /* точка влаштування на мапі — з тих самих даних, що й мітки «Роботи» на мапі */
-  const pt = POINTS.find(p => p.kind === 'job' && p.job === job.id);
+  /* точка влаштування на мапі — мітка «Роботи», прив'язана до цієї роботи (0072); без 0072 — точка з коду */
+  const pt = pins ? pins.find(p => p.job === job.id) : POINTS.find(p => p.kind === 'job' && p.job === job.id);
   const layer = JOB_LAYER[job.id];
   const setIcon = async (icon: string) => {
     const { error } = await supabase!.from('jobs').update({ icon }).eq('id', job.id);
@@ -112,6 +152,7 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
             {err && <span className="bad" role="alert">{err}</span>}
           </div>
         )}
+        {admin && pins && <PinAdmin job={job} pins={pins} onChanged={reloadPins} />}
         {admin && pick && <IconGrid label={'Іконка роботи ' + job.name} value={job.icon ?? null} extra={catIcons}
           onChange={v => { if (v) { setIcon(v); setPick(false); } }} />}
         <div className="wdlg-f">
