@@ -48,8 +48,13 @@ export const fontUrl = (id: string, subset: keyof typeof SUBSETS, weight: number
   `https://cdn.jsdelivr.net/fontsource/fonts/${id}@latest/${subset}-${weight}-normal.woff2`;
 /* ім'я сімейства для canvas: своє, щоб не зачепити шрифти сайту */
 export const fontFamily = (id: string) => `QL-${id}`;
-/* рядок ctx.font; якщо шрифт не завантажився — запасний sans-serif */
-export const fontCss = (id: string, weight: number, px: number) => `${fontWeight(id, weight)} ${px}px "${fontFamily(id)}", sans-serif`;
+/* рядок ctx.font; товщина — саме вибрана: якщо файлу такої товщини в шрифту немає, браузер домальовує жирний сам
+   (завантажується найближчий файл — loadLabelFont). Шрифт не завантажився — запасний sans-serif */
+export const fontCss = (id: string, weight: number, px: number) => `${weight} ${px}px "${fontFamily(id)}", sans-serif`;
+
+/* «Жирний» у формі напису: три кроки товщини (specs/089) */
+export const BOLD_STEPS: [number, string][] = [[400, 'Звичайний'], [700, 'Жирний'], [900, 'Дуже жирний']];
+export const boldStep = (weight: number) => (weight >= 800 ? 900 : weight >= 600 ? 700 : 400);
 
 const loading = new Map<string, Promise<boolean>>();
 /* завантажити шрифт (latin + cyrillic) — true, коли готовий; false — не вдалося (немає інтернету, тайм-аут) */

@@ -123,8 +123,9 @@ export function CatEdit({ cats, pick, onSaved }: { cats: MapCategory[]; pick?: s
 }
 
 /* інструменти адміна на мапі: нова мітка (координати вписати або взяти кліком), багато міток рядками, нова категорія */
-export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks, onCat, onReload }: {
-  cats: MapCategory[]; marks: MapMark[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;
+/* part — розділ панелі адміна (MapPage): «Мітки» — нова мітка, багато одразу, партії; «Категорії» — нова категорія */
+export default function MapAdmin({ part, cats, marks, picked, picking, onPick, onMarks, onCat, onReload }: {
+  part: 'marks' | 'cats'; cats: MapCategory[]; marks: MapMark[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;
   onMarks: (m: MapMark[]) => void; onCat: (c: MapCategory) => void; onReload: () => void;
 }) {
   const own = cats.filter(c => !c.builtin);
@@ -208,9 +209,8 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
   }
 
   return (
-    <details className="madmin" open>
-      <summary>Інструменти адміна</summary>
-      <section>
+    <div className="madmin">
+      {part === 'marks' && <><section>
         <h4>Нова мітка</h4>
         <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
         <input className="min" placeholder="Назва (необов'язково)" value={name} onChange={e => setName(e.target.value)} aria-label="Назва мітки" />
@@ -237,14 +237,14 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
       </section>
       <section>
         <h4>Багато міток одразу</h4>
-        <p className="muted">У категорію <b>«{own.find(c => c.id === cat)?.name || '—'}»</b> (вибирається вгорі, у «Нова мітка»){src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
+        <p className="muted">У категорію <b>«{own.find(c => c.id === cat)?.name || '—'}»</b> (вибирається вище, у «Нова мітка»){src === 'qf' ? ', пікселі QuantFun' : src === 'ohm' ? ', партією з Open Hydra Map' : ''}. Кожен рядок: <span className="mono">X, Y, назва</span></p>
         {src === 'ohm' && <label className="mrow"><span className="muted">Файл з Open Hydra Map (.json):</span><input type="file" accept=".json,application/json" onChange={e => { const fl = e.target.files?.[0]; if (fl) ohmFile(fl); e.target.value = ''; }} /></label>}
         <textarea className="min mono" rows={4} placeholder={'-1600, -1000, Бак біля пірсу\n120.5, -830'} value={bulk} onChange={e => setBulk(e.target.value)} aria-label="Мітки рядками" />
         {bulk.trim() && <p className="muted" role="status">Рядків з координатами: {pre.ok.length}{pre.bad.length > 0 && <> · не зрозумів або поза мапою: {pre.bad.length} (рядки {pre.bad.slice(0, 8).join(', ')}{pre.bad.length > 8 ? '…' : ''})</>}{dups > 0 && <> · дублів (ближче 10 м): {dups} — їх пропущу</>}</p>}
         <button type="button" className="btn sm acc" disabled={busy || !pre.ok.length} onClick={addBulk}>{src === 'ohm' ? `Завантажити партію в «${own.find(c => c.id === cat)?.name || '—'}»: ${pre.ok.length - dups}` : `Додати ${pre.ok.length || ''} міток`}</button>
       </section>
-      <Batches cats={cats} onReload={onReload} setMsg={setMsg} />
-      <section>
+      <Batches cats={cats} onReload={onReload} setMsg={setMsg} /></>}
+      {part === 'cats' && <section>
         <h4>Нова категорія</h4>
         <input className="min" placeholder="Назва, напр. Сміттєві баки" value={cName} onChange={e => setCName(e.target.value)} aria-label="Назва категорії" />
         <input className="min" list="map-groups" placeholder="Група" value={cGrp} onChange={e => setCGrp(e.target.value)} aria-label="Група" />
@@ -256,9 +256,9 @@ export default function MapAdmin({ cats, marks, picked, picking, onPick, onMarks
           <PicUpload label="Своя іконка категорії" path={`map/${slugify(cName || 'icon')}-${Date.now().toString(36)}.webp`} frame={{ w: 128, h: 128 }} onDone={async url => { setCIcon(url); }} />
           {!MAP_ICONS.includes(cIcon) && <img src={cIcon} alt="Своя іконка" width={26} height={26} />}</div>
         <button type="button" className="btn sm acc" disabled={busy} onClick={addCat}>Створити категорію</button>
-      </section>
+      </section>}
       {msg && <p className="mmsg" role="status">{msg}</p>}
-    </details>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LABEL_Z, RANK, supertileOf } from './gameMap';
 import { mergeRuns, supertileAt, labelBox, labelFromRow, labelHeight, labelRuns, labelToRow, splitBySupertile } from './mapLabel';
-import { fontWeight, LABEL_FONTS } from './labelFonts';
+import { boldStep, fontCss, fontWeight, LABEL_FONTS } from './labelFonts';
 
 const L0 = { x: 100, y: 200, angle: 0, size: 30, outlineW: 3 };
 const near = (a: number, b: number) => expect(a).toBeCloseTo(b, 6);
@@ -80,6 +80,10 @@ describe('шрифти', () => {
     expect(fontWeight('oswald', 800)).toBe(700);
     expect(fontWeight('russo-one', 700)).toBe(400);
     expect(fontWeight('невідомий', 700)).toBe(400);
+  });
+  it('жирний: три кроки, рядок шрифту бере саме вибрану товщину (домальовується, якщо файлу немає)', () => {
+    expect([300, 400, 500, 600, 700, 800, 900].map(boldStep)).toEqual([400, 400, 400, 700, 700, 900, 900]);
+    expect(fontCss('russo-one', 700, 20)).toBe('700 20px "QL-russo-one", sans-serif');
   });
   it('id шрифтів проходять перевірку бази', () => {
     for (const f of LABEL_FONTS) expect(f.id).toMatch(/^[a-z0-9-]{2,40}$/);
