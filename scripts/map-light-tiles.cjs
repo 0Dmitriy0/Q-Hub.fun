@@ -98,7 +98,8 @@ async function run(argv) {
     return shrink(cv, TS);
   }, ocean);
 
-  /* назви: прозорі плитки z3–6 (як scripts/map-names-tiles.py), той самий набір, що в public/map/n/index.json */
+  /* назви: прозорі плитки z3–6 (як scripts/map-names-tiles.py). З specs/089 назв Hydra немає (написи ставить адмін) — пропускаємо */
+  if (!fs.existsSync(path.join(map, 'game/names.bin'))) return `плиток мапи: ${nBase} -> ${outBase} (назв Hydra немає — specs/089)`;
   const nix = JSON.parse(fs.readFileSync(path.join(map, 'n/index.json'), 'utf8'));
   for (let z = 0; z <= ZMAX; z++) have[z] = new Set((nix.have[z] || []).map(i => `${Math.floor(i / nix.n)}/${i % nix.n}`));
   const meta = JSON.parse(fs.readFileSync(path.join(map, 'game/export.json'), 'utf8')), npal = meta.namesPalette.map(tone);

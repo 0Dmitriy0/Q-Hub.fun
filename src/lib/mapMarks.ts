@@ -10,6 +10,8 @@ import { supabase } from './supabase';
 import { asset } from './app';
 import { sortAnimals } from './huntAnimals';
 import { BRAND_SRC, brandBox } from './mapBrand';
+import { labelFromRow, renderLabel, type MapLabel } from './mapLabel';
+import { fontCss, loadLabelFont } from './labelFonts';
 
 /* спільне для повної мапи (/mapa) і мапи-прев'ю на головній */
 
@@ -35,7 +37,7 @@ export const BUILTIN_MARKS: MapMark[] = POINTS.map(p => {
 });
 
 /* staleOk — у базі вже є «Точка застаріла» (0060: колонка hidden у map_points) */
-export type MapData = { cats: MapCategory[]; marks: MapMark[]; areas: MapArea[] | null; owners: Record<number, string> | null; staleOk?: boolean };
+export type MapData = { cats: MapCategory[]; marks: MapMark[]; areas: MapArea[] | null; labels: MapLabel[] | null; owners: Record<number, string> | null; staleOk?: boolean };
 
 /* категорії, мітки, зони й власники з бази. null — таблиць мапи ще немає (або бази немає зовсім) */
 export async function loadMapData(): Promise<MapData | null> {
@@ -60,7 +62,7 @@ export async function loadMapData(): Promise<MapData | null> {
       if (!r.data || r.data.length < 1000) return m;
     }
   };
-  const [c, p, o, a, au] = await Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name'), supabase.from('map_areas').select('*').order('id'), authors()]);
+  const [c, p, o, a, au, lb] = await Promise.all([supabase.from('map_categories').select('*').order('sort'), pts(), supabase.from('map_owners').select('static_id,game_name'), supabase.from('map_areas').select('*').order('id'), authors(), supabase.from('map_labels').select('*').order('id')]);
   if (c.error || p.error) return null;
   const rows = (p.data || []) as Record<string, unknown>[];
   return {
@@ -70,6 +72,8 @@ export async function loadMapData(): Promise<MapData | null> {
  id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number) }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
     areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][], animals: sortAnimals((r.animals as unknown[] | null | undefined) ?? []) })),
+    /* написи адміна (0070, specs/089); до міграції — мапа без назв */
+    labels: lb.error ? null : ((lb.data || []) as Record<string, unknown>[]).map(labelFromRow),
     owners: o.error ? null : Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string]))
   };
 }
@@ -93,6 +97,18 @@ export function baseMap(el: HTMLElement, opts: L.MapOptions = {}, theme: () => G
   const b = brandBox();
   L.imageOverlay(asset(BRAND_SRC), L.latLngBounds(ll(b.x0, b.y0), ll(b.x1, b.y1)), { interactive: false, className: 'mbrand-map' }).addTo(m);
   return { m, bounds, ll, retheme: () => { tiles.setUrl(url()); vec.redraw(); } };
+}
+
+/* напис адміна на мапі (specs/089): картинка напису в його межах у метрах — росте й меншає з мапою, як місцевість.
+   4 px на метр — чітко до найближчого зуму. Шрифт ще вантажиться — спершу запасний, потім перемальовується */
+export const LABEL_PX_PER_M = 4;
+export function labelLayer(l: MapLabel, ll: (x: number, y: number) => L.LatLng, o: { pane?: string; interactive?: boolean } = {}) {
+  const make = () => { const r = renderLabel(l, LABEL_PX_PER_M); return { url: r.canvas.toDataURL(), b: L.latLngBounds(ll(r.box.x0, r.box.y0), ll(r.box.x1, r.box.y1)) }; };
+  const ready = typeof document !== 'undefined' && document.fonts?.check(fontCss(l.font, l.weight, 20));
+  const f = make();
+  const ov = L.imageOverlay(f.url, f.b, { pane: o.pane ?? 'names', interactive: !!o.interactive, className: 'mlabel-img' });
+  if (!ready) loadLabelFont(l.font, l.weight).then(ok => { if (ok) { const g = make(); ov.setUrl(g.url); ov.setBounds(g.b); } });
+  return ov;
 }
 
 /* значок мітки: напівпрозорий розмитий кружок з обводкою кольору категорії (.mpin) */

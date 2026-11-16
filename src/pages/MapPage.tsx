@@ -4,14 +4,14 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
-import { PX_PER_M, TILE, ZMAX, makeHash, parseHash, readView, saveView, toGame, toPx } from '../lib/mapGeo';
+import { PX_PER_M, ZMAX, makeHash, parseHash, readView, saveView, toGame, toPx } from '../lib/mapGeo';
 import { asset } from '../lib/app';
-import { namesLayer } from '../lib/mapVector';
 import { groupCategories, labelShown, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
-import { BUILTIN, BUILTIN_MARKS, baseMap, esc, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
+import { BUILTIN, BUILTIN_MARKS, baseMap, esc, labelLayer, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
+import { labelBox, labelWidth, type MapLabel } from '../lib/mapLabel';
+import MapLabelEdit, { newLabel } from '../components/MapLabelEdit';
 import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
-import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -84,6 +84,12 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   const [edArea, setEdArea] = useState<MapArea | null>(null);
   const [edRing, setEdRing] = useState<[number, number][]>([]);
   const edLayer = useRef<L.LayerGroup | null>(null);
+  /* написи адміна (specs/089): шар «Назви місць»; напис у роботі (новий — без dbId) і очікування кліку, де його поставити */
+  const [labels, setLabels] = useState<MapLabel[]>([]);
+  const [edLabel, setEdLabel] = useState<MapLabel | null>(null);
+  const [labelPick, setLabelPick] = useState(false);
+  const labelPickRef = useRef(false);
+  const labLayer = useRef<L.LayerGroup | null>(null);
   const [cats, setCats] = useState<MapCategory[]>(BUILTIN);
   const [marks, setMarks] = useState<MapMark[]>(BUILTIN_MARKS);
   const [saved] = useState(readOn);
@@ -176,7 +182,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }, [game]);
   const [openG, setOpenG] = useState<Record<string, boolean>>(readOpen);
   const toggleG = (g: string) => setOpenG(o => { const n = { ...o, [g]: !o[g] }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* приватний режим */ } return n; });
-  const count = useMemo(() => { const n: Record<string, number> = { names: LABELS.length, zones: ZONES.length }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas]);
+  const count = useMemo(() => { const n: Record<string, number> = { names: labels.length, zones: ZONES.length }; for (const m of [...marks, ...areas]) n[m.category] = (n[m.category] || 0) + 1; return n; }, [marks, areas, labels]);
   const today = kyivDay(Date.now());   // для «з 23.10 до 12.11» під назвою категорії-івенту
   /* гостям порожні категорії не показуємо — лише адміну, щоб він міг їх наповнити */
   const visibleCats = useMemo(() => cats.filter(c => c.builtin || isAdmin || count[c.id]), [cats, count, isAdmin]);
@@ -192,8 +198,9 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* вікно програми (specs/014 US4): спершу остання копія — мапа одразу з мітками й без інтернету; не вдалось оновити — «станом на …» */
   const [offline, setOffline] = useState<string | null>(null);
   const loadedAt = useRef(0);
-  const apply = (d: { cats: MapCategory[]; marks: MapMark[]; areas: MapArea[] | null; owners: Record<number, string> | null }) => {
+  const apply = (d: { cats: MapCategory[]; marks: MapMark[]; areas: MapArea[] | null; labels?: MapLabel[] | null; owners: Record<number, string> | null }) => {
     if (d.areas) setAreas(d.areas);
+    if (d.labels) setLabels(d.labels);
     if (d.owners) setOwners(d.owners);
     setCats(d.cats); setMarks(d.marks);
   };
@@ -227,6 +234,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     /* координати курсора лишаються після виходу з мапи — щоб їх можна було скопіювати кнопкою в HUD */
     m.on('mousemove', e => setPos(game(e)));
     m.on('click', e => {
+      if (labelPickRef.current) { const g = game(e); labelPickRef.current = false; setLabelPick(false); setEdLabel(newLabel(Math.round(g[0]), Math.round(g[1]))); return; }
       if (moveRef.current) { const g = game(e); setMoving(v => (v ? { ...v, pt: g } : v)); return; }
       if (drawRef.current) { const g = game(e); setRing(r => [...r, g]); return; }
       if (!pickRef.current) return;
@@ -302,11 +310,59 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     /* шари мапи: зелені зони й назви місць (дані з експорту Hydra, scripts/minimap) */
     const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
     if (layers.current.zones) for (const z of ZONES as number[][][][]) L.polygon(z.map(r => r.map(([x, y]) => ll(x, y))), { color: '#9ff0b8', weight: 1.5, dashArray: '6 5', fillColor: '#2ea057', fillOpacity: 0.26, interactive: false }).addTo(layers.current.zones);
-    /* назви — трикутники тексту Hydra частиною мапи, як у грі (namesLayer) */
-    if (layers.current.names) { const full = TILE * 2 ** ZMAX; namesLayer(ZMAX, PX_PER_M, ZMAX + 2, L.latLngBounds(m.unproject([0, full], ZMAX), m.unproject([full, 0], ZMAX))).addTo(layers.current.names); }
+    /* назви — написи адміна (specs/089): картинка в межах напису в метрах; адміну — клік: «Змінити / перенести», «Видалити»;
+       напис, який зараз змінюють, малює шар правки */
+    if (layers.current.names) for (const lb of labels) {
+      if (lb.dbId !== undefined && lb.dbId === edLabel?.dbId) continue;
+      const ov = labelLayer(lb, ll, { interactive: isAdmin });
+      if (isAdmin) ov.bindPopup(`<div class="mpop"><span class="mtag">Напис</span><b>${esc(lb.text)}</b><span class="mrow"><button type="button" class="medit" data-edit-label="${lb.dbId}">Змінити / перенести</button><button type="button" class="mdel" data-del-label="${lb.dbId}">Видалити напис</button></span></div>`, POPUP);
+      ov.addTo(layers.current.names);
+    }
     for (const c of cats) if (isOn(c)) layers.current[c.id].addTo(m);
     m.fire('zoomend');
-  }, [cats, marks, areas, isAdmin, owners, edArea, wiki, staleOk]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cats, marks, areas, labels, isAdmin, owners, edArea, edLabel?.dbId, wiki, staleOk]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* напис у роботі: сам напис наживо + дві ручки — центр (перенести) і правий верхній кут (повернути й змінити розмір).
+     Під час перетягування — лише картинка без React, у стан — на dragend */
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    labLayer.current?.remove(); labLayer.current = null;
+    if (!edLabel) return;
+    const ll = (x: number, y: number) => m.unproject(toPx(x, y), ZMAX);
+    const gm = (p: L.LatLng) => { const q = m.project(p, ZMAX); return toGame(q.x, q.y); };
+    const ico = (cls: string, s: number) => L.divIcon({ className: 'mpin-wrap', iconSize: [s, s], iconAnchor: [s / 2, s / 2], html: `<span class="${cls}"></span>` });
+    const g = L.layerGroup().addTo(m);
+    let ov = labelLayer(edLabel, ll).addTo(g), live = edLabel;
+    const redraw = (l: MapLabel) => { live = l; ov.remove(); ov = labelLayer(l, ll).addTo(g); };
+    /* ручка — правий верхній кут повернутого прямокутника напису */
+    const corner = (l: MapLabel) => labelBox(l, labelWidth(l)).corners[1];
+    const mv = L.marker(ll(edLabel.x, edLabel.y), { icon: ico('mmove', 30), draggable: true, title: 'Тягни, щоб перенести напис', zIndexOffset: 1000 }).addTo(g);
+    const rot = L.marker(ll(...corner(edLabel)), { icon: ico('mlabel-h', 18), draggable: true, title: 'Тягни — повернути й змінити розмір', zIndexOffset: 1100 }).addTo(g);
+    mv.on('drag', () => { const [x, y] = gm(mv.getLatLng()); redraw({ ...live, x, y }); });
+    mv.on('dragend', () => setEdLabel({ ...live, x: Math.round(live.x), y: Math.round(live.y) }));
+    const c0 = corner(edLabel), a0 = Math.atan2(c0[1] - edLabel.y, c0[0] - edLabel.x) - (edLabel.angle * Math.PI) / 180, d0 = Math.hypot(c0[0] - edLabel.x, c0[1] - edLabel.y) || 1;
+    rot.on('drag', () => {
+      const [x, y] = gm(rot.getLatLng()), dx = x - edLabel.x, dy = y - edLabel.y;
+      let ang = ((Math.atan2(dy, dx) - a0) * 180) / Math.PI; ang = ((ang + 540) % 360) - 180;
+      const size = Math.min(400, Math.max(5, edLabel.size * Math.hypot(dx, dy) / d0));
+      redraw({ ...live, angle: Math.round(ang), size: Math.round(size) });
+    });
+    rot.on('dragend', () => setEdLabel(live));
+    labLayer.current = g;
+  }, [edLabel]);   // eslint-disable-line react-hooks/exhaustive-deps
+  function startLabelEdit(id: number) {
+    const l = labels.find(x => x.dbId === id); if (!l) return;
+    map.current?.closePopup(); setTools(true); setTab('admin'); setEdLabel(l);
+    setTimeout(() => document.getElementById('label-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+  function pickLabel(v: boolean) { labelPickRef.current = v; setLabelPick(v); if (v) { setEdLabel(null); draw(false); } }
+  async function delLabel(id: number) {
+    const l = labels.find(x => x.dbId === id); if (!l) return;
+    if (!confirm(`Видалити напис «${l.text}»?`)) return;
+    const { error } = await supabase!.from('map_labels').delete().eq('id', id);
+    if (error) { alert('Не вдалося видалити: ' + error.message); return; }
+    map.current?.closePopup(); setLabels(ls => ls.filter(x => x.dbId !== id));
+  }
 
   useEffect(() => {
     const m = map.current; if (!m) return;
@@ -538,6 +594,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
           const d = t.closest('button[data-del]'); if (d) del(Number(d.getAttribute('data-del')));
           const da = t.closest('button[data-del-area]'); if (da) delArea(Number(da.getAttribute('data-del-area')));
           const ea = t.closest('button[data-edit-area]'); if (ea) startAreaEdit(Number(ea.getAttribute('data-edit-area')));
+          const el = t.closest('button[data-edit-label]'); if (el) startLabelEdit(Number(el.getAttribute('data-edit-label')));
+          const dl = t.closest('button[data-del-label]'); if (dl) delLabel(Number(dl.getAttribute('data-del-label')));
           const ow = t.closest('button[data-owner]'); if (ow) setOwner(Number(ow.getAttribute('data-owner')));
           const ed = t.closest('button[data-edit]'); if (ed) startEdit(Number(ed.getAttribute('data-edit')));
           const mv = t.closest('button[data-move]'); if (mv) startMove(Number(mv.getAttribute('data-move')));
@@ -653,7 +711,15 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
               onDone={a => { setAreas(as => as.map(x => (x.dbId === a.dbId ? a : x))); setMany([a.category], true); stopAreaEdit(); }} /></div>}
             {dbMissing
               ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
-              : <><CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
+              : <><section className="madmin" aria-label="Назви на мапі">
+                  <h4>Назви на мапі</h4>
+                  <p className="muted">Свій текст, шрифт, колір, обводка, поворот і розмір — видно на сайті, у програмі й у мапі для гри.</p>
+                  <div className="mrow"><button type="button" className={'btn sm' + (labelPick ? ' acc' : ' ghost')} aria-pressed={labelPick} onClick={() => pickLabel(!labelPick)}>
+                    {labelPick ? 'Клікни на мапі, де буде напис…' : 'Новий напис'}</button></div>
+                </section>
+                {edLabel && <div id="label-edit"><MapLabelEdit key={edLabel.dbId ?? 'new'} label={edLabel} onChange={setEdLabel} onCancel={() => setEdLabel(null)}
+                  onSaved={l => { setLabels(ls => (ls.some(x => x.dbId === l.dbId) ? ls.map(x => (x.dbId === l.dbId ? l : x)) : [...ls, l])); setMany(['names'], true); setEdLabel(null); }} /></div>}
+                <CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
                 <MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
                   onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />
                 <MapAdmin cats={cats} marks={marks} picked={picked} picking={picking} onPick={pick} onReload={() => setDataV(v => v + 1)}
@@ -667,7 +733,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             <div><h2 id="mdlg-t">Мапа для гри</h2><small>Заміна мінікарти GTA V через OpenIV</small></div>
             <button type="button" className="hud-b" onClick={() => setGame(false)} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
           </div>
-          {game && <GameMapExport groups={groups} marks={marks} areas={areas} catById={catById} isOn={isOn} loading={!mapReady} />}
+          {game && <GameMapExport groups={groups} marks={marks} areas={areas} labels={labels} catById={catById} isOn={isOn} loading={!mapReady} />}
         </div>
       </dialog>
       <dialog ref={shotDlg} className="mdlg" aria-labelledby="mshot-t" onClose={() => setShotOpen(false)} onClick={e => { if (e.target === shotDlg.current) setShotOpen(false); }}>
@@ -677,7 +743,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             <div><h2 id="mshot-t">Скрін мапи</h2><small>Уся мапа з увімкненими мітками · PNG або SVG</small></div>
             <button type="button" className="hud-b" onClick={() => setShotOpen(false)} aria-label="Закрити" title="Закрити"><Icon name="x" size={18} /></button>
           </div>
-          {shotOpen && <MapShot marks={marks} areas={areas} catById={catById} isOn={isOn} />}
+          {shotOpen && <MapShot marks={marks} areas={areas} labels={labels} catById={catById} isOn={isOn} />}
         </div>
       </dialog>
       <ProposeForm target={propose} mode={proposeMode} onClose={() => setPropose(null)}

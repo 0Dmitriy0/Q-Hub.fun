@@ -17,6 +17,8 @@ export function readCopy(): MapCopy | null {
     if (!(c && typeof c.at === 'string' && Array.isArray(c.cats) && Array.isArray(c.marks))) return null;
     /* копія з попередньої версії: у зонах ще немає звірів (specs/088) — без цього мапа падала на ar.animals */
     if (Array.isArray(c.areas)) c.areas = c.areas.map((a: MapArea) => ({ ...a, animals: sortAnimals(Array.isArray(a.animals) ? a.animals : []) }));
+    /* копія до specs/089 — без написів: мапа без назв, а не падіння */
+    if (!Array.isArray(c.labels)) c.labels = [];
     return c;
   } catch { return null; }
 }

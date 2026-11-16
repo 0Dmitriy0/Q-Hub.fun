@@ -8,7 +8,7 @@ describe('копія мапи для роботи без інтернету (spe
 
   it('зберігається з часом і читається; биті дані чи порожньо — null', () => {
     expect(readCopy()).toBeNull();
-    const d = { cats: [], marks: [{ id: 'a', category: 'x', name: 'A', note: '', x: 1, y: 2 }], areas: null, owners: null };
+    const d = { cats: [], marks: [{ id: 'a', category: 'x', name: 'A', note: '', x: 1, y: 2 }], areas: null, labels: [], owners: null };
     saveCopy(d, Date.UTC(2026, 9, 29, 12, 5));
     expect(readCopy()).toEqual({ ...d, at: '2026-10-29T12:05:00.000Z' });
     store.set('qhub:map:copy', '{"at":"x","cats":[]}'); expect(readCopy()).toBeNull();
@@ -19,6 +19,10 @@ describe('копія мапи для роботи без інтернету (spe
       areas: [{ id: 'area-1', dbId: 1, category: 'hunting-fields', name: 'Поле полювання 1', note: '', ring: [[0, 0], [1, 0], [0, 1]] },
         { id: 'area-2', dbId: 2, category: 'hunting-fields', name: 'Поле полювання 2', note: '', ring: [[0, 0], [1, 0], [0, 1]], animals: ['boar', 'wolf', 'deer'] }] }));
     expect(readCopy()?.areas?.map(a => a.animals)).toEqual([[], ['deer', 'boar']]);
+  });
+  it('копія до specs/089 (без написів) читається з порожнім списком написів', () => {
+    store.set('qhub:map:copy', JSON.stringify({ at: '2026-11-15T10:00:00.000Z', cats: [], marks: [], areas: null, owners: null }));
+    expect(readCopy()?.labels).toEqual([]);
   });
   it('оновлювати з 5 хв', () => {
     expect(stale(0, 4 * 60e3)).toBe(false);

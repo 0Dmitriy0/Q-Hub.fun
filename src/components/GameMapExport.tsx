@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { readGameTheme, saveGameTheme, type GameTheme } from '../lib/gameTheme';
 import type { MapArea, MapCategory, MapMark } from '../lib/mapData';
+import type { MapLabel } from '../lib/mapLabel';
 import { BIG_CAT, MANY_PINS, packSummary } from '../lib/gamePreview';
-import LABELS from '../data/mapLabels.json';
 import ZONES from '../data/mapZones.json';
 import GamePreview from './GamePreview';
 import { ANIMAL_BY_ID, animalSpots } from '../lib/huntAnimals';
 import Icon from './Icon';
 
-/* шари мапи (не мітки): у грі це готові файли назв і зон */
-const LAYER_COUNT = { names: LABELS.length, zones: ZONES.length };
+/* шари мапи (не мітки): назви — написи адміна (specs/089), зелені зони — готовий файл */
+const LAYER_COUNT = { names: 0, zones: ZONES.length };
 const isLayer = (id: string) => id in LAYER_COUNT;
 
 /* це адмін хоче бачити на карті для гри одразу — галочки стоять, навіть якщо на сайті категорію чи шар сховано */
@@ -30,8 +30,8 @@ function saveCatSizes(v: Record<string, number>) { try { localStorage.setItem(SI
 
 /* «Карта для гри»: гравець галочками вибирає мітки, сайт збирає zip у форматі Hydra (вектор мінікарти + значки + 6 текстур).
    specs/026: зліва (на телефоні — зверху) перегляд того, що буде на мінікарті, справа вибір, кнопка «Скачати» з підсумком завжди видно */
-export default function GameMapExport({ groups, marks, areas, catById, isOn, loading = false }: {
-  groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; areas: MapArea[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean; loading?: boolean;
+export default function GameMapExport({ groups, marks, areas, labels, catById, isOn, loading = false }: {
+  groups: { grp: string; cats: MapCategory[] }[]; marks: MapMark[]; areas: MapArea[]; labels: MapLabel[]; catById: Record<string, MapCategory>; isOn: (c: MapCategory) => boolean; loading?: boolean;
 }) {
   /* поки галочку не чіпали — як у фільтрі мапи (категорії з бази приходять уже після відкриття сторінки) */
   const [sel, setSel] = useState<Record<string, boolean>>({});
@@ -47,7 +47,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   const [shut, setShut] = useState<Record<string, boolean>>({});   // згорнуті групи
   const [busy, setBusy] = useState(''); const [err, setErr] = useState('');
   const [done, setDone] = useState(false);   // архів завантажено — показати, як поставити (specs/023)
-  const count: Record<string, number> = { names: LAYER_COUNT.names, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
+  const count: Record<string, number> = { names: labels.length, zones: LAYER_COUNT.zones }; for (const m of [...marks, ...areas]) count[m.category] = (count[m.category] || 0) + 1;
   const all = list.flatMap(g => g.cats);
   const picked = marks.filter(m => catById[m.category] && !inGame(catById[m.category]) && on(catById[m.category]));
   /* зони з бази (поля скарбів): відтінок на текстурах і пунктирна межа у векторі мінікарти */
@@ -76,7 +76,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
     try {
       const { buildGamePack } = await import('../lib/gameMap');
       const ps = withMarks ? pins : [];
-      const blob = await buildGamePack(ps, { iconM, layers: withMarks ? layers : [], theme, areas: withMarks ? shownAreas : [] }, setBusy);
+      const blob = await buildGamePack(ps, { iconM, layers: withMarks ? layers : [], theme, areas: withMarks ? shownAreas : [], labels }, setBusy);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'q-hub-minimap.zip';
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
       setDone(true);
@@ -87,7 +87,7 @@ export default function GameMapExport({ groups, marks, areas, catById, isOn, loa
   return (
     <div className="gx">
       <div className="gx-prev">
-        <GamePreview theme={theme} names={layers.includes('names')} zones={layers.includes('zones')} pins={pins} areas={shownAreas} iconM={iconM} loading={loading} />
+        <GamePreview theme={theme} names={layers.includes('names')} zones={layers.includes('zones')} pins={pins} areas={shownAreas} labels={labels} iconM={iconM} loading={loading} />
       </div>
       <div className="gx-side">
         <div className="gx-scroll">
