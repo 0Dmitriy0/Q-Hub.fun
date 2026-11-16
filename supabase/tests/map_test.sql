@@ -3,6 +3,12 @@
 set client_min_messages = warning;
 do $$ begin assert (select count(*) from public.map_categories) = 42, 'початкових категорій не 42 (39 і «Гарбузи» з 0033; «вода» й «їжа» — одна «Вендингові апарати», 0066; «Роботи» й «Скупники» для міток з бази, 0071)'; end $$;
 
+-- 0072: роботи й скупники з коду сайту тепер у базі; мітки робіт закріплені за роботами довідника
+do $$ begin
+  assert (select count(*) from public.map_points where category_id in ('jobs', 'buyers')) = 20, 'міток робіт і скупників з коду не 20';
+  assert (select count(*) from public.map_points where job_id is not null) = (select count(distinct job_id) from public.map_points), 'одна робота має кілька міток';
+end $$;
+
 set role anon;
 select set_config('request.jwt.claim.sub', '', false) \gset
 do $$ begin
@@ -28,7 +34,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a
 insert into public.map_categories (id, name, grp, icon, color) values ('boxes', 'Скрині', 'Інше', '/icons/jobs/treasure.svg', '#22c55e');
 insert into public.map_points (category_id, name, x, y) values ('boxes', 'Скриня 1', 100.5, -200), ('trash-bins', 'Бак біля пірсу', -1600, -1000);
 do $$ begin
-  assert (select count(*) from public.map_points) = 2, 'адмін не додав мітки';
+  assert (select count(*) from public.map_points where category_id not in ('jobs', 'buyers')) = 2, 'адмін не додав мітки';
   assert (select created_by from public.map_points where name = 'Скриня 1') = auth.uid(), 'автор мітки не записаний';
   begin insert into public.map_points (category_id, x, y) values ('boxes', 99999, 0); raise exception 'мітку поза мапою прийнято';
   exception when check_violation then null; end;
@@ -53,15 +59,15 @@ do $$ begin
   exception when check_violation then null; end;
 end $$;
 delete from public.map_categories where id = 'boxes';
-do $$ begin assert (select count(*) from public.map_points) = 1, 'мітки видаленої категорії лишились'; end $$;
+do $$ begin assert (select count(*) from public.map_points where category_id not in ('jobs', 'buyers')) = 1, 'мітки видаленої категорії лишились'; end $$;
 -- «Роботи» й «Скупники» (0071): адмін ставить мітку нової роботи, хоча рядка категорії не бачить і змінити його не може
 insert into public.map_points (category_id, name, x, y, icon) values ('jobs', 'Пілот', -1037, -2737, '/icons/jobs/pilot.svg'), ('buyers', 'Новий скупник', 0, 0, null);
 update public.map_categories set name = 'Зламано' where id = 'jobs';
 do $$ begin
-  assert (select count(*) from public.map_points where category_id in ('jobs', 'buyers')) = 2, 'мітки в «Роботи»/«Скупники» не додано';
+  assert (select count(*) from public.map_points where name in ('Пілот', 'Новий скупник')) = 2, 'мітки в «Роботи»/«Скупники» не додано';
   assert not exists (select 1 from public.map_categories where id = 'jobs'), 'адмін бачить службову категорію «Роботи»';
 end $$;
-delete from public.map_points where category_id in ('jobs', 'buyers');
+delete from public.map_points where name in ('Пілот', 'Новий скупник');
 reset role;
 do $$ begin assert (select name from public.map_categories where id = 'jobs') = 'Роботи', 'адмін змінив службову категорію «Роботи»'; end $$;
 set role anon;

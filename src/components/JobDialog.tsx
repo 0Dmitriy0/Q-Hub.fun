@@ -7,7 +7,7 @@ import Icon from './Icon';
 import Profit from './Profit';
 import PageMeta from './wiki/PageMeta';
 import HourlyChart from './wiki/HourlyChart';
-import { jobIconSrc, type JobRow } from '../lib/jobsData';
+import { jobIconSrc, loadJobMarks, type JobMark, type JobRow } from '../lib/jobsData';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { dbError } from '../lib/wiki';
@@ -57,10 +57,22 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
   /* іконка й видалення назавжди — лише admin (0062); у базі це теж перевіряється */
   const admin = role === 'admin' && !!supabase && job?.version !== undefined;
   useEffect(() => { setErr(''); setPick(false); if (job) dlg.current?.showModal(); else dlg.current?.close(); }, [job?.id]);
+  /* мітки «Роботи» з бази (0072): серед них — мітка цієї роботи; адмін присвоює її тут же */
+  const [marks, setMarks] = useState<JobMark[] | null>(null);
+  const [markBusy, setMarkBusy] = useState(false);
+  useEffect(() => { if (job) loadJobMarks().then(setMarks); }, [job?.id]);
   if (!job) return <dialog ref={dlg} className="modal jmodal" onClose={onClose} />;
   const list = (k: keyof Job) => (job[k] as string[] | undefined) || [];
-  /* точка влаштування на мапі — з тих самих даних, що й мітки «Роботи» на мапі */
-  const pt = POINTS.find(p => p.kind === 'job' && p.job === job.id);
+  /* точка влаштування на мапі — мітка, яку роботі присвоїв адмін; до міграції 0072 і без бази — з коду */
+  const mine = marks?.find(m => m.job === job.id);
+  const pt = marks ? mine : POINTS.find(p => p.kind === 'job' && p.job === job.id);
+  const setMark = async (v: string) => {
+    setMarkBusy(true);
+    let { error } = await supabase!.from('map_points').update({ job_id: null }).eq('job_id', job.id);
+    if (!error && v) ({ error } = await supabase!.from('map_points').update({ job_id: job.id }).eq('id', Number(v)));
+    setErr(error ? dbError(error) : '');
+    setMarks(await loadJobMarks()); setMarkBusy(false);
+  };
   const layer = JOB_LAYER[job.id];
   const setIcon = async (icon: string) => {
     const { error } = await supabase!.from('jobs').update({ icon }).eq('id', job.id);
@@ -109,6 +121,12 @@ export default function JobDialog({ job, onClose, onPropose, onHide, onChanged }
             <button type="button" className={'btn ghost sm' + (pick ? ' on' : '')} aria-expanded={pick} onClick={() => setPick(p => !p)}>Іконка з мапи</button>
             {job.icon && <button type="button" className="btn ghost sm" onClick={() => setIcon('')}>Стандартна іконка</button>}
             {job.hidden && <button type="button" className="btn sm bad" onClick={purge}>Видалити назавжди</button>}
+            {marks && <label className="jd-mark">Мітка на мапі
+              <select className="min" value={mine ? String(mine.id) : ''} disabled={markBusy} onChange={e => setMark(e.target.value)}>
+                <option value="">— немає —</option>
+                {marks.map(m => <option key={m.id} value={m.id}>{(m.name || 'Без назви') + ` (${Math.round(m.x)}, ${Math.round(m.y)})` + (m.job && m.job !== job.id ? ' · інша робота' : '')}</option>)}
+              </select></label>}
+            {marks && <Link className="btn ghost sm" to="/mapa?tools=marks" title="Постав мітку в категорії «Роботи», потім вибери її тут">Поставити нову на мапі</Link>}
             {err && <span className="bad" role="alert">{err}</span>}
           </div>
         )}

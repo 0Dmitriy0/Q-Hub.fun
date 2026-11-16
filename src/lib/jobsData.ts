@@ -29,6 +29,18 @@ export function wikiReady(): Promise<boolean> {
   return ready;
 }
 
+/* мітки категорії «Роботи» на мапі (0072): яку з них показує «Мітка на мапі» в описі роботи — вирішує job_id,
+   його виставляє адмін. null — бази чи колонки job_id ще немає: тоді точки беруться з коду (data/mapPoints.ts) */
+export type JobMark = { id: number; name: string; x: number; y: number; job: string | null };
+export async function loadJobMarks(): Promise<JobMark[] | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('map_points').select('*').eq('category_id', 'jobs').order('name');
+  if (error || !data) return null;
+  const rows = data as Record<string, unknown>[];
+  if (rows.length && !('job_id' in rows[0])) return null;
+  return rows.filter(r => !r.hidden).map(r => ({ id: r.id as number, name: (r.name as string) || '', x: r.x as number, y: r.y as number, job: (r.job_id as string | null) || null }));
+}
+
 let cache: JobRow[] | null = null;
 export async function loadJobs(): Promise<JobRow[] | null> {
   if (!supabase) return null;

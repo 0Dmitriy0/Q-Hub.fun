@@ -490,6 +490,8 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jd-pay-by { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
 .jd-pay-stale { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 5px; background: var(--warn-soft); color: var(--warn); font-weight: 600; }
 .jd-pay-by:empty { display: none; }
+.jd-mark { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.jd-mark select { width: auto; max-width: 260px; }
 .jd-admin { flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px dashed var(--line2); font-size: 13px; }
 .jd-src a { color: var(--accent-hi); }
 

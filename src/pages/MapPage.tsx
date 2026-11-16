@@ -140,11 +140,13 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* панель: вкладки й згорнуті групи */
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
   /* /mapa?tools=drafts — з адмін-панелі (specs/039): одразу розбір чернеток */
-  const draftsLink = new URLSearchParams(window.location.search).get('tools') === 'drafts';
+  /* /mapa?tools=marks — з вікна роботи у вікі: одразу «Мітки», щоб поставити точку нової роботи */
+  const toolsLink = new URLSearchParams(window.location.search).get('tools');
+  const draftsLink = toolsLink === 'drafts';
   /* панель адміна по розділах: у кожній вкладці лише своє (раніше все було одним стовпцем) */
   const [tab, setTab] = useState<AdminTab>(draftsLink ? 'drafts' : 'marks');
   const [labelQ, setLabelQ] = useState('');
-  const [tools, setTools] = useState(draftsLink);
+  const [tools, setTools] = useState(!!toolsLink);
   /* скільки нових чернеток з F9 чекає адміна — видно на кнопці внизу мапи; є нові — плитка відкривається одразу на них */
   const [newDrafts, setNewDrafts] = useState(0);
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     if (shotOpen && !d.open) d.showModal(); else if (!shotOpen && d.open) d.close();
   }, [shotOpen]);
   useEffect(() => {
-    if (params.get('game') || params.get('show')) history.replaceState(null, '', location.pathname + location.hash);
+    if (params.get('game') || params.get('show') || params.get('tools')) history.replaceState(null, '', location.pathname + location.hash);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const d = dlg.current; if (!d) return;

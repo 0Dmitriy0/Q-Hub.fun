@@ -37,11 +37,12 @@ export const BUILTIN_MARKS: MapMark[] = POINTS.map(p => {
     : { id: p.id, category: 'buyers', name: p.name, note: p.note || '', x: p.x, y: p.y, icon: p.id === 'buyer-junk' ? '/icons/junk/buyer.svg' : '/icons/harvest/buyer.svg', link: { href: '/tsiny', label: 'Ціни скупників →' } };
 });
 
-/* посилання для міток з бази у вбудованих категоріях: робота з іконкою /icons/jobs/<id>.svg — на її опис, інакше на список */
-const dbLink = (cat: string, icon: string | null): MapMark['link'] => {
+/* посилання для міток з бази у вбудованих категоріях: робота, яку мітці присвоїв адмін (job_id, 0072), або з іконкою
+   /icons/jobs/<id>.svg — на її опис, інакше на список */
+export const dbLink = (cat: string, icon: string | null | undefined, job?: string | null): MapMark['link'] => {
   if (cat === 'buyers') return { href: '/tsiny', label: 'Ціни скупників →' };
   if (cat !== 'jobs') return undefined;
-  const id = /^\/icons\/jobs\/([a-z0-9-]+)\.svg$/.exec(icon || '')?.[1];
+  const id = job || /^\/icons\/jobs\/([a-z0-9-]+)\.svg$/.exec(icon || '')?.[1];
   return id ? { href: `/wiki/roboty?job=${id}`, label: 'Опис роботи →' } : { href: '/wiki/roboty', label: 'Усі роботи →' };
 };
 
@@ -78,8 +79,10 @@ export async function loadMapData(): Promise<MapData | null> {
     staleOk: rows.some(r => 'hidden' in r),
     /* рядки «jobs»/«buyers» у базі (0071) потрібні лише для зв'язку міток — назву й іконку бере код, тож не дублюємо */
     cats: [...BUILTIN, ...(c.data as MapCategory[]).filter(x => !BUILTIN.some(b => b.id === x.id))],
-    marks: [...BUILTIN_MARKS, ...rows.filter(r => !r.hidden).map(r => ({   // сховані («Точка застаріла», 0060) модератор бачить лише в черзі й історії
- id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number), link: dbLink(r.category_id as string, r.icon as string | null) }))],
+    /* після 0072 роботи й скупники з коду вже лежать у базі (ознака — колонка job_id): тоді мітки з коду не домальовуємо,
+       інакше видалена чи перенесена адміном мітка лишалася б ще й на старому місці */
+    marks: [...(rows.some(r => 'job_id' in r) ? [] : BUILTIN_MARKS), ...rows.filter(r => !r.hidden).map(r => ({   // сховані («Точка застаріла», 0060) модератор бачить лише в черзі й історії
+ id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, note: r.note as string, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number), job: (r.job_id as string | null) || undefined, link: dbLink(r.category_id as string, r.icon as string | null, r.job_id as string | null) }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
     areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][], animals: sortAnimals((r.animals as unknown[] | null | undefined) ?? []) })),
     /* написи адміна (0070, specs/089); до міграції — мапа без назв */

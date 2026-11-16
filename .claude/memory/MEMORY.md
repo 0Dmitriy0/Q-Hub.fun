@@ -20,4 +20,4 @@
 - [Власник керує через Lavish](owner-uses-lavish.md) — одна сторінка .lavish/hub.html (оновлювати її, не нові вкладки); відповідь — через --agent-reply-file
 - [Перезапуск програми після зміни](relaunch-app-after-change.md) — закрити Q-Hub власника, зібрати й `npm.cmd start` з коду після кожної зміни програми
 - [Вікно поверх гри забирає ввід](overlay-steals-game-input.md) — RAGE MP втрачає керування навіть без фокусу; після показу з клавіші — game.giveBack()
-- [«Роботи»/«Скупники» приймають мітки з бази](builtin-cats-db-marks.md) — 0071: dbMarks + markCats(); рядки jobs/buyers сховані RLS від усіх
+- [«Роботи»/«Скупники» — мітки з бази](builtin-cats-db-marks.md) — 0071: dbMarks + markCats(); 0072: усі мітки робіт у базі, job_id закріплює мітку за роботою

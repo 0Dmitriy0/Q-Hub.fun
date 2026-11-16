@@ -6,6 +6,8 @@ import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 import IconGrid from './IconGrid';
+import { useJobs } from '../lib/jobsData';
+import { dbLink } from '../lib/mapMarks';
 
 export const dbErr = (m: string) => /map_points_category_id_fkey|foreign key/i.test(m)
   ? 'Щоб ставити мітки в «Роботи» й «Скупники», запусти supabase/migrations/0071_jobs_buyers_db_marks.sql у Supabase → SQL Editor.'
@@ -26,6 +28,9 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
   const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
   const [label, setLabel] = useState(mark.label !== false);
+  /* робота з довідника, до якої належить мітка (0072): лише в категорії «Роботи» */
+  const [job, setJob] = useState(mark.job || '');
+  const { jobs } = useJobs();
   const [photo, setPhoto] = useState(mark.photo || '');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const catIcon = cats.find(c => c.id === cat)?.icon || '';
@@ -38,10 +43,12 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
   }
   async function save() {
     setBusy(true); setMsg('');
-    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}) }).eq('id', mark.dbId!);
+    const jobId = cat === 'jobs' ? job : '';
+    const { error } = await supabase!.from('map_points').update({ category_id: cat, icon, name: name.trim(), note: note.trim(), ...(label !== (mark.label !== false) ? { show_label: label } : {}),
+      ...(jobId !== (mark.job || '') ? { job_id: jobId || null } : {}) }).eq('id', mark.dbId!);
     setBusy(false);
-    if (error) return setMsg(colErr(error.message));
-    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label, photo: photo || undefined });
+    if (error) return setMsg(/job_id/.test(error.message) ? 'Щоб закріпити мітку за роботою, запусти supabase/migrations/0072_job_points_in_db.sql у Supabase → SQL Editor.' : colErr(error.message));
+    onDone({ ...mark, category: cat, icon: icon || undefined, name: name.trim(), note: note.trim(), label, photo: photo || undefined, job: jobId || undefined, link: dbLink(cat, icon, jobId) });
   }
   return (
     <section className="madmin medit-box" aria-label="Змінити мітку">
@@ -58,6 +65,8 @@ export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats
         <small className="muted">Обріж кадр так, щоб не було чату, ніків і HUD — лише місце й об'єкт.</small>
       </div>
       <Select label="Категорія" value={cat} onChange={setCat} searchable options={own.map(c => ({ value: c.id, label: c.name, hint: c.grp }))} placeholder="Категорія" />
+      {cat === 'jobs' && <Select label="Робота з довідника" value={job} onChange={setJob} searchable placeholder="Робота з довідника"
+        options={[{ value: '', label: '— без роботи —' }, ...jobs.map(j => ({ value: j.id, label: j.name }))]} />}
       <p className="muted">Іконка: перша — як у категорії, або будь-яка інша лише для цієї мітки</p>
       <IconGrid value={icon} onChange={setIcon} catIcon={catIcon} label="Іконка мітки" />
       <div className="mrow">
