@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { labelFromRow, labelToRow, type MapLabel } from '../lib/mapLabel';
-import { FONT_BY_ID, LABEL_FONTS, fontFamily, fontWeight, loadLabelFont } from '../lib/labelFonts';
+import { BOLD_STEPS, FONT_BY_ID, LABEL_FONTS, boldStep, fontFamily, loadLabelFont } from '../lib/labelFonts';
 import Select from './Select';
 
 /* новий напис у точці (x, y) — стиль за замовчуванням (specs/089) */
@@ -46,13 +46,14 @@ export default function MapLabelEdit({ label, onChange, onCancel, onSaved }: {
         <label className="mfield">Колір тексту<input type="color" value={label.color} onChange={e => set({ color: e.target.value })} /></label>
         <label className="mfield">Колір обводки<input type="color" value={label.outlineColor} onChange={e => set({ outlineColor: e.target.value })} /></label>
       </div>
-      <Select label="Шрифт" value={label.font} searchable onChange={v => set({ font: v, weight: fontWeight(v, label.weight) })}
+      <Select label="Шрифт" value={label.font} searchable onChange={v => set({ font: v })}
         options={LABEL_FONTS.map(f => ({ value: f.id, label: f.name }))} />
-      <p className="mlabel-sample" style={{ fontFamily: `"${fontFamily(label.font)}", sans-serif`, fontWeight: fontWeight(label.font, label.weight) }}>
+      <div className="mseg" role="radiogroup" aria-label="Товщина шрифту">
+        {BOLD_STEPS.map(([w, name]) => <button key={w} type="button" role="radio" aria-checked={boldStep(label.weight) === w} onClick={() => set({ weight: w })} style={{ fontWeight: w }}>{name}</button>)}
+      </div>
+      <p className="mlabel-sample" style={{ fontFamily: `"${fontFamily(label.font)}", sans-serif`, fontWeight: label.weight }}>
         {label.text || 'Зразок'} · Ґґ Єє Її 123</p>
       {!fontOk && <p className="mmsg" role="status">Шрифт {font.name} не завантажився (немає інтернету?) — поки показано запасним.</p>}
-      {font.weights.length > 1 && <Select label="Товщина" value={fontWeight(label.font, label.weight)} onChange={v => set({ weight: v })}
-        options={font.weights.map(w => ({ value: w, label: String(w) }))} />}
       <label className="mfield">Товщина обводки, м
         <span className="mlabel-num"><input type="range" min={0} max={20} step={0.5} value={label.outlineW} onChange={e => set({ outlineW: +e.target.value })} />
           <input className="min" type="number" min={0} max={20} step={0.5} value={label.outlineW} onChange={e => set({ outlineW: num(e.target.value, 0, 20) })} /></span>

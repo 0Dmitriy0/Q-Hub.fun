@@ -42,6 +42,8 @@ const HOME: [number, number] = [0, -800];
 const HOME_Z = 3;
 /* швидкі перемикачі шарів у верхній панелі (як «Зони & GZ» у макеті) */
 const QUICK: [string, string][] = [['zones', 'Зелені зони'], ['names', 'Назви']];
+type AdminTab = 'marks' | 'zones' | 'labels' | 'cats' | 'drafts';
+const ADMIN_TABS: [AdminTab, string][] = [['marks', 'Мітки'], ['zones', 'Зони'], ['labels', 'Назви'], ['cats', 'Категорії'], ['drafts', 'Чернетки F9']];
 
 /* embed — мапа у вікні програми (specs/014): лише перегляд — без інструментів адміна, «Скріну», «Мапи для гри» й чернеток;
    кадр — у localStorage (адреси немає), посилання на сторінки сайту — onLink (програма відкриває їх у браузері) */
@@ -139,7 +141,9 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* інструменти адміна й чернетки — окрема плитка праворуч, відкривається кнопкою внизу мапи */
   /* /mapa?tools=drafts — з адмін-панелі (specs/039): одразу розбір чернеток */
   const draftsLink = new URLSearchParams(window.location.search).get('tools') === 'drafts';
-  const [tab, setTab] = useState<'admin' | 'drafts'>(draftsLink ? 'drafts' : 'admin');
+  /* панель адміна по розділах: у кожній вкладці лише своє (раніше все було одним стовпцем) */
+  const [tab, setTab] = useState<AdminTab>(draftsLink ? 'drafts' : 'marks');
+  const [labelQ, setLabelQ] = useState('');
   const [tools, setTools] = useState(draftsLink);
   /* скільки нових чернеток з F9 чекає адміна — видно на кнопці внизу мапи; є нові — плитка відкривається одразу на них */
   const [newDrafts, setNewDrafts] = useState(0);
@@ -350,9 +354,10 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     rot.on('dragend', () => setEdLabel(live));
     labLayer.current = g;
   }, [edLabel]);   // eslint-disable-line react-hooks/exhaustive-deps
-  function startLabelEdit(id: number) {
+  function startLabelEdit(id: number, fly = false) {
     const l = labels.find(x => x.dbId === id); if (!l) return;
-    map.current?.closePopup(); setTools(true); setTab('admin'); setEdLabel(l);
+    map.current?.closePopup(); setTools(true); setTab('labels'); setEdLabel(l);
+    if (fly) map.current?.setView(map.current.unproject(toPx(l.x, l.y), ZMAX), Math.max(map.current.getZoom(), 4));
     setTimeout(() => document.getElementById('label-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   function pickLabel(v: boolean) { labelPickRef.current = v; setLabelPick(v); if (v) { setEdLabel(null); draw(false); } }
@@ -457,7 +462,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }, [edRing, edArea]);   // eslint-disable-line react-hooks/exhaustive-deps
   function startAreaEdit(id: number) {
     const a = areas.find(x => x.dbId === id); if (!a) return;
-    map.current?.closePopup(); draw(false); setRing([]); setTools(true); setTab('admin'); setEdArea(a); setEdRing(a.ring);
+    map.current?.closePopup(); draw(false); setRing([]); setTools(true); setTab('zones'); setEdArea(a); setEdRing(a.ring);
     setTimeout(() => document.getElementById('area-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   function stopAreaEdit() { setEdArea(null); setEdRing([]); }
@@ -566,7 +571,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   }
   function startEdit(id: number) {
     const mk = marks.find(x => x.dbId === id); if (!mk) return;
-    map.current?.closePopup(); setTools(true); setTab('admin'); setEditing(mk);
+    map.current?.closePopup(); setTools(true); setTab('marks'); setEditing(mk);
     setTimeout(() => document.getElementById('mark-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   async function delCat(c: MapCategory) {
@@ -681,7 +686,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                           {c.description && <button type="button" className={'mcat-info' + (isAdmin && !c.builtin ? ' mcat-info-adm' : '')} aria-expanded={info === c.id} aria-controls={'mcat-pop-' + c.id}
                             aria-label={'Що це: ' + c.name} title="Що це" onClick={() => setInfo(i => (i === c.id ? null : c.id))}>i</button>}
                           {info === c.id && c.description && <div id={'mcat-pop-' + c.id} className="mcat-pop" role="note"><b>{c.name}</b><p>{c.description}</p></div>}
-                          {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('admin'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
+                          {isAdmin && !c.builtin && <button type="button" className="mcat-edit" onClick={() => { setCatPick(c.id); setTab('cats'); setTools(true); }} aria-label={'Змінити категорію ' + c.name} title="Змінити категорію"><Icon name="tag" size={12} /></button>}
                           {isAdmin && !c.builtin && <button type="button" className="mcat-del" onClick={() => delCat(c)} aria-label={'Видалити категорію ' + c.name}>✕</button>}
                         </span>
                       );
@@ -697,34 +702,53 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
             <span className="mside-t">{isAdmin ? 'Адмін мапи' : 'Чернетки'}</span>
             <button type="button" className="hud-b" onClick={() => setTools(false)} aria-label="Закрити інструменти" title="Закрити"><Icon name="x" size={16} /></button>
           </div>
-          {isAdmin && isStaff && <div className="mtabs" role="tablist" aria-label="Інструменти">
-            <button type="button" role="tab" aria-selected={tab === 'admin'} onClick={() => setTab('admin')}>Мітки й зони</button>
-            <button type="button" role="tab" aria-selected={tab === 'drafts'} onClick={() => setTab('drafts')}>Чернетки з F9{newDrafts > 0 ? ` · ${newDrafts}` : ''}</button>
+          {isAdmin && <div className="mtabs mtabs-wrap" role="tablist" aria-label="Розділи адміна мапи">
+            {ADMIN_TABS.filter(([id]) => id !== 'drafts' || isStaff).map(([id, name]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+                {name}{id === 'drafts' && newDrafts > 0 ? ` · ${newDrafts}` : id === 'labels' && labels.length ? ` · ${labels.length}` : ''}</button>))}
           </div>}
           {(tab === 'drafts' || !isAdmin) && isStaff && <MapDrafts isAdmin={isAdmin} cats={cats} marks={marks} point={draftPt} picking={picking}
             onPoint={setDraftPt} onPick={v => pick(v, true)} onFocus={focusDraft}
             onPublished={mk => { setMarks(ms => [...ms, mk]); setMany([mk.category], true); }} />}
-          {tab === 'admin' && isAdmin && <>
-            {editing && <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
-              onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>}
-            {edArea && <div id="area-edit"><MapAreaEdit key={edArea.id} area={edArea} cats={cats} ring={edRing} onReset={() => setEdRing(edArea.ring)} onCancel={stopAreaEdit}
-              onDone={a => { setAreas(as => as.map(x => (x.dbId === a.dbId ? a : x))); setMany([a.category], true); stopAreaEdit(); }} /></div>}
-            {dbMissing
-              ? <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>
-              : <><section className="madmin" aria-label="Назви на мапі">
-                  <h4>Назви на мапі</h4>
-                  <p className="muted">Свій текст, шрифт, колір, обводка, поворот і розмір — видно на сайті, у програмі й у мапі для гри.</p>
-                  <div className="mrow"><button type="button" className={'btn sm' + (labelPick ? ' acc' : ' ghost')} aria-pressed={labelPick} onClick={() => pickLabel(!labelPick)}>
-                    {labelPick ? 'Клікни на мапі, де буде напис…' : 'Новий напис'}</button></div>
-                </section>
-                {edLabel && <div id="label-edit"><MapLabelEdit key={edLabel.dbId ?? 'new'} label={edLabel} onChange={setEdLabel} onCancel={() => setEdLabel(null)}
-                  onSaved={l => { setLabels(ls => (ls.some(x => x.dbId === l.dbId) ? ls.map(x => (x.dbId === l.dbId ? l : x)) : [...ls, l])); setMany(['names'], true); setEdLabel(null); }} /></div>}
-                <CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
-                <MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
+          {tab !== 'drafts' && isAdmin && dbMissing && <p className="card err">Таблиць мапи в базі ще немає або вони старої версії. Запусти останній q-hub-map.sql у Supabase → SQL Editor і онови сторінку — тоді тут з'являться інструменти адміна.</p>}
+          {tab !== 'drafts' && isAdmin && !dbMissing && <div className="mtab-body">
+            {/* Мітки: правка вибраної або нова, багато одразу, партії */}
+            {tab === 'marks' && (editing
+              ? <div id="mark-edit"><MarkEdit key={editing.id} mark={editing} cats={cats} onCancel={() => setEditing(null)}
+                  onDone={mk => { setMarks(ms => ms.map(x => (x.id === mk.id ? mk : x))); setMany([mk.category], true); setEditing(null); }} /></div>
+              : <MapAdmin part="marks" cats={cats} marks={marks} picked={picked} picking={picking} onPick={pick} onReload={() => setDataV(v => v + 1)}
+                  onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />)}
+            {/* Зони: правка вибраної або нова */}
+            {tab === 'zones' && (edArea
+              ? <div id="area-edit"><MapAreaEdit key={edArea.id} area={edArea} cats={cats} ring={edRing} onReset={() => setEdRing(edArea.ring)} onCancel={stopAreaEdit}
+                  onDone={a => { setAreas(as => as.map(x => (x.dbId === a.dbId ? a : x))); setMany([a.category], true); stopAreaEdit(); }} /></div>
+              : <><MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
                   onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />
-                <MapAdmin cats={cats} marks={marks} picked={picked} picking={picking} onPick={pick} onReload={() => setDataV(v => v + 1)}
-                  onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} /></>}
-          </>}
+                <p className="muted mtab-tip">Змінити чи видалити зону — клікни по ній на мапі.</p></>)}
+            {/* Назви: правка напису або «Новий напис» і список наявних */}
+            {tab === 'labels' && (edLabel
+              ? <div id="label-edit"><MapLabelEdit key={edLabel.dbId ?? 'new'} label={edLabel} onChange={setEdLabel} onCancel={() => setEdLabel(null)}
+                  onSaved={l => { setLabels(ls => (ls.some(x => x.dbId === l.dbId) ? ls.map(x => (x.dbId === l.dbId ? l : x)) : [...ls, l])); setMany(['names'], true); setEdLabel(null); }} /></div>
+              : <section className="madmin mlabels-admin" aria-label="Назви на мапі">
+                  <p className="muted">Свій текст, шрифт, колір, обводка, поворот і розмір — видно на сайті, у програмі й у мапі для гри.</p>
+                  <button type="button" className={'btn sm' + (labelPick ? ' acc' : ' ghost')} aria-pressed={labelPick} onClick={() => pickLabel(!labelPick)}>
+                    {labelPick ? 'Клікни на мапі, де буде напис…' : 'Новий напис'}</button>
+                  {labels.length > 0 && <>
+                    {labels.length > 6 && <input className="min" type="search" placeholder="Знайти напис" aria-label="Знайти напис" value={labelQ} onChange={e => setLabelQ(e.target.value)} />}
+                    <ul className="mlabel-list">
+                      {labels.filter(l => !labelQ.trim() || l.text.toLowerCase().includes(labelQ.trim().toLowerCase())).sort((a, b) => a.text.localeCompare(b.text, 'uk')).map(l => (
+                        <li key={l.id}><button type="button" onClick={() => l.dbId !== undefined && startLabelEdit(l.dbId, true)} title="Показати на мапі й змінити">
+                          <span className="mlabel-dot" style={{ background: l.color, borderColor: l.outlineColor }} aria-hidden="true" />{l.text}<small className="muted">{Math.round(l.size)} м</small></button></li>))}
+                    </ul></>}
+                  {!labels.length && <p className="muted">Написів ще немає — постав перший.</p>}
+                </section>)}
+            {/* Категорії: змінити наявну й створити нову */}
+            {tab === 'cats' && <>
+              <CatEdit key={catPick || ''} cats={cats} pick={catPick} onSaved={c => setCats(cs => cs.map(x => (x.id === c.id ? c : x)))} />
+              <MapAdmin part="cats" cats={cats} marks={marks} picked={picked} picking={picking} onPick={pick} onReload={() => setDataV(v => v + 1)}
+                onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />
+            </>}
+          </div>}
         </aside>}
       <dialog ref={dlg} className="mdlg wide" aria-labelledby="mdlg-t" onClose={() => setGame(false)} onClick={e => { if (e.target === dlg.current) setGame(false); }}>
         <div className="mdlg-in">

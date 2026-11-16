@@ -569,6 +569,19 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mtabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .mtabs button { flex: none; min-height: 34px; padding: 0 12px; border: 1px solid var(--line2); border-radius: 8px; background: color-mix(in srgb, var(--bg) 55%, transparent); color: var(--muted); font: 700 12.5px var(--sans); cursor: pointer; white-space: nowrap; }
 .mtabs button:hover { color: var(--fg); }
+/* панель адміна мапи: 5 розділів — усі видно, без прокрутки (переносяться в рядки) */
+.mtabs-wrap { flex-wrap: wrap; overflow: visible; }
+.mtabs-wrap button { flex: 1 1 auto; }
+.mtab-body { display: flex; flex-direction: column; gap: 10px; }
+.mtab-body > .madmin > section:first-child { border-top: 0; padding-top: 2px; }
+.mtab-tip { margin: 0; font-size: 12.5px; }
+.mlabels-admin { display: flex; flex-direction: column; gap: 8px; }
+.mlabels-admin > p { margin: 0; }
+.mlabel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 46vh; overflow-y: auto; }
+.mlabel-list button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line2); border-radius: 10px; background: var(--bg); color: var(--fg); font: 600 13.5px var(--sans); text-align: left; cursor: pointer; }
+.mlabel-list button:hover, .mlabel-list button:focus-visible { border-color: var(--accent); outline: none; }
+.mlabel-list small { margin-left: auto; font-weight: 500; }
+.mlabel-dot { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 3px solid; }
 .mtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #140700); box-shadow: 0 2px 8px rgba(255, 107, 0, .25); }
 .mfilters > .mseg { margin: 0; }
 .madmin > summary { display: none; }
