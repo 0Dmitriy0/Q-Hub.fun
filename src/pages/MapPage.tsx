@@ -10,7 +10,7 @@ import { groupCategories, labelShown, markCats, ownerLabel, type MapArea, type M
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, labelLayer, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { labelBox, labelWidth, type MapLabel } from '../lib/mapLabel';
 import MapLabelEdit, { newLabel } from '../components/MapLabelEdit';
-import { isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
+import { STOCK_GROUPS, STOCK_NAME, isVisible, mapRights, onlyIds, toggled } from '../lib/mapFilters';
 import { kyivDay, period } from '../lib/seasons';
 import ZONES from '../data/mapZones.json';
 import { supabase } from '../lib/supabase';
@@ -663,7 +663,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
               <button type="button" onClick={() => setMany(allIds, true)} aria-pressed={allIds.length > 0 && visibleCats.every(isOn)}>Усі</button>
               <button type="button" onClick={() => setMany(allIds, false)} aria-pressed={visibleCats.length > 0 && !visibleCats.some(isOn)}>Жодної</button>
             </div>
-            {groups.map(({ grp, cats: gc }) => {
+            {(() => {
+              const one = ({ grp, cats: gc }: { grp: string; cats: MapCategory[] }) => {
               const nOn = gc.filter(isOn).length, allOn = nOn === gc.length, open = !!openG[grp];
               return (
                 <section key={grp} className={'mgrp' + (open ? ' open' : '')}>
@@ -694,7 +695,29 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                   </div>}
                 </section>
               );
-            })}
+              };
+              /* штатні мітки гри (магазини, структури, транспорт, розваги, заробіток) — одним блоком з одним перемикачем:
+                 вони й так є на мапі в грі, тож ховаються разом і не розтягують список фільтрів */
+              const stock = groups.filter(g => STOCK_GROUPS.has(g.grp));
+              if (stock.length < 2) return groups.map(one);
+              const at = groups.indexOf(stock[0]), sc = stock.flatMap(g => g.cats);
+              const nOn = sc.filter(isOn).length, allOn = nOn === sc.length, open = !!openG[STOCK_NAME];
+              return [
+                ...groups.slice(0, at).map(one),
+                <section key={STOCK_NAME} className={'mgrp mgrp-stock' + (open ? ' open' : '')}>
+                  <div className="mgrp-h">
+                    <button type="button" className="mgrp-t" onClick={() => toggleG(STOCK_NAME)} aria-expanded={open} title="Мітки, які й так є на мапі в грі">
+                      <svg className="mchev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      <span>{STOCK_NAME}</span><span className={'mgrp-n' + (nOn ? ' on' : '')}>{nOn}/{sc.length}</span>
+                    </button>
+                    <button type="button" className="msw-b" role="switch" aria-checked={nOn > 0} onClick={() => setMany(sc.map(c => c.id), !allOn && nOn === 0 ? true : !allOn)}
+                      aria-label={(nOn ? 'Сховати' : 'Показати') + ' ' + STOCK_NAME.toLowerCase()}><span className={'msw' + (nOn && !allOn ? ' part' : '')} aria-hidden="true" /></button>
+                  </div>
+                  {open && <div className="mgrp-sub">{stock.map(one)}</div>}
+                </section>,
+                ...groups.filter((g, i) => i > at && !STOCK_GROUPS.has(g.grp)).map(one)
+              ];
+            })()}
           </section>
         </aside>
         {(isStaff || isAdmin) && tools && <aside id="map-tools" className="mside mtools" aria-label="Інструменти мапи">

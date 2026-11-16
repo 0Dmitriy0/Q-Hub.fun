@@ -555,6 +555,8 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mrow > .btn, .mrow > .min { flex: 1; }
 .mgrp { border: 1px solid var(--line2); border-radius: 12px; background: color-mix(in srgb, var(--bg) 55%, transparent); padding: 4px 4px 4px 10px; }
 .mgrp.open { padding-right: 10px; }
+.mgrp-sub { display: grid; gap: 6px; padding: 2px 0 8px; }
+.mgrp-sub .mgrp { background: color-mix(in srgb, var(--surface2) 45%, transparent); }
 .mgrp-h { display: flex; align-items: center; gap: 8px; }
 .mgrp-t { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 4px 2px; border: 0; background: none; color: var(--fg); font: 700 13px var(--sans); cursor: pointer; text-align: left; border-radius: 8px; }
 .mgrp-t:hover { color: var(--accent-hi); }
