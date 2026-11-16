@@ -58,3 +58,30 @@ describe('звірі на мапі для гри — більші за мітк�
     expect(spots).toHaveLength(4);
   });
 });
+
+/* місце звірів, яке вказав адмін (map_areas.animals_at, 0074) */
+import { animalAnchor, isPt } from './huntAnimals';
+describe('місце звірів, вказане адміном', () => {
+  const sq: Pt[] = [[0, 0], [1000, 0], [1000, 1000], [0, 1000]];
+  it('без точки — як раніше; з точкою — сітка з центром у ній', () => {
+    expect(animalAnchor(sq, null)).toEqual([500, 500]);
+    expect(animalAnchor(sq, [100, 200])).toEqual([100, 200]);
+    const { spots, k } = animalLayout(sq, 3, 20, [700, 300]);
+    expect(k).toBe(5);
+    expect(spots).toHaveLength(3);
+    expect(spots.reduce((a, p) => a + p[0], 0) / 3).toBeCloseTo(700);
+    expect(spots.every(p => p[1] === 300)).toBe(true);
+  });
+  it('біля межі значки меншають, щоб лишитись у полі; поза полем — звичайний розмір у точці', () => {
+    const near = animalLayout(sq, 3, 20, [30, 30]);
+    expect(near.k).toBeLessThan(5);
+    expect(near.spots.every(p => inRing(p, sq))).toBe(true);
+    const out = animalLayout(sq, 2, 20, [-300, 500]);
+    expect(out.k).toBe(1);
+    expect(out.spots.map(p => p[1])).toEqual([500, 500]);
+  });
+  it('isPt приймає лише пару чисел', () => {
+    expect(isPt([1, 2])).toBe(true);
+    for (const v of [null, [1], [1, '2'], [1, NaN], 'x', [1, 2, 3]]) expect(isPt(v)).toBe(false);
+  });
+});

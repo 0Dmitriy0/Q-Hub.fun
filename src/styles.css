@@ -700,6 +700,7 @@ body.map-open .foot { display: none; }
 .mlabels-on .leaflet-tooltip.mlabel { display: block; }
 /* звірі на полі полювання (specs/088): плашка з іконками в полі й список у картці поля */
 .manimal { display: grid; gap: 2px; width: max-content; padding: 3px; border-radius: 12px; background: rgba(244, 241, 234, .92); border: 2px solid var(--c, var(--accent)); box-shadow: 0 3px 10px rgba(0, 0, 0, .45); cursor: pointer; }
+.manimal.drag { cursor: move; box-shadow: 0 0 0 4px rgba(255, 106, 31, .35), 0 6px 14px rgba(0, 0, 0, .5); }
 .manimal img { display: block; width: 20px; height: 20px; }
 .mpop .manimals { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--fg); }
 .mpop .manimals i { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-size: 13px; }

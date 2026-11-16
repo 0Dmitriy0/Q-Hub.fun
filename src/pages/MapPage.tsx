@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import MapAdmin, { CatEdit, MarkEdit, dbErr } from '../components/MapAdmin';
-import GameMapExport from '../components/GameMapExport';
+import GameMapExport, { readCatSizes } from '../components/GameMapExport';
 import MapShot from '../components/MapShot';
 import MapDrafts from '../components/MapDrafts';
 import MapAreaDraw, { MapAreaEdit } from '../components/MapAreaDraw';
@@ -26,7 +26,7 @@ import { nearest } from '../lib/mapNear';
 import { asOf, readCopy, saveCopy, stale } from '../desktop/mapCache';
 import ProposeForm, { type ProposeTarget } from '../components/wiki/ProposeForm';
 import { wikiReady } from '../lib/jobsData';
-import { ANIMAL_BY_ID, animalSpots } from '../lib/huntAnimals';
+import { ANIMAL_BY_ID, HUNT_CATEGORY, animalAnchor, animalLayout } from '../lib/huntAnimals';
 
 const ON_KEY = 'qhub:map:on';
 const CLUSTER_MIN = 200;   // від скількох міток категорії групувати їх на віддаленні
@@ -85,6 +85,8 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
   /* зона, яку адмін зараз змінює, і її контур у роботі (зберігається лише кнопкою в MapAreaEdit) */
   const [edArea, setEdArea] = useState<MapArea | null>(null);
   const [edRing, setEdRing] = useState<[number, number][]>([]);
+  /* місце звірів поля, яке адмін зараз змінює: null — підбирається само */
+  const [edZoo, setEdZoo] = useState<[number, number] | null>(null);
   const edLayer = useRef<L.LayerGroup | null>(null);
   /* написи адміна (specs/089): шар «Назви місць»; напис у роботі (новий — без dbId) і очікування кліку, де його поставити */
   const [labels, setLabels] = useState<MapLabel[]>([]);
@@ -305,7 +307,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
       /* звірі поля (specs/088): одна плашка з іконками в рядок у «середині» поля — розмір у пікселях сталий, тож на будь-якому
          зумі іконки не налазять одна на одну; мітки інших шарів лежать поверх (zIndexOffset) */
       if (zoo.length) {
-        const [ax, ay] = animalSpots(ar.ring, 1, 0)[0], per = zoo.length;
+        const [ax, ay] = animalAnchor(ar.ring, ar.animalsAt), per = zoo.length;
         L.marker(m.unproject(toPx(ax, ay), ZMAX), { zIndexOffset: -1000, keyboard: false, title: zoo.map(a => a.name).join(', '),
           icon: L.divIcon({ className: 'manimal-wrap', iconSize: [per * 22 + 8, 30], html: `<span class="manimal" style="--c:${c.color};grid-template-columns:repeat(${per},20px)">${zoo.map(a => `<img src="${esc(asset(a.icon))}" alt="${esc(a.name)}" title="${esc(a.name)}" width="20" height="20">`).join('')}</span>` }) })
           .bindPopup(html, POPUP).addTo(layers.current[c.id]);
@@ -457,15 +459,30 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
     const mv = L.marker(ll(cen), { icon: ico('mmove', 34), draggable: true, title: 'Тягни, щоб перенести всю зону', zIndexOffset: 1000 }).addTo(g);
     const start = m.project(ll(cen), ZMAX), shift = () => m.project(mv.getLatLng(), ZMAX).subtract(start);
     mv.on('drag', () => { const d = shift(); poly.setLatLngs(edRing.map(p => { const q = toPx(p[0], p[1]); return m.unproject([q[0] + d.x, q[1] + d.y], ZMAX); })); });
-    mv.on('dragend', () => { const d = shift(), dx = d.x / PX_PER_M, dy = -d.y / PX_PER_M; setEdRing(r => r.map(([x, y]) => [x + dx, y + dy] as [number, number])); });
+    mv.on('dragend', () => { const d = shift(), dx = d.x / PX_PER_M, dy = -d.y / PX_PER_M; setEdRing(r => r.map(([x, y]) => [x + dx, y + dy] as [number, number])); setEdZoo(z => (z ? [z[0] + dx, z[1] + dy] : z)); });
+    /* звірі поля: плашку тягнуть, куди треба; кружки — де й якого розміру значки стануть на мапі для гри */
+    if (edArea.category === HUNT_CATEGORY && edArea.animals.length) {
+      const zoo = edArea.animals.map(id => ANIMAL_BY_ID[id]), per = zoo.length, base = readCatSizes()[edArea.category] || 20;
+      const foot = L.layerGroup().addTo(g);
+      const show = (at: [number, number] | null) => {
+        foot.clearLayers();
+        const { spots, k } = animalLayout(edRing, per, base, at), r = base * k / 2;
+        for (const [x, y] of spots) L.polygon(Array.from({ length: 24 }, (_, i) => ll([x + r * Math.cos(i * Math.PI / 12), y + r * Math.sin(i * Math.PI / 12)])), { color: '#fff', weight: 1.5, dashArray: '4 4', fillColor: col, fillOpacity: 0.25, interactive: false }).addTo(foot);
+      };
+      show(edZoo);
+      const zm = L.marker(ll(animalAnchor(edRing, edZoo)), { draggable: true, zIndexOffset: 900, title: 'Тягни, щоб перенести звірів',
+        icon: L.divIcon({ className: 'manimal-wrap', iconSize: [per * 22 + 8, 30], html: `<span class="manimal drag" style="--c:${col};grid-template-columns:repeat(${per},20px)">${zoo.map(a => `<img src="${esc(asset(a.icon))}" alt="" width="20" height="20">`).join('')}</span>` }) }).addTo(g);
+      zm.on('drag', () => show(gm(zm.getLatLng())));
+      zm.on('dragend', () => { const p = gm(zm.getLatLng()); setEdZoo([Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10]); });
+    }
     edLayer.current = g;
-  }, [edRing, edArea]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [edRing, edArea, edZoo]);   // eslint-disable-line react-hooks/exhaustive-deps
   function startAreaEdit(id: number) {
     const a = areas.find(x => x.dbId === id); if (!a) return;
-    map.current?.closePopup(); draw(false); setRing([]); setTools(true); setTab('zones'); setEdArea(a); setEdRing(a.ring);
+    map.current?.closePopup(); draw(false); setRing([]); setTools(true); setTab('zones'); setEdArea(a); setEdRing(a.ring); setEdZoo(a.animalsAt ?? null);
     setTimeout(() => document.getElementById('area-edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
-  function stopAreaEdit() { setEdArea(null); setEdRing([]); }
+  function stopAreaEdit() { setEdArea(null); setEdRing([]); setEdZoo(null); }
   function draw(v: boolean) { drawRef.current = v; setDrawing(v); if (v) { pickRef.current = false; setPicking(false); stopAreaEdit(); } }
   async function delArea(id: number) {
     if (!confirm('Видалити цю зону з мапи?')) return;
@@ -743,7 +760,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
                   onMarks={ms => { setMarks(x => [...x, ...ms]); setMany([...new Set(ms.map(m => m.category))], true); }} onCat={c => { setCats(x => [...x, c]); setMany([c.id], true); }} />)}
             {/* Зони: правка вибраної або нова */}
             {tab === 'zones' && (edArea
-              ? <div id="area-edit"><MapAreaEdit key={edArea.id} area={edArea} cats={cats} ring={edRing} onReset={() => setEdRing(edArea.ring)} onCancel={stopAreaEdit}
+              ? <div id="area-edit"><MapAreaEdit key={edArea.id} area={edArea} cats={cats} ring={edRing} zooAt={edZoo} onZooAuto={() => setEdZoo(null)} onReset={() => setEdRing(edArea.ring)} onCancel={stopAreaEdit}
                   onDone={a => { setAreas(as => as.map(x => (x.dbId === a.dbId ? a : x))); setMany([a.category], true); stopAreaEdit(); }} /></div>
               : <><MapAreaDraw cats={cats} ring={ring} drawing={drawing} onDraw={draw} onUndo={() => setRing(r => r.slice(0, -1))} onClear={() => setRing([])}
                   onAdded={a => { setAreas(as => [...as, a]); setRing([]); draw(false); setMany([a.category], true); }} />

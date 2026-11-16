@@ -56,13 +56,28 @@ function grid(c: Pt, n: number, rows: number, step: number): Pt[] {
    Беремо найбільший множник, з яким уся сітка ще влазить у поле; не влазить жоден — звичайний розмір.
    sizeM — розмір звичайного значка (м); крок сітки — 1,15 розміру іконки звіра */
 export const ANIMAL_SCALES = [5, 4, 3, 2.5, 2, 1.5, 1];
-export function animalLayout(ring: readonly Pt[], n: number, sizeM: number): { spots: Pt[]; k: number } {
+export function animalLayout(ring: readonly Pt[], n: number, sizeM: number, at?: Pt | null): { spots: Pt[]; k: number } {
+  /* місце вказав адмін (map_areas.animals_at): сітка з центром саме там, найбільший розмір, з яким вона ще в полі;
+     не влазить жодна — звичайний розмір у цій точці (адмін бачить контур значків під час правки) */
+  if (at) {
+    if (n <= 0) return { spots: [], k: 1 };
+    const pref = Math.ceil(n / 4), rowsOrder = [pref, ...Array.from({ length: n }, (_, i) => i + 1).filter(r => r !== pref)];
+    for (const k of ANIMAL_SCALES) for (const rows of rowsOrder) {
+      const spots = grid(at, n, rows, sizeM * k * 1.15);
+      if (spots.every(p => inRing(p, ring))) return { spots, k };
+    }
+    return { spots: grid(at, n, pref, sizeM * 1.15), k: 1 };
+  }
   for (const k of ANIMAL_SCALES) {
     const spots = animalSpots(ring, n, sizeM * k * 1.15);
     if (k === 1 || spots.every(p => inRing(p, ring))) return { spots, k };
   }
   return { spots: [], k: 1 };
 }
+
+/* точка плашки звірів на мапі сайту: вказана адміном або «середина» поля */
+export const animalAnchor = (ring: readonly Pt[], at?: Pt | null): Pt => at ?? animalSpots(ring, 1, 0)[0];
+export const isPt = (v: unknown): v is Pt => Array.isArray(v) && v.length === 2 && v.every(n => typeof n === 'number' && Number.isFinite(n));
 
 /* Де поставити n іконок звірів у полі: щільна сітка з кроком stepM (метри гри), уся всередині контуру.
    Центр — центр мас, а якщо він поза контуром (увігнуте поле) чи сітка не влазить — найближчі до нього точки

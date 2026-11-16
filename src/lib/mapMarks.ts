@@ -8,7 +8,7 @@ import { POINTS } from '../data/mapPoints';
 import { JOBS } from '../data/jobs';
 import { supabase } from './supabase';
 import { asset } from './app';
-import { sortAnimals } from './huntAnimals';
+import { sortAnimals, isPt } from './huntAnimals';
 import { BRAND_SRC, brandBox } from './mapBrand';
 import { labelFromRow, renderLabel, type MapLabel } from './mapLabel';
 import { fontCss, loadLabelFont } from './labelFonts';
@@ -89,7 +89,7 @@ export async function loadMapData(): Promise<MapData | null> {
  id: 'db-' + r.id, dbId: r.id as number, category: r.category_id as string, name: r.name as string, job: (r.job_id as string | null) || undefined,
  note: (r.note as string) || (r.job_id ? jobNote(jobs.get(r.job_id as string)) : ''), noteAuto: !r.note && !!r.job_id, x: r.x as number, y: r.y as number, owner: r.owner_static as number | null, source: (r.source as string) || null, icon: (r.icon as string | null) || undefined, label: r.show_label !== false, photo: (r.photo_url as string) || undefined, author: au.get(r.id as number), link: dbLink(r.category_id as string, r.icon as string | null, r.job_id as string | null) }))],
     /* таблиці зон ще може не бути (міграція 0021) — тоді мапа просто без зон */
-    areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][], animals: sortAnimals((r.animals as unknown[] | null | undefined) ?? []) })),
+    areas: a.error ? null : ((a.data || []) as Record<string, unknown>[]).map(r => ({ id: 'area-' + r.id, dbId: r.id as number, category: r.category_id as string, name: (r.name as string) || '', note: (r.note as string) || '', ring: r.ring as [number, number][], animals: sortAnimals((r.animals as unknown[] | null | undefined) ?? []), animalsAt: isPt(r.animals_at) ? r.animals_at : null })),
     /* написи адміна (0070, specs/089); до міграції — мапа без назв */
     labels: lb.error ? null : ((lb.data || []) as Record<string, unknown>[]).map(labelFromRow),
     owners: o.error ? null : Object.fromEntries((o.data || []).filter(r => r.game_name).map(r => [r.static_id as number, r.game_name as string]))
