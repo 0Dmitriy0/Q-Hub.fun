@@ -36,3 +36,15 @@ test('вікна рахуються окремо', () => {
   assert.equal(idle.due('map', hidden, 1000), true);
   assert.equal(idle.due('timer', hidden, 1000), false);
 });
+
+test('тиск на пам’ять: сховане й непотрібне закривається одразу, видиме й потрібне — ні', () => {
+  const idle = createIdle(1000), force = { force: true };
+  assert.equal(idle.due('map', hidden, 0, force), true);
+  assert.equal(idle.due('map', { exists: true, visible: true }, 0, force), false);
+  assert.equal(idle.due('rule', { exists: true, visible: false, keep: true }, 0, force), false);
+  assert.equal(idle.due('timer', { exists: false, visible: false }, 0, force), false);
+  /* після примусового закриття відлік для нового вікна — з нуля */
+  assert.equal(idle.due('map', hidden, 10, {}), false);
+  assert.equal(idle.due('map', hidden, 1009), false);
+  assert.equal(idle.due('map', hidden, 1010), true);
+});

@@ -17,9 +17,9 @@ const { ocrRelease } = require('./ocridle.cjs');
 /* в інсталяторі мовні дані лежать поруч з архівом (asarUnpack у package.json): робочі потоки OCR читають з диска */
 const OCR = path.join(__dirname, 'ocr').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 /* як часто знімати екран (замір 2026-11-14): кадр з потоку коштує ~60 мс, тож HUD читаємо раз на TICK_FAST, а поки HUD
-   закритий меню — раз на TICK_MENU, щоб вікно скупника впізнати одразу (заголовок — ~120 мс). Знімок повільний (потік не
+   закритий меню — раз на 0,35 с (далі рідше: scene.cjs menuPace), щоб вікно скупника впізнати одразу (заголовок — ~120 мс). Знімок повільний (потік не
    працює, запасний getSources ~780 мс) — як раніше, раз на TICK_EVERY. Вікно скупника — кадр за кадром */
-const TICK_EVERY = 2000, TICK_FAST = 700, TICK_MENU = 350, SLOW_CAPTURE = 300, TICK_POLL = 100;
+const TICK_EVERY = 2000, TICK_FAST = 700, SLOW_CAPTURE = 300, TICK_POLL = 100;   // крок у меню — scene.cjs menuPace
 /* як часто пробувати інші масштаби HUD, коли гроші не читаються (hud.HUD_SCALES) */
 const HUD_RESCAN = 10e3;
 const SCENE_EVERY = 4e3;        // як часто читати меню, поки HUD закритий
@@ -55,9 +55,18 @@ function vision(deps) {
   let pace = TICK_EVERY, lastProbe = null, lastChange = null, sameFrame = false;   // sameFrame — список той самий, що минулого кадру (не гортали)
   /* один рушій — одна картинка за раз: завдання до того самого рушія стають у чергу */
   const queue = new WeakMap();
-  const on = (w, f) => { const p = (queue.get(w) || Promise.resolve()).then(f); queue.set(w, p.catch(() => {})); return p; };
+  /* лічильники для режиму заміру (specs/090): скільки кадрів якого виду й скільки часу пішло — main забирає раз на хвилину */
+  let stat = {};
+  const hit = (k, ms) => { stat[k] = (stat[k] || 0) + 1; if (ms !== undefined) stat[k + 'Ms'] = (stat[k + 'Ms'] || 0) + ms; };
+  const timed = async (k, f) => { const t = Date.now(); try { return await f(); } finally { hit(k, Date.now() - t); } };
+  const on = (w, f) => { const p = (queue.get(w) || Promise.resolve()).then(() => timed('ocr', f)); queue.set(w, p.catch(() => {})); return p; };
   const feed = hud.watcher();
   let place = null, lastScene = 0;
+  const scenePace = scenes.scenePacer({ every: SCENE_EVERY });
+  let hudRawAt = 0;
+  let hudFirst = false, lastSize = null;   // минулий кадр був з HUD → наступний беремо ділянками; розмір кадру потоку
+  const cut = (key, r, outW) => ({ key, x: r.x, y: r.y, w: r.width, h: r.height, ...(outW ? { outW } : {}) });
+  const hudParts = (w, h, k) => [cut('thumb', { x: 0, y: 0, width: w, height: h }, 96), cut('badge', hud.badgeRegion(w, h, k)), cut('money', hud.region(w, h, k))];
   const pickPrices = pricePicker();
   const covered = coverage();   // «прочитано N з M» → смужка (specs/024)
   const unknownAt = new Map();  // невідомі назви — не частіше разу на годину на пару
@@ -115,6 +124,22 @@ function vision(deps) {
     if (what === 'all') { await stop(); log('ocr released (idle)'); }
     else if (what === 'lists') { const ws = lists; lists = null; await Promise.all(ws.map(w => w.terminate().catch(() => {}))); }
   }
+  /* сторож пам'яті (usage.cjs, specs/090 FR-006): звільнити рушії зараз, не чекаючи простою. 'lists' — рушії списку, якщо
+     список не читали 10 с; 'all' — усі. Лише між кадрами: посеред кадру — відкладається до наступного tick. Наступний кадр
+     створить рушії заново, як після простою. true — щось справді звільнено */
+  let relieveWant = null;
+  async function relieve(kind) {
+    if (busy) { relieveWant = kind === 'all' || relieveWant === 'all' ? 'all' : 'lists'; return kind === 'all' || !!lists; }   // 'all' посеред кадру: рушії саме створюються — звільняться на наступному tick
+    busy = true;
+    try {
+      if (kind === 'all') { const had = !!(digits || text || lists); await stop(); if (had) log('ocr released (memory)'); return had; }
+      if (!lists || Date.now() - listsAt < 10e3) return false;
+      const ws = lists; lists = null;
+      await Promise.all(ws.map(w => w.terminate().catch(() => {})));
+      log('ocr lists released (memory)');
+      return true;
+    } finally { busy = false; }
+  }
   async function stop() {
     const ws = [digits, text, ...(lists || [])];
     digits = text = lists = null;
@@ -124,17 +149,20 @@ function vision(deps) {
   /* гроші HUD у масштабі k. k = 1 — як завжди; більший HUD (4K) — ще й лише білі пікселі (whiteOnly): за сумою банку
      бувають неонові вивіски, і без фільтра «$820 289» читалось як «$8205» (знімки 4K, 2026-11-16) */
   let hudK = 1, hudScanAt = 0;
-  async function readMoney(img, k) {
-    const { width, height } = img.getSize();
-    let crop = img.crop(hud.region(width, height, k));
+  /* crop — уже вирізана ділянка грошей (hud.region): з повного кадру або одразу з потоку екрана */
+  async function readMoney(crop, k) {
     if (k !== 1) crop = whiteOnly(crop, deps.nativeImage);
-    return hud.parse(await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })));
+    const raw = await read(digits, crop.resize({ width: crop.getSize().width * 2, quality: 'best' })), m = hud.parse(raw);
+    /* режим заміру: чому гроші не прочитались — сам текст (лише цифри й «$»), не частіше разу на 5 с */
+    if (!m && deps.trace && Date.now() - hudRawAt > 5000) { hudRawAt = Date.now(); log(`hud ? k=${k} «${raw.trim().replace(/\n/g, ' / ').replace(/[ \t\r]+/g, ' ').slice(0, 40)}»`); }
+    return m;
   }
 
   /* main кличе tick часто (TICK_POLL): кадр раз на TICK_EVERY, а поки минулий кадр був вікном скупника — одразу після
      попереднього, без очікування (кадр 2,5 с при таймері 2 с займав 4 с). Вікно закрили — знову раз на TICK_EVERY */
   async function tick() {
     if (busy) return;
+    if (relieveWant) { const k = relieveWant; relieveWant = null; await relieve(k); }
     if (Date.now() - lastTick < pace && !atList) return;
     lastTick = Date.now();
     atList = false;
@@ -145,30 +173,56 @@ function vision(deps) {
     busy = true;
     try {
       const t0 = Date.now();
-      const img = await deps.capture();
-      if (!img || img.isEmpty()) return;
+      /* поки HUD читається, з потоку екрана беремо лише три ділянки — гроші, значок зміни й зменшений кадр для перевірки
+         на чорний — замість повного кадру (8 МБ на 1080p, 33 МБ на 4K), який щоразу копіювався між процесами заради них
+         (specs/090, H1). Пікселі ділянок ті самі, що й у повному кадрі. Повний кадр — щойно гроші не прочитались
+         (меню, скупник, інший масштаб HUD) і далі, доки HUD знову не прочитається */
+      let img = null, parts = null;
+      if (hudFirst && lastSize && deps.captureParts) {
+        parts = await deps.captureParts(hudParts(lastSize.width, lastSize.height, hudK)).catch(() => null);
+        if (parts && (parts.width !== lastSize.width || parts.height !== lastSize.height)) parts = null;   // змінився розмір екрана
+      }
+      if (parts) hit('part', Date.now() - t0);
+      else {
+        img = await deps.capture();
+        hit('frame', Date.now() - t0);
+        if (!img || img.isEmpty()) return;
+        lastSize = img.getSize();
+      }
       /* чорний кадр (гра в повноекранному режимі) — читати нічого, лише попередити гравця (blackwatch.cjs) */
-      if (deps.onFrame && deps.onFrame(img) === false) return;
+      if (deps.onFrame && deps.onFrame(parts ? parts.thumb : img) === false) return;
       const slow = Date.now() - t0 > SLOW_CAPTURE;
       pace = slow ? TICK_EVERY : TICK_FAST;
       await workers();
-      const { width, height } = img.getSize(), now = Date.now();
-      const badge = hud.hasBadge(img.crop(hud.badgeRegion(width, height, hudK)).toBitmap());
+      const { width, height } = lastSize, now = Date.now();
+      const badge = hud.hasBadge((parts ? parts.badge : img.crop(hud.badgeRegion(width, height, hudK))).toBitmap());
       let money = null;
       if (!badge) {
-        money = await readMoney(img, hudK);
+        money = await readMoney(parts ? parts.money : img.crop(hud.region(width, height, hudK)), hudK);
+        /* ділянки не вистачило: далі потрібен повний кадр */
+        if (!money && !img) {
+          const t1 = Date.now();
+          img = await deps.capture();
+          hit('frame', Date.now() - t1);
+          if (!img || img.isEmpty()) { hudFirst = false; return; }
+          lastSize = img.getSize();
+        }
         /* не прочиталось — може, HUD іншого розміру (4K): інші масштаби, не частіше HUD_RESCAN (HUD закритий меню теж
            не читається, і щокадру зайвих OCR не треба). Що спрацювало — запам'ятовуємо */
         if (!money && now - hudScanAt > HUD_RESCAN) {
           hudScanAt = now;
+          hit('rescan');
           for (const k of hud.scaleOrder(hudK).slice(1)) {
-            money = await readMoney(img, k);
+            money = await readMoney(img.crop(hud.region(lastSize.width, lastSize.height, k)), k);
             if (money) { log(`hud scale ${hudK} -> ${k}`); hudK = k; break; }
           }
         }
       }
       /* баланс HUD — лише для «прибуток за годину сеансу» в смужці (specs/040); облік програма більше не веде.
          watcher відкидає одиничні похибки OCR: баланс береться, коли два кадри поспіль однакові */
+      hit(money ? 'money' : badge ? 'badge' : 'menu');
+      hudFirst = !!money || badge;
+      scenePace.hud(!!money || badge, now);
       feed(money);
       if (feed.stable) deps.onMoney?.(feed.stable, now);
       /* відкрите вікно скупника читаємо щокадру (~2 с), а не раз на SCENE_EVERY: ціна йде на сайт після двох однакових кадрів,
@@ -177,15 +231,15 @@ function vision(deps) {
       /* вікно скупника вже читається (останній кадр — до OPEN_GAP тому): меню не розпізнаємо щоразу, одразу ціни —
          на живій грі кадр займав 20–25 с, з них кілька — розпізнавання меню (specs/024) */
       /* HUD закритий меню — дивимось частіше: вікно скупника треба впізнати одразу, як відкрилось */
-      if (!money && !badge && !slow) pace = TICK_MENU;
+      if (!money && !badge && !slow) pace = scenes.menuPace(scenePace.unreadFor(now), now - lastPricesAt < OPEN_GAP);
       if (!money && !badge && deps.prices() && now - lastPricesAt < OPEN_GAP) {
         lastScene = now;
-        /* новий кадр списку — одразу наступний (друга зчитка підтверджує ціну); той самий — за TICK_MENU, без зайвої роботи */
+        /* новий кадр списку — одразу наступний (друга зчитка підтверджує ціну); той самий — за кроком меню, без зайвої роботи */
         if (await scanPrices(img, now)) { atList = !sameFrame; place = { ...(place || { kind: 'buyer', title: 'Скупник' }), at: now }; return; }
       }
       /* вікно скупника щойно відкрили: заголовок «Купує …» ліворуч угорі читається за ~120 мс — і одразу ціни, без
          розпізнавання всього меню (2,8 с; замір 2026-11-14). Заголовка не видно — як раніше, через меню нижче */
-      if (!money && !badge && deps.prices() && await probeBuyer(img)) {
+      if (!money && !badge && deps.prices() && await timed('probe', () => probeBuyer(img))) {
         const first = place?.kind !== 'buyer' || now - place.at > OPEN_GAP;
         if (await scanPrices(img, now)) {
           if (first) log('scene Скупник (заголовок)');
@@ -193,11 +247,13 @@ function vision(deps) {
           return;
         }
       }
-      if (!money && !badge && now - lastScene > (atBuyer ? 0 : SCENE_EVERY)) {
+      const wide = listParts(width, height).length >= 3;
+      if (!money && !badge && (atBuyer ? now - lastScene > 0 : scenePace.due(now, lastScene, wide))) {
         /* HUD закритий — гравець у меню: де саме */
         lastScene = now;
         const small = img.resize({ width: Math.min(width, 1280), quality: 'good' });
-        const sc = scenes.scene(await read(text, small));
+        const sc = scenes.scene(await timed('scene', () => read(text, small)));
+        scenePace.done(sc?.kind || null, wide);
         if (sc) {
           if (place?.title !== sc.title) log('scene ' + sc.title);
           place = { ...sc, at: now };
@@ -205,7 +261,7 @@ function vision(deps) {
         }
       }
     } catch (e) { log('error ' + (e?.stack || e)); }
-    finally { busy = false; }
+    finally { busy = false; hit('tick', Date.now() - lastTick); }
   }
 
   /* чи це вікно скупника — лише за заголовком «Купує …» (16:9: ділянка заголовка з listParts). Той самий заголовок, що
@@ -224,7 +280,12 @@ function vision(deps) {
   }
 
   /* вікно скупника → ціни на сайт від імені гравця (сервер сам перевіряє межі, ліміт і цикл цін) */
+  /* тривалість кадру списку — у журнал споживання в режимі заміру (specs/090, SC-007) */
   async function scanPrices(img, now) {
+    const t0 = Date.now();
+    try { return await scanList(img, now); } finally { deps.onTiming?.('buyer-frame', Date.now() - t0); }
+  }
+  async function scanList(img, now) {
     const items = await deps.catalog();
     if (!items.length) return null;
     const t0 = Date.now();
@@ -364,7 +425,7 @@ function vision(deps) {
     await deps.onNextChange(buyer, at);
   }
 
-  return { tick, stop };
+  return { tick, stop, relieve, listsAt: () => listsAt, takeStat: () => { const s = stat; stat = {}; return s; } };
 }
 
 module.exports = { vision, whiteOnly, TICK_POLL };

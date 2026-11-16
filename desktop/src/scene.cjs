@@ -23,4 +23,43 @@ function scene(text) {
   return null;
 }
 
-module.exports = { scene };
+/* Коли читати меню цілим екраном (specs/090, H7). Це найдорожче, що робить «зір»: ~3 с розпізнавання на кадр. Замір живої гри
+   2026-11-16: гроші HUD не читались у ~40 % кадрів звичайної гри (не меню — просто кадр не прочитався), і кожен такий кадр
+   запускав читання екрана — 30 з 40 с розпізнавання на хвилину, майже ціле ядро процесора у фоні.
+   На 16:9 вікно скупника впізнається за заголовком на першому ж кадрі (vision.cjs probeBuyer), тож читання всього екрана —
+   запасний шлях і рядок у журналі. Там воно чекає, поки HUD не читається after мс поспіль (справжнє меню, а не один
+   непрочитаний кадр), і після кожного читання без скупника рідшає вдвічі — до max. HUD видно calm мс поспіль (гравець
+   пішов далі, а не закрив меню на секунду) — відлік з початку: другий замір показав, що з поверненням «за три кадри HUD»
+   часті короткі меню знову давали 20 с читання екрана на хвилину. Інший формат екрана — як раніше, раз на every: там заголовок окремо не читається */
+function scenePacer({ every = 4000, max = 30000, after = 1500, calm = 20000 } = {}) {
+  let gap = every, unreadSince = null, readSince = null;
+  return {
+    /* кожен кадр: read — HUD видно (гроші прочитано або є значок зміни) */
+    hud(read, now) {
+      if (read) { unreadSince = null; readSince ??= now; if (now - readSince >= calm) gap = every; }
+      else { readSince = null; unreadSince ??= now; }
+    },
+    /* чи пора читати екран; wide — 16:9 */
+    due(now, lastScene, wide) {
+      if (!wide) return now - lastScene > every;
+      return unreadSince !== null && now - unreadSince >= after && now - lastScene > gap;
+    },
+    /* екран прочитано: kind — що впізнано (null — нічого) */
+    done(kind, wide) { if (wide) gap = kind === 'buyer' ? every : Math.min(gap * 2, max); },
+    get gap() { return gap; },
+    /* скільки мс поспіль HUD не видно (0 — видно) */
+    unreadFor(now) { return unreadSince === null ? 0 : now - unreadSince; },
+  };
+}
+
+/* Як часто знімати екран, поки HUD не видно (specs/090). Часто — лише перші секунди: вікно скупника відкривають з гри,
+   де HUD щойно було видно, і впізнати його треба одразу. HUD немає довго (гру згорнули, пауза, довге меню) — рідше:
+   замір 2026-11-16 показав хвилини поспіль по 140 кадрів з читанням заголовка — 6 % процесора ні на що.
+   near — щойно читали список скупника: там кадр за кадром, як і було */
+const MENU_PACE = [[15e3, 350], [60e3, 700], [Infinity, 2000]];
+function menuPace(unreadMs, near = false) {
+  if (near) return MENU_PACE[0][1];
+  return MENU_PACE.find(([until]) => unreadMs < until)[1];
+}
+
+module.exports = { scene, scenePacer, menuPace };

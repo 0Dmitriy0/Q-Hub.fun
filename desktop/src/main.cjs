@@ -28,6 +28,8 @@ const rulewin = require('./rulewin.cjs');
 const jobtimer = require('./jobtimer.cjs');
 const { blackWatch } = require('./blackwatch.cjs');
 const { createIdle } = require('./idlewin.cjs');
+const usage = require('./usage.cjs');
+const os = require('node:os');
 const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
 const { createWorker } = require('tesseract.js');
@@ -261,9 +263,11 @@ async function whereFrom(img) {
 async function mapKeyPressed() {
   if (mapw?.isVisible()) { hideMap(); return; }
   game.remember();
+  const t0 = Date.now();
   const img = await grabClean().catch(() => null);
   const big = !!img && !!mapmatch.scaleBar({ width: img.getSize().width, height: img.getSize().height, data: img.toBitmap() });
   showMap('key');
+  usageTiming('map-show', Date.now() - t0);
   if (!big) return;
   mapw.webContents.send('map-where', { state: 'busy' });
   mapw.webContents.send('map-where', await whereFrom(img));
@@ -378,11 +382,13 @@ const timerJobIds = () => (Array.isArray(settings.jobsCache) ? new Set(settings.
    Стан кожного живе тут, у головному процесі, тож наступне відкриття створить вікно заново з тим самим вмістом.
    destroy(), а не close(): у таймера й «Окремо» close означає «завершити замір» / «закрити всі правила» */
 const idle = createIdle(Number(process.env.QHUB_IDLE_MS) || undefined);   // QHUB_IDLE_MS — лише для перевірки
-function reapIdle() {
-  const now = Date.now();
-  if (idle.due('map', { exists: !!mapw, visible: !!mapw?.isVisible() }, now)) { const w = mapw; mapw = null; w.destroy(); }
-  if (idle.due('timer', { exists: !!timerw, visible: !!timerw?.isVisible() }, now)) { const w = timerw; timerw = null; w.destroy(); }
-  if (idle.due('rule', { exists: !!rulew, visible: !!rulew?.isVisible(), keep: ruleSt.groups.length > 0 }, now)) { const w = rulew; rulew = null; w.destroy(); }
+/* force — тисне пам'ять (сторож, specs/090): сховані закриваються одразу. Повертає, що закрито */
+function reapIdle(force = false) {
+  const now = Date.now(), o = { force: force === true }, did = [];
+  if (idle.due('map', { exists: !!mapw, visible: !!mapw?.isVisible() }, now, o)) { const w = mapw; mapw = null; w.destroy(); did.push('map'); }
+  if (idle.due('timer', { exists: !!timerw, visible: !!timerw?.isVisible() }, now, o)) { const w = timerw; timerw = null; w.destroy(); did.push('timer'); }
+  if (idle.due('rule', { exists: !!rulew, visible: !!rulew?.isVisible(), keep: ruleSt.groups.length > 0 }, now, o)) { const w = rulew; rulew = null; w.destroy(); did.push('rule'); }
+  return did;
 }
 function createTimerWin() {
   timerw = new BrowserWindow({
@@ -1028,6 +1034,10 @@ async function readScale(img, bar) {
 const WHY = { no_map: 'не видно шкали великої карти', zoom_in: 'карта надто віддалена — наблизьте до 50–1500 м',
   zoom_out: 'карта надто наближена — віддаліть до 50–1500 м', unsure: 'не впевнений у місці', no_ref: 'мапа ще завантажується', error: 'помилка розпізнавання' };
 async function locatePin(img) {
+  const t0 = Date.now();
+  try { return await locatePinRaw(img); } finally { usageTiming('locate', Date.now() - t0); }
+}
+async function locatePinRaw(img) {
   locatorUsed();
   if (!locator || !locatorReady) return { kind: 'no_ref' };
   const bmp = img.toBitmap(), { width, height } = img.getSize(), frame = { width, height, data: bmp };
@@ -1223,7 +1233,11 @@ async function shareShot(name, label, note) {
 let barKey = null;
 function registerHotkey(key) {
   if (barKey) globalShortcut.unregister(barKey);
-  const ok = globalShortcut.register(key, () => { if (!bar.isVisible()) game.remember(); toggleBar(); });
+  const ok = globalShortcut.register(key, () => {
+    const was = bar.isVisible(), t0 = Date.now();
+    if (!was) game.remember();
+    toggleBar().finally(() => { if (!was && bar.isVisible()) usageTiming('bar-show', Date.now() - t0); });
+  });
   barKey = ok ? key : null;
   return ok;
 }
@@ -1328,6 +1342,9 @@ async function captureFrame() {
 const GRAB_FPS = 4, GRAB_IDLE = 20e3, GRAB_RETRY = 60e3, GRAB_WAIT = 1500;
 let grabw = null, grabOn = false, grabStarting = null, grabN = 0, grabIdleT = null, grabFailAt = -Infinity;
 const grabWaits = new Map();
+/* один обробник на все життя програми: вікно потоку перестворюється (простій, сторож пам'яті), і обробник на кожне
+   створення накопичувався б (specs/090, M2) */
+ipcMain.on('grab-frame-done', (e, n, f) => { if (e.sender !== grabw?.webContents) return; const r = grabWaits.get(n); if (r) { grabWaits.delete(n); r(f); } });
 function grabStop() {
   clearTimeout(grabIdleT); grabIdleT = null; grabOn = false;
   if (grabw && !grabw.isDestroyed()) grabw.webContents.send('grab-stop');
@@ -1343,12 +1360,12 @@ async function grabStart() {
       webPreferences: { preload: path.join(__dirname, 'grab.preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false } });
     grabw.webContents.on('will-navigate', e => e.preventDefault());
     grabw.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    ipcMain.on('grab-frame-done', (e, n, f) => { if (e.sender !== grabw?.webContents) return; const r = grabWaits.get(n); if (r) { grabWaits.delete(n); r(f); } });
     await grabw.loadFile(path.join(__dirname, 'grab.html'));
   }
   const ok = await new Promise(res => {
-    const t = setTimeout(() => res(false), 5000);
-    ipcMain.once('grab-started', (e, r) => { clearTimeout(t); res(e.sender === grabw.webContents && !!r?.ok); });
+    const started = (e, r) => { clearTimeout(t); res(e.sender === grabw.webContents && !!r?.ok); };
+    const t = setTimeout(() => { ipcMain.removeListener('grab-started', started); res(false); }, 5000);   // не відповіло — обробник не лишаємо висіти
+    ipcMain.once('grab-started', started);
     grabw.webContents.send('grab-start', { id: src.id, w: size.width, h: size.height, fps: GRAB_FPS });
   });
   if (ok) await new Promise(r => setTimeout(r, 300));   // перший кадр потоку
@@ -1376,6 +1393,25 @@ async function captureFast() {
     try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} grab: потік екрана не працює (${e?.message || e}) — звичайний знімок\n`); } catch { /* журнал не обов'язковий */ }
     return captureFrame();
   }
+}
+/* лише ділянки кадру з того самого потоку (specs/090, H1): { width, height, <key>: NativeImage }. Потік ще не запущено чи
+   не працює — null, і «зір» бере повний кадр через captureFast (він і запускає потік) */
+async function captureParts(regions) {
+  if (!grabOn || !grabw || grabw.isDestroyed()) return null;
+  clearTimeout(grabIdleT); grabIdleT = setTimeout(grabStop, GRAB_IDLE);
+  const n = ++grabN;
+  const f = await new Promise(res => {
+    const t = setTimeout(() => { grabWaits.delete(n); res(null); }, GRAB_WAIT);
+    grabWaits.set(n, x => { clearTimeout(t); res(x); });
+    grabw.webContents.send('grab-frame', n, regions);
+  });
+  if (!f?.parts || f.parts.length !== regions.length) return null;
+  const out = { width: f.width, height: f.height };
+  for (const p of f.parts) {
+    if (!p?.data || p.data.byteLength !== p.width * p.height * 4) return null;
+    out[p.key] = nativeImage.createFromBitmap(Buffer.from(p.data.buffer, p.data.byteOffset, p.data.byteLength), { width: p.width, height: p.height });
+  }
+  return out;
 }
 /* ціни скупника → сайт від імені гравця; сервер сам перевіряє межі, ліміт за годину й цикл цін */
 /* час наступної зміни цін з вікна скупника — на сайт від імені гравця (база перевіряє, що це найближчі 24 год і є нік зі статіком) */
@@ -1410,15 +1446,16 @@ async function autoLimits(buyer, item, price) {
   const { error } = await sb.rpc('report_limit_mismatch', { p_buyer: buyer, p_item: item, p_price: price });
   try { fs.appendFileSync(visionLog(), `${new Date().toISOString()} limits sent ${buyer}/${item} ${price}: ${error ? 'ні — ' + error.message : 'так'}\n`); } catch { /* журнал не обов'язковий */ }
 }
+let eye = null;
 function startVision() {
   trimLog(visionLog());   // завеликий журнал — лишається хвіст, а не порожній файл
-  const eye = vision({
-    nativeImage, logFile: visionLog(), capture: captureFast, catalog: visionCatalog,
+  eye = vision({
+    nativeImage, logFile: visionLog(), capture: captureFast, captureParts, catalog: visionCatalog,
     /* гра йде — HUD читаємо завжди (прибуток за годину сеансу, specs/040); ціни скупників — за налаштуванням і з персонажем */
     active: () => !!settings.session,
     prices: () => prefs().autoPrices !== false && !!settings.character,
     onMoney, onPrices: autoPrices, onNextChange: autoNextChange, onFrame: onGameFrame, onIdle: () => fullscreenSay(blackW.reset()),
-    onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits,
+    onCoverage: c => { onCoverage(c).catch(() => {}); }, onUnknown: autoUnknown, onLimits: autoLimits, onTiming: usageTiming, trace: USAGE_TRACE,
   });
   setInterval(() => eye.tick(), TICK_POLL);
 }
@@ -1501,6 +1538,67 @@ function startAlerts() {
   /* таймер оголошення на маркеті прибрано до виходу (рішення власника 2026-11-10) — слід від тестової збірки не лишаємо */
   if (settings.market) { delete settings.market; saveSettings(); }
   alertsTick(); setInterval(alertsTick, ALERT_TICK);
+}
+
+/* ---------- споживання програми (usage.cjs, specs/090): журнал usage.log і сторож пам'яті.
+   Замір — app.getAppMetrics(): усі процеси програми разом (вікна, GPU, головний з потоками розпізнавання).
+   Журнал лише на цьому ПК, нікуди не відправляється (FR-012); у ньому самі числа — ні кадрів, ні ніків, ні цін.
+   QHUB_USAGE_TRACE=1 — режим заміру: запис щосекунди й тривалість дій гравця (рядки S і T), у гравців вимкнено ---------- */
+const usageLog = () => path.join(dir(), 'usage.log');
+const USAGE_TRACE = process.env.QHUB_USAGE_TRACE === '1';
+/* на скільки ділити суму percentCPUUsage, щоб вийшла частка всього процесора, як у Диспетчері завдань (research.md R1) */
+const USAGE_CPU_DIV = 1;
+const usageWrite = r => { try { fs.appendFileSync(usageLog(), usage.line(r) + '\n'); } catch { /* журнал не обов'язковий */ } };
+function usageTiming(kind, ms) { if (USAGE_TRACE) usageWrite({ type: 'T', at: Date.now(), kind, ms }); }
+/* видно плашку чи мапу — гравець користується програмою; смужка, таймер і закріплене «Окремо» — це ще фон */
+const usageState = () => usage.stateOf({ session: settings.session, windowShown: !!(bar?.isVisible() || mapw?.isVisible()), listsAt: eye?.listsAt(), now: Date.now() });
+/* режим заміру: процесор за видами процесів (головний, GPU, вікна) — сума за хвилину, у десятих частках відсотка */
+let usageByType = {}, usageByTypeN = 0;
+function usageNow() {
+  const ms = app.getAppMetrics();
+  if (USAGE_TRACE) { usageByTypeN++; for (const m of ms) { const k = m.type === 'Browser' ? 'main' : m.type === 'Tab' ? 'win' : String(m.type).toLowerCase(); usageByType[k] = (usageByType[k] || 0) + (Number(m.cpu?.percentCPUUsage) || 0) / USAGE_CPU_DIV; } }
+  return usage.sample(ms, usageState(), Date.now(), USAGE_CPU_DIV);
+}
+/* сторож каже, що звільнити; тут — як. Усе це програма й так робить після простою (ocridle, idlewin, stopLocator), і все
+   відновлюється саме при наступному використанні. Черги відправки, сесії й видимих вікон не торкаємось (FR-006) */
+async function relieveMemory(level, actions, before) {
+  const did = [], want = new Set(actions);
+  try {
+    if (want.has('ocr')) { if (await eye?.relieve('all')) did.push('ocr'); }
+    else if (want.has('lists') && await eye?.relieve('lists')) did.push('lists');
+    if (want.has('map') || want.has('timer') || want.has('rule')) did.push(...reapIdle(true));
+    if (want.has('locator') && locator && !pending.size) { clearTimeout(locatorIdle); stopLocator(); did.push('locator'); }
+    /* вікно потоку екрана — цілком: наступний кадр «зору» створить його заново (grabStart) */
+    if (want.has('grab') && grabw && !grabw.isDestroyed() && !grabWaits.size && !grabStarting) { grabStop(); const w = grabw; grabw = null; w.destroy(); did.push('grab'); }
+  } catch (e) { did.push('error:' + String(e?.message || e).replace(/\s+/g, '_').slice(0, 60)); }
+  setTimeout(() => usageWrite({ type: 'PRESSURE', at: Date.now(), level, before, after: usageNow().mem, did }), 5000);
+}
+function startUsage() {
+  trimLog(usageLog());
+  setInterval(() => trimLog(usageLog()), 24 * 3600e3);
+  /* QHUB_MEM_SOFT / QHUB_MEM_HARD — лише для перевірки сторожа на малих числах (quickstart.md, крок 5) */
+  const soft = Number(process.env.QHUB_MEM_SOFT) || usage.BUDGET.memSoft, hard = Number(process.env.QHUB_MEM_HARD) || usage.BUDGET.memHard;
+  const budget = { ...usage.BUDGET, memSoft: soft, memHard: hard, memOk: Math.min(usage.BUDGET.memOk, Math.round(soft * 0.9)) };
+  const meter = usage.createMeter(budget, { trace: USAGE_TRACE }), guard = usage.createGuard(budget);
+  usageWrite({ type: 'START', at: Date.now(), v: app.getVersion(), cores: os.cpus().length, ram: Math.round(os.totalmem() / 2 ** 30) });
+  setInterval(() => {
+    try {
+      const s = usageNow();
+      if (USAGE_TRACE) usageWrite({ type: 'S', ...s });
+      const r = meter.feed(s);
+      if (r.minute) usageWrite(r.minute);
+      /* режим заміру: що робив «зір» за хвилину — скільки кадрів якого виду й скільки мілісекунд розпізнавання */
+      if (r.minute && USAGE_TRACE) {
+        usageWrite({ type: 'V', at: s.at, stat: eye?.takeStat() || {} });
+        usageWrite({ type: 'V', at: s.at, stat: Object.fromEntries(Object.entries(usageByType).map(([k, v]) => ['cpu10_' + k, 10 * v / (usageByTypeN || 1)])) });
+        usageByType = {}; usageByTypeN = 0;
+      }
+      for (const o of r.over) usageWrite(o);
+      const g = guard.feed(s.mem, s.at);
+      if (g.actions.length) relieveMemory(g.level, g.actions, s.mem);
+      else if (g.changed && g.level === 'ok') usageWrite({ type: 'PRESSURE', at: s.at, level: 'ok', before: s.mem, after: s.mem, did: [] });
+    } catch { /* замір не має валити програму */ }
+  }, USAGE_TRACE ? 1000 : 5000);
 }
 
 /* помилка запуску — повідомлення замість тихого виходу без вікна */
@@ -1734,7 +1832,8 @@ app.whenReady().then(() => {
   createBar();
   createStrip();
   createTray();
-  setInterval(reapIdle, 60e3);
+  setInterval(() => reapIdle(), 60e3);
+  startUsage();
   /* після автозапуску важке — через 30 с, щоб не гальмувати ввімкнення ПК (FR-004); клавіші — одразу (FR-005) */
   const later = f => (autostarted ? setTimeout(f, 30e3) : f());
   later(startUpdates);

@@ -17,3 +17,5 @@ supabase/.temp/
 desktop/src/lib/
 # граф проєкту від graphify (/graphify .) — локальний, не для репозиторію
 graphify-out/
+# сирі CSV замірів програми (specs/090) — локальні
+specs/090-app-resource-limits/runs/

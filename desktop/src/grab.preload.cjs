@@ -2,7 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('grab', {
   onStart: cb => { ipcRenderer.on('grab-start', (_e, p) => cb(p)); },
-  onFrame: cb => { ipcRenderer.on('grab-frame', (_e, n) => cb(n)); },
+  onFrame: cb => { ipcRenderer.on('grab-frame', (_e, n, parts) => cb(n, parts)); },
   onStop: cb => { ipcRenderer.on('grab-stop', () => cb()); },
   started: r => ipcRenderer.send('grab-started', r),
   frame: (n, f) => ipcRenderer.send('grab-frame-done', n, f),
