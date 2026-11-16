@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
+import { markCats, parseBulk, slugify, type MapCategory, type MapMark } from '../lib/mapData';
 import { MAP_ICONS } from '../data/mapIcons';
 import { fromOpenHydra, fromQuantFun } from '../lib/mapGeo';
 import Select from './Select';
 import PicUpload from './PicUpload';
 import IconGrid from './IconGrid';
 
-export const dbErr = (m: string) => /owner_static|icon|column .* does not exist/i.test(m)
+export const dbErr = (m: string) => /map_points_category_id_fkey|foreign key/i.test(m)
+  ? 'Щоб ставити мітки в «Роботи» й «Скупники», запусти supabase/migrations/0071_jobs_buyers_db_marks.sql у Supabase → SQL Editor.'
+  : /owner_static|icon|column .* does not exist/i.test(m)
   ? 'У базі стара версія таблиць мапи. Запусти оновлений q-hub-map.sql у Supabase → SQL Editor ще раз.'
   : /relation .*map_(points|categories)|schema cache/i.test(m)
   ? 'У базі ще немає таблиць мапи. Запусти q-hub-map.sql у Supabase → SQL Editor.'
@@ -20,7 +22,7 @@ export { IconGrid };
 
 /* редагування мітки: інша категорія і/або своя іконка */
 export function MarkEdit({ mark, cats, onDone, onCancel }: { mark: MapMark; cats: MapCategory[]; onDone: (m: MapMark) => void; onCancel: () => void }) {
-  const own = cats.filter(c => !c.builtin);
+  const own = markCats(cats);
   const [cat, setCat] = useState(mark.category); const [icon, setIcon] = useState<string | null>(mark.icon || null);
   const [name, setName] = useState(mark.name); const [note, setNote] = useState(mark.note);
   const [label, setLabel] = useState(mark.label !== false);
@@ -128,7 +130,7 @@ export default function MapAdmin({ part, cats, marks, picked, picking, onPick, o
   part: 'marks' | 'cats'; cats: MapCategory[]; marks: MapMark[]; picked: [number, number] | null; picking: boolean; onPick: (on: boolean) => void;
   onMarks: (m: MapMark[]) => void; onCat: (c: MapCategory) => void; onReload: () => void;
 }) {
-  const own = cats.filter(c => !c.builtin);
+  const own = markCats(cats);
   const [cat, setCat] = useState(own[0]?.id || '');
   /* категорії з бази приходять уже після відкриття форми — тоді вибираємо першу */
   useEffect(() => { if (!cat && own.length) setCat(own[0].id); }, [own.length]);   // eslint-disable-line react-hooks/exhaustive-deps

@@ -6,7 +6,7 @@ import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { PX_PER_M, ZMAX, makeHash, parseHash, readView, saveView, toGame, toPx } from '../lib/mapGeo';
 import { asset } from '../lib/app';
-import { groupCategories, labelShown, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
+import { groupCategories, labelShown, markCats, ownerLabel, type MapArea, type MapCategory, type MapMark } from '../lib/mapData';
 import { BUILTIN, BUILTIN_MARKS, baseMap, esc, labelLayer, loadMapData, photoHtml, pinIcon } from '../lib/mapMarks';
 import { labelBox, labelWidth, type MapLabel } from '../lib/mapLabel';
 import MapLabelEdit, { newLabel } from '../components/MapLabelEdit';
@@ -771,7 +771,7 @@ export default function MapPage({ embed = false, onLink, focus, where = null, on
         </div>
       </dialog>
       <ProposeForm target={propose} mode={proposeMode} onClose={() => setPropose(null)}
-        options={{ category_id: cats.filter(c => !c.builtin).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />
+        options={{ category_id: markCats(cats).sort((a, b) => a.name.localeCompare(b.name, 'uk')).map(c => [c.id, c.name] as [string, string]) }} />
     </div>
   );
 }

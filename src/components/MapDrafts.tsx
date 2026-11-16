@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import Select from './Select';
-import type { MapCategory, MapMark } from '../lib/mapData';
+import { markCats, type MapCategory, type MapMark } from '../lib/mapData';
 import {
   authorName, loadDrafts, nearby, publishDraft, purgeExpiredShots, rejectDraft, shotUrl, shotUrls, statusLabel, type MapDraft,
 } from '../lib/mapDrafts';
@@ -15,7 +15,7 @@ export default function MapDrafts({ isAdmin, cats, marks, point, picking, onPoin
   onPoint: (p: [number, number] | null) => void; onPick: (on: boolean) => void;
   onFocus: (p: [number, number]) => void; onPublished: (m: MapMark) => void;
 }) {
-  const own = cats.filter(c => !c.builtin);
+  const own = markCats(cats);
   /* підказка редактора: «Сміттєві баки · бак за магазином» */
   const hintText = (d: MapDraft) => [own.find(c => c.id === d.category_id)?.name, d.note?.trim()].filter(Boolean).join(' · ');
   const [drafts, setDrafts] = useState<MapDraft[] | null>(null);
