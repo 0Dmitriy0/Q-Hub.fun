@@ -142,6 +142,15 @@ describe('шари частини мапи — одним файлом', () => {
     expect(doc.min).toEqual([0, 0, 12]); expect(doc.max).toEqual([10, 10, 16.8]);
     expect(parseMesh(doc.mesh).map(g => g.idx.length).reduce((a, b) => a + b, 0)).toBe(12);
   });
+  it('понад межу індексів — теж нова геометрія (кількість індексів у грі 16-бітна)', () => {
+    const many = new IconMesh(); for (let i = 0; i < 5; i++) many.addRect(0, 0, 10, 10, 12, [1, 2, 3]);
+    const gs = joinGeos([parseMesh(meshText(many).mesh)], 65000, 12);
+    expect(gs.map(g => g.idx.length)).toEqual([12, 12, 6]);
+    for (const g of gs) expect(Math.max(...g.idx)).toBeLessThan(g.v.length);
+    /* межа за замовчуванням — нижче 65 536 */
+    const big = new IconMesh(); for (let i = 0; i < 11000; i++) big.addRect(i, 0, i + 1, 1, 12, [1, 2, 3]);
+    expect(Math.max(...joinGeos([parseMesh(meshText(big).mesh)]).map(g => g.idx.length))).toBeLessThanOrEqual(60000);
+  });
   it('у частині лишається один файл переднього плану: мапа, локації, зони, написи, значки', async () => {
     const enc = new TextEncoder(), dec = new TextDecoder(), file = (name: string, text = '') => ({ name, data: enc.encode(text) });
     const mesh = (z: number) => { const x = new IconMesh(); x.addRect(0, 0, 1, 1, z, [0, 0, 0]); return meshText(x).mesh; };
