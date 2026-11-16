@@ -487,12 +487,14 @@ export function parseMesh(text: string): Geo[] {
   return out;
 }
 /* шари (кожен — геометрії одного файлу) → якнайменше геометрій: трикутники йдуть підряд у порядку шарів, однакові
-   вершини в межах геометрії зливаються; нова геометрія — лише коли вершин понад max (індекси в грі 16-бітні) */
-export function joinGeos(layers: Geo[][], max = 65000): Geo[] {
+   вершини в межах геометрії зливаються; нова геометрія — коли вершин понад max або індексів понад maxIdx: у грі 16-бітні
+   і самі індекси, і їх кількість у геометрії. Частина з 66 096 індексами в одній геометрії зблизька не малювалась зовсім
+   (перевірено в грі 2026-11-16, частина 3_7 — центр міста) */
+export function joinGeos(layers: Geo[][], max = 65000, maxIdx = 60000): Geo[] {
   const out: Geo[] = []; let cur: Geo = { v: [], idx: [] }, at = new Map<string, number>();
   const next = () => { if (cur.v.length) out.push(cur); cur = { v: [], idx: [] }; at = new Map(); };
   for (const layer of layers) for (const g of layer) for (let i = 0; i + 2 < g.idx.length; i += 3) {
-    if (cur.v.length + 3 > max) next();
+    if (cur.v.length + 3 > max || cur.idx.length + 3 > maxIdx) next();
     for (let k = 0; k < 3; k++) {
       const line = g.v[g.idx[i + k]]; if (line === undefined) throw new Error('mesh: індекс поза вершинами');
       let j = at.get(line); if (j === undefined) { j = cur.v.length; cur.v.push(line); at.set(line, j); }
