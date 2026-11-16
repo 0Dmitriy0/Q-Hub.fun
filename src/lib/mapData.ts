@@ -1,7 +1,7 @@
 /* Дані мапи: категорії й мітки з бази плюс вбудовані (роботи, скупники) з даних сайту. */
 import type { AnimalId } from './huntAnimals';
 export interface MapCategory { id: string; name: string; grp: string; icon: string; color: string; sort: number; shown: boolean; builtin?: boolean; dbMarks?: boolean; description?: string; starts_on?: string | null; ends_on?: string | null; show_labels?: boolean }
-export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; icon?: string; label?: boolean; photo?: string; author?: string; link?: { href: string; label: string } }
+export interface MapMark { id: string; dbId?: number; category: string; name: string; note: string; x: number; y: number; owner?: number | null; source?: string | null; icon?: string; label?: boolean; photo?: string; author?: string; link?: { href: string; label: string }; job?: string; noteAuto?: boolean }
 
 /* категорії, куди можна поставити мітку з бази: усі адмінські + вбудовані з dbMarks («Роботи», «Скупники», 0071) —
    нова робота чи скупник на проєкті з'являється на мапі без зміни коду. Адмінські — першими, щоб вибір за замовчуванням не змінився */

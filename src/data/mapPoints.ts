@@ -1,4 +1,5 @@
 /* Точки на карті, координати — метри гри (X схід, Y північ). Роботи посилаються на id з data/jobs.ts.
+   ЗАПАС: з 0072 ці точки живуть у базі (map_points, job_id) і правляться в адмінці мапи; тут — лише для сайту без бази.
    Початкові позиції роботодавців узято з мапи QuantFun і перераховано в координати гри (похибка ~3 м). */
 export type PointKind = 'job' | 'buyer';
 export interface MapPoint { id: string; kind: PointKind; name: string; x: number; y: number; job?: string; note?: string }
