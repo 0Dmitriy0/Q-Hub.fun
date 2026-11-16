@@ -55,7 +55,7 @@ function grid(c: Pt, n: number, rows: number, step: number): Pt[] {
 /* Звірі на мапі для гри — більші за звичайний значок: поле полювання велике, і значок розміром з мітку на ньому губився.
    Беремо найбільший множник, з яким уся сітка ще влазить у поле; не влазить жоден — звичайний розмір.
    sizeM — розмір звичайного значка (м); крок сітки — 1,15 розміру іконки звіра */
-export const ANIMAL_SCALES = [3, 2.5, 2, 1.5, 1];
+export const ANIMAL_SCALES = [5, 4, 3, 2.5, 2, 1.5, 1];
 export function animalLayout(ring: readonly Pt[], n: number, sizeM: number): { spots: Pt[]; k: number } {
   for (const k of ANIMAL_SCALES) {
     const spots = animalSpots(ring, n, sizeM * k * 1.15);

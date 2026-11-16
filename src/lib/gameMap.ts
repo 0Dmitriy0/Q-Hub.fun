@@ -5,7 +5,7 @@ import { ytd, type YtdFormat } from './ytd';
 import { BRAND_SRC, brandBox } from './mapBrand';
 import { labelRuns, mergeRuns, renderLabel, splitBySupertile, type LabelRun, type MapLabel } from './mapLabel';
 import { FONT_BY_ID, loadLabelFont } from './labelFonts';
-import { clipToField, fieldTris, tint, type Tri } from './areaFill';
+import { clipConvex, clipToField, fieldTris, tint, type Tri } from './areaFill';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -66,15 +66,8 @@ export function readZip(buf: Uint8Array): ZipEntry[] {
 /* сітка частин мінікарти: стовпці по 1175 м від X -4500, рядки по 1388 м від Y 8000; папка minimap_<стовпець>_<рядок> */
 export const supertileOf = (x: number, y: number): [number, number] => [Math.floor((x + 4500) / 1175), Math.floor((8000 - y) / 1388)];
 
-/* у кожній частині гра читає лише supertile_fore_C_R_tile_X_Y з X, Y від 0 до 2 (tile_3_0 вже ігнорує — назви так і зникали)
-   і, схоже, малює їх за зростанням номера, а не за висотою: tile_0_0 — сама мапа, tile_0_1 — нові локації (base.zip),
-   далі знизу вгору — зелені зони, значки, назви (інакше локація чи тінь тексту лягали поверх літер) */
-export const SLOTS = ['0_1', '0_2', '1_0', '1_1', '1_2', '2_0', '2_1', '2_2'];
+/* файл шару частини мапи; гра читає лише supertile_fore_C_R_tile_X_Y з X, Y від 0 до 2 */
 export const slotFile = (k: string, slot: string) => `minimap_${k}/supertile_fore_${k}_tile_${slot}.odr`;
-export function freeSlot(k: string, taken: Set<string>): string | null {
-  const s = SLOTS.find(x => !taken.has(slotFile(k, x))); if (!s) return null;
-  taken.add(slotFile(k, s)); return s;
-}
 
 /* значок у одиницях [-0.5, 0.5]: горизонтальні смужки однакового кольору з растру іконки */
 export type IconRuns = { x0: number; x1: number; y0: number; y1: number; c: [number, number, number] }[];
@@ -303,7 +296,7 @@ function runsOf(im: HTMLImageElement | null, n = 24): IconRuns {
 export const oddText = (k: string, odrs: string[]) =>
   `Version 165 32\n{\n${[...new Set(odrs)].sort().map(n => `\tminimap_${k}\\${n}`).join('\n')}\n}`;
 
-/* .mesh і .odr одного шару частини мапи k; tile — тимчасовий номер (tile_L_N), справжній дає toSlots */
+/* .mesh і .odr одного шару частини мапи k; tile — тимчасовий номер (tile_L_N); у грі всі шари частини — один файл (oneFilePerPart) */
 async function meshFiles(out: ZipEntry[], k: string, tile: string, m: IconMesh) {
   const enc = new TextEncoder(), dir = `minimap_${k}/`;
   const { mesh, min, max } = meshText(m);
@@ -313,18 +306,44 @@ async function meshFiles(out: ZipEntry[], k: string, tile: string, m: IconMesh) 
   }
 }
 
-/* файли значків для вектора мінікарти: у кожній частині мапи — тимчасово tile_5_N, справжній номер дає toSlots */
+/* трикутник → шматки по частинах мапи: кожен шматок цілком у своїй частині. Порядок малювання між файлами різних частин
+   гра не гарантує, тож заливка поля чи значок з сусідньої частини не мають заходити на чужу — інакше накривають її написи */
+export function splitByPart(t: Tri): { k: string; t: Tri }[] {
+  const xs = [t[0][0], t[1][0], t[2][0]], ys = [t[0][1], t[1][1], t[2][1]];
+  const [c0, r1] = supertileOf(Math.min(...xs), Math.min(...ys)), [c1, r0] = supertileOf(Math.max(...xs), Math.max(...ys));
+  if (c0 === c1 && r0 === r1) return [{ k: c0 + '_' + r0, t }];
+  const out: { k: string; t: Tri }[] = [];
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
+    const xa = -4500 + c * 1175, xb = xa + 1175, yb = 8000 - r * 1388, ya = yb - 1388;
+    for (const half of [[[xa, ya], [xb, ya], [xb, yb]], [[xa, ya], [xb, yb], [xa, yb]]] as Tri[]) {
+      const p = clipConvex(t, half);
+      for (let i = 1; i + 1 < p.length; i++) {
+        const piece: Tri = [p[0], p[i], p[i + 1]];
+        if (Math.abs((piece[1][0] - piece[0][0]) * (piece[2][1] - piece[0][1]) - (piece[1][1] - piece[0][1]) * (piece[2][0] - piece[0][0])) / 2 >= 0.01) out.push({ k: c + '_' + r, t: piece });
+      }
+    }
+  }
+  return out;
+}
+
+/* файли значків для вектора мінікарти: у кожній частині мапи — тимчасово tile_5_N (oneFilePerPart зливає шари частини).
+   Значок на межі частин ріжеться по межі (splitByPart) */
 async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLImageElement | null>): Promise<ZipEntry[]> {
   const runs = new Map<string, IconRuns>(); for (const [src, im] of imgs) runs.set(src, runsOf(im));
-  const groups = new Map<string, GamePin[]>();
-  for (const p of pins) { const [c, r] = supertileOf(p.x, p.y); const k = c + '_' + r; groups.set(k, [...(groups.get(k) || []), p]); }
-  const out: ZipEntry[] = [];
-  for (const [k, list] of groups) {
-    let m = new IconMesh(), part = 0;
-    const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_5_${part++}`, m); m = new IconMesh(); };
-    for (const p of list) { if (m.size > 60000) await flush(); m.add(p.x, p.y, sizeM * (p.s ?? 1), p.color, runs.get(p.icon) || []); }
-    await flush();
+  const parts = new Map<string, IconMesh[]>();
+  const cur = (k: string) => { let a = parts.get(k); if (!a) parts.set(k, (a = [new IconMesh()])); if (a[a.length - 1].size > 60000) a.push(new IconMesh()); return a[a.length - 1]; };
+  for (const p of pins) {
+    const size = sizeM * (p.s ?? 1), r = size / 2, u = runs.get(p.icon) || [];
+    const ks = new Set([[-r, -r], [r, -r], [-r, r], [r, r]].map(([dx, dy]) => supertileOf(p.x + dx, p.y + dy).join('_')));
+    if (ks.size === 1) { cur([...ks][0]).add(p.x, p.y, size, p.color, u); continue; }
+    const tmp = new IconMesh(); tmp.add(p.x, p.y, size, p.color, u);
+    for (let i = 0; i < tmp.idx.length; i += 3) {
+      const a = tmp.v[tmp.idx[i]], b = tmp.v[tmp.idx[i + 1]], c = tmp.v[tmp.idx[i + 2]];
+      for (const piece of splitByPart([[a[0], a[1]], [b[0], b[1]], [c[0], c[1]]])) cur(piece.k).addTri(piece.t, a[2], [a[3], a[4], a[5]]);
+    }
   }
+  const out: ZipEntry[] = [];
+  for (const [k, list] of parts) for (let i = 0; i < list.length; i++) if (list[i].size) await meshFiles(out, k, `supertile_fore_${k}_tile_5_${i}`, list[i]);
   return out;
 }
 
@@ -340,8 +359,7 @@ async function areaFills(areas: GameArea[], theme: GameTheme): Promise<Map<strin
   const buf = await fetch(mapUrl('/map/game/export.bin')).then(r => r.arrayBuffer());
   const n = new DataView(buf).getUint32(0, true), xy = new Uint16Array(buf, 4, n * 6), col = new Uint8Array(buf, 4 + n * 12, n), q = meta.q as number;
   const put = (t: Tri, c: [number, number, number]) => {
-    const [sc, sr] = supertileOf((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][1] + t[1][1] + t[2][1]) / 3), k = sc + '_' + sr;
-    let a = groups.get(k); if (!a) groups.set(k, (a = [])); a.push({ t, c });
+    for (const p of splitByPart(t)) { let a = groups.get(p.k); if (!a) groups.set(p.k, (a = [])); a.push({ t: p.t, c }); }
   };
   for (const a of areas) {
     const field = fieldTris(a.ring), ac = hex(a.color); if (!field.length) continue;
@@ -383,7 +401,7 @@ export const GAME_LAYERS = { zones: '/map/game/zones.zip' } as const;
 export type GameLayer = 'names' | keyof typeof GAME_LAYERS;
 
 /* написи на радарі мінікарти: той самий рендер, що на сайті, пікселі → смужки (як значки), 1,5 px на метр гри; обводка — не тонша
-   за 1 м, щоб на радарі не зникала. Назви — під мітками (рішення власника 2026-11-16): шар tile_3_N у toSlots іде після зелених
+   за 1 м, щоб на радарі не зникала. Назви — під мітками (рішення власника 2026-11-16): шар tile_3_N в oneFilePerPart іде після зелених
    зон і перед значками, висота 16,8 — між пунктиром зон (16,6) і значками (17,0); усе в частині — одним
    файлом, доки вершин < 60 000 (у кожній частині лише 8 вільних номерів) */
 export const RADAR_PX_PER_M = 1.5, LABEL_Z = 16.8;
@@ -419,7 +437,7 @@ export async function ensureLabelFonts(labels: MapLabel[]) {
 /* нові локації проєкту (Деморган, військова база) в base.zip лежать у найстаршому номері tile_2_2 на висоті 29–30 —
    гра малює їх останніми, тож вони закривали написи й значки («ДЕМОРГАН» під будівлями, «КПП-2» під дорогою).
    Переносимо шар одразу після самої мапи (tile_0_1) і опускаємо на висоту решти мапи — все наше лягає поверх.
-   Працює за обома правилами порядку: і за номером файлу, і за висотою */
+   Сам порядок шарів це не задає (гра впорядковує файли по-своєму) — його дає oneFilePerPart: один файл на частину */
 const LOC_FROM = /supertile_fore_(\d+_\d+)_tile_2_2/, LOC_DROP = 16.6;
 export function lowerZ(text: string): string {
   const f = (z: string) => (+z >= 20 ? (+z - LOC_DROP).toFixed(7) : z);
@@ -453,25 +471,76 @@ async function inflate(e: ZipEntry): Promise<Uint8Array> {
   return new Uint8Array(await new Response(new Blob([e.data as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
 }
 
-/* шари в кожній частині отримують вільні номери за зростанням, знизу вгору: зелені зони (tile_4_N у zones.zip),
-   назви (tile_3_N — написи адміна, labelFiles; під мітками), значки (tile_5_N); міняються шляхи і посилання на .mesh усередині .odr */
+/* порядок шарів у частині мапи, знизу вгору: зелені зони (tile_4_N у zones.zip і зони з бази — заливка й пунктир),
+   назви (tile_3_N — написи адміна; під мітками), значки (tile_5_N) */
 export const RANK: Record<string, number> = { 4: 0, 3: 1, 5: 2 };
-async function toSlots(entries: ZipEntry[], taken: Set<string>): Promise<ZipEntry[]> {
-  const re = /supertile_fore_(\d+_\d+)_tile_(\d)_(\d+)/, map = new Map<string, string | null>();
-  const keys = [...new Set(entries.map(e => re.exec(e.name)?.[0]).filter((x): x is string => !!x))]
-    .map(key => { const m = re.exec(key)!; return { key, k: m[1], rank: RANK[m[2]] ?? 9, n: +m[3] }; })
-    .sort((a, b) => a.k.localeCompare(b.k) || a.rank - b.rank || a.n - b.n);
-  for (const x of keys) { const slot = freeSlot(x.k, taken); map.set(x.key, slot && `supertile_fore_${x.k}_tile_${slot}`); }
-  const out: ZipEntry[] = [], enc = new TextEncoder(), dec = new TextDecoder();
-  for (const e of entries) {
-    const m = re.exec(e.name); if (!m) continue;
-    const to = map.get(m[0]); if (!to) continue;
-    const name = e.name.split(m[0]).join(to);
-    if (!name.endsWith('.odr')) { out.push({ ...e, name }); continue; }
-    const raw = enc.encode(dec.decode(await inflate(e)).split(m[0]).join(to)), z = await deflate(raw);
-    out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
-  }
+
+/* Усі шари частини мапи — ОДНИМ файлом (supertile_fore_C_R_tile_0_0), трикутники в порядку «знизу вгору».
+   Окремі файли шарів гра впорядковує по-своєму, і ні номер файлу, ні висота z цього не задають (перевірено в грі
+   2026-11-16: заливка поля з tile_1_0 на висоті 16,2 закрила написи з tile_1_1 на 16,8 і значки, а Деморган з tile_0_1
+   лишився над написом). Усередині одного файлу порядок трикутників — наш: так уже малюються кружок, тло й малюнок значка */
+export type Geo = { v: string[]; idx: number[] };
+export function parseMesh(text: string): Geo[] {
+  const out: Geo[] = [];
+  for (const m of text.matchAll(/Indices \d+\s*\{([^}]*)\}\s*Vertices \d+\s*\{([^}]*)\}/g))
+    out.push({ idx: m[1].trim().split(/\s+/).filter(Boolean).map(Number), v: m[2].split('\n').map(l => l.trim()).filter(Boolean) });
   return out;
+}
+/* шари (кожен — геометрії одного файлу) → якнайменше геометрій: трикутники йдуть підряд у порядку шарів, однакові
+   вершини в межах геометрії зливаються; нова геометрія — лише коли вершин понад max (індекси в грі 16-бітні) */
+export function joinGeos(layers: Geo[][], max = 65000): Geo[] {
+  const out: Geo[] = []; let cur: Geo = { v: [], idx: [] }, at = new Map<string, number>();
+  const next = () => { if (cur.v.length) out.push(cur); cur = { v: [], idx: [] }; at = new Map(); };
+  for (const layer of layers) for (const g of layer) for (let i = 0; i + 2 < g.idx.length; i += 3) {
+    if (cur.v.length + 3 > max) next();
+    for (let k = 0; k < 3; k++) {
+      const line = g.v[g.idx[i + k]]; if (line === undefined) throw new Error('mesh: індекс поза вершинами');
+      let j = at.get(line); if (j === undefined) { j = cur.v.length; cur.v.push(line); at.set(line, j); }
+      cur.idx.push(j);
+    }
+  }
+  next(); return out;
+}
+export function meshDoc(geos: Geo[]): { mesh: string; min: number[]; max: number[] } {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (const g of geos) for (const l of g.v) { const p = l.split(' ', 3).map(Number); for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k], p[k]); max[k] = Math.max(max[k], p[k]); } }
+  const geo = (g: Geo) => {
+    const lines: string[] = []; for (let i = 0; i < g.idx.length; i += 15) lines.push('\t\t\t\t' + g.idx.slice(i, i + 15).join(' '));
+    return `\t\tGeometry\n\t\t{\n\t\t\tShaderIndex 0\n\t\t\tFlags -\n\t\t\tVertexDeclaration NB60E6ACF\n\t\t\tIndices ${g.idx.length}\n\t\t\t{\n${lines.join('\n')}\n\t\t\t}\n`
+      + `\t\t\tVertices ${g.v.length}\n\t\t\t{\n${g.v.map(l => '\t\t\t\t' + l).join('\n')}\n\t\t\t}\n\t\t}\n`;
+  };
+  const mesh = `Version 165 32\n{\n\tLocked false\n\tSkinned false\n\tBoneCount 0\n\tMask 255\n\tBounds\n\t{\n\t\tAabb\n\t\t{\n\t\t\tMin ${min.map(f7).join(' ')}\n\t\t\tMax ${max.map(f7).join(' ')}\n\t\t}\n\t}\n`
+    + `\tGeometries\n\t{\n${geos.map(geo).join('')}\t}\n}`;
+  return { mesh, min, max };
+}
+
+/* base — мапа (tile_0_0) й нові локації (tile_0_1 після lowerLocations); extra — шари з тимчасовими номерами tile_L_N.
+   Повертає архів, де в кожній частині лишився один файл переднього плану, і частини, чий .odd треба переписати */
+const FORE = /^minimap_(\d+_\d+)\/supertile_fore_\1_tile_(\d)_(\d+)(?:\.odr$|\/)/;
+export async function oneFilePerPart(base: ZipEntry[], extra: ZipEntry[]): Promise<{ entries: ZipEntry[]; parts: string[] }> {
+  const dec = new TextDecoder(), enc = new TextEncoder(), layers = new Map<string, { order: number; geos: Geo[] }[]>();
+  const take = async (e: ZipEntry, order: number, k: string) => {
+    if (!e.name.endsWith('.mesh')) return;
+    let a = layers.get(k); if (!a) layers.set(k, (a = []));
+    a.push({ order, geos: parseMesh(dec.decode(await inflate(e))) });
+  };
+  const rest: ZipEntry[] = [];
+  for (const e of base) {
+    const m = FORE.exec(e.name); if (!m) { rest.push(e); continue; }
+    await take(e, m[2] === '0' && m[3] === '0' ? 0 : m[2] === '0' && m[3] === '1' ? 1 : 2, m[1]);   // мапа, локації, решта базового
+  }
+  for (const e of extra) { const m = FORE.exec(e.name); if (m) await take(e, 10 + (RANK[m[2]] ?? 9) * 1000 + +m[3], m[1]); }
+  const out = [...rest];
+  for (const [k, list] of layers) {
+    const tile = `supertile_fore_${k}_tile_0_0`, geos = joinGeos(list.sort((a, b) => a.order - b.order).map(l => l.geos));
+    if (!geos.length) continue;
+    const { mesh, min, max } = meshDoc(geos);
+    for (const [name, text] of [[`minimap_${k}/${tile}/${tile}_high.mesh`, mesh], [`minimap_${k}/${tile}.odr`, odrText(tile, min, max)]] as const) {
+      const raw = enc.encode(text), z = await deflate(raw);
+      out.push({ name, data: z.data, method: z.method, crc: crc32(raw), size: raw.length });
+    }
+  }
+  return { entries: out, parts: [...layers.keys()] };
 }
 
 /* повний пак для гри: чиста мапа з експорту Hydra + вибрані шари (назви, зони) + зони з бази (поля скарбів) + значки вибраних міток + 6 текстур */
@@ -487,13 +556,11 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
   raw.push(...await areaFiles(areas, theme), ...await iconFiles(pins, opt.iconM, imgs), ...await labelFiles(labels));
-  /* зони, значки й назви — у вільні номери кожної частини, знизу вгору */
-  const extra = await toSlots(raw, new Set(base.map(e => e.name)));
-  /* .odd кожної частини, де з'явились нові .odr: усі її .odr за алфавітом */
-  const touched = new Set<string>(low.parts);   // частини з перенесеним шаром локацій — їхній .odd теж переписати
-  for (const e of extra) { const m = /^minimap_([\d_]+)\/[^/]+\.odr$/.exec(e.name); if (m) touched.add(m[1]); }
-  const all = [...base, ...extra], enc = new TextEncoder(), odds: ZipEntry[] = [];
-  for (const k of touched) {
+  /* мапа, локації, зони, написи й значки кожної частини — одним файлом, у порядку знизу вгору (oneFilePerPart) */
+  const one = await oneFilePerPart(base, raw);
+  /* .odd кожної частини: усі її .odr за алфавітом (тло, передній план — тепер один, море) */
+  const all = one.entries, enc = new TextEncoder(), odds: ZipEntry[] = [];
+  for (const k of new Set([...low.parts, ...one.parts])) {
     const own = all.filter(e => e.name.startsWith(`minimap_${k}/`) && /^minimap_[\d_]+\/[^/]+\.odr$/.test(e.name)).map(e => e.name.split('/')[1]);
     const rawOdd = enc.encode(oddText(k, own)); const z = await deflate(rawOdd);
     odds.push({ name: `minimap_${k}.odd`, data: z.data, method: z.method, crc: crc32(rawOdd), size: rawOdd.length });
