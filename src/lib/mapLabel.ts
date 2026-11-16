@@ -1,6 +1,6 @@
 /* Напис на мапі від адміна (specs/089): геометрія в метрах гри й рендер на canvas. Один рендер іде всюди —
    мапа сайту й програми (imageOverlay), текстури мапи для гри (пауза) і радар-мінікарта (смужки пікселів, як значки). */
-import { fontCss } from './labelFonts';
+import { DEFAULT_FONT, fontCss } from './labelFonts';
 
 export interface MapLabel {
   id: string; dbId?: number; text: string; x: number; y: number;
@@ -105,7 +105,7 @@ export function splitBySupertile(runs: LabelRun[]): Map<string, LabelRun[]> {
 export function labelFromRow(r: Record<string, unknown>): MapLabel {
   return {
     id: 'label-' + r.id, dbId: r.id as number, text: String(r.text ?? ''), x: Number(r.x), y: Number(r.y),
-    color: String(r.color ?? '#f4f1ec'), font: String(r.font ?? 'roboto-condensed'), weight: Number(r.weight ?? 700),
+    color: String(r.color ?? '#f4f1ec'), font: String(r.font ?? DEFAULT_FONT), weight: Number(r.weight ?? 700),
     outlineColor: String(r.outline_color ?? '#0d0d0d'), outlineW: Number(r.outline_w ?? 3), angle: Number(r.angle ?? 0), size: Number(r.size ?? 30),
   };
 }

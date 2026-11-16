@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { labelFromRow, labelToRow, type MapLabel } from '../lib/mapLabel';
-import { BOLD_STEPS, FONT_BY_ID, LABEL_FONTS, boldStep, fontFamily, loadLabelFont } from '../lib/labelFonts';
+import { BOLD_STEPS, DEFAULT_FONT, FONT_BY_ID, LABEL_FONTS, boldStep, fontFamily, loadLabelFont } from '../lib/labelFonts';
 import Select from './Select';
 
 /* новий напис у точці (x, y) — стиль за замовчуванням (specs/089) */
 export const newLabel = (x: number, y: number): MapLabel => ({
-  id: 'label-new', text: 'НАЗВА', x, y, color: '#f4f1ec', font: 'roboto-condensed', weight: 700, outlineColor: '#0d0d0d', outlineW: 3, angle: 0, size: 40,
+  id: 'label-new', text: 'НАЗВА', x, y, color: '#f4f1ec', font: DEFAULT_FONT, weight: 700, outlineColor: '#0d0d0d', outlineW: 3, angle: 0, size: 40,
 });
 
 /* форма напису адміна: текст, колір, шрифт, товщина, обводка, кут, розмір. Кожна зміна — одразу на мапі (onChange);
