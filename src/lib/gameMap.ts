@@ -5,6 +5,7 @@ import { ytd, type YtdFormat } from './ytd';
 import { BRAND_SRC, brandBox } from './mapBrand';
 import { labelRuns, mergeRuns, renderLabel, splitBySupertile, type LabelRun, type MapLabel } from './mapLabel';
 import { FONT_BY_ID, loadLabelFont } from './labelFonts';
+import { clipToField, fieldTris, tint, type Tri } from './areaFill';
 /* «Карта для гри»: ті самі 6 текстур, що дає Hydra (minimap_<рядок>_<стовпець>, 2x3 тайли), готовими .ytd гри,
    з вибраними мітками, намальованими поверх. Межі текстур гри: лівий верхній кут (-4140, 8400), тайл — 4500 м. */
 export const GAME = { x0: -4140, yt: 8400, tile: 4500, cols: 2, rows: 3 };
@@ -111,6 +112,8 @@ export class IconMesh {
   }
   /* чотирикутник одного кольору (штрих межі зони) */
   addQuad(c: [number, number][], z: number, color: string) { const col = hex(color); this.quad(...(c.map(([x, y]) => [x, y, z, ...col]) as [number[], number[], number[], number[]])); }
+  /* трикутник одного кольору (заливка зони) */
+  addTri(t: readonly (readonly [number, number])[], z: number, c: [number, number, number]) { const k = this.v.length; for (const [x, y] of t) this.v.push([x, y, z, ...c]); this.idx.push(k, k + 1, k + 2); }
   /* прямокутник одного кольору (смужка напису, specs/089) */
   addRect(x0: number, y0: number, x1: number, y1: number, z: number, c: [number, number, number]) { this.quad([x0, y0, z, ...c], [x1, y0, z, ...c], [x1, y1, z, ...c], [x0, y1, z, ...c]); }
   get size() { return this.v.length; }
@@ -327,14 +330,50 @@ async function iconFiles(pins: GamePin[], sizeM: number, imgs: Map<string, HTMLI
 
 /* межі зон з бази для вектора мінікарти — пунктир кольору категорії на висоті пунктиру зелених зон (16.6);
    шар зон (tile_4_N, як zones.zip), номер 50 — щоб не збігтися з готовими зеленими зонами */
-async function areaFiles(areas: GameArea[]): Promise<ZipEntry[]> {
-  const groups = new Map<string, IconMesh>();
+/* заливка зони (areaFill): тло кольору зони й та сама мапа всередині контуру, підфарбована кольором зони, — нижче пунктиру.
+   Порядок трикутників — як у export.bin (тло, потім дороги й будівлі): гра малює їх у порядку файлу */
+export const AREA_FILL_Z = 16.2;
+type FillTri = { t: Tri; c: [number, number, number] };
+async function areaFills(areas: GameArea[], theme: GameTheme): Promise<Map<string, FillTri[]>> {
+  const groups = new Map<string, FillTri[]>(); if (!areas.length) return groups;
+  const meta = await fetch(mapUrl('/map/game/export.json')).then(r => r.json()), pal = (themed(meta.palette, theme) as string[]).map(hex);
+  const buf = await fetch(mapUrl('/map/game/export.bin')).then(r => r.arrayBuffer());
+  const n = new DataView(buf).getUint32(0, true), xy = new Uint16Array(buf, 4, n * 6), col = new Uint8Array(buf, 4 + n * 12, n), q = meta.q as number;
+  const put = (t: Tri, c: [number, number, number]) => {
+    const [sc, sr] = supertileOf((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][1] + t[1][1] + t[2][1]) / 3), k = sc + '_' + sr;
+    let a = groups.get(k); if (!a) groups.set(k, (a = [])); a.push({ t, c });
+  };
+  for (const a of areas) {
+    const field = fieldTris(a.ring), ac = hex(a.color); if (!field.length) continue;
+    const xs = a.ring.map(p => p[0]), ys = a.ring.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    /* тло: найтемніший колір мапи (підкладка суші, pal[0]) під кольором зони; далі вся мапа всередині контуру у своїх
+       відтінках — світліші ділянки рельєфу (pal[1]) лишаються світлішими, як на текстурі */
+    for (const f of field) put(f.tri, tint(pal[0], ac));
+    for (let i = 0; i < n; i++) {
+      const o = i * 6, t: Tri = [[GAME.x0 + xy[o] / q, GAME.yt - xy[o + 1] / q], [GAME.x0 + xy[o + 2] / q, GAME.yt - xy[o + 3] / q], [GAME.x0 + xy[o + 4] / q, GAME.yt - xy[o + 5] / q]];
+      if (Math.max(t[0][0], t[1][0], t[2][0]) < x0 || Math.min(t[0][0], t[1][0], t[2][0]) > x1 || Math.max(t[0][1], t[1][1], t[2][1]) < y0 || Math.min(t[0][1], t[1][1], t[2][1]) > y1) continue;
+      const c = tint(pal[col[i]], ac);
+      for (const p of clipToField(t, field)) put(p, c);
+    }
+    await new Promise(r => setTimeout(r));   // між зонами віддаємо хід, щоб сторінка не завмирала
+  }
+  return groups;
+}
+
+async function areaFiles(areas: GameArea[], theme: GameTheme = 'dark'): Promise<ZipEntry[]> {
+  const fills = await areaFills(areas, theme), dashes = new Map<string, { q: [number, number][]; color: string }[]>();
   for (const a of areas) for (const q of areaDashes(a.ring)) {
     const [c, r] = supertileOf((q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2), k = c + '_' + r;
-    const m = groups.get(k) ?? new IconMesh(); groups.set(k, m); m.addQuad(q, 16.6, a.color);
+    let d = dashes.get(k); if (!d) dashes.set(k, (d = [])); d.push({ q, color: a.color });
   }
   const out: ZipEntry[] = [];
-  for (const [k, m] of groups) await meshFiles(out, k, `supertile_fore_${k}_tile_4_50`, m);
+  for (const k of new Set([...fills.keys(), ...dashes.keys()])) {
+    let m = new IconMesh(), part = 50;
+    const flush = async () => { if (m.size) await meshFiles(out, k, `supertile_fore_${k}_tile_4_${part++}`, m); m = new IconMesh(); };
+    for (const f of fills.get(k) ?? []) { if (m.size > 60000) await flush(); m.addTri(f.t, AREA_FILL_Z, f.c); }
+    for (const d of dashes.get(k) ?? []) { if (m.size > 60000) await flush(); m.addQuad(d.q, 16.6, d.color); }
+    await flush();
+  }
   return out;
 }
 
@@ -447,7 +486,7 @@ export async function buildGamePack(pins: GamePin[], opt: { iconM: number; layer
   step?.('Готую значки…');
   const imgs = new Map<string, HTMLImageElement | null>();
   for (const src of new Set(pins.map(p => p.icon))) imgs.set(src, await loadImg(src));
-  raw.push(...await areaFiles(areas), ...await iconFiles(pins, opt.iconM, imgs), ...await labelFiles(labels));
+  raw.push(...await areaFiles(areas, theme), ...await iconFiles(pins, opt.iconM, imgs), ...await labelFiles(labels));
   /* зони, значки й назви — у вільні номери кожної частини, знизу вгору */
   const extra = await toSlots(raw, new Set(base.map(e => e.name)));
   /* .odd кожної частини, де з'явились нові .odr: усі її .odr за алфавітом */
