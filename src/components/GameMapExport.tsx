@@ -58,7 +58,7 @@ export default function GameMapExport({ groups, marks, areas, labels, catById, i
   const big = (c: MapCategory) => on(c) && (count[c.id] || 0) > BIG_CAT && !isLayer(c.id);
 
   /* перегляд бере той самий вибір, що й архів */
-  /* звірі полів полювання (specs/088) — значками сіткою всередині поля, до трьох розмірів значка своєї категорії (animalLayout: на великому полі звичайний значок губився),
+  /* звірі полів полювання (specs/088) — значками сіткою всередині поля, до п’яти розмірів значка своєї категорії (animalLayout: на великому полі звичайний значок губився),
      крок трохи більший за значок; у підсумку «міток» їх не рахуємо (там лише picked) */
   const animalPins = useMemo(() => pickedAreas.flatMap(a => {
     const c = catById[a.category], base = catM[c.id] || iconM, { spots, k } = animalLayout(a.ring, a.animals.length, base);

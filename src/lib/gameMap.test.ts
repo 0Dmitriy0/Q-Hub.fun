@@ -112,3 +112,66 @@ describe('шар нових локацій — під написами й зна
     expect(radarPxPerM(200)).toBe(3);
   });
 });
+
+/* усі шари частини мапи — одним файлом: порядок між окремими файлами гра не гарантує (перевірено в грі 2026-11-16) */
+import { joinGeos, meshDoc, oneFilePerPart, parseMesh, splitByPart } from './gameMap';
+describe('шари частини мапи — одним файлом', () => {
+  const m = new IconMesh(); m.addRect(0, 0, 10, 10, 12, [1, 2, 3]);
+  const top = new IconMesh(); top.addRect(2, 2, 4, 4, 16.8, [9, 9, 9]);
+  it('mesh розбирається назад у ті самі вершини й індекси', () => {
+    const g = parseMesh(meshText(m).mesh);
+    expect(g).toHaveLength(1);
+    expect(g[0].idx).toEqual([0, 1, 2, 2, 3, 0]);
+    expect(g[0].v[0]).toBe('0.0000000 0.0000000 12.0000000 / 1 2 3 255');
+  });
+  it('шари йдуть підряд: спершу нижній, потім верхній; спільні вершини зливаються', () => {
+    const [g] = joinGeos([parseMesh(meshText(m).mesh), parseMesh(meshText(top).mesh)]);
+    expect(g.v).toHaveLength(8);
+    expect(g.idx).toHaveLength(12);
+    expect(g.idx.slice(0, 6).every(i => g.v[i].includes(' 12.0000000 /'))).toBe(true);
+    expect(g.idx.slice(6).every(i => g.v[i].includes(' 16.8000000 /'))).toBe(true);
+    /* двічі той самий шар — вершини ті самі, трикутників удвічі більше */
+    const [d] = joinGeos([parseMesh(meshText(m).mesh), parseMesh(meshText(m).mesh)]);
+    expect(d.v).toHaveLength(4); expect(d.idx).toHaveLength(12);
+  });
+  it('понад межу вершин — нова геометрія, порядок збережено', () => {
+    const gs = joinGeos([parseMesh(meshText(m).mesh), parseMesh(meshText(top).mesh)], 4);
+    expect(gs.length).toBeGreaterThan(1);
+    for (const g of gs) { expect(g.v.length).toBeLessThanOrEqual(4); expect(Math.max(...g.idx)).toBeLessThan(g.v.length); }
+    const doc = meshDoc(gs);
+    expect(doc.min).toEqual([0, 0, 12]); expect(doc.max).toEqual([10, 10, 16.8]);
+    expect(parseMesh(doc.mesh).map(g => g.idx.length).reduce((a, b) => a + b, 0)).toBe(12);
+  });
+  it('у частині лишається один файл переднього плану: мапа, локації, зони, написи, значки', async () => {
+    const enc = new TextEncoder(), dec = new TextDecoder(), file = (name: string, text = '') => ({ name, data: enc.encode(text) });
+    const mesh = (z: number) => { const x = new IconMesh(); x.addRect(0, 0, 1, 1, z, [0, 0, 0]); return meshText(x).mesh; };
+    const p = 'minimap_5_3/supertile_fore_5_3_tile_';
+    const { entries, parts } = await oneFilePerPart(
+      [file('minimap_5_3/supertile_back_5_3.odr', 'back'), file(p + '0_0.odr', 'x'), file(p + '0_0/supertile_fore_5_3_tile_0_0_high.mesh', mesh(12)),
+        file(p + '0_1.odr', 'x'), file(p + '0_1/supertile_fore_5_3_tile_0_1_high.mesh', mesh(13))],
+      [file(p + '5_0/supertile_fore_5_3_tile_5_0_high.mesh', mesh(17)), file(p + '3_0/supertile_fore_5_3_tile_3_0_high.mesh', mesh(16.8)),
+        file(p + '4_50/supertile_fore_5_3_tile_4_50_high.mesh', mesh(16.2)), file(p + '4_0/supertile_fore_5_3_tile_4_0_high.mesh', mesh(13.1)), file(p + '4_0.odr', 'x')]);
+    expect(parts).toEqual(['5_3']);
+    expect(entries.map(e => e.name).sort()).toEqual(['minimap_5_3/supertile_back_5_3.odr', p + '0_0.odr', p + '0_0/supertile_fore_5_3_tile_0_0_high.mesh']);
+    const out = entries.find(e => e.name.endsWith('.mesh'))!;
+    if (!out.method) {
+      const [g] = parseMesh(dec.decode(out.data));
+      const zs = g.idx.filter((_, i) => i % 6 === 0).map(i => +g.v[i].split(' ')[2]);
+      expect(zs).toEqual([12, 13, 13.1, 16.2, 16.8, 17]);
+    }
+  });
+  it('трикутник на межі частин ріжеться по межі, площа зберігається', () => {
+    const area = (t: readonly (readonly number[])[]) => Math.abs((t[1][0] - t[0][0]) * (t[2][1] - t[0][1]) - (t[1][1] - t[0][1]) * (t[2][0] - t[0][0])) / 2;
+    /* межа стовпців 4|5 — x = 1375; межа рядків 2|3 — y = 3836 */
+    const inside = splitByPart([[1400, 3000], [1500, 3000], [1400, 3100]]);
+    expect(inside).toEqual([{ k: '5_3', t: [[1400, 3000], [1500, 3000], [1400, 3100]] }]);
+    const cross = splitByPart([[1300, 3700], [1500, 3700], [1300, 3900]]);
+    expect(new Set(cross.map(p => p.k))).toEqual(new Set(['4_3', '5_3', '4_2']));
+    expect(cross.reduce((s, p) => s + area(p.t), 0)).toBeCloseTo(20000, 3);
+    for (const p of cross) for (const [x, y] of p.t) {
+      const [c, r] = p.k.split('_').map(Number);
+      expect(x).toBeGreaterThanOrEqual(-4500 + c * 1175 - 1e-6); expect(x).toBeLessThanOrEqual(-4500 + (c + 1) * 1175 + 1e-6);
+      expect(y).toBeLessThanOrEqual(8000 - r * 1388 + 1e-6); expect(y).toBeGreaterThanOrEqual(8000 - (r + 1) * 1388 - 1e-6);
+    }
+  });
+});

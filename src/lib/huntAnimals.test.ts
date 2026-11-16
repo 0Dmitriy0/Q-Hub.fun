@@ -43,7 +43,7 @@ describe('huntAnimals', () => {
 
 import { ANIMAL_SCALES, animalLayout } from './huntAnimals';
 describe('звірі на мапі для гри — більші за мітку', () => {
-  it('на справжніх полях — утричі більші й усі всередині поля', () => {
+  it('на справжніх полях — найбільший множник і всі всередині поля', () => {
     for (const f of fields) for (const n of [3, 5]) {
       const { spots, k } = animalLayout(f.ring, n, 20);
       expect(k).toBe(ANIMAL_SCALES[0]);
