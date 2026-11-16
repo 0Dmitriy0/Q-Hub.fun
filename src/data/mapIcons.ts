@@ -63,6 +63,7 @@ export const MAP_ICONS: string[] = [
  "/icons/jobs/lisorub.svg",
  "/icons/jobs/mechanic.svg",
  "/icons/jobs/mushroom.svg",
+ "/icons/jobs/pilot.svg",
  "/icons/jobs/postman.svg",
  "/icons/jobs/taxi.svg",
  "/icons/jobs/tow.svg",

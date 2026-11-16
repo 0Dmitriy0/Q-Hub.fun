@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupCategories, labelShown, parseBulk, ringProblem, slugify, type MapCategory } from './mapData';
+import { groupCategories, labelShown, markCats, parseBulk, ringProblem, slugify, type MapCategory } from './mapData';
 
 const c = (id: string, grp: string, sort: number): MapCategory => ({ id, name: id, grp, icon: '', color: '#ff6a1f', sort, shown: true });
 
@@ -49,5 +49,13 @@ describe('назва під міткою — галочка категорії (
   it('база без поля чи категорії немає — як раніше, з назвою', () => {
     expect(labelShown(mk('Бак'), {})).toBe(true);
     expect(labelShown(mk('Бак'))).toBe(true);
+  });
+});
+
+describe('куди можна поставити мітку (0071)', () => {
+  it('«Роботи» й «Скупники» приймають мітки з бази, назви й зелені зони — ні; адмінські — першими', () => {
+    const b = (id: string, dbMarks?: boolean): MapCategory => ({ ...c(id, 'Шари мапи', 1), builtin: true, dbMarks });
+    const ids = markCats([b('names'), b('zones'), b('jobs', true), b('buyers', true), c('shop-247', 'Магазини', 10)]).map(x => x.id);
+    expect(ids).toEqual(['shop-247', 'jobs', 'buyers']);
   });
 });

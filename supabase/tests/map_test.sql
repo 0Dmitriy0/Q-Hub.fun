@@ -1,12 +1,13 @@
 -- Мапа: мітки бачать усі, додає/видаляє лише адмін; координати в межах штату.
 \set ON_ERROR_STOP on
 set client_min_messages = warning;
-do $$ begin assert (select count(*) from public.map_categories) = 40, 'початкових категорій не 40 (39 і «Гарбузи» з 0033; «вода» й «їжа» — одна «Вендингові апарати», 0066)'; end $$;
+do $$ begin assert (select count(*) from public.map_categories) = 42, 'початкових категорій не 42 (39 і «Гарбузи» з 0033; «вода» й «їжа» — одна «Вендингові апарати», 0066; «Роботи» й «Скупники» для міток з бази, 0071)'; end $$;
 
 set role anon;
 select set_config('request.jwt.claim.sub', '', false) \gset
 do $$ begin
   assert (select count(*) from public.map_categories) = 40, 'гість не бачить категорій';
+  assert not exists (select 1 from public.map_categories where id in ('jobs', 'buyers')), 'гість бачить службові «Роботи»/«Скупники» — стара програма покаже їх двічі';
   begin insert into public.map_points (category_id, name, x, y) values ('trash-bins', 'бак', 0, 0); raise exception 'гість додав мітку';
   exception when insufficient_privilege then null; end;
 end $$;
@@ -53,7 +54,16 @@ do $$ begin
 end $$;
 delete from public.map_categories where id = 'boxes';
 do $$ begin assert (select count(*) from public.map_points) = 1, 'мітки видаленої категорії лишились'; end $$;
+-- «Роботи» й «Скупники» (0071): адмін ставить мітку нової роботи, хоча рядка категорії не бачить і змінити його не може
+insert into public.map_points (category_id, name, x, y, icon) values ('jobs', 'Пілот', -1037, -2737, '/icons/jobs/pilot.svg'), ('buyers', 'Новий скупник', 0, 0, null);
+update public.map_categories set name = 'Зламано' where id = 'jobs';
+do $$ begin
+  assert (select count(*) from public.map_points where category_id in ('jobs', 'buyers')) = 2, 'мітки в «Роботи»/«Скупники» не додано';
+  assert not exists (select 1 from public.map_categories where id = 'jobs'), 'адмін бачить службову категорію «Роботи»';
+end $$;
+delete from public.map_points where category_id in ('jobs', 'buyers');
 reset role;
+do $$ begin assert (select name from public.map_categories where id = 'jobs') = 'Роботи', 'адмін змінив службову категорію «Роботи»'; end $$;
 set role anon;
 do $$ begin
   assert (select count(*) from public.map_owners) = 1, 'власника не видно гостю';
