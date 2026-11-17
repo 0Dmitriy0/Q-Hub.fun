@@ -13,6 +13,8 @@ import AdminLinks from '../components/admin/AdminLinks';
 import AdminDiscordBot from '../components/admin/AdminDiscordBot';
 import AdminNews from '../components/admin/AdminNews';
 import AdminWiki from '../components/admin/AdminWiki';
+import AdminStats from '../components/admin/AdminStats';
+import AdminNotifications from '../components/admin/AdminNotifications';
 import PanelHome from '../components/panel/PanelHome';
 import ReviewQueue from '../components/panel/ReviewQueue';
 import MyDecisions from '../components/panel/MyDecisions';
@@ -23,14 +25,14 @@ import Icon from '../components/Icon';
    - /admin — «Адмінка» (лише admin): усе, зокрема розбір довідника вкладками тут же, без переходу в /panel;
    - /panel — «Модерація» (модератор) чи «Мої інструменти» (редактор): та сама сторінка, лише їхні розділи.
    Вкладка — у ?tab=, тож посилання й «Назад» працюють. Це лише показ: кожне читання й дію перевіряє база (конституція II) */
-type Tab = 'overview' | 'review' | 'decisions' | 'hidden' | 'queues' | 'news' | 'accounts' | 'app' | 'shots' | 'discord' | 'links';
+type Tab = 'overview' | 'review' | 'decisions' | 'hidden' | 'queues' | 'news' | 'accounts' | 'stats' | 'notices' | 'app' | 'shots' | 'discord' | 'links';
 type Group = { title: string; items: [Tab, string, string][] };
 const MODERATION: Group = { title: 'Модерація', items: [['review', 'Розбір пропозицій', 'tag'], ['decisions', 'Мої рішення', 'check'], ['hidden', 'Прибрані й заборони', 'eyeoff']] };
 const ADMIN_GROUPS: Group[] = [
   { title: '', items: [['overview', 'Огляд', 'home']] },
   MODERATION,
   { title: 'Щодня', items: [['queues', 'Черги програми', 'layers'], ['news', 'Новини', 'edit']] },
-  { title: 'Люди', items: [['accounts', 'Гравці й ролі', 'user']] },
+  { title: 'Люди', items: [['accounts', 'Гравці й ролі', 'user'], ['stats', 'Статистика активності', 'chart'], ['notices', 'Сповіщення гравцям', 'bell']] },
   { title: 'Система', items: [['app', 'Програма', 'download'], ['shots', 'Навчальні знімки', 'camera'], ['discord', 'Discord-бот', 'bolt'], ['links', 'Налаштування', 'gear']] },
 ];
 /* старі адреси: ?tab=wiki (колишній «Довідник») і /panel/rozbir… ведуть у відповідні вкладки */
@@ -91,6 +93,8 @@ export default function Admin({ mode = 'admin' }: { mode?: 'admin' | 'team' }) {
     queues: <AdminQueues onChange={loadCounts} />,
     news: <AdminNews />,
     accounts: <><AdminAccounts /><WikiAuthors /></>,
+    stats: <AdminStats />,
+    notices: <AdminNotifications />,
     app: <AdminAppState />,
     shots: <AdminShots />,
     discord: <AdminDiscordBot />,

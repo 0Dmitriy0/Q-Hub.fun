@@ -22,4 +22,5 @@
 - [Вікно поверх гри забирає ввід](overlay-steals-game-input.md) — RAGE MP втрачає керування навіть без фокусу; після показу з клавіші — game.giveBack()
 - [«Роботи»/«Скупники» — мітки з бази](builtin-cats-db-marks.md) — 0071: dbMarks + markCats(), рядки jobs/buyers сховані RLS; 0072: точки з коду в базі, job_id → довідник
 - [Радар гри: порядок файлів шарів не керується](game-radar-layer-order.md) — ні номером, ні висотою z; усі шари частини — один файл (oneFilePerPart)
+- [SQL-тести локально на Windows](sql-tests-local-windows.md) — немає Postgres/WSL; портативний EDB + `psql -c` з кирилицею ламається (cp1251), лише CI
 - [Замір процесора й пам'яті програми](app-usage-measure.md) — usage.log, measure.ps1, QHUB_USAGE_TRACE=1; `[math]::Max(0,…)` у PowerShell округлює
