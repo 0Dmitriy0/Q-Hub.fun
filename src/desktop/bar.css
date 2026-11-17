@@ -100,6 +100,9 @@ body.in-bar input { user-select: text; }
 .bpen { align-self: stretch; font-size: 13px; font-weight: 600; line-height: 1.45; color: #f87171; background: var(--bad-soft); padding: 5px 10px; border-left: 3px solid var(--bad); border-radius: 4px 8px 8px 4px; }
 .brule p.bextra { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .bnone { color: var(--muted); }
+/* запит знайдено в іншій розкладці (specs/092): «Показано результати для: 3.3 дк» */
+.bfix { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.bfix b { color: var(--fg); font-weight: 700; }
 .btip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); padding-top: 2px; }
 .btip .ico { color: var(--accent); }
 .btip kbd, .bans kbd { font: 600 11px var(--sans); padding: 1px 5px; border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; color: var(--fg); }

@@ -71,6 +71,13 @@ export interface PlaceHit { id: string; name: string; cat: string; icon: string;
 /* слова запиту, що не є назвою місця */
 const PLACE_FILLER = /^(де|где|знайти|знайди|покажи|показати|мапа|мапі|карта|карті|на|найближча|найближчий|найближче)$/;
 
+/* слово є серед назв міток чи категорій (за основою) — його не перекладаємо в іншу розкладку (specs/092) */
+export function knownPlaceWord(marks: PlaceMark[], cats: PlaceCat[], w: string): boolean {
+  const s = stem(norm(w));
+  if (!s) return false;
+  return cats.some(c => norm(c.name).includes(s)) || marks.some(m => norm(m.name).includes(s));
+}
+
 export function places(q: string, marks: PlaceMark[], cats: PlaceCat[], limit = 6): PlaceHit[] {
   const words = norm(q).split(/\s+/).filter(w => w && !PLACE_FILLER.test(w)).map(stem);
   if (!words.length) return [];

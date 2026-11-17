@@ -3,8 +3,8 @@ import Icon from './Icon';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { loadMapData } from '../lib/mapMarks';
-import { buyers, places, type BarPrice, type PlaceHit } from '../desktop/barSearch';
-import { searchRules, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
+import { buyers, knownPlaceWord, places, type BarPrice, type PlaceHit } from '../desktop/barSearch';
+import { fixedSearch, knownRuleWord, searchRules, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
 import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from '../desktop/barParts';
 import { plainText } from '../desktop/richText';
 import RULES from '../data/rules.json';
@@ -17,7 +17,7 @@ const TOPICS = (RULES as { fetched: string; topics: RuleTopic[] }).topics;
 const AT = (RULES as { fetched: string }).fetched;
 const rulesDay = new Date(AT.length === 10 ? AT + 'T12:00:00' : AT).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
-interface Ask { q: string; reply: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean }
+interface Ask { q: string; reply: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean; fixed?: string }
 /* у тому самому форматі, що й справжня відповідь ШІ в програмі (specs/085): головна думка, список, жирне — без вигаданих пунктів правил */
 const AI_ONLY = [
   'Питання до ШІ своїми словами працює **в програмі Q-Hub** — на сайті лише пошук без ШІ.',
@@ -43,9 +43,12 @@ const loadPrices = () => (pricesP ??= !supabase ? Promise.resolve([]) : Promise.
 
 async function rulesAsk(text: string): Promise<Ask> {
   const m = await loadMarks();
-  const pl = m ? places(text, m.marks, m.cats) : [];
-  const hits = searchRules(TOPICS, text);
-  return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl };
+  const marks = m?.marks ?? [], cats = m?.cats ?? [];
+  /* як у програмі (specs/092): нічого як набрано — спроба в іншій розкладці, з підказкою */
+  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
+    w => knownRuleWord(TOPICS, w) || knownPlaceWord(marks, cats, w));
+  const { hits, places: pl } = f.result;
+  return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined };
 }
 
 export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'prices'; n: number } }) {
@@ -124,6 +127,7 @@ export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'pr
               <div className="bans"><Rich text={a.reply} /><CopyBtn icon text={plainText(a.reply)} label="Копіювати відповідь" /></div>
               <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>
             </> : <>
+              {a.fixed && <p className="bfix" role="status">Показано результати для: <b>{a.fixed}</b></p>}
               {a.places && a.places.length > 0 && <>
                 <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · у програмі клік показує мітку на мапі поверх гри<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
                 <ul className="bplaces">{a.places.map(h => <li key={h.id}><span className="brow item">
