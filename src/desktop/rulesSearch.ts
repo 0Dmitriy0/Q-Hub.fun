@@ -78,9 +78,86 @@ function index(topics: RuleTopic[]) {
 
 const LOOKALIKE: Record<string, string> = { a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', i: 'і', k: 'к', m: 'м', o: 'о', p: 'р', t: 'т', x: 'х', y: 'у' };
 
+/* ---------- нормалізація запиту (specs/092) ----------
+   Роздільник між двома цифрами — крапка: «3/3», «3,3», «3-3», «3 3», а також «3ю3», «3б3» (клавіші «.» і «,», коли не перемкнули
+   розкладку). Не між цифрами («кк/пдр», «зелена-зона») — не чіпається, щоб не з'явилось хибних збігів */
+export const QUERY_SEP = /(\d)(?:\s*[/\\,\-_.юб]\s*|\s+)(?=\d)/g;
+export function normalizeQuery(query: string): string {
+  let q = query.toLowerCase().replace(/\s+/g, ' ').trim();
+  for (let prev = ''; prev !== q;) { prev = q; q = q.replace(QUERY_SEP, '$1.'); }
+  return q;
+}
+
+/* розкладки Windows: та сама клавіша в англійській (США), українській і російській */
+const EN_KEYS = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`";
+const UA_KEYS = "йцукенгшщзхїфівапролджєячсмитьбю'";
+const RU_KEYS = 'йцукенгшщзхъфывапролджэячсмитьбюё';
+const pairs = (from: string, to: string) => Object.freeze(Object.fromEntries([...from].map((k, i) => [k, to[i]]))) as Readonly<Record<string, string>>;
+export const LAYOUT_UA = pairs(EN_KEYS, UA_KEYS);
+export const LAYOUT_RU = pairs(EN_KEYS, RU_KEYS);
+/* правила українською: російський варіант після переведення зводимо до українських літер, інакше він нічого б не знайшов */
+export const RU_TO_UA: Readonly<Record<string, string>> = Object.freeze({ ы: 'и', э: 'е', ё: 'е', ъ: '' });
+/* кирилиця → латинська клавіша (з обох розкладок) */
+const TO_EN: Readonly<Record<string, string>> = Object.freeze({ ...pairs(RU_KEYS, EN_KEYS), ...pairs(UA_KEYS, EN_KEYS) });
+/* з Shift розділові клавіші дають інші символи: «:» — та сама клавіша, що «;» (ж) */
+const SHIFTED: Record<string, string> = { '{': '[', '}': ']', ':': ';', '"': "'", '<': ',', '>': '.', '~': '`' };
+
+/* слово, набране не в тій розкладці, — за розташуванням клавіш; регістр не важить */
+export function toLayout(word: string, to: 'ua' | 'ru' | 'en'): string {
+  const w = [...word.toLowerCase()].map(c => SHIFTED[c] ?? c);
+  if (to === 'en') return w.map(c => TO_EN[c] ?? c).join('');
+  const table = to === 'ua' ? LAYOUT_UA : LAYOUT_RU;
+  const out = w.map(c => table[c] ?? c).join('');
+  return to === 'ru' ? [...out].map(c => RU_TO_UA[c] ?? c).join('') : out;
+}
+
+/* латинське слово (разом з клавішами, що дають кириличні літери: ; ' [ ] , . `) або кириличне */
+const LAYOUT_TOKEN = /[a-z;'[\]{}:"<>~,.`]+|[\p{Script=Cyrillic}']+/gu;
+
+/* виправлені запити: слова, яких як набрано немає (known), переведено в іншу розкладку; цифри й відомі слова — без змін.
+   До двох варіантів — український, потім російський — без дублів і без збігу з набраним */
+export function layoutVariants(query: string, known: (w: string) => boolean): string[] {
+  const base = normalizeQuery(query);
+  const out: string[] = [];
+  for (const to of ['ua', 'ru'] as const) {
+    const v = normalizeQuery(base.replace(LAYOUT_TOKEN, tok => {
+      if (/\p{Script=Cyrillic}/u.test(tok)) return known(tok) ? tok : toLayout(tok, 'en');
+      /* кома й крапка на краях — розділові знаки, не літери «б» і «ю» */
+      const [, lead, core, trail] = /^([,.]*)(.*?)([,.]*)$/.exec(tok)!;
+      if (!/[a-z]/.test(core) || known(core)) return tok;
+      return lead + toLayout(core, to) + trail;
+    }));
+    if (v !== base && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+/* слово відоме пошуку: службове, розмовна назва чи сленг, скорочення документа або є в тексті правил (за основою) */
+export function knownRuleWord(topics: RuleTopic[], w: string): boolean {
+  const x = norm(w);
+  if (!x) return false;
+  if (STOP.has(x) || ALIAS[x] || slang(x).length) return true;
+  const { vocab, abbr } = index(topics);
+  if (abbr.has(x) || (/^[a-z]+$/.test(x) && abbr.has([...x].map(c => LOOKALIKE[c] ?? c).join('')))) return true;
+  const s = stem(x);
+  return vocab.some(v => v.startsWith(s));
+}
+
+/* шукати як набрано; нічого — по черзі виправлені варіанти (FR-004). shown — виправлений запит для підказки, null — показано набране */
+export interface FixedSearch<T> { result: T; shown: string | null }
+export function fixedSearch<T>(query: string, run: (q: string) => T, isEmpty: (r: T) => boolean, known: (w: string) => boolean): FixedSearch<T> {
+  const first = run(query);
+  if (!isEmpty(first)) return { result: first, shown: null };
+  for (const v of layoutVariants(query, known)) {
+    const r = run(v);
+    if (!isEmpty(r)) return { result: r, shown: v };
+  }
+  return { result: first, shown: null };
+}
+
 export function searchRules(topics: RuleTopic[], query: string, limit = 8): RuleHit[] {
-  /* «10,10» — те саме, що «10.10»: гравці пишуть номер і через кому */
-  const q = query.replace(/(\d),(\d)/g, '$1.$2');
+  /* «10,10», «3/3», «3 3», «3ю3» — те саме, що «10.10», «3.3»: гравці пишуть номер як звикли (specs/092) */
+  const q = normalizeQuery(query);
   /* номер пункту чи статті в запиті («КК 4.1», «10.10») — окремо: такий пункт угорі, а цифри не шукаються як слова.
      Запит із самих цифр — номер у будь-якому документі, і ціле число теж («5» — стаття 5); таких збігів буває багато */
   const onlyNums = /^[\d.\s]+$/.test(q.trim());

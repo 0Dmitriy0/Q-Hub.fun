@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abbrsOf, rulesExcerpt, searchRules, type RuleTopic } from './rulesSearch';
+import { abbrsOf, fixedSearch, knownRuleWord, layoutVariants, normalizeQuery, rulesExcerpt, searchRules, toLayout, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 
 const topics: RuleTopic[] = [
@@ -157,4 +157,105 @@ describe('закони штату в пошуку (specs/010)', () => {
   it('«забити бізвар» — запланувати захоплення бізнесу', () => expect(best('за скільки треба забити бізвар')).toMatchObject({ n: '1.8.1' }));
   it('«скільки учасників» — пункт «кількість учасників» вище за інші з цифрами', () => expect(best('скільки учасників на захопленні території')).toMatchObject({ n: '1.4' }));
   it('«без ліцензії» — пункт, де так і написано, вище за «з ліцензією»', () => expect(best('чи можна рибалити без ліцензії')).toMatchObject({ n: '6' }));
+});
+
+describe('normalizeQuery: роздільник між цифрами — крапка (specs/092)', () => {
+  it('усі роздільники зі специфікації → «3.3»', () => {
+    for (const q of ['3/3', '3,3', '3ю3', '3б3', '3 3', '3-3', '3_3', '3\\3', '3 / 3', '3  -  3', '3Ю3', '3.3'])
+      expect(normalizeQuery(q), q).toBe('3.3');
+  });
+  it('вкладені номери → «3.3.1»', () => {
+    for (const q of ['3/3/1', '3-3/1', '3ю3ю1', '3.3.1', '3 3 1']) expect(normalizeQuery(q), q).toBe('3.3.1');
+  });
+  it('номер серед слів; регістр', () => {
+    expect(normalizeQuery('КК 6/7')).toBe('кк 6.7');
+    expect(normalizeQuery('  ЗЕЛЕНА   ЗОНА ')).toBe('зелена зона');
+  });
+  it('роздільник не між цифрами — не змінюється', () => {
+    for (const q of ['кк/пдр', '3/', '/3', 'зелена-зона', 'бізнес-вар', 'кк, 6']) expect(normalizeQuery(q), q).toBe(q);
+  });
+  it('ідемпотентна', () => {
+    for (const q of ['3/3', '3 / 3 /1', 'КК 6/7', 'кк/пдр', '3ю3 lr']) expect(normalizeQuery(normalizeQuery(q))).toBe(normalizeQuery(q));
+  });
+  it('пошук: кожен роздільник знаходить те саме, що «3.3 дк»; «КК 6/7» = «КК 6.7»', () => {
+    const t = (RULES as { topics: RuleTopic[] }).topics;
+    const key = (q: string) => searchRules(t, q).map(h => `${h.topic} ${h.n}`);
+    const want = key('3.3 дк');
+    expect(want.length).toBeGreaterThan(0);
+    expect(want.every(k => k.endsWith(' 3.3'))).toBe(true);
+    for (const q of ['3/3 дк', '3,3 дк', '3ю3 дк', '3б3 дк', '3 3 дк', '3-3 дк', 'ДК 3/3']) expect(key(q), q).toEqual(want);
+    expect(key('КК 6/7')).toEqual(key('КК 6.7'));
+  });
+});
+
+describe('не та розкладка (specs/092)', () => {
+  const t = (RULES as { topics: RuleTopic[] }).topics;
+  const known = (w: string) => knownRuleWord(t, w);
+  const run = (q: string) => searchRules(t, q);
+  const fix = (q: string) => fixedSearch(q, run, h => !h.length, known);
+  const key = (hs: { topic: string; n: string }[]) => hs.map(h => `${h.topic} ${h.n}`);
+
+  it('переведення за клавішами, регістр не важить', () => {
+    expect(toLayout('lr', 'ua')).toBe('дк');
+    expect(toLayout('ghfdbkf', 'ua')).toBe('правила');
+    expect(toLayout('GHFDBKF', 'ua')).toBe('правила');
+    expect(toLayout('GhFdBkF', 'ua')).toBe('правила');
+    expect(toLayout('ufhf;', 'ua')).toBe('гараж');
+    expect(toLayout('ptktyj]', 'ua')).toBe('зеленої');
+    expect(toLayout('вь', 'en')).toBe('dm');
+    expect(toLayout('ВЬ', 'en')).toBe('dm');
+    /* російська — з приведенням до українських літер: ы→и, э→е */
+    expect(toLayout("'ktrnhjyysq", 'ru')).toBe('електронний');
+    expect(toLayout("'ktrnhjyysq", 'ua')).toBe('єлектронній');
+  });
+  it('варіанти: відоме слово лишається, цифри не чіпаються, без дублів', () => {
+    expect(layoutVariants('dm ptktyf', w => w === 'dm')[0]).toBe('dm зелена');
+    expect(layoutVariants('3/3 lr', () => false)[0]).toBe('3.3 дк');
+    expect(layoutVariants('вь', () => false)).toEqual(['dm']);
+    const v = layoutVariants("'ktrnhjyysq", () => false);
+    expect(v).toEqual(['єлектронній', 'електронний']);
+    expect(layoutVariants('lr', () => false)).toEqual(['дк']);   // українська й російська однакові — один варіант
+    expect(layoutVariants('3.3', () => false)).toEqual([]);   // нічого переводити
+  });
+  it('«3/3 lr» — те саме, що «3.3 дк», з підказкою', () => {
+    const r = fix('3/3 lr');
+    expect(r.shown).toBe('3.3 дк');
+    expect(key(r.result)).toEqual(key(run('3.3 дк')));
+    expect(r.result.length).toBeGreaterThan(0);
+  });
+  it('«lr» — те саме, що «дк»; «ptktyf pjyf» — що «зелена зона»', () => {
+    expect(fix('lr')).toMatchObject({ shown: 'дк' });
+    expect(key(fix('lr').result)).toEqual(key(run('дк')));
+    const z = fix('ptktyf pjyf');
+    expect(z.shown).toBe('зелена зона');
+    expect(key(z.result)).toEqual(key(run('зелена зона')));
+  });
+  it('«ghfdbkf» — те саме, що «правила» (службове слово — як і правильний запит, нічого)', () => {
+    expect(key(fix('ghfdbkf').result)).toEqual(key(run('правила')));
+  });
+  it('кирилиця замість латиниці: «вь» → «dm»', () => {
+    const r = fix('вь');
+    expect(r.shown).toBe('dm');
+    expect(key(r.result)).toEqual(key(run('dm')));
+  });
+  it('коректний запит — як раніше, без підказки і без другого пошуку', () => {
+    for (const q of ['dm', 'кк 6.5', 'зелена зона', '3.3 дк', 'КК 6/7']) {
+      let calls = 0;
+      const r = fixedSearch(q, x => { calls++; return run(x); }, h => !h.length, known);
+      expect(r.shown, q).toBeNull();
+      expect(calls, q).toBe(1);
+      expect(key(r.result)).toEqual(key(run(q)));
+    }
+  });
+  it('нічого не знайдено ні так, ні так — без підказки', () => {
+    const r = fix('qzqzqz');
+    expect(r.shown).toBeNull();
+    expect(r.result).toEqual([]);
+  });
+  it('український варіант перед російським; береться той, що знайшов', () => {
+    const runFake = (q: string) => (q === 'електронний' ? ['x'] : []);
+    expect(fixedSearch("'ktrnhjyysq", runFake, r => !r.length, () => false)).toEqual({ result: ['x'], shown: 'електронний' });
+    const both = (q: string) => (q === 'єлектронній' || q === 'електронний' ? [q] : []);
+    expect(fixedSearch("'ktrnhjyysq", both, r => !r.length, () => false).shown).toBe('єлектронній');
+  });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buyers, places, pos, search, type BarPrice } from './barSearch';
+import { buyers, knownPlaceWord, places, pos, search, type BarPrice } from './barSearch';
+import { fixedSearch } from './rulesSearch';
 
 const p = (item: string, buyer: string, price: number, min = 0, max = 0): BarPrice => ({ item, unit: 'шт', icon: '', buyer, buyerIcon: '', price, min, max, at: null });
 const prices = [p('Глива', 'Гриби', 120, 100, 200), p('Глива', 'Харчі', 150), p('Гарбуз', 'Врожай', 900), p('Сироїжка зелена', 'Гриби', 460), p('Шкура кабана', 'Шкури', 600), p('Шкура кролика', 'Шкури', 500)];
@@ -64,6 +65,18 @@ describe('місця на мапі в рядку Alt+Q (specs/014 FR-007)', () =
     const r = places('заправка', marks, cats);
     expect(r.map(h => h.id)).toEqual(['a', 'b']);
     expect(r[1]).toEqual({ id: 'b', name: 'Заправки', cat: 'Заправки', icon: '/i/fuel.svg', x: 3, y: 4 });
+  });
+  it('слово серед назв міток чи категорій — відоме, його не перекладаємо (specs/092)', () => {
+    expect(knownPlaceWord(marks, cats, 'заправку')).toBe(true);
+    expect(knownPlaceWord(marks, cats, 'ЛІКАРНЯ')).toBe(true);
+    expect(knownPlaceWord(marks, cats, 'pfghfdrf')).toBe(false);
+    expect(knownPlaceWord(marks, cats, '')).toBe(false);
+  });
+  it('«pfghfdrf» (заправка в не тій розкладці) — ті самі місця, що «заправка», з підказкою (specs/092)', () => {
+    const r = fixedSearch('pfghfdrf', q => places(q, marks, cats), h => !h.length, w => knownPlaceWord(marks, cats, w));
+    expect(r.shown).toBe('заправка');
+    expect(r.result.map(h => h.id)).toEqual(places('заправка', marks, cats).map(h => h.id));
+    expect(fixedSearch('24/7', q => places(q, marks, cats), h => !h.length, w => knownPlaceWord(marks, cats, w)).shown).toBeNull();
   });
   it('«24/7», «де лікарня», «заправки» — слова-заповнювачі й закінчення не заважають', () => {
     expect(places('24/7', marks, cats).map(h => h.id)).toEqual(['c']);

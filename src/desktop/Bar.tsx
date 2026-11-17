@@ -4,12 +4,12 @@ import Hub from './Hub';
 import { useAuth } from '../lib/auth';
 import Icon from '../components/Icon';
 import { dur, eventStatus, kyHM } from '../lib/events';
-import { buyers, places, type BarPrice, type PlaceHit } from './barSearch';
+import { buyers, knownPlaceWord, places, type BarPrice, type PlaceCat, type PlaceHit, type PlaceMark } from './barSearch';
 import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import History, { type HistPick } from './History';
 import { matchCats } from './catMatch';
-import { searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import { fixedSearch, knownRuleWord, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
 import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from './barParts';
@@ -37,7 +37,8 @@ export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' |
   streamer?: boolean }
 interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string; fullscreen?: boolean }
 /* unseen — відповідь ШІ прийшла, поки плашку не бачили: при новому Alt+Q лишається лише вона (specs/082) */
-interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean }
+/* fixed — запит в іншій розкладці, за яким знайдено результати (specs/092): над ними підказка */
+interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean; fixed?: string }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
@@ -68,7 +69,14 @@ const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' 
 
 /* пошук у правилах сервера без ШІ — і для Enter, і для повтору з історії */
 /* пошук без ШІ: правила сервера й місця на мапі (specs/014) */
-const rulesAsk = (text: string, pl: PlaceHit[] = []): Ask => { const hits = searchRules(TOPICS, text); return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl }; };
+/* specs/092: як набрано нічого не знайшлося — та сама спроба в іншій розкладці («lr» → «дк»), разом для правил і місць;
+   підказка над результатами показує, що саме знайдено */
+const rulesAsk = (text: string, marks: PlaceMark[] = [], cats: PlaceCat[] = []): Ask => {
+  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
+    w => knownRuleWord(TOPICS, w) || knownPlaceWord(marks, cats, w));
+  const { hits, places: pl } = f.result;
+  return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined };
+};
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
 /* вкладки над плашкою: найближчий івент, а поруч — промокод Q-Hub, але лише коли івент не йде й не почнеться
@@ -114,7 +122,7 @@ export default function Bar() {
     if (Date.now() - placeData.current.at < PLACES_TTL) return;
     loadMapData().then(m => { if (m) placeData.current = { at: Date.now(), marks: m.marks, cats: m.cats }; }).catch(() => { /* без мережі — без місць */ });
   }, []);
-  const askRules = (text: string) => rulesAsk(text, places(text, placeData.current.marks, placeData.current.cats));
+  const askRules = (text: string) => rulesAsk(text, placeData.current.marks, placeData.current.cats);
   /* журнал оновлень: що гравець уже бачив — у сховищі плашки; після оновлення внизу з'являється «що нового» */
   const [seenLog, setSeenLog] = useState<string | null>(() => { try { return localStorage.getItem('qhub.seenLog'); } catch { return null; } });
   const unseen = unseenCount(seenLog);
@@ -184,7 +192,9 @@ export default function Bar() {
     const text = q.trim(); if (!text || busy) return;
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
-    const r = await api.quickAsk(text, rulesExcerpt(searchRules(TOPICS, text, 40), 24000));
+    /* specs/092: пункти — за тим запитом, за яким їх знайдено (набраним чи в іншій розкладці) */
+    const found = fixedSearch(text, x => searchRules(TOPICS, x, 40), h => !h.length, w => knownRuleWord(TOPICS, w)).result;
+    const r = await api.quickAsk(text, rulesExcerpt(found, 24000));
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', error: r.error, unseen: !document.hasFocus() }, ...a].slice(0, 30));
     setSel(0);
@@ -314,6 +324,7 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
     </>}</div>
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
       {a.hits ? <>
+        {a.fixed && <p className="bfix" role="status">Показано результати для: <b>{a.fixed}</b></p>}
         {a.places && a.places.length > 0 && <>
           <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
