@@ -17,8 +17,9 @@ export type Guild = { id: string; name: string };
 export const ANNOUNCEMENT = 5;
 
 export type Kind = 'rate' | 'auth' | 'forbidden' | 'not_found' | 'bad' | 'other';
+/* code — JSON-код помилки Discord (напр. 50007 «не можна писати цьому користувачу»), якщо він був у відповіді */
 export class DiscordError extends Error {
-  constructor(public kind: Kind, public status: number, message: string) { super(message); }
+  constructor(public kind: Kind, public status: number, message: string, public code?: number) { super(message); }
 }
 
 /* людський текст для адмінки (US3 AC3): що сталось і що зробити */
@@ -62,7 +63,12 @@ export function discord(token: string, opts: { fetch?: Fetch; sleep?: Sleep } = 
       try { wait = Number((await r.json()).retry_after) || 1; } catch { /* без тіла — 1 с */ }
       if (wait <= 10) { await sleep(Math.ceil(wait * 1000)); return call<T>(method, path, body, true); }
     }
-    if (!r.ok) { const k = kindOf(r.status); throw new DiscordError(k, r.status, human(k, r.status)); }
+    if (!r.ok) {
+      const k = kindOf(r.status);
+      let code: number | undefined;
+      try { code = Number((await r.json()).code) || undefined; } catch { /* без JSON-тіла */ }
+      throw new DiscordError(k, r.status, human(k, r.status), code);
+    }
     return (r.status === 204 ? undefined : await r.json()) as T;
   }
 
@@ -76,6 +82,8 @@ export function discord(token: string, opts: { fetch?: Fetch; sleep?: Sleep } = 
     crosspost: (channelId: string, messageId: string) =>
       call<unknown>('POST', `/channels/${channelId}/messages/${messageId}/crosspost`),
     channel: (channelId: string) => call<Channel>('GET', `/channels/${channelId}`),
+    /* особистий канал з гравцем (specs/091 US5): Discord дозволяє лише за спільного сервера й відкритих DM */
+    openDm: async (userId: string) => (await call<{ id: string }>('POST', '/users/@me/channels', { recipient_id: userId })).id,
     me: () => call<{ id: string; username: string }>('GET', '/users/@me'),
     guilds: () => call<Guild[]>('GET', '/users/@me/guilds'),
   };

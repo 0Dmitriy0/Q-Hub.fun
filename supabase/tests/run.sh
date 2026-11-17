@@ -14,6 +14,10 @@ $P <<'SQL'
 create role anon nologin; create role authenticated nologin;
 create schema auth;
 create table auth.users (id uuid primary key, raw_user_meta_data jsonb not null default '{}');
+-- Discord-ідентифікатор входу (0078: бот надсилає DM переможцям)
+create table auth.identities (user_id uuid references auth.users (id) on delete cascade, provider text not null, provider_id text not null);
+create role service_role nologin;
+grant usage on schema public to service_role;
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
@@ -89,3 +93,6 @@ $P -f supabase/tests/wiki_test.sql
 $P -f supabase/tests/wiki_guides_test.sql
 $P -f supabase/tests/map_point_authors_test.sql
 $P -f supabase/tests/team_test.sql
+$P -f supabase/tests/activity_stats_test.sql
+$P -f supabase/tests/activity_exclusions_test.sql
+$P -f supabase/tests/notifications_test.sql

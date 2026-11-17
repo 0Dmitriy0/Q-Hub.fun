@@ -1,6 +1,6 @@
 /* Discord-бот Q-Hub (specs/060, contracts/discord-bot-function.md): публікує ціни скупників і новини в Discord.
    Хто кличе: pg_cron щохвилини й CI після деплою (x-sync-secret) або адмін з адмін-панелі (сесія admin).
-   Дії: tick (ціни й мітки від гравців, 0061) і drafts (чернетки новин) — лише з секретом; send, test, status — лише admin.
+   Дії: tick (ціни й мітки від гравців, 0061; сповіщення переможцям у DM, 0078) і drafts (чернетки новин) — лише з секретом; send, test, status — лише admin.
    Секрети функції: DISCORD_BOT_TOKEN, DISCORD_SYNC_SECRET, SUPABASE_SERVICE_ROLE_KEY. Токен не потрапляє ні в базу, ні у відповідь. */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { ANNOUNCEMENT, discord, DiscordError, human, type Body, type Discord } from './discord.ts';
@@ -8,6 +8,7 @@ import { allowed, due, group, partKey, postKey, route, type BuyerInfo, type Ev, 
 import { newsMessage, newsTooLong, pricesMessage, TEST_MESSAGE } from './format.ts';
 import { toDraft, type DraftIn, type Entry } from './changelog.ts';
 import { marksMessage, type NewMark } from './marks.ts';
+import { sendDms, type DmItem } from './dm.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sync-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -131,8 +132,27 @@ async function marksTick(db: SupabaseClient, dc: Discord, bot: Bot): Promise<{ m
 
 /* ціни (US1 + 0056): черга → вікно збирання → по каналах скупників → у кожному каналі ліміт години й одне нове
    повідомлення (чи кілька частин). Скупник без каналу — нікуди. Збій одного каналу не зупиняє інші */
+/* сповіщення переможцям у DM (specs/091, 0078): пакет «в черзі», результат — notification_dm_result.
+   Збій кроку не зупиняє ціни й мітки — лише пишеться в last_error */
+async function dmTick(db: SupabaseClient, dc: Discord, enabled: boolean) {
+  try {
+    const { data, error } = await db.rpc('notification_dm_batch', { p_limit: 20 });
+    if (error) throw new Error('черга сповіщень: ' + error.message);
+    const items = (data ?? []) as DmItem[];
+    if (!items.length) return null;
+    return await sendDms(items, dc, async (id, o) => {
+      const { error: e } = await db.rpc('notification_dm_result', { p_id: id, p_status: o.status, p_error: o.error });
+      if (e) throw e;
+    }, { enabled });
+  } catch (e) {
+    await markError(db, e);
+    return null;
+  }
+}
+
 const tick: Action = async ({ db, dc }) => {
   const { data: bot } = await db.from('discord_bot').select('*').eq('id', true).single();
+  await dmTick(db, dc, bot?.dm_on !== false);
   const mk = bot ? await marksTick(db, dc, bot) : { marks: 0 };
   if (!bot?.prices_on) {
     if (mk.error) await markError(db, mk.error); else if (mk.marks) await markOk(db);
