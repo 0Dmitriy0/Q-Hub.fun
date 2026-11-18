@@ -96,3 +96,4 @@ $P -f supabase/tests/team_test.sql
 $P -f supabase/tests/activity_stats_test.sql
 $P -f supabase/tests/activity_exclusions_test.sql
 $P -f supabase/tests/notifications_test.sql
+$P -f supabase/tests/glossary_test.sql

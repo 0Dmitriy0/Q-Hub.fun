@@ -3,7 +3,7 @@ import Icon from '../components/Icon';
 import { asset } from '../lib/app';
 import { money, when } from '../lib/format';
 import { pos, type BuyerHit, type PlaceHit } from './barSearch';
-import { KIND, numLabel, type RuleHit } from './rulesSearch';
+import { KIND, numLabel, type GlossaryTerm, type RuleHit } from './rulesSearch';
 import { parseRich, type Span } from './richText';
 
 /* частини плашки Alt+Q, спільні для програми (Bar.tsx) і демо на сайті (components/BarDemo.tsx) —
@@ -54,6 +54,18 @@ export const rulesText = (hits: RuleHit[]) => hits.map(ruleText).join('\n\n');
 export const placesText = (pl: PlaceHit[]) => pl.map(p => `${p.name} — ${p.cat}, X ${Math.round(p.x)} · Y ${Math.round(p.y)}`).join('\n');
 
 /* onOpen — «Відкрити окремо» (specs/084): лише в програмі, демо на сайті його не передає — тоді кнопки немає */
+/* картка RP-терміну над результатами (specs/093): скорочення, інші назви, пояснення; без пунктів — так і сказати */
+export function GlossaryCard({ term, empty }: { term: GlossaryTerm; empty?: boolean }) {
+  const names = [...term.aliases, term.full_name].filter((n, i, a) => n && a.findIndex(x => x.toLowerCase() === n.toLowerCase()) === i);
+  return (
+    <div className="bterm">
+      <p><b>{term.term}</b>{names.length > 0 && <span className="bterm-n"> · {names.join(', ')}</span>}</p>
+      <p className="bterm-d">{term.description}</p>
+      {empty && <small className="bterm-e">Окремого пункту в правилах немає</small>}
+    </div>
+  );
+}
+
 export function RuleCard({ h, onOpen }: { h: RuleHit; onOpen?: (h: RuleHit) => void }) {
   const [open, setOpen] = useState(false);
   const { body, pen, more } = splitPenalty(h.s);

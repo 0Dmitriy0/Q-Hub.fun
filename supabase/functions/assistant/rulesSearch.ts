@@ -134,15 +134,68 @@ export function layoutVariants(query: string, known: (w: string) => boolean): st
   return out;
 }
 
-/* слово відоме пошуку: службове, розмовна назва чи сленг, скорочення документа або є в тексті правил (за основою) */
-export function knownRuleWord(topics: RuleTopic[], w: string): boolean {
+/* ---------- глосарій RP-термінів (specs/093) ----------
+   Терміни — дані (таблиця glossary_terms / src/data/glossary.json), пошук отримує їх параметром: так ця сама копія файлу
+   працює й у функції помічника, яка не бачить файлів поза собою (там глосарію немає — лишається ALIAS вище). */
+export interface GlossaryTerm { term: string; aliases: string[]; full_name: string; description: string; related_rules: string[] }
+const termNames = (g: GlossaryTerm) => [g.term, ...g.aliases, g.full_name].map(n => words(n)).filter(ws => ws.length);
+/* слово назви підходить слову запиту: коротке — лише точно («дм», «варн»), довге — за основою («метагеймінгу») */
+const nameWordFits = (qw: string, nw: string) => qw === nw || (nw.length >= 4 && stem(qw).startsWith(stem(nw)));
+/* терміни в словах запиту: однослівна назва — окреме слово, багатослівна — ті слова підряд; слово з цифрою — ніколи не термін */
+function glossarySpans(glossary: GlossaryTerm[], all: string[]) {
+  const spans: { start: number; end: number; terms: GlossaryTerm[] }[] = [];
+  for (let i = 0; i < all.length;) {
+    let best = 0; let found: GlossaryTerm[] = [];
+    if (!/\d/.test(all[i])) for (const g of glossary) for (const ws of termNames(g)) {
+      if (ws.length < best || i + ws.length > all.length) continue;
+      if (!ws.every((nw, k) => nameWordFits(all[i + k], nw))) continue;
+      if (ws.length > best) { best = ws.length; found = []; }
+      if (!found.includes(g)) found.push(g);
+    }
+    if (best) { spans.push({ start: i, end: i + best, terms: found }); i += best; } else i++;
+  }
+  return spans;
+}
+/* терміни запиту в порядку слів, без дублів — для карток над результатами */
+export function glossaryMatches(glossary: GlossaryTerm[], query: string): GlossaryTerm[] {
+  const out: GlossaryTerm[] = [];
+  for (const s of glossarySpans(glossary, words(normalizeQuery(query)))) for (const g of s.terms) if (!out.includes(g)) out.push(g);
+  return out;
+}
+/* картки над результатами: термін і чи є для нього пункти в правилах (немає — «Окремого пункту в правилах немає»).
+   Спільне скорочення (ГМ — God Mode і Головний модератор) перевіряємо за повною назвою, а не за самим скороченням */
+export function termCards(topics: RuleTopic[], glossary: GlossaryTerm[], query: string): { term: GlossaryTerm; empty: boolean }[] {
+  return glossaryMatches(glossary, query).map(g => {
+    const shared = glossary.filter(x => norm(x.term) === norm(g.term)).length > 1;
+    const probe = shared && g.full_name ? g.full_name : g.term;
+    const empty = !relatedHits(topics, g).length && !searchRules(topics, probe, 1, shared ? glossary : [g]).length;
+    return { term: g, empty };
+  });
+}
+/* пункти за related_rules терміну: «ЗП 6.9» — документ за скороченням назви + номер пункту; не знайдене — пропускається */
+export function relatedHits(topics: RuleTopic[], g: GlossaryTerm): RuleHit[] {
+  const { abbr } = index(topics);
+  const out: RuleHit[] = [];
+  for (const r of g.related_rules) {
+    const m = /^(.+?)\s+(\d+(?:\.\d+)*)\.?$/.exec(r.trim());
+    if (!m) continue;
+    const ts = abbr.get(norm(m[1]).replace(/\s+/g, ''));
+    for (const t of ts ?? []) for (const it of t.items) if (it.n === m[2] && !out.some(h => h.topic === t.title && h.n === it.n))
+      out.push({ topic: t.title, url: t.url, kind: t.kind ?? 'rules', n: it.n, h: it.h, s: it.s, score: 0 });
+  }
+  return out;
+}
+
+/* слово відоме пошуку: службове, розмовна назва чи сленг, назва терміну глосарію, скорочення документа або є в тексті правил */
+export function knownRuleWord(topics: RuleTopic[], w: string, glossary: GlossaryTerm[] = []): boolean {
   const x = norm(w);
   if (!x) return false;
   if (STOP.has(x) || ALIAS[x] || slang(x).length) return true;
+  if (glossary.some(g => termNames(g).some(ws => ws.length === 1 && nameWordFits(x, ws[0])))) return true;
   const { vocab, abbr } = index(topics);
   if (abbr.has(x) || (/^[a-z]+$/.test(x) && abbr.has([...x].map(c => LOOKALIKE[c] ?? c).join('')))) return true;
   const s = stem(x);
-  return vocab.some(v => v.startsWith(s));
+  return s.length <= 2 ? vocab.includes(s) : vocab.some(v => v.startsWith(s));
 }
 
 /* шукати як набрано; нічого — по черзі виправлені варіанти (FR-004). shown — виправлений запит для підказки, null — показано набране */
@@ -157,7 +210,7 @@ export function fixedSearch<T>(query: string, run: (q: string) => T, isEmpty: (r
   return { result: first, shown: null };
 }
 
-export function searchRules(topics: RuleTopic[], query: string, limit = 8): RuleHit[] {
+export function searchRules(topics: RuleTopic[], query: string, limit = 8, glossary: GlossaryTerm[] = []): RuleHit[] {
   /* «10,10», «3/3», «3 3», «3ю3» — те саме, що «10.10», «3.3»: гравці пишуть номер як звикли (specs/092) */
   const q = normalizeQuery(query);
   /* номер пункту чи статті в запиті («КК 4.1», «10.10») — окремо: такий пункт угорі, а цифри не шукаються як слова.
@@ -170,8 +223,34 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
   const seen = new Set<string>();
   const all = words(q.replace(NUM, ' '));
   const penalty = all.some(w => PENALTY.test(w)), numq = NUMQ.test(norm(q));
-  const qw = all.filter(w => !STOP.has(w) && !PENALTY.test(w) && !seen.has(w) && seen.add(w));
-  const terms = qw.map(w => [stem(w), ...(ALIAS[w] ?? []), ...slang(w)]);
+  /* термін глосарію (specs/093) — одна група: основи всіх його однослівних назв (+ ALIAS) і фрази з багатослівних
+     («вбивство без причини» — пункт підходить, коли в ньому є всі слова фрази за основою) */
+  const spans = glossarySpans(glossary, all);
+  /* спільне скорочення двох термінів (ТК, ГМ) розширюємо, лише коли гравець набрав саме його: «god mode» — не «ГМ» модератора */
+  const termCount = new Map<string, number>();
+  for (const g of glossary) { const k = norm(g.term); termCount.set(k, (termCount.get(k) ?? 0) + 1); }
+  const qw: string[] = [], terms: string[][] = [], phrases: string[][][] = [], gterms: GlossaryTerm[] = [];
+  for (let i = 0; i < all.length; i++) {
+    const sp = spans.find(s => s.start === i);
+    if (sp) {
+      const key = all.slice(sp.start, sp.end).join(' ');
+      i = sp.end - 1;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const names = sp.terms.flatMap(termNames);
+      qw.push(all[sp.start]);
+      const typed = all[sp.start];
+      terms.push([...new Set(names.filter(ws => ws.length === 1 && ((termCount.get(ws[0]) ?? 0) < 2 || ws[0] === typed))
+        .flatMap(ws => [stem(ws[0]!), ...(ALIAS[ws[0]!] ?? [])]))]);
+      phrases.push(names.filter(ws => ws.length > 1).map(ws => ws.filter(w => !STOP.has(w)).map(stem)).filter(ph => ph.length));
+      gterms.push(...sp.terms);
+      continue;
+    }
+    const w = all[i];
+    if (STOP.has(w) || PENALTY.test(w) || seen.has(w)) continue;
+    seen.add(w);
+    qw.push(w); terms.push([stem(w), ...(ALIAS[w] ?? []), ...slang(w)]); phrases.push([]);
+  }
   if (!terms.length && !nums.size) return [];
   const { docs, vocab, abbr } = index(topics);
   /* слово запиту — скорочення документа («ЗП», «ПКС»): пункти цього документа рахуються так, ніби слово є в назві */
@@ -180,9 +259,12 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
   /* слово в назві документа; для скорочення — лише сам документ («КК вбивство» — не «Правила … Кримінальних Структур») */
   const inHeadOf = (d: Doc, i: number) => (abbrOf[i] ? abbrOf[i].has(d.topic) : has(d.head, i));
   /* «грабувати» — і «пограбування», «почати» — і «розпочати»: основа після префікса (від 4 літер — інакше шуму забагато) */
-  const fits = (w: string, t: string[]) => t.some(x => w.startsWith(x) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x))));
+  /* 1–2 літери — лише ціле слово: «pp» не має знаходити «PPC», «дм» — «дмитро» (specs/093) */
+  const fits = (w: string, t: string[]) => t.some(x => (x.length <= 2 ? w === x : w.startsWith(x)) || (x.length >= 4 && PREFIX.some(p => w.startsWith(p + x))));
   const match = terms.map(t => new Set(vocab.filter(w => fits(w, t))));
-  const has = (ws: string[], i: number) => ws.some(w => match[i].has(w));
+  /* фраза терміну: для кожного її слова — свої збіги словника; пункт підходить, коли є всі слова фрази */
+  const phraseMatch = phrases.map(ps => ps.map(ph => ph.map(st => new Set(vocab.filter(w => fits(w, [st]))))));
+  const has = (ws: string[], i: number) => ws.some(w => match[i].has(w)) || phraseMatch[i].some(ph => ph.every(set => ws.some(w => set.has(w))));
   const idf = terms.map((_, i) => Math.log(1 + docs.length / (1 + docs.filter(d => has(d.words, i)).length)));
   const defs = terms.map(t => new RegExp(`(^|[^\\p{L}])(${t.join('|')})\\p{L}* \\(`, 'u'));
   /* «без ліцензії», «без маски»: «без» — службове, але заперечення важливе — пункт, де так і написано, вище */
@@ -212,6 +294,14 @@ export function searchRules(topics: RuleTopic[], query: string, limit = 8): Rule
     const hit: RuleHit = { topic: d.topic.title, url: d.topic.url, kind: d.topic.kind ?? 'rules', n: d.item.n, h: d.item.h, s: d.item.s, score };
     hits.push(hit);
     if (isExact) exact.add(hit);
+  }
+  /* specs/093: пов'язані пункти термінів (related_rules) — першими, навіть якщо жодної з назв у них немає */
+  if (!exact.size && gterms.length) {
+    const top = hits.reduce((m, h) => Math.max(m, h.score), 0);
+    for (const g of gterms) for (const r of relatedHits(topics, g)) {
+      const h = hits.find(x => x.topic === r.topic && x.n === r.n);
+      if (h) h.score += top + 1; else hits.push({ ...r, score: top + 1 });
+    }
   }
   if (exact.size) return [...exact].sort((a, b) => b.score - a.score || a.s.length - b.s.length).slice(0, limit);
   /* лише скорочення («ПКС») і нічого не знайшлося — початок документа по порядку */

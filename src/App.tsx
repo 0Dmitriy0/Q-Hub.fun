@@ -10,6 +10,7 @@ const Prices = lazy(() => import('./pages/Prices'));
 const Transport = lazy(() => import('./pages/Transport'));
 const Jobs = lazy(() => import('./pages/Jobs'));
 const WikiEvents = lazy(() => import('./pages/WikiEvents'));
+const Glossary = lazy(() => import('./pages/Glossary'));
 const WikiEvent = lazy(() => import('./pages/WikiEvent'));
 const Guides = lazy(() => import('./pages/Guides'));
 const MapPage = lazy(() => import('./pages/MapPage'));
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="iventy/:slug" element={<WikiEvent />} />
           <Route path="gaidy" element={<Guides />} />
           <Route path="gaidy/:slug" element={<Guides />} />
+          <Route path="glosariy" element={<Glossary />} />
         </Route>
         <Route path="transport" element={<ToWiki to="/wiki/transport" />} />
         <Route path="roboty" element={<ToWiki to="/wiki/roboty" />} />

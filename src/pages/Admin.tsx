@@ -15,6 +15,7 @@ import AdminNews from '../components/admin/AdminNews';
 import AdminWiki from '../components/admin/AdminWiki';
 import AdminStats from '../components/admin/AdminStats';
 import AdminNotifications from '../components/admin/AdminNotifications';
+import AdminGlossary from '../components/admin/AdminGlossary';
 import PanelHome from '../components/panel/PanelHome';
 import ReviewQueue from '../components/panel/ReviewQueue';
 import MyDecisions from '../components/panel/MyDecisions';
@@ -25,9 +26,10 @@ import Icon from '../components/Icon';
    - /admin — «Адмінка» (лише admin): усе, зокрема розбір довідника вкладками тут же, без переходу в /panel;
    - /panel — «Модерація» (модератор) чи «Мої інструменти» (редактор): та сама сторінка, лише їхні розділи.
    Вкладка — у ?tab=, тож посилання й «Назад» працюють. Це лише показ: кожне читання й дію перевіряє база (конституція II) */
-type Tab = 'overview' | 'review' | 'decisions' | 'hidden' | 'queues' | 'news' | 'accounts' | 'stats' | 'notices' | 'app' | 'shots' | 'discord' | 'links';
+type Tab = 'overview' | 'review' | 'decisions' | 'hidden' | 'glossary' | 'queues' | 'news' | 'accounts' | 'stats' | 'notices' | 'app' | 'shots' | 'discord' | 'links';
 type Group = { title: string; items: [Tab, string, string][] };
-const MODERATION: Group = { title: 'Модерація', items: [['review', 'Розбір пропозицій', 'tag'], ['decisions', 'Мої рішення', 'check'], ['hidden', 'Прибрані й заборони', 'eyeoff']] };
+/* глосарій RP-термінів (specs/093) — у модерації: правлять admin і moderator (конституція 1.4.0) */
+const MODERATION: Group = { title: 'Модерація', items: [['review', 'Розбір пропозицій', 'tag'], ['decisions', 'Мої рішення', 'check'], ['hidden', 'Прибрані й заборони', 'eyeoff'], ['glossary', 'Глосарій', 'book']] };
 const ADMIN_GROUPS: Group[] = [
   { title: '', items: [['overview', 'Огляд', 'home']] },
   MODERATION,
@@ -90,6 +92,7 @@ export default function Admin({ mode = 'admin' }: { mode?: 'admin' | 'team' }) {
     review: <ReviewQueue inUrl onBanned={loadCounts} />,
     decisions: <MyDecisions />,
     hidden: <><Hidden /><Bans /></>,
+    glossary: <AdminGlossary />,
     queues: <AdminQueues onChange={loadCounts} />,
     news: <AdminNews />,
     accounts: <><AdminAccounts /><WikiAuthors /></>,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { abbrsOf, fixedSearch, knownRuleWord, layoutVariants, normalizeQuery, rulesExcerpt, searchRules, toLayout, type RuleTopic } from './rulesSearch';
+import { abbrsOf, fixedSearch, glossaryMatches, knownRuleWord, layoutVariants, normalizeQuery, relatedHits, rulesExcerpt, searchRules, termCards, toLayout, type GlossaryTerm, type RuleTopic } from './rulesSearch';
 import RULES from '../data/rules.json';
+import GLOSSARY from '../data/glossary.json';
 
 const topics: RuleTopic[] = [
   { title: 'Загальні правила', section: 'Загальні правила', url: 'u1', items: [
@@ -257,5 +258,76 @@ describe('не та розкладка (specs/092)', () => {
     expect(fixedSearch("'ktrnhjyysq", runFake, r => !r.length, () => false)).toEqual({ result: ['x'], shown: 'електронний' });
     const both = (q: string) => (q === 'єлектронній' || q === 'електронний' ? [q] : []);
     expect(fixedSearch("'ktrnhjyysq", both, r => !r.length, () => false).shown).toBe('єлектронній');
+  });
+});
+
+describe('глосарій у пошуку (specs/093)', () => {
+  const t = (RULES as { topics: RuleTopic[] }).topics;
+  const G = (GLOSSARY as { terms: GlossaryTerm[] }).terms;
+  const run = (q: string) => searchRules(t, q, 8, G);
+  const fix = (q: string) => fixedSearch(q, run, h => !h.length, w => knownRuleWord(t, w, G));
+  /* God Mode і Bunny Hop у правилах QuantRP не згадуються; «ГМ» у правилах — Головний модератор (окремий термін) */
+  const NO_RULES = new Set(['God Mode', 'Bunny Hop']);
+
+  it('кожен термін: кириличне скорочення, перша інша назва й не та розкладка знаходять пункти', () => {
+    expect(run('бх')).toEqual([]);
+    expect(run('bunny hop')).toEqual([]);
+    expect(run('god mode')).toEqual([]);
+    for (const g of G) {
+      const name = `${g.term}${g.full_name ? ` (${g.full_name})` : ''}`;
+      if (NO_RULES.has(g.full_name)) continue;
+      expect(run(g.term).length, `${name}: скорочення`).toBeGreaterThan(0);
+      if (g.aliases[0]) expect(run(g.aliases[0]).length, `${name}: ${g.aliases[0]}`).toBeGreaterThan(0);
+      const wrong = toLayout(g.term, 'en');
+      expect(fix(wrong).result.length, `${name}: не та розкладка «${wrong}»`).toBeGreaterThan(0);
+    }
+  });
+  it('пов\'язані пункти існують у правилах і йдуть першими', () => {
+    for (const g of G) for (const r of g.related_rules) expect(relatedHits(t, { ...g, related_rules: [r] }).length, `${g.term}: ${r}`).toBe(1);
+    const dm = G.find(g => g.term === 'ДМ')!;
+    const main = relatedHits(t, dm)[0];
+    for (const q of ['дм', 'DM', 'Дм', 'DeathMatch', 'lv']) {
+      const first = (q === 'lv' ? fix(q).result : run(q))[0];
+      expect({ topic: first.topic, n: first.n }, q).toEqual({ topic: main.topic, n: main.n });
+    }
+  });
+  it('синонім фразою: «дм» знаходить пункти зі словами «вбивство … без … причини»', () => {
+    expect(run('дм').some(h => /вбивств/i.test(h.s) && /причин/i.test(h.s))).toBe(true);
+  });
+  it('«33» — номер пункту, а «зз» і «pp» — зелена зона', () => {
+    const n33 = run('33');
+    expect(n33.every(h => h.n === '33')).toBe(true);
+    expect(n33.some(h => /зелен/i.test(h.s))).toBe(false);
+    expect(glossaryMatches(G, '33')).toEqual([]);
+    const zz = run('зз');
+    expect(zz.length).toBeGreaterThan(0);
+    expect(zz.some(h => /зелен|ЗЗ/i.test(h.s))).toBe(true);
+    const pp = fix('pp');
+    expect(pp.shown).toBe('зз');
+    expect(pp.result.map(h => h.topic + h.n)).toEqual(zz.map(h => h.topic + h.n));
+  });
+  it('два терміни в запиті — обидва розуміються', () => {
+    const r = searchRules(t, 'дм у зз', 30, G);
+    expect(r.length).toBeGreaterThan(0);
+    expect(glossaryMatches(G, 'дм у зз').map(g => g.term)).toEqual(['ДМ', 'ЗЗ']);
+  });
+  it('картки: порядок слів, без дублів, ТК — двома значеннями, без термінів — нічого', () => {
+    expect(glossaryMatches(G, 'зз dm').map(g => g.term)).toEqual(['ЗЗ', 'ДМ']);
+    expect(glossaryMatches(G, 'дм DM дезматч').map(g => g.term)).toEqual(['ДМ']);
+    expect(glossaryMatches(G, 'тк').map(g => g.full_name)).toEqual(['Team Kill', 'Трудовий кодекс']);
+    expect(glossaryMatches(G, 'вбивство в лікарні')).toEqual([]);
+    expect(glossaryMatches(G, 'зелена зона').map(g => g.term)).toEqual(['ЗЗ']);
+    expect(glossaryMatches(G, 'метагеймінгу').map(g => g.term)).toEqual(['МГ']);
+    expect(glossaryMatches(G, 'ГМ').map(g => g.full_name)).toEqual(['God Mode', 'Головний модератор']);
+  });
+  it('картка «Окремого пункту немає» — для God Mode і Bunny Hop, але не для Головного модератора чи ДМ', () => {
+    const empty = (q: string) => termCards(t, G, q).map(c => `${c.term.full_name || c.term.term}:${c.empty}`);
+    expect(empty('гм')).toEqual(['God Mode:true', 'Головний модератор:false']);
+    expect(empty('бх')).toEqual(['Bunny Hop:true']);
+    expect(empty('дм')).toEqual(['DeathMatch:false']);
+    expect(empty('варн')).toEqual(['Варн:false']);
+  });
+  it('без глосарію пошук такий самий, як раніше', () => {
+    for (const q of ['дм', 'зелена зона', 'КК 6.5', 'за скільки треба забити бізвар']) expect(searchRules(t, q)).toEqual(searchRules(t, q, 8, []));
   });
 });

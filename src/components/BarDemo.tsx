@@ -4,8 +4,9 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { loadMapData } from '../lib/mapMarks';
 import { buyers, knownPlaceWord, places, type BarPrice, type PlaceHit } from '../desktop/barSearch';
-import { fixedSearch, knownRuleWord, searchRules, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
-import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from '../desktop/barParts';
+import { fixedSearch, knownRuleWord, searchRules, termCards, type GlossaryTerm, type RuleHit, type RuleTopic } from '../desktop/rulesSearch';
+import { CopyBtn, GlossaryCard, placesText, Prices, Rich, RuleCard, rulesText } from '../desktop/barParts';
+import { builtinGlossary, loadGlossary } from '../lib/glossary';
 import { plainText } from '../desktop/richText';
 import RULES from '../data/rules.json';
 import '../desktop/bar.css';
@@ -17,7 +18,7 @@ const TOPICS = (RULES as { fetched: string; topics: RuleTopic[] }).topics;
 const AT = (RULES as { fetched: string }).fetched;
 const rulesDay = new Date(AT.length === 10 ? AT + 'T12:00:00' : AT).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 
-interface Ask { q: string; reply: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean; fixed?: string }
+interface Ask { q: string; reply: string; hits?: RuleHit[]; places?: PlaceHit[]; local?: boolean; fixed?: string; terms?: { term: GlossaryTerm; empty: boolean }[] }
 /* у тому самому форматі, що й справжня відповідь ШІ в програмі (specs/085): головна думка, список, жирне — без вигаданих пунктів правил */
 const AI_ONLY = [
   'Питання до ШІ своїми словами працює **в програмі Q-Hub** — на сайті лише пошук без ШІ.',
@@ -42,13 +43,14 @@ const loadPrices = () => (pricesP ??= !supabase ? Promise.resolve([]) : Promise.
   })), () => []));
 
 async function rulesAsk(text: string): Promise<Ask> {
-  const m = await loadMarks();
+  const [m, glossary] = await Promise.all([loadMarks(), loadGlossary().catch(() => builtinGlossary())]);
   const marks = m?.marks ?? [], cats = m?.cats ?? [];
-  /* як у програмі (specs/092): нічого як набрано — спроба в іншій розкладці, з підказкою */
-  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
-    w => knownRuleWord(TOPICS, w) || knownPlaceWord(marks, cats, w));
+  /* як у програмі (specs/092, 093): інша розкладка з підказкою; RP-терміни — розширення запиту й картки */
+  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q, 8, glossary), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
+    w => knownRuleWord(TOPICS, w, glossary) || knownPlaceWord(marks, cats, w));
   const { hits, places: pl } = f.result;
-  return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined };
+  const terms = termCards(TOPICS, glossary, f.shown ?? text);
+  return { q: text, reply: hits.length || pl.length || terms.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined, terms };
 }
 
 export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'prices'; n: number } }) {
@@ -128,12 +130,13 @@ export default function BarDemo({ pick }: { pick?: { q: string; mode: 'ai' | 'pr
               <p className="bfine">ШІ відповідає з правил сервера, але може помилятися — перевір пункт на форумі.</p>
             </> : <>
               {a.fixed && <p className="bfix" role="status">Показано результати для: <b>{a.fixed}</b></p>}
+              {a.terms?.map((c, i) => <GlossaryCard key={i} term={c.term} empty={c.empty} />)}
               {a.places && a.places.length > 0 && <>
                 <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · у програмі клік показує мітку на мапі поверх гри<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
                 <ul className="bplaces">{a.places.map(h => <li key={h.id}><span className="brow item">
                   <img src={h.icon} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></span></li>)}</ul>
               </>}
-              {(a.hits!.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits!.length ? ` · ${a.hits!.length} збігів` : ''} · станом на {rulesDay}
+              {(a.hits!.length > 0 || (!a.places?.length && !a.terms?.length)) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits!.length ? ` · ${a.hits!.length} збігів` : ''} · станом на {rulesDay}
                 {a.hits!.length > 1 && <CopyBtn text={rulesText(a.hits!)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
               {a.reply && <p className="bnone">{a.reply}</p>}
               {a.hits!.length > 0 && <ul className="brules">{a.hits!.map((h, i) => <RuleCard key={a.q + i} h={h} />)}</ul>}
