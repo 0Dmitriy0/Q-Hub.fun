@@ -9,10 +9,11 @@ import { loadMapData } from '../lib/mapMarks';
 import Settings, { CHANGES, unseenCount, type SetSec } from './Settings';
 import History, { type HistPick } from './History';
 import { matchCats } from './catMatch';
-import { fixedSearch, knownRuleWord, searchRules, rulesExcerpt, type RuleHit, type RuleTopic } from './rulesSearch';
+import { fixedSearch, knownRuleWord, searchRules, rulesExcerpt, termCards, type GlossaryTerm, type RuleHit, type RuleTopic } from './rulesSearch';
+import { builtinGlossary, loadGlossary } from '../lib/glossary';
 import RULES from '../data/rules.json';
 import { asset } from '../lib/app';
-import { CopyBtn, placesText, Prices, Rich, RuleCard, rulesText } from './barParts';
+import { CopyBtn, GlossaryCard, placesText, Prices, Rich, RuleCard, rulesText } from './barParts';
 import { plainText } from './richText';
 import { streamView } from './streamer';
 import { pinStatus, type PinStatus } from './pinStatus';
@@ -38,7 +39,7 @@ export interface Prefs { autostart?: boolean; pinned: boolean; position: 'top' |
 interface Data { /* товари, за якими стежу (specs/075), і промокод Q-Hub для вкладки над плашкою (specs/077; null — вимкнено адміном) */ watch?: (number | string)[]; promo?: SitePromo | null; user: { name: string; avatar: string | null; nick: string; nickChangedAt: string | null } | null; characters: { id: string; name: string; static: number | null }[]; character: string | null; prices: BarPrice[]; prefs: Prefs; staff?: boolean; version?: string; discord?: string; fullscreen?: boolean }
 /* unseen — відповідь ШІ прийшла, поки плашку не бачили: при новому Alt+Q лишається лише вона (specs/082) */
 /* fixed — запит в іншій розкладці, за яким знайдено результати (specs/092): над ними підказка */
-interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean; fixed?: string }
+interface Ask { q: string; reply: string; error?: string; hits?: RuleHit[]; places?: PlaceHit[]; unseen?: boolean; fixed?: string; terms?: { term: GlossaryTerm; empty: boolean }[] }
 interface BarApi {
   barData(): Promise<Data>; barCharacter(id: string): Promise<boolean>;
   rulesData(): Promise<{ fetched: string; topics: RuleTopic[] } | null>; onRulesChanged(cb: () => void): void;
@@ -71,11 +72,13 @@ const rulesDay = () => new Date(RULES_AT.length === 10 ? RULES_AT + 'T12:00:00' 
 /* пошук без ШІ: правила сервера й місця на мапі (specs/014) */
 /* specs/092: як набрано нічого не знайшлося — та сама спроба в іншій розкладці («lr» → «дк»), разом для правил і місць;
    підказка над результатами показує, що саме знайдено */
-const rulesAsk = (text: string, marks: PlaceMark[] = [], cats: PlaceCat[] = []): Ask => {
-  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
-    w => knownRuleWord(TOPICS, w) || knownPlaceWord(marks, cats, w));
+/* specs/093: RP-терміни з глосарію — розширення запиту й картки над результатами */
+const rulesAsk = (text: string, marks: PlaceMark[] = [], cats: PlaceCat[] = [], glossary: GlossaryTerm[] = []): Ask => {
+  const f = fixedSearch(text, q => ({ hits: searchRules(TOPICS, q, 8, glossary), places: places(q, marks, cats) }), r => !r.hits.length && !r.places.length,
+    w => knownRuleWord(TOPICS, w, glossary) || knownPlaceWord(marks, cats, w));
   const { hits, places: pl } = f.result;
-  return { q: text, reply: hits.length || pl.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined };
+  const terms = termCards(TOPICS, glossary, f.shown ?? text);
+  return { q: text, reply: hits.length || pl.length || terms.length ? '' : 'У правилах, законах і на мапі такого не знайшов. Спробуй інакше або Shift+Enter — спитати ШІ.', hits, places: pl, fixed: f.shown ?? undefined, terms };
 };
 /* мітки мапи для пошуку місць — раз на 10 хв (FR-012), у ref: слухачі плашки створюються один раз */
 const PLACES_TTL = 10 * 60e3;
@@ -122,7 +125,10 @@ export default function Bar() {
     if (Date.now() - placeData.current.at < PLACES_TTL) return;
     loadMapData().then(m => { if (m) placeData.current = { at: Date.now(), marks: m.marks, cats: m.cats }; }).catch(() => { /* без мережі — без місць */ });
   }, []);
-  const askRules = (text: string) => rulesAsk(text, placeData.current.marks, placeData.current.cats);
+  /* глосарій RP-термінів (specs/093): вбудований одразу, далі — з бази з кешем на 10 хв (loadGlossary сам стежить за часом) */
+  const glossary = useRef<GlossaryTerm[]>(builtinGlossary());
+  const loadTerms = useCallback(() => { loadGlossary().then(g => { glossary.current = g; }).catch(() => { /* лишається попередній */ }); }, []);
+  const askRules = (text: string) => rulesAsk(text, placeData.current.marks, placeData.current.cats, glossary.current);
   /* журнал оновлень: що гравець уже бачив — у сховищі плашки; після оновлення внизу з'являється «що нового» */
   const [seenLog, setSeenLog] = useState<string | null>(() => { try { return localStorage.getItem('qhub.seenLog'); } catch { return null; } });
   const unseen = unseenCount(seenLog);
@@ -137,7 +143,7 @@ export default function Bar() {
   useEffect(() => {
     load();
     /* нове відкриття — як перше за сесію: без минулих відповідей (вони в «Історії»), крім непрочитаної відповіді ШІ (specs/082) */
-    api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); setTimeout(() => input.current?.focus(), 0);
+    api.onQuickShow(() => { setAsks(freshAsks); setPeek(false); setQ(''); setView('main'); setSel(0); setNote(null); setChars(false); setHistOn(false); setMapOn(false); setBuyer(null); load(); loadPlaces(); loadTerms(); setTimeout(() => input.current?.focus(), 0);
       /* поява плашки: коротке опускання з прозорості (140 мс) — без затримки для гравця; зменшений рух — лише проявлення */
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
       root.current?.querySelector('.bbox')?.animate(reduce ? [{ opacity: .3 }, { opacity: 1 }] : [{ opacity: .3, transform: 'translateY(-6px) scale(.99)' }, { opacity: 1, transform: 'none' }], { duration: reduce ? 100 : 140, easing: 'cubic-bezier(.16, 1, .3, 1)' });
@@ -151,7 +157,7 @@ export default function Bar() {
     api.onPinAsk(s => { setPinQ(s); setView('pinask'); setChars(false); setNote(null); });
     /* F9 у гравця без точки: червоний блок без фокусу, сам ховається (specs/080) */
     api.onPinMiss?.(s => { setPinMiss(s); setPinQ(null); setView('pinmiss'); setChars(false); setNote(null); });
-    loadPlaces();
+    loadPlaces(); loadTerms();
     const pullRules =() => api.rulesData?.().then(s => { if (s?.topics?.length) { TOPICS = s.topics; RULES_AT = s.fetched; setRulesAt(s.fetched); } }).catch(() => {});
     pullRules(); api.onRulesChanged?.(pullRules);
   }, [load]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,7 +199,7 @@ export default function Bar() {
     setBusy(true); setNote(null);
     /* помічнику — пункти правил, найближчі до питання: він відповідає з них, а не з пам'яті */
     /* specs/092: пункти — за тим запитом, за яким їх знайдено (набраним чи в іншій розкладці) */
-    const found = fixedSearch(text, x => searchRules(TOPICS, x, 40), h => !h.length, w => knownRuleWord(TOPICS, w)).result;
+    const found = fixedSearch(text, x => searchRules(TOPICS, x, 40, glossary.current), h => !h.length, w => knownRuleWord(TOPICS, w, glossary.current)).result;
     const r = await api.quickAsk(text, rulesExcerpt(found, 24000));
     setBusy(false);
     setAsks(a => [{ q: text, reply: r.reply || '', error: r.error, unseen: !document.hasFocus() }, ...a].slice(0, 30));
@@ -325,12 +331,13 @@ function Ai({ asks, sel, setSel, busy, q, left }: { asks: Ask[]; sel: number; se
     <div className="bright">{busy && sel === 0 ? <div className="bskel" aria-label="ШІ думає"><i /><i /><i /></div> : a ? <>
       {a.hits ? <>
         {a.fixed && <p className="bfix" role="status">Показано результати для: <b>{a.fixed}</b></p>}
+        {a.terms?.map((c, i) => <GlossaryCard key={i} term={c.term} empty={c.empty} />)}
         {a.places && a.places.length > 0 && <>
           <div className="bkind brow-h"><Icon name="map" size={14} />Місця на мапі · клік — показати на мапі Q-Hub<CopyBtn text={placesText(a.places)} label="Копіювати місця з координатами" /></div>
           <ul className="bplaces">{a.places.map(h => <li key={h.id}><button className="brow item" onClick={() => api.mapOpen({ id: h.id, x: h.x, y: h.y })}>
             <img src={asset(h.icon)} alt="" width={22} height={22} /><span><b>{h.name}</b><small>{h.cat} · X {Math.round(h.x)} · Y {Math.round(h.y)}</small></span></button></li>)}</ul>
         </>}
-        {(a.hits.length > 0 || !a.places?.length) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}
+        {(a.hits.length > 0 || (!a.places?.length && !a.terms?.length)) && <div className="bkind brow-h"><Icon name="search" size={14} />Правила й закони{a.hits.length ? ` · ${a.hits.length} збігів` : ''} · станом на {rulesDay()}
           {a.hits.length > 1 && <CopyBtn text={rulesText(a.hits)} label="Копіювати всі знайдені пункти" short="Копіювати все" />}</div>}
         {a.reply && <p className="bnone">{a.reply}</p>}
         {a.hits.length > 0 && <ul className="brules">{a.hits.map((h, i) => <RuleCard key={a.q + i} h={h} onOpen={api.ruleOpen ? x => { api.ruleOpen!({ topic: x.topic, url: x.url, kind: x.kind, n: x.n, h: x.h, s: x.s }).catch(() => {}); } : undefined} />)}</ul>}

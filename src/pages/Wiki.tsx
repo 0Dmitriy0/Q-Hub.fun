@@ -19,7 +19,7 @@ export default function Wiki() {
       setLive((data || []).filter(e => phase(e.starts_on, e.ends_on, today).kind === 'now').length));
   }, []);
   const here = pathname.startsWith('/wiki/transport') ? 'Транспорт' : pathname.startsWith('/wiki/iventy') ? 'Івенти'
-    : pathname.startsWith('/wiki/gaidy') ? 'Гайди' : 'Роботи';
+    : pathname.startsWith('/wiki/gaidy') ? 'Гайди' : pathname.startsWith('/wiki/glosariy') ? 'Глосарій' : 'Роботи';
   return (
     <div className="wiki">
       <div className="wiki-top">
@@ -29,6 +29,7 @@ export default function Wiki() {
           <NavLink to="/wiki/transport" role="tab"><Icon name="car" size={16} />Транспорт{cars != null && <span className="cnt mono">{cars}</span>}</NavLink>
           <NavLink to="/wiki/iventy" role="tab"><Icon name="spark" size={16} />Івенти{live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>}</NavLink>
           <NavLink to="/wiki/gaidy" role="tab"><Icon name="book" size={16} />Гайди</NavLink>
+          <NavLink to="/wiki/glosariy" role="tab"><Icon name="tag" size={16} />Глосарій</NavLink>
         </div>
       </div>
       <Outlet />

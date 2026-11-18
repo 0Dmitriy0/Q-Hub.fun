@@ -1,0 +1,26 @@
+{
+  "_": "Глосарій RP-термінів (specs/093): вбудована копія для програми й сайту без мережі й початковий список міграції 0080. Живі дані — таблиця glossary_terms (правлять admin і moderator). related_rules — «<скорочення документа> <номер>», документ впізнається за скороченням назви (abbrsOf).",
+  "terms": [
+    { "term": "ДМ", "aliases": ["DM", "DeathMatch", "дезматч", "вбивство без причини"], "full_name": "DeathMatch", "description": "Вбивство чи нанесення шкоди без вагомої RP-причини.", "related_rules": ["ЗП 6.9"] },
+    { "term": "ДБ", "aliases": ["DB", "DriveBy", "драйвбай"], "full_name": "DriveBy", "description": "Вбивство чи шкода з машини або машиною (таран).", "related_rules": ["ЗП 6.4"] },
+    { "term": "СК", "aliases": ["SK", "Spawn Kill", "спавнкіл"], "full_name": "Spawn Kill", "description": "Вбивство чи шкода на місці спавну або титульній території.", "related_rules": ["ЗП 6.6"] },
+    { "term": "ТК", "aliases": ["TK", "Team Kill", "тімкіл"], "full_name": "Team Kill", "description": "Вбивство чи шкода членам своєї чи союзної організації.", "related_rules": ["ЗП 6.5"] },
+    { "term": "ТК", "aliases": [], "full_name": "Трудовий кодекс", "description": "Трудовий кодекс штату Quant — закон про роботу й працевлаштування.", "related_rules": [] },
+    { "term": "РП", "aliases": ["RP", "Role Play", "RolePlay", "рольова гра"], "full_name": "Role Play", "description": "Гра за ролями: кожен дотримується своєї ролі й реалістичної поведінки персонажа.", "related_rules": ["ЗП 6.1"] },
+    { "term": "МГ", "aliases": ["MG", "MetaGaming", "метагеймінг"], "full_name": "MetaGaming", "description": "Використання OOC-інформації (з-поза гри) в IC (у грі).", "related_rules": ["ЗП 6.8"] },
+    { "term": "ГМ", "aliases": ["GM", "God Mode", "годмод"], "full_name": "God Mode", "description": "Поведінка, ніби персонаж безсмертний — як у режимі бога.", "related_rules": [] },
+    { "term": "ГМ", "aliases": [], "full_name": "Головний модератор", "description": "Головний модератор сервера; ЗГМ — його заступник.", "related_rules": [] },
+    { "term": "ПГ", "aliases": ["PG", "PowerGaming", "павергеймінг"], "full_name": "PowerGaming", "description": "Нереалістичне геройство: напад без зброї на озброєного, бійка 1 проти 5, вміння, яких персонаж не має.", "related_rules": ["ЗП 6.7"] },
+    { "term": "РК", "aliases": ["RK", "Revenge Kill", "ревендж", "помста"], "full_name": "Revenge Kill", "description": "Повернення на місце смерті чи помста після загибелі.", "related_rules": ["ЗП 6.10"] },
+    { "term": "БХ", "aliases": ["BH", "Bunny Hop", "банніхоп"], "full_name": "Bunny Hop", "description": "NonRP біг зі стрибками для швидшого пересування.", "related_rules": [] },
+    { "term": "КК", "aliases": [], "full_name": "Кримінальний кодекс", "description": "Кримінальний кодекс штату Quant — злочини й покарання за них.", "related_rules": [] },
+    { "term": "АК", "aliases": [], "full_name": "Адміністративний кодекс", "description": "Адміністративний кодекс штату Quant — проступки, штрафи.", "related_rules": [] },
+    { "term": "ДК", "aliases": ["ПДР"], "full_name": "Дорожній кодекс", "description": "Дорожній кодекс штату Quant — правила дорожнього руху й штрафи за порушення.", "related_rules": [] },
+    { "term": "ПК", "aliases": [], "full_name": "Процесуальний кодекс", "description": "Процесуальний кодекс штату Quant — як затримують, допитують і судять.", "related_rules": [] },
+    { "term": "ЗЗ", "aliases": ["GZ", "Green Zone", "зелена зона"], "full_name": "Зелена зона", "description": "Мерія, вокзали, лікарні тощо: стрільба й шкода гравцям заборонені.", "related_rules": ["ПЗЗ 1.1"] },
+    { "term": "НРД", "aliases": ["NRD", "NonRP Drive"], "full_name": "NonRP Drive", "description": "Нереалістична їзда: стрибки, їзда там, де транспорт не проїде.", "related_rules": [] },
+    { "term": "Деморган", "aliases": ["demorgan"], "full_name": "", "description": "Покарання від адміністрації: персонаж на час опиняється в ізоляції.", "related_rules": [] },
+    { "term": "Ганбан", "aliases": ["gunban"], "full_name": "", "description": "Покарання від адміністрації: заборона користуватися зброєю на час.", "related_rules": [] },
+    { "term": "Варн", "aliases": ["warn"], "full_name": "", "description": "Попередження від адміністрації; кілька варнів — бан.", "related_rules": [] }
+  ]
+}
