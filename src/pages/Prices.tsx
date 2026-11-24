@@ -381,15 +381,21 @@ export default function Prices() {
                   const lr = rows.filter(r => r.buyer_id === buyer.id && limFor(r)).map(r => ({ r, l: limFor(r)! }));
                   return (
                     <div className="bp-admin">
-                      <label className="mcheck"><input type="checkbox" checked={bv.fixed} onChange={e => saveBuyerFlags(buyer.id, { fixed_prices: e.target.checked })} /> Фіксовані ціни — не змінюються за розкладом; ціну ставить лише адміністрація, голоси гравців і програми не приймаються</label>
-                      <form className="row" style={{ gap: 6, flexWrap: 'wrap' }} onSubmit={e => {
-                        e.preventDefault(); const fd = new FormData(e.currentTarget), v = Number(String(fd.get('lim') || '').replace(/\s/g, ''));
-                        saveBuyerFlags(buyer.id, v > 0 ? { sale_limit: v, sale_limit_unit: String(fd.get('unit') || 'кг') } : { sale_limit: null, sale_limit_unit: null });
-                      }}>
-                        <label className="fld"><span>Ліміт продажу</span><input name="lim" inputMode="numeric" defaultValue={buyer.sale_limit ? String(buyer.sale_limit) : ''} key={'lim' + buyer.id + (buyer.sale_limit ?? '')} style={{ width: 100 }} /></label>
-                        <label className="fld"><span>одиниця</span><select name="unit" defaultValue={buyer.sale_limit_unit || 'кг'} key={'unit' + buyer.id + (buyer.sale_limit_unit ?? '')}><option>кг</option><option>шт</option></select></label>
-                        <button className="btn sm ghost">Зберегти ліміт</button>
-                      </form>
+                      <div className="bp-admin-row">
+                        <label className="tgl" title="Ціни не змінюються за розкладом: ставить лише адміністрація, голоси гравців і програми не приймаються">
+                          <input type="checkbox" role="switch" checked={bv.fixed} onChange={e => saveBuyerFlags(buyer.id, { fixed_prices: e.target.checked })} />
+                          <span className="tgl-track" aria-hidden="true" /><span>Фіксовані ціни</span>
+                        </label>
+                        <form className="bp-limit" onSubmit={e => {
+                          e.preventDefault(); const fd = new FormData(e.currentTarget), v = Number(String(fd.get('lim') || '').replace(/\s/g, ''));
+                          saveBuyerFlags(buyer.id, v > 0 ? { sale_limit: v, sale_limit_unit: String(fd.get('unit') || 'кг') } : { sale_limit: null, sale_limit_unit: null });
+                        }}>
+                          <label htmlFor={'lim-' + buyer.id}>Ліміт продажу</label>
+                          <input id={'lim-' + buyer.id} name="lim" inputMode="numeric" placeholder="—" defaultValue={buyer.sale_limit ? String(buyer.sale_limit) : ''} key={'lim' + buyer.id + (buyer.sale_limit ?? '')} />
+                          <select name="unit" aria-label="Одиниця ліміту" defaultValue={buyer.sale_limit_unit || 'кг'} key={'unit' + buyer.id + (buyer.sale_limit_unit ?? '')}><option>кг</option><option>шт</option></select>
+                          <button className="btn sm ghost">Зберегти</button>
+                        </form>
+                      </div>
                       {!bv.fixed && <label className="mcheck"><input type="checkbox" checked={noLimOnly} onChange={e => setNoLimOnly(e.target.checked)} /> Лише без меж цін ({nl}) — програма бере їх лише з двох зчиток</label>}
                       {un.length > 0 && <details><summary>Невідомі товари у скупника: {un.length}</summary>
                         <ul className="list">{un.map(u => (
