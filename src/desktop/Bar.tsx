@@ -172,7 +172,7 @@ export default function Bar() {
   useLayoutEffect(() => {
     const el = root.current; if (!el) return;
     const ro = new ResizeObserver(fit);
-    ro.observe(el); return () => ro.disconnect();
+    ro.observe(el, { box: 'border-box' }); return () => ro.disconnect();   // border-box: запас під список персонажів — це padding, content-box його не бачить
   }, [fit]);
 
   /* «Ціни»: назвав скупника чи товар — відкривається скупник з цінами */
@@ -243,6 +243,28 @@ export default function Bar() {
 
   const expanded = !!d && (v !== 'main' || (mode === 'prices' && (q.trim() !== '' || !!cur)) || (mode === 'ai' && (asks.length > 0 || busy || histOn)));
   useLayoutEffect(() => { fit(); }, [expanded, fit]);
+  /* список персонажів не обрізаний (specs/094): вікно — точно під плашку, тож поки список відкритий, плашка
+     отримує запас знизу (угорі екрана й по центру) або згори (внизу екрана — список відкривається вгору), а вікно росте під нього.
+     Сама плашка не зсувається: знизу екрана вікно росте вгору рівно на запас. */
+  const charMenu = useRef<HTMLDivElement>(null);
+  const [menuRoom, setMenuRoom] = useState(0);
+  const menuUp = prefs?.position === 'bottom';
+  useLayoutEffect(() => {
+    if (!chars) { setMenuRoom(0); return; }
+    const m = charMenu.current, el = root.current; if (!m || !el) return;
+    /* offsetHeight, а не getBoundingClientRect: поява списку анімується масштабом, і розмір на екрані спершу менший */
+    const c = (m.offsetParent ?? m.parentElement!).getBoundingClientRect(), r = el.getBoundingClientRect(), gap = 6;
+    const pad = parseFloat(getComputedStyle(el)[menuUp ? 'paddingTop' : 'paddingBottom']) || 0;
+    const reach = menuUp ? (r.top + pad) - (c.top - gap - m.offsetHeight) : (c.bottom + gap + m.offsetHeight) - (r.bottom - pad);
+    setMenuRoom(Math.max(0, Math.ceil(reach) + 8));
+  }, [chars, menuUp]);
+  useLayoutEffect(() => { fit(); }, [menuRoom, fit]);
+  /* клік повз список закриває його — інакше прозорий запас під ним тримав би кліки, а не віддавав їх грі */
+  useEffect(() => {
+    if (!chars) return;
+    const off = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.bchar')) setChars(false); };
+    window.addEventListener('pointerdown', off); return () => window.removeEventListener('pointerdown', off);
+  }, [chars]);
   /* режим стрімера: підписи без ніка, аватара, імен персонажів і статіків; кабінет — під заслінкою, доки не відкриють */
   const streamer = !!prefs?.streamer;
   const sv = streamView(d?.user ?? null, d?.characters ?? [], streamer);
@@ -251,7 +273,7 @@ export default function Bar() {
   const aiNext = mode === 'ai' && shift;
 
   return (
-    <div className="bwrap" ref={root} onKeyDown={onKey} style={prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : undefined}>
+    <div className="bwrap" ref={root} onKeyDown={onKey} style={{ ...(prefs && prefs.opacity < 1 ? { opacity: prefs.opacity } : null), ...(menuRoom ? { [menuUp ? 'paddingTop' : 'paddingBottom']: `calc(${menuUp ? 4 : 22}px + ${menuRoom}px)` } : null) }}>
       {prefs?.tab !== false && <Tabs promo={d?.promo ?? null} />}
       {/* гра в повноекранному режимі — «зір» не бачить гру (blackwatch.cjs): плашка, таймер і ціни не працюють */}
       {d?.fullscreen && <div className="bfull" role="alert"><Icon name="alert" size={16} /><span><b>Q-Hub не бачить гру — вона в повноекранному режимі.</b> Постав у GTA V: Налаштування → Графіка → Режим екрана → «Вікно без рамки».</span></div>}
@@ -278,7 +300,7 @@ export default function Bar() {
               {/* зверху нік акаунта, під ним — вибраний персонаж зі статіком (specs/025): «D_VYRX» / «Dmitriy_Core #171028» */}
               <span className="bwho"><b>{sv.user?.nick || sv.user?.name || 'Q-Hub'}</b><small>{ch ? ch.name + (ch.static ? ' #' + ch.static : '') : 'Персонаж'}</small></span><Icon name="chev" size={14} />
             </button>
-            {chars && d && <div className="bmenu" role="menu">{sv.characters.map(c => (
+            {chars && d && <div ref={charMenu} className={'bmenu' + (menuUp ? ' up' : '')} role="menu">{sv.characters.map(c => (
               <button key={c.id} role="menuitemradio" aria-checked={c.id === d.character} onClick={async () => { setChars(false); await api.barCharacter(c.id); load(); }}>{c.name}{c.static ? <small className="mono"> #{c.static}</small> : null}</button>))}
               <button onClick={() => go('/kabinet/nalashtuvannya')}>Персонажі й профіль…</button>
               <button onClick={() => { setChars(false); signOut(); }}>Вийти з акаунта</button></div>}

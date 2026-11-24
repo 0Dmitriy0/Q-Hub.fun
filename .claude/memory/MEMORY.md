@@ -24,3 +24,5 @@
 - [Радар гри: порядок файлів шарів не керується](game-radar-layer-order.md) — ні номером, ні висотою z; усі шари частини — один файл (oneFilePerPart)
 - [SQL-тести локально на Windows](sql-tests-local-windows.md) — немає Postgres/WSL; портативний EDB + `psql -c` з кирилицею ламається (cp1251), лише CI
 - [Замір процесора й пам'яті програми](app-usage-measure.md) — usage.log, measure.ps1, QHUB_USAGE_TRACE=1; `[math]::Max(0,…)` у PowerShell округлює
+- [Початок сесії: стіл і програма](session-start-routine.md) — перше повідомлення: оновити .lavish/hub.html, запустити програму з коду, лише потім робота
+- [Перевіряти самому перед віддачею](self-verify-before-handoff.md) — готовий код: вимір і знімок через порт 9333, звіт з цифрами; tsc і збірки замало
