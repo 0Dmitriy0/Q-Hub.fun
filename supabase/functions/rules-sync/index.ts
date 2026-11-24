@@ -5,8 +5,10 @@
    Що змінилось проти попереднього знімка — дописує в rules-changes.json того ж бакета (changes.ts, вкладка «Правила» в програмі).
    Ключі — лише в секретах функції (SUPABASE_SERVICE_ROLE_KEY, RULES_SYNC_SECRET). */
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { FORUM, forumError, forumTopics, heading, readTopic } from './parse.ts';
-import { merge, plan, type SnapTopic, type SourceRow } from './merge.ts';
+import { FORUM, forumError } from './parse.ts';
+import { merge, type SnapTopic, type SourceRow } from './merge.ts';
+import { crawl } from './crawl.ts';
+import { checkAppBody, MAX_BODY, suspicious } from './guard.ts';
 import { append, changes, type Log } from './changes.ts';
 
 /* x-client-info шле supabase-js (functions.invoke з сайту) — без нього браузер блокує запит ще до функції */
@@ -27,21 +29,45 @@ async function get(path: string) {
   const h = await r.text(); pages.set(u.href, h); return h;
 }
 
-async function allowed(req: Request) {
-  if (SECRET && req.headers.get('x-sync-secret') === SECRET) return true;
+/* хто кличе: секрет GitHub (by — null) або сесія адміна (by — його id); інакше null */
+async function caller(req: Request): Promise<{ secret: boolean; by: string | null } | null> {
+  if (SECRET && req.headers.get('x-sync-secret') === SECRET) return { secret: true, by: null };
   const auth = req.headers.get('Authorization');
-  if (!auth) return false;
+  if (!auth) return null;
   const sb = createClient(URL_, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
   const { data } = await sb.rpc('my_role');
-  return data === 'admin';
+  if (data !== 'admin') return null;
+  const { data: u } = await sb.auth.getUser();
+  return { secret: false, by: u.user?.id ?? null };
 }
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return fail(405, 'Лише POST');
-  if (!(await allowed(req))) return fail(403, 'Оновлювати правила може лише адміністратор.');
+  const who = await caller(req);
+  if (!who) return fail(403, 'Оновлювати правила може лише адміністратор.');
+  /* тіло: {} — функція обходить форум сама; { via:'app', … } — теми прочитала програма адміна (specs/095) */
+  const raw = await req.text();
+  if (raw.length > MAX_BODY) return fail(413, 'Завеликий знімок правил');
+  let body: Record<string, unknown> = {};
+  if (raw.trim()) try { body = JSON.parse(raw); } catch { return fail(400, 'Тіло — не JSON'); }
+  const app = body.via === 'app';
+  if (app && who.secret) return fail(403, 'Оновлювати правила може лише адміністратор.');   // секрет GitHub не підсуває теми
+  const via = app ? 'app' : 'server';
   pages.clear();
   const db = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  /* журнал спроб (rules_sync_runs, 0081); збій журналу не зриває оновлення */
+  const lastOk = async () => {
+    const { data } = await db.from('rules_sync_runs').select('at,via').eq('ok', true).order('at', { ascending: false }).limit(1).maybeSingle();
+    return data ?? null;
+  };
+  const record = async (r: { ok: boolean; topics?: number; items?: number; changes?: number; error?: string | null }) => {
+    try {
+      await db.from('rules_sync_runs').insert({ via, by: who.by, ok: r.ok, topics: r.topics ?? null, items: r.items ?? null, changes: r.changes ?? null, error: r.error ?? null });
+      await db.from('rules_sync_runs').delete().lt('at', new Date(Date.now() - 90 * 86_400_000).toISOString());
+    } catch { /* журнал не обов'язковий */ }
+  };
 
   const { data: rows, error } = await db.from('rule_sources').select('id,url,kind,enabled').order('id');
   if (error) return fail(500, 'Не вдалося прочитати джерела правил.');
@@ -51,33 +77,29 @@ Deno.serve(async req => {
   const old = await db.storage.from('rules').download('rules.json');
   if (old.data) try { prev = JSON.parse(await old.data.text()).topics ?? []; } catch { /* битий — як порожній */ }
 
-  /* розділи → теми; помилка розділу — помилка джерела, решта йде далі */
-  const errors = new Map<number, string>(), titles = new Map<number, string>();
-  const listed = new Map<number, { url: string; section: string }[]>();
-  for (const s of sources) {
-    if (!s.enabled || /\/topic\/\d+/.test(s.url)) continue;
-    try { listed.set(s.id, await forumTopics(get, s.url)); titles.set(s.id, heading(await get(s.url.replace(/\/+$/, '') + '/'))); }
-    catch (e) { errors.set(s.id, e instanceof Error ? e.message : String(e)); }
-  }
-  const fresh: SnapTopic[] = [];
-  for (const p of plan(sources, listed)) {
-    if (errors.has(p.src)) continue;
-    try {
-      const t = await readTopic(get, p.url, p.section, p.kind);
-      fresh.push({ ...t, src: p.src });
-      if (/\/topic\/\d+/.test(sources.find(s => s.id === p.src)?.url ?? '')) titles.set(p.src, t.title);
-    } catch (e) { errors.set(p.src, (e instanceof Error ? e.message : String(e)) + ' · ' + p.url); }
-  }
+  /* теми: з тіла програми (перевірені guard.ts) або власним обходом (crawl.ts — той самий, що в програмі) */
+  let fresh: SnapTopic[], errors: Map<number, string>, titles: Map<number, string>;
+  if (app) {
+    const b = checkAppBody(body, sources);
+    if (!b.ok) { await record({ ok: false, error: 'тіло від програми: ' + b.error }); return fail(400, 'Програма надіслала неправильні дані: ' + b.error); }
+    ({ fresh, errors, titles } = b);
+  } else ({ fresh, errors, titles } = await crawl(get, sources));
+  /* запобіжник: зламана розмітка чи заглушка не стирає правила (FR-007) */
+  for (const [id, why] of suspicious(prev, fresh, sources, errors)) errors.set(id, why);
   const { topics, results } = merge(prev, sources, fresh, errors);
+  const items = topics.reduce((n, t) => n + t.items.length, 0);
 
+  /* жодне джерело не оновилось — знімок не чіпаємо: fetched лишається часом останнього вдалого оновлення */
+  const any = [...results.values()].some(r => !r.error);
   const fetched = new Date().toISOString();
-  const body = JSON.stringify({ fetched, topics });
-  const up = await db.storage.from('rules').upload('rules.json', new Blob([body], { type: 'application/json' }), { upsert: true, cacheControl: '300', contentType: 'application/json' });
-  if (up.error) return fail(502, 'Не вдалося записати знімок правил — попередній лишається.');
+  if (any) {
+    const up = await db.storage.from('rules').upload('rules.json', new Blob([JSON.stringify({ fetched, topics })], { type: 'application/json' }), { upsert: true, cacheControl: '300', contentType: 'application/json' });
+    if (up.error) { await record({ ok: false, error: 'знімок не записано: ' + up.error.message }); return fail(502, 'Не вдалося записати знімок правил — попередній лишається.'); }
+  }
 
   /* журнал змін: збій тут не зриває оновлення — правила вже записано, пропаде лише цей запис журналу */
   const ok = new Set([...results].filter(([, r]) => !r.error).map(([id]) => id));
-  const cs = changes(prev, topics, ok);
+  const cs = any ? changes(prev, topics, ok) : [];
   let logged = 0, logError: string | null = null;
   if (cs.length) try {
     let log: Log | null = null;
@@ -97,5 +119,7 @@ Deno.serve(async req => {
     await db.from('rule_sources').update(patch).eq('id', s.id);
     out.push({ id: s.id, title: titles.get(s.id) ?? null, items: r.items, error: r.error, diff: r.diff });
   }
-  return json({ fetched, changes: logged, changes_error: logError, topics: topics.length, items: topics.reduce((n, t) => n + t.items.length, 0), sources: out });
+  const firstErr = out.find(o => o.error)?.error ?? null;
+  await record({ ok: any, topics: topics.length, items, changes: logged, error: any ? null : firstErr });
+  return json({ fetched: any ? fetched : null, via, changes: logged, changes_error: logError, topics: topics.length, items, sources: out, last_ok: await lastOk() });
 });
