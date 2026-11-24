@@ -193,8 +193,8 @@ export default function Prices() {
   }, [rows, ups, tab, q, sort, hist, now, noLimOnly, ranks]);
   const buyer = buyers.find(b => b.id === tab);
   /* фіксовані ціни (specs/096): без таймера, меж і голосів; оновлює лише staff */
-  const viewOf = (id: string) => buyerView(buyers.find(b => b.id === id), isStaff);
-  const bv = buyerView(buyer, isStaff);
+  const viewOf = (id: string) => buyerView(buyers.find(b => b.id === id));
+  const bv = buyerView(buyer);
   async function saveBuyerFlags(id: string, patch: Partial<BuyerFlags>) {
     const { error } = await supabase!.from('buyers').update(patch).eq('id', id);
     if (error) { alert('Не вдалося зберегти: ' + error.message); return; }
@@ -445,7 +445,7 @@ export default function Prices() {
                 </div>
               </div>
             )}
-            {cur.length > 0 && <div className="bp-th" aria-hidden="true"><span>Товар · положення між мін і макс</span><span>30 днів</span><span>Ціна</span></div>}
+            {cur.length > 0 && <div className="bp-th" aria-hidden="true"><span>{bv.fixed && !q ? 'Товар' : 'Товар · положення між мін і макс'}</span><span>{bv.fixed && !q ? '' : '30 днів'}</span><span>Ціна</span></div>}
             {cur.length ? (
               <div className="plist">{cur.map((r, i) => {
                 const v = viewOf(r.buyer_id);
@@ -458,10 +458,10 @@ export default function Prices() {
                   {sub && <h3 className="psub">{sub}</h3>}
                   <div className={'prow' + (isOpen ? ' open' : '')}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
-                    <button type="button" className="pname" aria-expanded={isOpen} aria-controls={'pd-' + key} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
+                    <button type="button" className="pname" aria-expanded={v.chart ? isOpen : undefined} aria-controls={v.chart ? 'pd-' + key : undefined} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
                       <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{v.fixed && <span> · фіксована</span>}{isAdmin && limFor(r) && <span className="warn"> · {v.fixed ? 'на екрані' : 'перевір межі: у грі'} {money(limFor(r)!.price)}</span>}</small>
                       {v.limits && <RangeBar pos={pos} range={range} />}</button>
-                    <Spark pts={pts} now={now} />
+                    {v.chart ? <Spark pts={pts} now={now} /> : <span aria-hidden="true" />}
                     <div className="pval">
                       {editing
                         ? <form className="row upd" onSubmit={e => { e.preventDefault(); savePrice(r); }}>
@@ -481,7 +481,7 @@ export default function Prices() {
                     {isAdmin && <PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
                       const { error } = await supabase!.from('items').update({ image_url: url }).eq('id', r.item_id); if (error) throw error; load();
                     }} />}
-                    {isOpen && (
+                    {isOpen && v.chart && (
                       <div className="pdetail" id={'pd-' + key}>
                         {v.limits && <><div className="stats">
                           <div><small>Зараз</small><b className="mono">{r.shown ? money(r.shown) : '—'}</b></div>
@@ -490,7 +490,6 @@ export default function Prices() {
                           <div><small>Положення</small><b className="mono">{pos === null ? '—' : pos + '%'}</b></div>
                         </div>
                         <p className="muted note">{range?.from === 'editor' ? 'Межі мінімум і максимум вписав редактор з гри.' : range ? 'Межі — найнижча і найвища ціна, що траплялися за 30 днів. Коли редактор впише межі з гри, вони будуть точнішими.' : 'Меж поки немає: потрібно щонайменше дві різні ціни за 30 днів або межі від редактора.'}</p></>}
-                        {v.fixed && <p className="muted note">Ціна фіксована: не змінюється за розкладом. На графіку — і старі змінні ціни, до оновлення рибалки.</p>}
                         <PriceChart raw={raw} range={range} name={r.items!.name} onDelete={isAdmin ? p => delPoint(r, p) : undefined} />
                         {isStaff && v.limits && (
                           <form className="row lims" onSubmit={e => { e.preventDefault(); saveLimits(r); }}>

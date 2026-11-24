@@ -2,17 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { buyerView, isFixed, saleLimitText } from './fixedPrices';
 
 describe('скупник із фіксованими цінами (specs/096)', () => {
-  it('фіксований: без таймера, меж, голосів і «застаріла»; оновлює лише staff', () => {
-    const b = { fixed_prices: true, sale_limit: 5000, sale_limit_unit: 'кг' };
-    const v = buyerView(b, false);
-    expect(v).toMatchObject({ fixed: true, timer: false, limits: false, pending: false, canUpdate: false, stale: false });
+  it('фіксований: без таймера, меж, голосів, графіка й кнопки «Оновити ціну»', () => {
+    const v = buyerView({ fixed_prices: true, sale_limit: 5000, sale_limit_unit: 'кг' });
+    expect(v).toMatchObject({ fixed: true, timer: false, limits: false, pending: false, canUpdate: false, chart: false, stale: false });
     expect(v.limit).toMatch(/^5\s?000 кг$/);
-    expect(buyerView(b, true).canUpdate).toBe(true);
   });
   it('звичайний скупник і база до 0082 (полів немає) — усе як раніше', () => {
     for (const b of [{ fixed_prices: false }, {}, null]) {
-      const v = buyerView(b, false);
-      expect(v).toMatchObject({ fixed: false, timer: true, limits: true, pending: true, canUpdate: true, stale: true, limit: '' });
+      expect(buyerView(b)).toMatchObject({ fixed: false, timer: true, limits: true, pending: true, canUpdate: true, chart: true, stale: true, limit: '' });
     }
   });
   it('ліміт продажу показується й у звичайного скупника, ховається без значення', () => {
