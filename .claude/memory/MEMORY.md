@@ -17,12 +17,12 @@
 - [Масові пропозиції SQL-ом](wiki-bulk-proposals-sql.md) — ліміт 10 на розгляді рахує й той самий insert; do-блок з тимчасовим max_pending
 - [Програма виходить паками](desktop-release-packs.md) — реліз лише вручну `gh workflow run desktop.yml`; запис журналу пака з "pending"
 - [Відкат партії міток — назавжди](map-batch-restore-seed.md) — гарбузи повертати сідом map_pumpkins_ohm.sql з delete лише по harbuzy
-- [Власник керує через Lavish](owner-uses-lavish.md) — одна сторінка .lavish/hub.html (оновлювати її, не нові вкладки); відповідь — через --agent-reply-file
+- [Стіл — артефакт claude.ai](owner-hub-artifact.md) — працюємо через артефакт ReHf9JXtYqkr2M6qbBfGyu: watch на старті, відповіді в тред, фото за asset id; Lavish — архів
 - [Перезапуск програми після зміни](relaunch-app-after-change.md) — закрити Q-Hub власника, зібрати й `npm.cmd start` з коду після кожної зміни програми
 - [Вікно поверх гри забирає ввід](overlay-steals-game-input.md) — RAGE MP втрачає керування навіть без фокусу; після показу з клавіші — game.giveBack()
 - [«Роботи»/«Скупники» — мітки з бази](builtin-cats-db-marks.md) — 0071: dbMarks + markCats(), рядки jobs/buyers сховані RLS; 0072: точки з коду в базі, job_id → довідник
 - [Радар гри: порядок файлів шарів не керується](game-radar-layer-order.md) — ні номером, ні висотою z; усі шари частини — один файл (oneFilePerPart)
 - [SQL-тести локально на Windows](sql-tests-local-windows.md) — немає Postgres/WSL; портативний EDB + `psql -c` з кирилицею ламається (cp1251), лише CI
 - [Замір процесора й пам'яті програми](app-usage-measure.md) — usage.log, measure.ps1, QHUB_USAGE_TRACE=1; `[math]::Max(0,…)` у PowerShell округлює
-- [Початок сесії: стіл і програма](session-start-routine.md) — перше повідомлення: оновити .lavish/hub.html, запустити програму з коду, лише потім робота
+- [Початок сесії: стіл і програма](session-start-routine.md) — перше повідомлення: watch + оновити артефакт-стіл, запустити програму з коду, лише потім робота
 - [Перевіряти самому перед віддачею](self-verify-before-handoff.md) — готовий код: вимір і знімок через порт 9333, звіт з цифрами; tsc і збірки замало

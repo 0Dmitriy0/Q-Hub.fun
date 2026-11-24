@@ -29,6 +29,7 @@ const jobtimer = require('./jobtimer.cjs');
 const { blackWatch } = require('./blackwatch.cjs');
 const { createIdle } = require('./idlewin.cjs');
 const usage = require('./usage.cjs');
+const { createRuleSync } = require('./rulesync.cjs');
 const os = require('node:os');
 const { gameFocus, hwndOf, closeToGame } = require('./gamefocus.cjs');
 const { Worker } = require('node:worker_threads');
@@ -1196,6 +1197,15 @@ function startOnline() {
   const ping = async () => { const { data: { session } } = await sb.auth.getSession(); if (session) await sb.rpc('app_ping', { p_version: app.getVersion() }); };   // версія — для адмін-панелі (specs/039)
   ping().catch(() => {}); setInterval(() => ping().catch(() => {}), 60e3);
 }
+/* правила форуму з ПК адміна (specs/095, rulesync.cjs): форум не пускає сервер, а ПК адміна пускає.
+   Лише роль admin; через 2 хв після старту (QHUB_RULESYNC_NOW=1 — одразу), далі щогодини; саме оновлення — не частіше разу на добу */
+function startRuleSync() {
+  const { crawl } = require('./lib/rulecrawl.cjs');
+  const rs = createRuleSync({ dir, fetch: globalThis.fetch, crawl, sb, role: () => myRole, version: app.getVersion() });
+  const tick = () => rs.tick().then(r => { if (r.result === 'ok') pullRules(true); }).catch(() => {});
+  setTimeout(tick, process.env.QHUB_RULESYNC_NOW === '1' ? 15e3 : 2 * 60e3);   // роль приходить з refreshRole — дамо їй час
+  setInterval(tick, 3600e3);
+}
 function startDrafts() {
   refreshRole().catch(() => {});
   setInterval(() => refreshRole().catch(() => {}), 10 * 60e3);
@@ -1844,11 +1854,12 @@ app.whenReady().then(() => {
   if (updatedFrom) notify({ title: `Q-Hub оновлено до ${app.getVersion()}`, body: 'Що нового — у плашці Alt+Q: «Програму оновлено — що нового».' }, openFromToast);
   later(startDrafts);
   startOnline();
+  startRuleSync();
   startSessionTimer();
   later(startVision);
   later(startAlerts);
   /* журнали діагностики не ростуть без кінця (store.cjs) */
-  for (const n of ['pin.log', 'update.log', 'timer.log']) trimLog(path.join(dir(), n));
+  for (const n of ['pin.log', 'update.log', 'timer.log', 'rulesync.log']) trimLog(path.join(dir(), n));
   if (!globalShortcut.register(SHOT_KEY, () => captureShot().catch(() => {})))
     tray?.displayBalloon?.({ title: 'Q-Hub', content: `${SHOT_KEY} зайнята іншою програмою — навчальні знімки недоступні.` });
   if (!registerMapKey(prefs().mapKey))

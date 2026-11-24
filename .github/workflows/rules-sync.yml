@@ -31,5 +31,8 @@ jobs:
           echo "HTTP $code"
           node -e "const r=require('./out.json'); console.log(r.error || ('тем ' + r.topics + ', пунктів ' + r.items + ', змін у журналі ' + (r.changes ?? 0))); for (const s of r.sources || []) console.log((s.error ? '✗ ' : '✓ ') + (s.title || s.id) + ': ' + (s.error || s.items + ' пунктів')); if (r.changes_error) console.log('::warning::' + r.changes_error)" || cat out.json
           [ "$code" = 200 ]
-          # жодне джерело не оновилось (форум не пускає сервер) — запуск червоний, щоб це було видно одразу, а не за тиждень
-          node -e "const s=require('./out.json').sources||[]; if (s.length && s.every(x=>x.error)) { console.log('::error::Жодне джерело правил не оновилось — правила в програмі застарівають'); process.exit(1) }"
+          # жодне джерело не оновилось (форум не пускає сервер): червоний, лише якщо й програма адміна за 24 год правил не оновила (specs/095)
+          node -e "const r=require('./out.json'), s=r.sources||[]; if (!(s.length && s.every(x=>x.error))) process.exit(0);
+            const ok=r.last_ok, age=ok ? (Date.now()-Date.parse(ok.at))/3600e3 : Infinity;
+            if (age < 24) { console.log('::notice::Форум не пускає сервер; правила оновлено ' + (ok.via==='app' ? 'з програми адміна' : 'сервером') + ' ' + ok.at); process.exit(0) }
+            console.log('::error::Жодне джерело не оновилось, і за 24 год правил не оновлював ніхто — правила в програмі застарівають' + (ok ? ' (останнє вдале: ' + ok.at + ')' : '')); process.exit(1)"

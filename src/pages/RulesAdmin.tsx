@@ -11,6 +11,7 @@ import { KINDS, diffText, normalizeSourceUrl, type RuleKind } from '../lib/ruleS
    форуму з типом, вмикає й вимикає, видаляє і тисне «Оновити зараз» — функція rules-sync збирає новий знімок, який програма
    підхоплює сама. Права — у базі (0039): усе це бачить і змінює лише admin */
 interface Source { id: number; url: string; kind: RuleKind; enabled: boolean; title: string | null; items: number; synced_at: string | null; error: string | null; diff: { added: number; changed: number; removed: number } | null }
+interface Run { at: string; via: 'server' | 'app'; ok: boolean; topics: number | null; items: number | null; changes: number | null; error: string | null }
 const KIND = Object.fromEntries(KINDS) as Record<RuleKind, string>;
 const short = (u: string) => decodeURIComponent(u.replace('https://forum.quant5.com.ua/index.php?/', '')).replace(/\/$/, '');
 
@@ -20,8 +21,15 @@ export default function RulesAdmin() {
   const [url, setUrl] = useState(''); const [kind, setKind] = useState<RuleKind>('rules');
   const [msg, setMsg] = useState<{ text: string; bad?: boolean } | null>(null);
   const [busy, setBusy] = useState('');
-  const load = () => supabase?.from('rule_sources').select('id,url,kind,enabled,title,items,synced_at,error,diff').order('id')
-    .then(({ data, error }) => setList(error ? [] : (data as Source[])));
+  /* спроби оновлення (specs/095, 0081): сервер чи програма адміна, коли й з яким результатом */
+  const [runs, setRuns] = useState<Run[] | null>(null);
+  const loadRuns = () => supabase?.from('rules_sync_runs').select('at,via,ok,topics,items,changes,error').order('at', { ascending: false }).limit(10)
+    .then(({ data, error }) => setRuns(error ? [] : (data as Run[])));
+  const load = () => {
+    loadRuns();
+    return supabase?.from('rule_sources').select('id,url,kind,enabled,title,items,synced_at,error,diff').order('id')
+      .then(({ data, error }) => setList(error ? [] : (data as Source[])));
+  };
   useEffect(() => { if (role === 'admin') load(); }, [role]);
 
   if (!ready) return <div className="card empty">Завантаження…</div>;
@@ -64,7 +72,8 @@ export default function RulesAdmin() {
         <div className="row between"><h1 className="ih"><Icon name="book" />Джерела правил</h1>
           <button type="button" className="btn acc" disabled={!!busy} onClick={sync}>{busy === 'sync' ? 'Оновлюю…' : 'Оновити зараз'}</button></div>
         <p className="muted">Розділи й теми форуму QuantRP, з яких програма бере правила сервера, закони штату й накази. Розділ береться з
-          усіма підрозділами; вимкнена окремо тема всередині розділу пропускається. Оновлюється саме щодня о 03:00 за Києвом.
+          усіма підрозділами; вимкнена окремо тема всередині розділу пропускається. Оновлюється саме щодня о 03:00 за Києвом,
+          а поки форум не пускає сервер — раз на добу з програми Q-Hub адміна (вона має бути запущена).
           Пошук у плашці: <Link to="/programa">програма Q-Hub</Link>.</p>
         <form className="form cols" onSubmit={add}>
           <label className="fld" style={{ flex: 3 }}><span>Посилання на розділ чи тему</span>
@@ -82,7 +91,7 @@ export default function RulesAdmin() {
               <td><a href={s.url} target="_blank" rel="noreferrer"><b>{s.title || short(s.url)}</b></a><br /><small className="mono muted">{short(s.url)}</small>
                 {s.error && <><br /><small className="err">{s.error}</small></>}
                 {/* форум не пускає сервер (403/429): кнопка «Оновити зараз» цього не вилікує — сказати, що робити */}
-                {s.error && /40[39]|429|не пускає/.test(s.error) && <><br /><small className="muted">Правила в пошуку лишаються з останнього вдалого оновлення. Доступ відкриває адміністрація форуму.</small></>}</td>
+                {s.error && /40[39]|429|не пускає/.test(s.error) && <><br /><small className="muted">Правила в пошуку лишаються з останнього вдалого оновлення. Їх оновлює програма Q-Hub адміна раз на добу — див. «Останні оновлення» нижче.</small></>}</td>
               <td>{KIND[s.kind]}</td>
               <td className="n">{s.items || '—'}</td>
               <td>{s.synced_at ? when(s.synced_at) : 'ще ні'}</td>
@@ -90,6 +99,18 @@ export default function RulesAdmin() {
               <td className="row" style={{ flexWrap: 'nowrap' }}>
                 <button type="button" className="btn sm" onClick={() => toggle(s)}>{s.enabled ? 'Вимкнути' : 'Увімкнути'}</button>
                 <button type="button" className="btn sm ghost" onClick={() => remove(s)} aria-label="Видалити джерело">✕</button></td>
+            </tr>)}</tbody></table></div>}
+      </section>
+      <section className="card">
+        <h2>Останні оновлення</h2>
+        {!runs ? <div className="empty">Завантаження…</div> : !runs.length ? <div className="empty">Ще не було — або на базі немає міграції 0081.</div> :
+          <div className="scroll"><table className="t">
+            <thead><tr><th>Коли</th><th>Звідки</th><th>Результат</th><th className="n">Тем</th><th className="n">Пунктів</th><th className="n">Змін</th></tr></thead>
+            <tbody>{runs.map((r, i) => <tr key={i}>
+              <td>{when(r.at)}</td>
+              <td>{r.via === 'app' ? 'програма адміна' : 'сервер'}</td>
+              <td>{r.ok ? <span className="good">оновлено</span> : <span className="err">{r.error || 'не оновлено'}</span>}</td>
+              <td className="n">{r.topics ?? '—'}</td><td className="n">{r.items ?? '—'}</td><td className="n">{r.changes ?? '—'}</td>
             </tr>)}</tbody></table></div>}
       </section>
     </div>
