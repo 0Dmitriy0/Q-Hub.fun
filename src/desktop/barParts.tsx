@@ -119,12 +119,12 @@ export function Prices({ hits, setSel, cur, q, watch, onWatch }: { hits: BuyerHi
         <span><b>{b.buyer}</b><small>{b.items.length} товар{b.items.length % 10 === 1 && b.items.length % 100 !== 11 ? '' : 'ів'}</small></span>
       </button>))}</div>
     <div className="bright">
-      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">Ціни, які внесли гравці; у грі вони могли змінитися</small></div>
+      <div className="bhead">{cur.icon ? <img src={asset(cur.icon)} alt="" /> : null}<div><h3>{cur.buyer}</h3><small className="muted">{cur.items.length && cur.items.every(x => x.fixed) ? 'Ціни фіксовані — у грі вони не змінюються за розкладом' : 'Ціни, які внесли гравці; у грі вони могли змінитися'}</small></div>
         <CopyBtn label="Копіювати ціни скупника" text={[cur.buyer + ':', ...cur.items.filter(x => x.price).map(x => `${x.item} — ${money(x.price)}/${x.unit}`)].join('\n')} /></div>
       <div className="bbuyers">{cur.items.map(x => { const p = pos(x), id = x.itemId, on = id != null && !!watch?.some(w => String(w) === String(id)); return (
         <div key={x.item} className={'bbuy' + (onWatch ? ' w' : '')}>
           {x.icon ? <img src={asset(x.icon)} alt="" /> : <span className="bava" />}
-          <span><b>{x.item}</b><small>{x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
+          <span><b>{x.item}</b><small>{x.fixed ? 'фіксована ціна' : x.max > x.min ? `межі ${money(x.min)}–${money(x.max)}` : 'межі не вписані'}{x.at ? ` · ${when(x.at)}` : ''}{x.pend ? <span className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось"> · нова {money(x.pend.price)} · {x.pend.votes} з {x.pend.need}</span> : null}</small></span>
           {p !== null && <span className="brange" title={`${p}% діапазону`}><i style={{ left: p + '%' }} /></span>}
           <b className="mono">{x.price ? `${money(x.price)}/${x.unit}` : '—'}</b>
           {onWatch && id != null && <button type="button" className={'bbell' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onWatch(id)}

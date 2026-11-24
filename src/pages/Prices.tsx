@@ -16,8 +16,9 @@ import { readCache, readSnapshot, writeCache, type PriceData } from '../lib/pric
 import { subRank, subRanks } from '../lib/subOrder';
 import { widen } from '../lib/limits';
 import { useLinks } from '../lib/brand';
+import { buyerView, type BuyerFlags } from '../lib/fixedPrices';
 
-interface Buyer { id: string; name: string; updated_at: string | null; image_url: string }
+interface Buyer extends BuyerFlags { id: string; name: string; updated_at: string | null; image_url: string }
 interface NextChange { buyer_id: string; next_change_at: string | null; nick: string | null }
 /* sub — підгрупа («Шкури» / «М'ясо»); у старому кеші й знімку її немає (specs/028) */
 interface Item { id: number; name: string; unit: string; image_url: string; sub?: string }
@@ -114,14 +115,17 @@ export default function Prices() {
     load();
   }
   /* підказка зникає сама, коли адмін виправив межі так, що прочитана ціна в них */
-  const limFor = (r: Pick<Row, 'buyer_id' | 'item_id' | 'min_price' | 'max_price'>) =>
-    limRep.find(l => l.buyer_id === r.buyer_id && l.item_id === r.item_id && !noLim(r) && (l.price < r.min_price || l.price > r.max_price));
+  /* фіксований скупник (specs/096): звіт — «на екрані інша ціна», зникає, коли ціну оновили до прочитаної */
+  const limFor = (r: Pick<Row, 'buyer_id' | 'item_id' | 'min_price' | 'max_price' | 'price'>) =>
+    limRep.find(l => l.buyer_id === r.buyer_id && l.item_id === r.item_id && (buyers.find(b => b.id === r.buyer_id)?.fixed_prices
+      ? l.price !== r.price
+      : !noLim(r) && (l.price < r.min_price || l.price > r.max_price)));
 
   async function load() {
     if (!supabase) return;
     supabase.from('price_pending').select('*').then(({ data }) => setPend((data as Pending[] | null) || []), () => {});
     const [b, r, u, c, n] = await Promise.all([
-      supabase.from('buyers').select('id,name,updated_at,image_url').order('sort'),
+      supabase.from('buyers').select('*').order('sort'),
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)'),
       supabase.from('price_updates').select('*').order('created_at', { ascending: false }).limit(500),
       supabase.from('contributors').select('*').order('total', { ascending: false }).limit(500),
@@ -188,6 +192,14 @@ export default function Prices() {
       });
   }, [rows, ups, tab, q, sort, hist, now, noLimOnly, ranks]);
   const buyer = buyers.find(b => b.id === tab);
+  /* фіксовані ціни (specs/096): без таймера, меж і голосів; оновлює лише staff */
+  const viewOf = (id: string) => buyerView(buyers.find(b => b.id === id), isStaff);
+  const bv = buyerView(buyer, isStaff);
+  async function saveBuyerFlags(id: string, patch: Partial<BuyerFlags>) {
+    const { error } = await supabase!.from('buyers').update(patch).eq('id', id);
+    if (error) { alert('Не вдалося зберегти: ' + error.message); return; }
+    load();
+  }
   useEffect(() => { loadHist([...new Set(cur.map(r => r.buyer_id))].filter(id => !histFor.has(id))); }, [cur]);
   const reload = (buyerId: string) => { load(); loadHist([buyerId]); };
   /* натиснув на скупника — свіжі ціни саме його, без оновлення сторінки (поки дивився інших, ціни могли змінитися);
@@ -198,7 +210,7 @@ export default function Prices() {
     const n = ++buyerReq.current;
     const [r, b, x] = await Promise.all([
       supabase.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,price_at,items(id,name,unit,image_url,sub)').eq('buyer_id', id),
-      supabase.from('buyers').select('id,name,updated_at,image_url').eq('id', id).maybeSingle(),
+      supabase.from('buyers').select('*').eq('id', id).maybeSingle(),
       supabase.from('buyer_next_change').select('*').eq('buyer_id', id),
     ]);
     if (n !== buyerReq.current || r.error) return;
@@ -356,7 +368,11 @@ export default function Prices() {
               </a>))}</div>}
             {!q && buyer && (
               <div className="bp-buyer">
-                <div className="row"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span></div></div>
+                <div className="row"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span>
+                  {(bv.fixed || bv.limit) && <span className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                    {bv.fixed && <span className="pill acc" title="Ціни цього скупника не змінюються за розкладом — їх оновлює адміністрація, коли проєкт їх змінить">фіксовані ціни</span>}
+                    {bv.limit && <span className="muted">Ліміт продажу: <b className="mono">{bv.limit}</b></span>}
+                  </span>}</div></div>
                 {isAdmin && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
                   const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
                 }} />}
@@ -365,13 +381,30 @@ export default function Prices() {
                   const lr = rows.filter(r => r.buyer_id === buyer.id && limFor(r)).map(r => ({ r, l: limFor(r)! }));
                   return (
                     <div className="bp-admin">
-                      <label className="mcheck"><input type="checkbox" checked={noLimOnly} onChange={e => setNoLimOnly(e.target.checked)} /> Лише без меж цін ({nl}) — програма бере їх лише з двох зчиток</label>
+                      <label className="mcheck"><input type="checkbox" checked={bv.fixed} onChange={e => saveBuyerFlags(buyer.id, { fixed_prices: e.target.checked })} /> Фіксовані ціни — не змінюються за розкладом; ціну ставить лише адміністрація, голоси гравців і програми не приймаються</label>
+                      <form className="row" style={{ gap: 6, flexWrap: 'wrap' }} onSubmit={e => {
+                        e.preventDefault(); const fd = new FormData(e.currentTarget), v = Number(String(fd.get('lim') || '').replace(/\s/g, ''));
+                        saveBuyerFlags(buyer.id, v > 0 ? { sale_limit: v, sale_limit_unit: String(fd.get('unit') || 'кг') } : { sale_limit: null, sale_limit_unit: null });
+                      }}>
+                        <label className="fld"><span>Ліміт продажу</span><input name="lim" inputMode="numeric" defaultValue={buyer.sale_limit ? String(buyer.sale_limit) : ''} key={'lim' + buyer.id + (buyer.sale_limit ?? '')} style={{ width: 100 }} /></label>
+                        <label className="fld"><span>одиниця</span><select name="unit" defaultValue={buyer.sale_limit_unit || 'кг'} key={'unit' + buyer.id + (buyer.sale_limit_unit ?? '')}><option>кг</option><option>шт</option></select></label>
+                        <button className="btn sm ghost">Зберегти ліміт</button>
+                      </form>
+                      {!bv.fixed && <label className="mcheck"><input type="checkbox" checked={noLimOnly} onChange={e => setNoLimOnly(e.target.checked)} /> Лише без меж цін ({nl}) — програма бере їх лише з двох зчиток</label>}
                       {un.length > 0 && <details><summary>Невідомі товари у скупника: {un.length}</summary>
                         <ul className="list">{un.map(u => (
                           <li key={u.id} className="row between"><span>{u.text} <small className="muted">· {u.seen_count} раз · {when(u.last_seen)}</small></span>
                             <button type="button" className="btn sm ghost" onClick={() => dropUnknown(u.id)}>Прибрати</button></li>))}</ul>
                       </details>}
-                      {lr.length > 0 && <details><summary>Перевір межі: {lr.length}</summary>
+                      {lr.length > 0 && bv.fixed && <details><summary>На екрані інша ціна: {lr.length}</summary>
+                        <ul className="list">{lr.map(({ r, l }) => (
+                          <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, зараз {money(r.price)} <small className="muted">· {l.seen_count} раз{l.reporters?.length ? ` · гравців: ${l.reporters.length}` : ''} · {when(l.last_seen)}</small></span>
+                            <span className="row" style={{ gap: 6 }}>
+                              <button type="button" className="btn sm acc" onClick={() => setEdit(e => ({ ...e, [r.buyer_id + ':' + r.item_id]: String(l.price) }))} title="Відкриє поле ціни з цим числом — перевір і збережи">Поставити {money(l.price)}</button>
+                              <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)} title="Це помилка розпізнавання — ціну не змінювати">Відхилити</button>
+                            </span></li>))}</ul>
+                      </details>}
+                      {lr.length > 0 && !bv.fixed && <details><summary>Перевір межі: {lr.length}</summary>
                         <ul className="list">{lr.map(({ r, l }) => (
                           <li key={l.item_id} className="row between"><span>{r.items?.name} — у грі {money(l.price)}, межі {money(r.min_price)}–{money(r.max_price)} <small className="muted">· {l.seen_count} раз{l.reporters?.length ? ` · гравців: ${l.reporters.length}` : ''} · {when(l.last_seen)}</small></span>
                             <span className="row" style={{ gap: 6 }}>
@@ -384,7 +417,14 @@ export default function Prices() {
                 })()}
               </div>
             )}
-            {!q && buyer && (
+            {!q && buyer && bv.fixed && (
+              <div className="cycle" role="status">
+                <div><small>Ціни</small><b>фіксовані</b></div>
+                <div><small>Останнє оновлення</small><b className="mono">{lastAt ? when(lastAt) : '—'}</b></div>
+                <div><small><Icon name="clock" size={14} /> Наступна зміна цін</small><b>не за розкладом</b><small className="muted">оновимо, коли проєкт змінить ціни</small></div>
+              </div>
+            )}
+            {!q && buyer && !bv.fixed && (
               <div className="cycle" role="status">
                 <div><small>Свіжі ціни (до 3 год)</small><b className="mono">{fresh} з {cur.length}</b></div>
                 <div><small>Останнє оновлення</small><b className="mono">{lastAt ? when(lastAt) : '—'}</b></div>
@@ -408,7 +448,8 @@ export default function Prices() {
             {cur.length > 0 && <div className="bp-th" aria-hidden="true"><span>Товар · положення між мін і макс</span><span>30 днів</span><span>Ціна</span></div>}
             {cur.length ? (
               <div className="plist">{cur.map((r, i) => {
-                const key = r.buyer_id + ':' + r.item_id, old = !!r.at && ms(r.at) < cs, isOpen = open === key, editing = edit[key] !== undefined;
+                const v = viewOf(r.buyer_id);
+                const key = r.buyer_id + ':' + r.item_id, old = v.stale && !!r.at && ms(r.at) < cs, isOpen = open === key, editing = edit[key] !== undefined;
                 const raw = hist[key] || [], pts = series(raw, now), range = priceRange(raw, r.min_price, r.max_price, now), pos = rangePos(r.shown, range);
                 /* підзаголовок перед блоком неосновної підгрупи («М'ясо»); основна й скупники з однією підгрупою — без нього */
                 const sub = sort === 'name' && rk(r) > 0 && (i === 0 || cur[i - 1].items!.sub !== r.items!.sub) ? r.items!.sub : '';
@@ -418,8 +459,8 @@ export default function Prices() {
                   <div className={'prow' + (isOpen ? ' open' : '')}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
                     <button type="button" className="pname" aria-expanded={isOpen} aria-controls={'pd-' + key} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
-                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{isAdmin && limFor(r) && <span className="warn"> · перевір межі: у грі {money(limFor(r)!.price)}</span>}</small>
-                      <RangeBar pos={pos} range={range} /></button>
+                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{v.fixed && <span> · фіксована</span>}{isAdmin && limFor(r) && <span className="warn"> · {v.fixed ? 'на екрані' : 'перевір межі: у грі'} {money(limFor(r)!.price)}</span>}</small>
+                      {v.limits && <RangeBar pos={pos} range={range} />}</button>
                     <Spark pts={pts} now={now} />
                     <div className="pval">
                       {editing
@@ -430,8 +471,8 @@ export default function Prices() {
                           </form>
                         : <b className="mono">{r.shown ? money(r.shown) : '—'}</b>}
                       {!editing && <small className="muted">за {r.items!.unit}</small>}
-                      {!editing && session && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
-                      {!editing && pend.filter(p => p.buyer_id === r.buyer_id && p.item_id === r.item_id).sort((a, b) => b.votes - a.votes).slice(0, 2).map(p =>
+                      {!editing && session && v.canUpdate && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
+                      {!editing && v.pending && pend.filter(p => p.buyer_id === r.buyer_id && p.item_id === r.item_id).sort((a, b) => b.votes - a.votes).slice(0, 2).map(p =>
                         <small key={p.price} className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось">нова: {money(p.price)} · {p.votes} з {p.need}
                           {isAdmin && <> · <button type="button" className="linkbtn" onClick={() => confirmPend(r, p)}>підтвердити</button></>}</small>)}
                       {!editing && note[key] && <small className="muted pnote">{note[key]}</small>}
@@ -442,15 +483,16 @@ export default function Prices() {
                     }} />}
                     {isOpen && (
                       <div className="pdetail" id={'pd-' + key}>
-                        <div className="stats">
+                        {v.limits && <><div className="stats">
                           <div><small>Зараз</small><b className="mono">{r.shown ? money(r.shown) : '—'}</b></div>
                           <div><small>Мінімум</small><b className="mono">{range ? money(range.min) : '—'}</b></div>
                           <div><small>Максимум</small><b className="mono">{range ? money(range.max) : '—'}</b></div>
                           <div><small>Положення</small><b className="mono">{pos === null ? '—' : pos + '%'}</b></div>
                         </div>
-                        <p className="muted note">{range?.from === 'editor' ? 'Межі мінімум і максимум вписав редактор з гри.' : range ? 'Межі — найнижча і найвища ціна, що траплялися за 30 днів. Коли редактор впише межі з гри, вони будуть точнішими.' : 'Меж поки немає: потрібно щонайменше дві різні ціни за 30 днів або межі від редактора.'}</p>
+                        <p className="muted note">{range?.from === 'editor' ? 'Межі мінімум і максимум вписав редактор з гри.' : range ? 'Межі — найнижча і найвища ціна, що траплялися за 30 днів. Коли редактор впише межі з гри, вони будуть точнішими.' : 'Меж поки немає: потрібно щонайменше дві різні ціни за 30 днів або межі від редактора.'}</p></>}
+                        {v.fixed && <p className="muted note">Ціна фіксована: не змінюється за розкладом. На графіку — і старі змінні ціни, до оновлення рибалки.</p>}
                         <PriceChart raw={raw} range={range} name={r.items!.name} onDelete={isAdmin ? p => delPoint(r, p) : undefined} />
-                        {isStaff && (
+                        {isStaff && v.limits && (
                           <form className="row lims" onSubmit={e => { e.preventDefault(); saveLimits(r); }}>
                             <label className="fld"><span>Мінімум скупника</span><input inputMode="numeric" value={lim.min} onChange={e => setLim({ ...lim, min: e.target.value })} style={{ width: 120 }} /></label>
                             <label className="fld"><span>Максимум скупника</span><input inputMode="numeric" value={lim.max} onChange={e => setLim({ ...lim, max: e.target.value })} style={{ width: 120 }} /></label>

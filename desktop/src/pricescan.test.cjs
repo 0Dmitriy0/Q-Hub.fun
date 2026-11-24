@@ -289,3 +289,20 @@ test('listParts: 16:9 — заголовок і дві смуги карток, 
   assert.deepEqual(q[2].r, { x: 1684, y: 0, width: 503, height: 1440 });
   assert.deepEqual(listParts(3440, 1440), [{ col: 0, r: { x: 0, y: 0, width: 1720, height: 1440 } }, { col: 1, r: { x: 1720, y: 0, width: 1720, height: 1440 } }]);
 });
+
+/* фіксовані ціни (specs/096): на сайт нічого; збіг — «прочитано»; інша ціна тричі впевнено — один звіт адміну */
+test('фіксований скупник: ціни не надсилаються, інша ціна — один звіт за відкриття', () => {
+  const pick = pricePicker(600e3), f = (price, score = 0.97) => ({ buyer_id: 'fish', item_id: 7, price, score, min: 0, max: 0, last: 825, fixed: true });
+  assert.deepStrictEqual(pick('fish', [f(825)], 0), []);
+  assert.ok(pick.confirmed.has(7));
+  for (let i = 1; i <= 2; i++) { assert.deepStrictEqual(pick('fish', [f(900)], i * 4e3), []); assert.deepStrictEqual(pick.outside, []); }
+  assert.deepStrictEqual(pick('fish', [f(900)], 12e3), []);
+  assert.deepStrictEqual(pick.outside, [{ item_id: 7, price: 900, last: 825, fixed: true }]);
+  pick('fish', [f(900)], 16e3); assert.deepStrictEqual(pick.outside, []);           // четвертий раз — без повтору
+  pick('fish', [f(950, 0.5)], 20e3); assert.deepStrictEqual(pick.outside, []);      // невпевнена зчитка — нічого
+});
+test('фіксований скупник: смужка «прокрути список» не показується', () => {
+  const { coverage } = require('./pricescan.cjs');
+  assert.strictEqual(coverage().frame('fish', 20, [1], new Set([1]), 0, true).shown, false);
+  assert.strictEqual(coverage().frame('hide', 32, [1], new Set([1]), 0).shown, true);
+});

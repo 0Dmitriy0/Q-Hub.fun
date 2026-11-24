@@ -306,16 +306,18 @@ function vision(deps) {
     const names = expandAliases(all);
     const rows = shot.parseShot(ls, names)
       .filter(r => r.item && r.price && r.score >= shot.MIN_SCORE)
-      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0 }));
+      .map(r => ({ buyer_id: buyer, item_id: r.item.id, price: r.price, score: r.score, min: r.item.min || 0, max: r.item.max || 0, last: r.item.last || 0, fixed: !!r.item.fixed }));
     rows.push(...await rereadNames(img, ls, names, buyer, rows, now));
-    await sendChange(buyer, await change, now);
+    /* скупник із фіксованими цінами (specs/096): таймера немає, «прокрути, щоб дочитати» не просимо */
+    const fixed = all.length > 0 && all.every(i => i.fixed);
+    await sendChange(buyer, fixed ? null : await change, now);
     const fresh = pickPrices(buyer, rows, now);
     /* та сама ціна поза межами, впевнено прочитана тричі: межі на сайті, мабуть, хибні — адміну «перевір межі» (T031) */
     if (pickPrices.outside.length) log(`limits ${buyer}: ${JSON.stringify(pickPrices.outside)}`);
     /* відкинуті ціни — у журнал, не частіше разу на хвилину на товар (specs/004 FR-004) */
     for (const r of pickPrices.rejected) { const q = `x:${buyer}:${r.item_id}`; if (now - (quietAt.get(q) || 0) < 60e3) continue; quietAt.set(q, now); log(`reject ${buyer}: ${JSON.stringify(r)}`); }
     for (const o of pickPrices.outside) await deps.onLimits?.(buyer, o.item_id, o.price);
-    const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now);
+    const cov = covered.frame(buyer, all.length, rows.map(r => r.item_id), pickPrices.confirmed, now, fixed);
     deps.onCoverage?.(cov);
     /* той самий кадр (не гортали) — у журнал не пишемо: тепер їх кілька на секунду */
     if (!sameFrame) log(`cover ${buyer}: ${cov.read}/${cov.total}, чекають ${cov.pending}, кадр за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
@@ -371,7 +373,7 @@ function vision(deps) {
         const id = e.item?.item.id;
         if (!e.item || reread.named.has(id) || [...reread.seen].some(([kk, o]) => kk !== k && o.item?.item.id === id)) continue;
         if (!rows.some(r => r.item_id === id) && !out.some(r => r.item_id === id))
-          out.push({ buyer_id: buyer, item_id: e.item.item.id, price, score: e.item.score, min: e.item.item.min || 0, max: e.item.item.max || 0 });
+          out.push({ buyer_id: buyer, item_id: e.item.item.id, price, score: e.item.score, min: e.item.item.min || 0, max: e.item.item.max || 0, ...(e.item.item.fixed ? { fixed: true, last: e.item.item.last || 0 } : {}) });
       }
     }
     return out;
