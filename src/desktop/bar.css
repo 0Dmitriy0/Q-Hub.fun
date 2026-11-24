@@ -8,6 +8,11 @@ body.in-bar input { user-select: text; }
 .btab.soon .ico { color: var(--accent); }
 .bbox { width: 100%; background: rgba(14, 18, 24, .96); border: 1px solid var(--line2); border-radius: 16px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7); overflow: hidden; transition: border-color .15s; }
 .bbox:focus-within { border-color: rgba(255, 107, 0, .35); }
+/* вкладки над плашкою — та сама рамка, що в плашки, і підсвічуються разом з нею (specs/094) */
+.btab { transition: border-color .15s; }
+.bwrap:has(.bbox:focus-within) .btab { border-color: rgba(255, 107, 0, .35); }
+/* список персонажів не ховається за краєм плашки (specs/094); вікно під нього росте — див. menuRoom у Bar.tsx */
+.bbox:has(.bmenu) { overflow: visible; }
 
 /* рядок */
 .bbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
@@ -37,7 +42,7 @@ body.in-bar input { user-select: text; }
 .bmenu button small { color: var(--muted); font-weight: 600; }
 .bpill img, .bava { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; flex: none; }
 .bava { display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); font: 800 13px var(--sans); }
-.bmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 200px; display: flex; flex-direction: column; padding: 5px; background: #1a2330; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }
+.bmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 200px; max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; padding: 5px; background: #1a2330; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }
 .bmenu button { text-align: left; border: 0; background: none; color: var(--fg); font: 600 14px var(--sans); padding: 9px 11px; border-radius: 8px; cursor: pointer; }
 .bmenu button:hover, .bmenu button[aria-checked="true"] { background: var(--surface2); }
 .bmenu button[aria-checked="true"]::after { content: ' ✓'; color: var(--accent); }
@@ -572,3 +577,5 @@ html:has(> body.in-timer), body.in-timer { margin: 0; background: transparent !i
 .brow { border-radius: 12px; }
 .brow:hover { background: rgba(255, 255, 255, .035); }
 
+.bmenu.up { top: auto; bottom: calc(100% + 6px); }
+.bmenu.up { transform-origin: bottom right; }
