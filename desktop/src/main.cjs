@@ -886,7 +886,8 @@ let pricesAt = 0, pricesCache = [];
 async function barPrices(fresh = false) {
   if (!fresh && Date.now() - pricesAt < 5 * 60e3 && pricesCache.length) return pricesCache;
   const [{ data, error }, pend] = await Promise.all([
-    sb.from('buyer_items').select('item_id,price,min_price,max_price,price_at,buyers(id,name,image_url),items(name,unit,image_url,sub)'),
+    /* buyers(*): fixed_prices (0082, specs/096) — до застосування міграції стовпця немає, і явний select зламав би ціни */
+    sb.from('buyer_items').select('item_id,price,min_price,max_price,price_at,buyers(*),items(name,unit,image_url,sub)'),
     /* ціни, що чекають другого гравця (specs/029) — доповнення: без них плашка однаково показує поточні */
     sb.from('price_pending').select('buyer_id,item_id,price,votes,need').then(r => r.data || [], () => []),
   ]);
@@ -894,7 +895,8 @@ async function barPrices(fresh = false) {
   const top = new Map();
   for (const p of pend) { const k = p.buyer_id + ':' + p.item_id; if (!top.has(k) || top.get(k).votes < p.votes) top.set(k, { price: Number(p.price), votes: p.votes, need: p.need }); }
   pricesCache = (data || []).filter(r => r.buyers && r.items).map(r => ({
-    pend: top.get(r.buyers.id + ':' + r.item_id),
+    pend: r.buyers.fixed_prices ? undefined : top.get(r.buyers.id + ':' + r.item_id),
+    fixed: !!r.buyers.fixed_prices,
     buyerId: r.buyers.id, itemId: r.item_id,
     item: r.items.name, unit: r.items.unit || 'шт', icon: r.items.image_url || '', sub: r.items.sub || '', buyer: r.buyers.name, buyerIcon: r.buyers.image_url || '',
     price: Number(r.price) || 0, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, at: r.price_at,
@@ -1334,8 +1336,9 @@ async function visionCatalog() {
   if (Date.now() - catalogAt < 30 * 60e3 && catalogCache.length) return catalogCache;
   /* min/max — межі скупника: з ними ціну з прокручуваного списку можна взяти з одного кадру (pricescan.cjs);
      last — ціна на сайті: товар без меж не отримає зчитку, що відрізняється від неї більш ніж удвічі (specs/004) */
-  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,items(name,aliases)');
-  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, aliases: r.items.aliases || [], buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, last: Number(r.price) || 0 })); catalogAt = Date.now(); }
+  /* fixed — скупник із фіксованими цінами (0082, specs/096): buyers(*), бо до міграції стовпця немає */
+  const { data, error } = await sb.from('buyer_items').select('buyer_id,item_id,min_price,max_price,price,items(name,aliases),buyers(*)');
+  if (!error) { catalogCache = (data || []).filter(r => r.items).map(r => ({ id: r.item_id, name: r.items.name, aliases: r.items.aliases || [], buyer_id: r.buyer_id, min: Number(r.min_price) || 0, max: Number(r.max_price) || 0, last: Number(r.price) || 0, fixed: !!r.buyers?.fixed_prices }));catalogAt = Date.now(); }
   return catalogCache;
 }
 /* кадр екрана гри (основний монітор) у повному розмірі */

@@ -5,7 +5,9 @@ import { subRank, subRanks } from '../lib/subOrder';
 /* sub — підгрупа товару («Шкури» / «М'ясо»), стара програма її не віддає */
 export interface BarPrice { /* id товару — для «стежу за ціною» (specs/075); демо на сайті його не має */ itemId?: number | string; item: string; unit: string; icon: string; buyer: string; buyerIcon: string; price: number; min: number; max: number; at: string | null; sub?: string;
   /* непідтверджена новіша ціна (price_pending, specs/029): «нова 500 $ · 1 з 2» */
-  pend?: { price: number; votes: number; need: number } }
+  pend?: { price: number; votes: number; need: number };
+  /* скупник із фіксованими цінами (specs/096): без меж і «нової ціни» */
+  fixed?: boolean }
 export interface Found { item: string; unit: string; icon: string; best: BarPrice | null; buyers: BarPrice[]; have: number }
 export interface BuyerHit { buyer: string; icon: string; items: (BarPrice & { have: number })[] }
 
@@ -16,7 +18,7 @@ const FILLER = /^скуп/;
 const stem = (w: string) => w.slice(0, Math.max(3, w.length - 2));
 
 /* де ціна між межами скупника, 0–100; null — меж ще немає */
-export const pos = (p: BarPrice) => (p.max > p.min && p.price > 0 ? Math.round(Math.min(100, Math.max(0, ((p.price - p.min) / (p.max - p.min)) * 100))) : null);
+export const pos = (p: BarPrice) => (!p.fixed && p.max > p.min && p.price > 0 ? Math.round(Math.min(100, Math.max(0, ((p.price - p.min) / (p.max - p.min)) * 100))) : null);
 
 export function buyers(prices: BarPrice[], q: string, stock: Record<string, number> = {}, limit = 8): BuyerHit[] {
   const words = norm(q).split(/\s+/).filter(w => w && !FILLER.test(w)).map(stem);

@@ -31,6 +31,16 @@ function pricePicker(every = PRICES_EVERY) {
     for (let r of rows) {
       const k = buyer + ':' + r.item_id, s = seen.get(k), done = sent.get(k), lim = r.min > 0 && r.max > r.min;
       let repaired = false;
+      /* фіксована ціна (specs/096): на сайт нічого не йде. Збіг із базою — товар «прочитано»; інша ціна, впевнено прочитана
+         ODD_TIMES разів за відкриття, — один звіт адміну «на екрані інша ціна» (report_limit_mismatch), межі й стрибок не діють */
+      if (r.fixed) {
+        if (r.price === r.last) { ok.add(r.item_id); seen.delete(k); continue; }
+        const sure = (r.score ?? 0) >= ODD_SURE, odds = sure ? (s?.odd === r.price ? (s.odds || 0) + 1 : 1) : (s?.odds || 0);
+        seen.set(k, { plain: [], odd: sure ? r.price : s?.odd, odds });
+        if (sure && odds === ODD_TIMES) odd.push({ item_id: r.item_id, price: r.price, last: r.last, fixed: true });
+        rejected.push({ item_id: r.item_id, price: r.price, last: r.last, why: 'інша за фіксовану' });
+        continue;
+      }
       if (!lim && jump(r)) { rejected.push({ item_id: r.item_id, price: r.price, last: r.last, why: 'стрибок від останньої ціни' }); seen.delete(k); continue; }
       /* межі є, а ціна поза ними (жива гра 2026-10-29): */
       if (lim && !inLimits(r)) {
@@ -97,14 +107,15 @@ function coverage(gap = OPEN_GAP, showAfter = 0) {
   const view = now => {
     if (!st || now - lastAny >= gap) return null;
     const pending = [...st.seen].filter(id => !st.read.has(id)).length;
-    return { buyer: st.buyer, read: Math.min(st.read.size, st.total), total: st.total, pending, shown: now - st.openedAt >= showAfter };
+    /* фіксовані ціни (specs/096): дочитувати нічого — смужку «прокрути список» не показуємо */
+    return { buyer: st.buyer, read: Math.min(st.read.size, st.total), total: st.total, pending, shown: !st.fixed && now - st.openedAt >= showAfter };
   };
   return {
-    frame(buyer, total, seen, confirmed, now) {
+    frame(buyer, total, seen, confirmed, now, fixed = false) {
       if (now - lastAny >= gap) states.clear();   // нове відкриття вікна — старі ліки не воскресають
       st = states.get(buyer);
       if (!st) { st = { buyer, openedAt: now, total, read: new Set(), seen: new Set(), lastAt: now }; states.set(buyer, st); }
-      st.total = total; st.lastAt = now; lastAny = now;
+      st.total = total; st.lastAt = now; st.fixed = !!fixed; lastAny = now;
       for (const id of seen) st.seen.add(id);
       for (const id of confirmed) st.read.add(id);
       return view(now);
