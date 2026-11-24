@@ -2557,3 +2557,21 @@ table.t td { padding-top: 10px; padding-bottom: 10px; }
 @media (prefers-reduced-motion: reduce) { .gloss-row > svg { transition: none; } }
 .adm-gl-hist { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
 .adm-gl-hist .btn { margin-top: 4px; }
+
+/* Блок адміна скупника (specs/096): перемикач «Фіксовані ціни» й ліміт продажу одним рядком, однакової висоти 36 px */
+.bp-admin { display: grid; gap: 10px; justify-items: start; }
+.bp-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.tgl { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font: 600 13px var(--sans); color: var(--fg); cursor: pointer; position: relative; }
+.tgl input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tgl-track { width: 36px; height: 20px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--line2); position: relative; transition: background .15s, border-color .15s; flex: none; }
+.tgl-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.tgl input:checked + .tgl-track { background: var(--accent); border-color: var(--accent); }
+.tgl input:checked + .tgl-track::after { transform: translateX(16px); background: var(--accent-fg); }
+.tgl input:focus-visible + .tgl-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bp-limit { display: inline-flex; align-items: center; gap: 6px; }
+.bp-limit label { font-size: 13px; color: var(--muted); margin-right: 2px; }
+.bp-limit input, .bp-limit select { height: 36px; background: var(--bg); color: var(--fg); border: 1px solid var(--line2); border-radius: 10px; font: 600 14px var(--sans); padding: 0 10px; }
+.bp-limit input { width: 84px; font-family: var(--mono); }
+.bp-limit select { padding-right: 6px; }
+.bp-limit input:focus, .bp-limit select:focus { border-color: var(--accent); outline: 0; }
+@media (prefers-reduced-motion: reduce) { .tgl-track, .tgl-track::after { transition: none; } }
