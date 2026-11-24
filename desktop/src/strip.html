@@ -44,7 +44,7 @@
     const s = Math.max(0, Math.floor((Date.now() - started) / 1000));
     el.textContent = 'Сесія: ' + pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
   }
-  /* d: { started: ms|null, perHour: число|null, game: bool } — надсилає main.cjs; прибуток — зміна балансу HUD за сеанс (specs/040) */
+  /* d: { started: ms|null, perHour: число|null, game: bool } — надсилає main.cjs; прибуток — сума надходжень на баланс HUD за сеанс, витрати не віднімаються (specs/040) */
   /* d: { mode: 'buyer', buyer, read, total, pending } — вікно скупника відкрите (contracts/strip-buyer.md) */
   function buyer(d) {
     const el = document.getElementById('buy'), t = document.getElementById('btxt'), done = d.read >= d.total;
