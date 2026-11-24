@@ -12,14 +12,17 @@ export function saleLimitText(b: BuyerFlags | null | undefined): string {
 }
 
 /* що показувати в рядку ціни й у шапці скупника */
-export function buyerView(b: BuyerFlags | null | undefined, staff: boolean) {
+export function buyerView(b: BuyerFlags | null | undefined) {
   const fixed = isFixed(b);
   return {
     fixed,
     timer: !fixed,              // «Наступна зміна цін», поле «через скільки»
     limits: !fixed,             // межі мін–макс, положення, «перевір межі … розширити»
     pending: !fixed,            // «нова: X $ · k з N»
-    canUpdate: fixed ? staff : true,   // кнопка «Оновити ціну»: фіксовану — лише staff (вхід перевіряє сама сторінка)
+    /* кнопка «Оновити ціну» (вхід перевіряє сама сторінка). Фіксовану — нікому, і staff теж (власник 2026-11-25:
+       «ціни тепер однакові, вони не змінюються»): staff ставить нову через «На екрані інша ціна → Поставити» */
+    canUpdate: !fixed,
+    chart: !fixed,              // графік 30 днів і розгорнута картка з історією
     stale: !fixed,              // «може бути застаріла»
     limit: saleLimitText(b),
   };
