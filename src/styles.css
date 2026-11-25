@@ -261,9 +261,10 @@ label.btn { position: relative; cursor: pointer; }
 .modal::backdrop { background: rgba(10, 12, 14, .66); }
 .modal-box { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
 .modal-box h2 { font-size: 26px; }
-.seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; background: var(--surface2); border-radius: var(--rc); padding: 4px; }
-.seg button { border: 0; background: none; color: var(--muted); font: 600 13px var(--sans); padding: 9px 6px; border-radius: var(--rc); cursor: pointer; min-height: 40px; }
-.seg button.on { background: var(--accent); color: var(--accent-fg); }
+/* у вікні рейтингу перемикач періодів — на всю ширину, рівними частинами */
+.modal .seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.modal .seg button { padding: 8px 6px; }
+.seg button.on { background: var(--fg); color: var(--bg); }
 .seg button:disabled { opacity: .4; cursor: default; }
 .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 tr.podium td { font-weight: 600; }
@@ -614,7 +615,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .mlabel-list button:hover, .mlabel-list button:focus-visible { border-color: var(--accent); outline: none; }
 .mlabel-list small { margin-left: auto; font-weight: 500; }
 .mlabel-dot { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 3px solid; }
-.mtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #140700); }
+.mtabs button[aria-selected="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 .mfilters > .mseg { margin: 0; }
 .madmin > summary { display: none; }
 /* категорії — кнопки-плитки з кольором категорії */
@@ -884,8 +885,8 @@ h2.sect { margin: 6px 2px 0; }
 input.search { width: 100%; background: var(--surface); color: var(--fg); border: 1px solid var(--line2); border-radius: var(--rc); padding: 12px 18px; font: 500 15px var(--sans); min-height: 44px; }
 input.search:focus { border-color: var(--accent); outline: 0; }
 .tabs.chips button { flex: none; padding: 9px 15px; border-radius: var(--rc); background: var(--surface); border: 1px solid var(--line); color: var(--fg); font: 600 14px var(--sans); cursor: pointer; }
-.tabs.chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.seg.sm button { padding: 6px 11px; font-size: 12.5px; min-height: 32px; }
+.tabs.chips button[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.seg.sm button { padding: 6px 11px; font-size: 14px; min-height: 34px; }
 
 
 /* гараж: плитки авто з фото з каталогу */
@@ -1437,6 +1438,7 @@ fieldset .static-form .btn { align-self: end; }
 @media (max-width: 640px) {
   .bp { gap: 28px; }
   .bp-head p { font-size: 16px; }
+  .bp-head .row > .btn:not(.acc) { flex: 1 1 150px; }   /* дві другорядні дії — в один рядок під головною */
   .bp-th { display: none; }
   .bp-list { padding: 12px; }
   .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr) minmax(96px, auto); margin: 0 -4px; padding: 10px 8px; }
@@ -1675,26 +1677,26 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .mshot { display: flex; flex-direction: column; gap: 12px; }
 .mshot p { margin: 0; }
 .mshot-n { font-size: 14px; color: var(--muted); } .mshot-n b { color: var(--fg); font-family: var(--mono); }
-.mshot .mseg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.mshot .mseg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 .mshot-prev { display: block; border-radius: var(--rc); overflow: hidden; border: 1px solid var(--line2); background: #0a0e11; }
 .mshot-prev img { display: block; width: 100%; height: auto; max-height: 38dvh; object-fit: contain; }
 
 /* інструкція «Як поставити мапу в гру» (specs/023) */
 .guide { max-width: 760px; margin: 0 auto; padding: 24px 0 48px; }
 .guide-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.guide h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; }
+.guide h1 { font-size: clamp(38px, 5.4vw, 60px); line-height: .98; }
 .guide .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .guide-pc, .guide-ok { display: flex; align-items: center; gap: 8px; }
 .guide-ok { padding: 10px 14px; border-radius: var(--rc); border: 1px solid var(--line); background: var(--surface); }
 .guide-wait { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-.guide-sec h2 { font-size: 20px; margin-bottom: 8px; }
+.guide-sec h2 { font-size: 30px; margin-bottom: 8px; }
 .guide-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
 .guide-steps li p { margin: 0; white-space: pre-line; line-height: 1.6; }
 .guide-steps img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: var(--rc); border: 1px solid var(--line); }
 /* specs/027: зміст етапів, плитки «Що потрібно», етапи, попередження, шляхи з «Копіювати», позначки «зроблено» */
 .guide-aside { display: none; }
 .guide-toc { padding: 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
-.guide-toc h2, .guide-toc summary { font: 600 12px var(--mono); color: var(--muted); margin: 0 0 8px; }
+.guide-toc h2, .guide-toc summary { font: 600 14px var(--sans); color: var(--muted); margin: 0 0 8px; }
 .guide-toc.mobile summary { margin: 0; cursor: pointer; }
 .guide-toc.mobile[open] summary { margin-bottom: 8px; }
 .guide-toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -1715,7 +1717,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .guide-tile.opt { background: transparent; border-style: dashed; }
 .guide-opt { padding: 1px 7px; border-radius: var(--rc); border: 1px solid var(--line2); color: var(--muted); font: 600 12px var(--sans); }
 .guide-go { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-hi); font-weight: 600; font-size: 14px; }
-.guide-host { color: var(--faint); font: 500 12px var(--mono); }
+.guide-host { color: var(--faint); font: 500 13px var(--sans); }
 .guide-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; margin-bottom: 8px; }
 .guide-head h2 { margin: 0; }
 .guide-stage { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; scroll-margin-top: 84px; }
@@ -1724,11 +1726,11 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .guide-stage > summary::before { content: ''; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; flex: none; }
 .guide-stage[open] > summary::before { transform: rotate(45deg); }
 .guide-stage > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
-.guide-stage h3 { margin: 0; font-size: 17px; flex: 1; }
-.guide-left { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font: 600 12px var(--mono); }
+.guide-stage h3 { margin: 0; font-size: 19px; flex: 1; }
+.guide-left { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font: 500 14px var(--sans); }
 .guide-left.ok { color: var(--good); }
 .guide-steps li.warn { padding: 12px 14px; border-radius: var(--rc); border: 1px solid var(--warn); background: var(--warn-soft); }
-.guide-warn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--warn); font: 600 12px var(--mono); }
+.guide-warn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--warn); font: 600 14px var(--sans); }
 .guide-steps li.done::marker { color: var(--good); }
 .guide-steps li.done > p { color: var(--muted); }
 .guide-done { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; border-radius: var(--rc); border: 1px solid var(--line2); background: none; color: var(--muted); font: 600 12.5px var(--sans); cursor: pointer; }
@@ -1736,7 +1738,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .guide-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .guide-btn { padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line2); border-bottom-width: 2px; background: var(--surface2); color: var(--fg); font: 600 .88em var(--sans); white-space: nowrap; }
 .guide-path { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; padding: 6px 6px 6px 10px; border-radius: var(--rc); border: 1px solid var(--line2); background: var(--surface2); white-space: normal; }
-.guide-path code { flex: 1; min-width: 0; font: 500 13px var(--mono); overflow-wrap: anywhere; color: var(--fg); }
+.guide-path code { flex: 1; min-width: 0; font: 500 14px var(--code); overflow-wrap: anywhere; color: var(--fg); }
 .guide-path button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--surface); color: var(--fg); font: 600 12.5px var(--sans); cursor: pointer; }
 .guide-path button:hover { border-color: var(--accent); }
 .guide-path button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -2023,7 +2025,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .wp-src { border: 1px solid var(--line2); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; margin: 0; }
 .wp-src legend { padding: 0 6px; font-weight: 600; }
 .wp-src .seg { flex-wrap: wrap; align-self: flex-start; }
-.wp-src .seg button.on { background: var(--accent); color: var(--accent-fg); }
+.wp-src .seg button.on { background: var(--fg); color: var(--bg); }
 .wp-proof { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .wp-rule { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 0; }
 .wp-login, .wp-done { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
@@ -2066,7 +2068,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .rq { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .rq-list, .rq-open { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .rq-filt { display: flex; flex-wrap: wrap; gap: 6px; }
-.rq-filt .btn.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.rq-filt .btn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .rq-row { padding: 0; }
 .rq-pick { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 10px 10px; border-radius: var(--rc); }
 .rq-pick b { overflow-wrap: anywhere; }
@@ -2108,7 +2110,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .pnl-wait .warn-row b.num { color: var(--warn, var(--accent)); }
 .nav-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--rc); background: var(--accent); color: var(--accent-fg); font: 700 12px var(--sans); }
 .seg a { display: inline-flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); text-decoration: none; font: 600 13px var(--sans); padding: 9px 6px; border-radius: var(--rc); min-height: 40px; }
-.seg a.on { background: var(--accent); color: var(--accent-fg); }
+.seg a.on { background: var(--fg); color: var(--bg); }
 .seg a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* адмінка: бічне меню з групами (2026-11-06); до 900 px — випадний список зверху */
@@ -2270,7 +2272,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .icpick { display: flex; flex-wrap: wrap; gap: 6px; }
 .icpick button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--rc); border: 1px solid var(--line2); background: var(--surface2); color: var(--muted); cursor: pointer; }
 .icpick button:hover { color: var(--fg); }
-.icpick button.on { color: var(--accent); border-color: var(--accent); background: rgba(255, 107, 0, .12); }
+.icpick button.on { color: var(--accent-hi); border-color: var(--accent); background: var(--accent-soft); }
 .icpick button:focus-visible, .bed .hud-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wp-prev .gd-text { padding: 16px; }
 .wdiff-blocks { grid-template-columns: 1fr; }
@@ -2349,10 +2351,11 @@ html { scroll-padding-top: 76px; }
    Підпис-пігулка над заголовком лишився лише там, де він каже нове (головна, «Програма»): «Особистий кабінет» над
    «Кабінет гравця» лише повторював заголовок. Кроки інструкції — окремими картками з номером: видно, де ти зараз */
 .mgrp-n { font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; }
-.guide-steps { padding-left: 30px; gap: 10px; }
-.guide-steps li { padding: 12px 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
-.guide-steps li::marker { color: var(--accent-hi); font-weight: 700; font-variant-numeric: tabular-nums; }
-.guide-steps li.done { background: color-mix(in srgb, var(--good) 6%, var(--surface)); border-color: color-mix(in srgb, var(--good) 30%, transparent); }
+.guide-steps { padding-left: 34px; gap: 0; border-top: 1px solid var(--line2); }
+.guide-steps li { padding: 14px 4px 14px 6px; border-bottom: 1px solid var(--line2); }
+.guide-steps li::marker { color: var(--accent-hi); font: 700 22px var(--disp); }
+.guide-steps li.done { background: var(--good-soft); }
+.guide-steps li.warn { margin: 6px 0; border: 0; border-left: 3px solid var(--warn); border-radius: 0 var(--rc) var(--rc) 0; }
 .cab .h-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cab .h-cards .card { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 14px; row-gap: 2px; align-items: center; padding: 16px 18px; }
 .cab .h-cards .card .ibub { grid-row: 1 / 3; }
@@ -2549,27 +2552,29 @@ html { scroll-padding-top: 76px; }
 
 /* WIKI → Глосарій RP-термінів (specs/093) */
 .gloss { display: flex; flex-direction: column; gap: 16px; max-width: 920px; }
-.gloss-head h1 { margin: 0 0 6px; }
-.gloss-head p { margin: 0 0 12px; max-width: 720px; }
-.gloss-search { display: flex; align-items: center; gap: 8px; max-width: 460px; padding: 0 14px; min-height: 44px; border-radius: var(--r); border: 1px solid var(--line2); background: var(--surface); color: var(--muted); }
-.gloss-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--fg); font: 600 16px var(--sans); outline: 0; }
+.gloss-head h1 { margin: 0 0 12px; font-size: clamp(40px, 5.6vw, 64px); line-height: .95; }
+.gloss-head p { margin: 0 0 16px; max-width: 70ch; font-size: 17px; }
+.gloss-search { display: flex; align-items: center; gap: 8px; max-width: 460px; padding: 0 14px; min-height: 44px; border-radius: var(--rc); border: 1px solid var(--line2); background: var(--bg); color: var(--muted); }
+.gloss-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--fg); font: 400 16px var(--sans); outline: 0; }
 .gloss-search:focus-within { border-color: var(--accent); }
 .gloss-search .sr, .gloss .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.gloss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.gloss-item { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
-.gloss-item.on { border-color: var(--line2); }
-.gloss-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; background: none; border: 0; color: var(--fg); font: inherit; text-align: left; cursor: pointer; min-height: 56px; }
+/* словник — один список з тонкими лініями, а не стос карток */
+.gloss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line2); }
+.gloss-item { border-bottom: 1px solid var(--line2); }
+.gloss-item.on { background: var(--surface); }
+.gloss-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; background: none; border: 0; color: var(--fg); font: inherit; text-align: left; cursor: pointer; min-height: 56px; }
 .gloss-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r); }
 .gloss-row > svg { color: var(--muted); transition: transform .18s; }
 .gloss-item.on .gloss-row > svg { transform: rotate(180deg); }
-.gloss-term { font-size: 18px; color: var(--accent); overflow-wrap: anywhere; }
-.gloss-main { display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; }
-.gloss-names { color: var(--muted); font-size: 13px; }
-.gloss-rules { padding: 0 16px 14px 126px; }
+.gloss-term { font: 700 28px/1 var(--disp); color: var(--accent-hi); overflow-wrap: anywhere; }
+.gloss-main { display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
+.gloss-names { color: var(--muted); font-size: 14px; }
+.gloss-rules { padding: 0 16px 16px 140px; }
 .gloss-rules ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.gloss-rules p { margin: 2px 0 0; font-size: 14px; white-space: pre-wrap; }
+.gloss-rules p { margin: 2px 0 0; font-size: 15px; white-space: pre-wrap; }
 @media (max-width: 640px) {
-  .gloss-row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; }
+  .gloss-row { grid-template-columns: 76px minmax(0, 1fr) auto; gap: 10px; padding: 12px 4px; }
+  .gloss-term { font-size: 24px; }
   .gloss-rules { padding: 0 12px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .gloss-row > svg { transition: none; } }
