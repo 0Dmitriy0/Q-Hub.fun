@@ -1,0 +1,4 @@
+new dark m /wiki/roboty -> 200; висота 5051px; знімків 5
+new dark m /wiki/transport -> 200; висота 8557px; знімків 7
+new dark d /wiki/roboty -> 200; висота 1952px; знімків 2
+new dark d /wiki/transport -> 200; висота 5834px; знімків 6
