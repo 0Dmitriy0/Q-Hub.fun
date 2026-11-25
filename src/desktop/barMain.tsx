@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../lib/auth';
 import Bar from './Bar';
-import '../styles.css';
+import './legacy.css';   // програма — на старому стилі сайту (див. legacy.css)
 import './bar.css';
 
 /* плашка Alt+Q програми Q-Hub (bar.html → desktop/src/ui/bar.html) — уся програма: рядок пошуку і кабінет під ним.

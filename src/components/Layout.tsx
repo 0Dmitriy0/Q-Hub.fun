@@ -7,7 +7,6 @@ import { FAMILY, familyLink, useLinks } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
-import Backdrop from './Backdrop';
 import DiscordMenu from './DiscordMenu';
 import NotificationBell from './NotificationBell';
 
@@ -43,11 +42,8 @@ export default function Layout() {
     mainRef.current?.animate(reduce ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
       { duration: reduce ? 120 : 220, easing: 'cubic-bezier(.16, 1, .3, 1)' });
   }, [section]);
-  /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
-  const [menu, setMenu] = useState(false);
   const [{ family_url }] = useLinks();
   const family = familyLink(family_url);   // «by CORE» — завжди на Discord сім'ї
-  useEffect(() => setMenu(false), [pathname]);
   /* модератору — скільки пропозицій від гравців чекає (specs/061); оновлюється при переході між сторінками */
   const [waiting, setWaiting] = useState(0);
   useEffect(() => {
@@ -55,11 +51,6 @@ export default function Layout() {
     supabase.from('wiki_proposals').select('id', { count: 'exact', head: true }).in('status', ['pending', 'conflict'])
       .then(({ count }) => setWaiting(count ?? 0));
   }, [role, pathname]);
-  useEffect(() => {
-    if (!menu) return;
-    const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
-    addEventListener('keydown', f); return () => removeEventListener('keydown', f);
-  }, [menu]);
   /* useLayoutEffect — раніше за звичайні ефекти сторінок: стаття (гайд, івент) ставить свою назву після цього, а не навпаки */
   useLayoutEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
@@ -69,23 +60,19 @@ export default function Layout() {
   return (
     <div className="app">
       <a className="skip" href="#main">До вмісту сторінки</a>
-      <Backdrop />
-      <header className={'top' + (menu ? ' menu-open' : '')}>
-        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={36} height={36} /><b>Q-Hub</b></NavLink>
-        <nav className="nav" id="site-nav" aria-label="Розділи">
+      <header className="top">
+        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></NavLink>
+        <nav className="nav" aria-label="Розділи">
           {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
         </nav>
-        <button type="button" className="burger" aria-expanded={menu} aria-controls="site-nav" aria-label={menu ? 'Закрити меню' : 'Відкрити меню'} onClick={() => setMenu(v => !v)}>
-          <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
-        </button>
         <div className="who">
           <ThemeToggle />
-          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
-          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Розбір пропозицій від гравців і твої інструменти"><Icon name="shield" size={16} />{role === 'moderator' ? 'Модерація' : 'Інструменти'}{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
+          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={18} /><span className="wide-only">Адмінка</span></NavLink>}
+          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Розбір пропозицій від гравців і твої інструменти"><Icon name="shield" size={18} /><span className="wide-only">{role === 'moderator' ? 'Модерація' : 'Інструменти'}</span>{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
           <NotificationBell />
           {session
-            ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
-            : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}
+            ? <NavLink to="/kabinet" className="btn sm who-me">{avatar && <img src={avatar} alt="" width={26} height={26} />}<span className="who-name">{name || 'Кабінет'}</span></NavLink>
+            : <button className="btn acc sm" onClick={signIn}>Увійти<span className="wide-only"> через Discord</span></button>}
         </div>
       </header>
       {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
@@ -114,6 +101,10 @@ export default function Layout() {
           </div>
         </div>
       </footer>
+      {/* телефон: розділи — нижнім меню під великим пальцем (на ширших екранах — у шапці) */}
+      <nav className="tabbar" aria-label="Розділи">
+        {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={22} />{label}</NavLink>)}
+      </nav>
     </div>
   );
 }

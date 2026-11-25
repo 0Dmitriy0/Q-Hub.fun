@@ -8,7 +8,7 @@ const LABEL: Record<Mode, string> = { dark: 'Тема: темна', light: 'Те
 
 function apply(m: Mode) {
   document.documentElement.setAttribute('data-theme', m);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', m === 'light' ? '#f3f5f8' : '#10141a');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', m === 'light' ? '#f3f4f6' : '#17181a');
 }
 
 /* одна кнопка: темна (за замовчуванням) ⇄ світла; вибір пам'ятається в браузері.
