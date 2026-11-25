@@ -313,23 +313,17 @@ export default function Prices() {
   return (
     <div className="bp">
       {pickDialog}
-      {/* смужка стану ринку — лише справжні числа з бази */}
-      {buyers.length > 0 && <div className="bp-status">
-        <span><span className="mdot good" aria-hidden="true" />Скупників: <b className="mono">{buyers.length}</b></span>
-        <span>Товарів: <b className="mono">{rows.length}</b></span>
-        <span>Свіжих цін (до 3 год): <b className="mono">{freshAll}</b></span>
-        <span className="bp-status-r">Остання ціна: <b className="mono">{lastAll ? when(lastAll) : '—'}</b></span>
-      </div>}
-
       <section className="bp-head">
         <div>
           <h1>Ціни скупників</h1>
           <p className="muted">Поточні ціни від гравців. Смужка показує, наскільки ціна близька до максимуму скупника: від {GOOD}% — вигідно здавати.</p>
+          {/* стан ринку — лише справжні числа з бази */}
+          {buyers.length > 0 && <p className="bp-meta">Скупників — <b>{buyers.length}</b>, товарів — <b>{rows.length}</b>, свіжих цін за 3 години — <b>{freshAll}</b>. Остання ціна — <b>{lastAll ? when(lastAll) : 'ще немає'}</b>.</p>}
         </div>
         <div className="row">
           {session ? <a className="btn acc" href="#add-price"><Icon name="camera" />Внести ціни</a> : <button className="btn acc" onClick={signIn}><Icon name="user" />Увійти, щоб вносити ціни</button>}
-          <Link className="btn ghost" to="/mapa"><Icon name="map" />Скупники на мапі</Link>
-          {market && <a className="btn ghost" href={market} target="_blank" rel="noreferrer" title="Продати чи купити в гравців, а не в скупника"><Icon name="coin" />Торговий майданчик<span className="vh"> — Discord, відкриється в новій вкладці</span></a>}
+          <Link className="btn" to="/mapa"><Icon name="map" />Скупники на мапі</Link>
+          {market && <a className="btn" href={market} target="_blank" rel="noreferrer" title="Продати чи купити в гравців, а не в скупника"><Icon name="coin" />Торговий майданчик<span className="vh"> — Discord, відкриється в новій вкладці</span></a>}
         </div>
       </section>
 
@@ -345,7 +339,7 @@ export default function Prices() {
             <div className="row between"><h2 className="ih"><Icon name="bolt" />Вигідно здавати зараз</h2><span className="h-lbl">свіжа ціна найближче до максимуму скупника</span></div>
             <div className="bp-leaders">{leaders.map(({ r, pos }, i) => (
               <button type="button" key={r.buyer_id + ':' + r.item_id} className="bp-lead" onClick={() => pick(r.buyer_id)}>
-                <span className="bp-lead-h"><Pic url={r.items!.image_url} alt={r.items!.name} size={36} /><span><b>{r.items!.name}</b><small>{buyerName(r.buyer_id)}</small></span>{i === 0 && <span className="bp-tag">Топ</span>}</span>
+                <span className="bp-lead-h"><Pic url={r.items!.image_url} alt={r.items!.name} size={36} /><span><b>{r.items!.name}</b><small>{buyerName(r.buyer_id)}</small></span>{i === 0 && <span className="bp-tag">найвигідніше</span>}</span>
                 <span className="bp-lead-p"><b className="mono">{money(r.price)}</b><small>за {r.items!.unit}</small><span className="bp-pos mono">▲ {pos}%</span></span>
                 <span className="bp-lead-f"><span>Межі: <b className="mono">{money(r.min_price)} – {money(r.max_price)}</b></span><span>{when(r.price_at!)}</span></span>
               </button>))}
@@ -523,7 +517,6 @@ export default function Prices() {
           {/* калькулятор і як внести ціну */}
           <section className="bp-bottom">
             <div className="card bp-calc">
-              <span className="h-kicker"><Icon name="coin" size={16} />Калькулятор</span>
               <h2>Скільки отримаєш у скупника</h2>
               {calcRow ? <>
                 <div className="bp-calc-in">
@@ -542,7 +535,6 @@ export default function Prices() {
               </> : <p className="muted">Ще немає цін для розрахунку.</p>}
             </div>
             <div className="card bp-how" id="add-price">
-              <span className="h-kicker"><Icon name="camera" size={16} />Ціни вносять гравці</span>
               <h2>Бачиш іншу ціну в грі?</h2>
               <ol className="bp-steps">
                 <li><span className="start-n p-n" aria-hidden="true">1</span><div><b>Автоматично через Q-Hub Desktop</b><p className="muted">Відкрий вікно скупника в грі — програма сама надішле ціни й час наступної зміни від твого імені.</p><Link to="/programa">Про програму →</Link></div></li>

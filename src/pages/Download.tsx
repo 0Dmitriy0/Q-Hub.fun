@@ -42,19 +42,16 @@ export default function Download() {
     <div className="prog">
       {/* 1. перший екран */}
       <section className="p-hero">
-        <div className="p-hero-top">
-          <span className="h-pill"><span className="mdot good" aria-hidden="true" />Q-Hub Desktop · Windows 10 / 11 (x64)</span>
-          <span className="p-badge">Тестова збірка</span>
-        </div>
+        <p className="p-hero-top">Q-Hub Desktop для Windows 10 і 11 (x64), <b>тестова збірка</b></p>
         <h1>Програма поверх гри</h1>
-        <p className="h-lead">Ціни скупників, правила сервера, мапа й ШІ-помічник — прямо поверх GTA V. Натисни <kbd>Alt+Q</kbd>, впиши, що шукаєш, і отримай відповідь, не виходячи з гри. А ще програма рахує, скільки ти заробляєш за годину.</p>
+        <p className="h-lead p-lead">Ціни скупників, правила сервера, мапа й ШІ-помічник — прямо поверх GTA V. Натисни <kbd>Alt+Q</kbd>, впиши, що шукаєш, і отримай відповідь, не виходячи з гри. А ще програма рахує, скільки ти заробляєш за годину.</p>
         <div className="p-warn" role="note">
           <span className="p-warn-ico" aria-hidden="true">!</span>
           <div><b>Тестова версія — ще не фінальний результат</b><span>Можуть траплятися помилки, а вигляд і можливості ще змінюватимуться.</span></div>
         </div>
         <div className="row">
           <a className="btn acc" href={SETUP} onClick={countDownload} data-umami-event="Завантажити програму" data-umami-event-where="programa"><Icon name="download" />Завантажити для Windows</a>
-          <Link className="btn ghost" to="/programa/instruktsiya"><Icon name="book" />Інструкція</Link>
+          <Link className="btn" to="/programa/instruktsiya"><Icon name="book" />Інструкція</Link>
           <a className="btn ghost" href="#onovlennya" onClick={() => setLogAll(false)}><Icon name="history" />Що нового в збірці</a>
         </div>
         <small className="p-sign"><Icon name="shield" size={16} />Інсталятор ще не підписаний сертифікатом: Windows покаже «Захистив ваш ПК» → «Докладніше» → «Виконати все одно».</small>
@@ -62,9 +59,7 @@ export default function Download() {
 
       {/* 2. як це виглядає в грі — демо */}
       <section className="h-sec">
-        <div className="h-head row between">
-          <div><span className="h-kicker"><Icon name="bolt" size={16} />Демо</span><h2>Спробуй плашку Alt+Q прямо тут</h2></div>
-        </div>
+        <div className="h-head"><h2>Спробуй плашку Alt+Q прямо тут</h2></div>
         <p className="muted p-bar-lead">Та сама плашка, що в програмі: впиши запит і натисни <kbd>Enter</kbd> або обери приклад нижче. ШІ, історія й мапа поверх гри працюють лише в самій програмі.</p>
         <div className="p-bar-ex" role="group" aria-label="Приклади запитів">
           {EXAMPLES.map(([t, m], i) => <button key={t} type="button" className="chip" onClick={() => setPick({ q: t, mode: m, n: i + Date.now() })}>{m === 'prices' ? <Icon name="tag" size={14} /> : <Icon name="search" size={14} />}{t}</button>)}
@@ -76,36 +71,36 @@ export default function Download() {
 
       {/* 3. можливості */}
       <section className="h-sec">
-        <div className="h-head"><span className="h-kicker"><Icon name="bolt" size={16} />Можливості</span><h2>Що вміє Q-Hub Desktop</h2></div>
+        <div className="h-head"><h2>Що вміє Q-Hub Desktop</h2></div>
         <div className="p-feats">
-          {FEATURES.map(([ico, t, p]) => <div key={t} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{t}</h3><p className="muted">{p}</p></div>)}
+          {FEATURES.map(([ico, t, p]) => <div key={t} className="p-feat"><Icon name={ico} size={22} /><div><h3>{t}</h3><p className="muted">{p}</p></div></div>)}
         </div>
       </section>
 
       {/* 3а. комбінації клавіш — той самий список, що в програмі (кнопка «?» у плашці), src/lib/hotkeys.ts */}
       <section className="h-sec" id="klavishi">
-        <div className="h-head"><span className="h-kicker"><Icon name="help" size={16} />Інструкція</span><h2>Комбінації клавіш</h2></div>
+        <div className="h-head"><h2>Комбінації клавіш</h2></div>
         <HotkeysTable />
         <p className="muted p-keys-note">Це типові клавіші. Alt+Q, Alt+M і Alt+F9 можна перепризначити в програмі: шестірня в плашці → «Основне» чи «Зір програми». Список у будь-який момент — кнопка <b>?</b> поруч із шестірнею. Як користуватися програмою крок за кроком — <Link to="/programa/instruktsiya">інструкція</Link>.</p>
       </section>
 
       {/* 4. вимоги */}
       <section className="h-sec">
-        <div className="h-head"><span className="h-kicker"><Icon name="gear" size={16} />Вимоги</span><h2>Що потрібно для запуску</h2></div>
+        <div className="h-head"><h2>Що потрібно для запуску</h2></div>
         <div className="p-req">
-          <div className="card"><span className="start-n p-n" aria-hidden="true">1</span><h3>Вікно без рамки</h3><p className="muted">Windows 10 або 11. GTA V — у режимі <b>«Вікно без рамки»</b>: у повноекранному режимі програма не бачить HUD.</p></div>
-          <div className="card"><span className="start-n p-n" aria-hidden="true">2</span><h3>Акаунт Q-Hub</h3><p className="muted">Вхід через <b>Discord</b> і персонаж у кабінеті — щоб записи потрапляли куди треба.</p></div>
-          <div className="card p-safe"><span className="start-n p-n" aria-hidden="true"><Icon name="shield" size={18} /></span><h3>Не лізе в гру</h3><p className="muted">Програма <b>не читає пам'ять гри</b> й нічого в ній не натискає — лише знімки екрана, як OBS.</p></div>
+          <div className="p-req-i"><h3>Вікно без рамки</h3><p className="muted">Windows 10 або 11. GTA V — у режимі <b>«Вікно без рамки»</b>: у повноекранному режимі програма не бачить HUD.</p></div>
+          <div className="p-req-i"><h3>Акаунт Q-Hub</h3><p className="muted">Вхід через <b>Discord</b> і персонаж у кабінеті — щоб записи потрапляли куди треба.</p></div>
+          <div className="p-req-i p-safe"><h3>Не лізе в гру</h3><p className="muted">Програма <b>не читає пам'ять гри</b> й нічого в ній не натискає — лише знімки екрана, як OBS.</p></div>
         </div>
       </section>
 
       {/* 5. журнал оновлень — той самий, що в програмі (Налаштування → Журнал оновлень), а не сторінка релізу на GitHub */}
       <section className="h-sec" id="onovlennya">
-        <div className="h-head"><span className="h-kicker"><Icon name="history" size={16} />Журнал оновлень</span><h2>Що нового в програмі</h2></div>
+        <div className="h-head"><h2>Що нового в програмі</h2></div>
         <div className="p-log">
           {CHANGES.slice(0, logAll ? CHANGES.length : LOG_FEW).map((e, i) => (
             <article key={e.id} className="card p-log-e">
-              <header><h3>{e.title}</h3><small className="muted">{e.version ? `v${e.version} · ` : ''}{dayOf(e.id)}</small>{i === 0 && <span className="pill good">найновіше</span>}</header>
+              <header><h3>{e.title}</h3><small className="muted">{dayOf(e.id)}{e.version ? `, версія ${e.version}` : ''}{i === 0 ? ' — найновіше' : ''}</small></header>
               {GROUPS.map(([k, l, tone]) => e[k]?.length ? <div key={k} className={'p-log-g ' + tone}><h4>{l}</h4><ul>{e[k]!.map(t => <li key={t}>{t}</li>)}</ul></div> : null)}
             </article>))}
         </div>
@@ -122,7 +117,6 @@ export default function Download() {
         </div>
         {/* помилки й ідеї — лише в Discord Q-Hub (рішення власника 2026-11-01: без GitHub); без посилання блок бачить лише адмін */}
         {(discord || isAdmin) && <div className="card p-help">
-          <span className="ibub"><Icon name="spark" /></span>
           <h3>Знайшли помилку чи маєте ідею?</h3>
           <p className="muted">Напиши в Discord, що сталося і що ти робив перед цим — так помилку виправити найшвидше.</p>
           {discord && <a className="btn acc" href={discord} target="_blank" rel="noreferrer">Написати в Discord Q-Hub<span className="vh"> (відкриється в новій вкладці)</span></a>}

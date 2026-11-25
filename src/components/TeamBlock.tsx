@@ -24,8 +24,7 @@ export default function TeamBlock() {
       <ul className="team-grid">
         {team.map(m => (
           <li key={m.name} className="card team-card">
-            {m.avatar_url ? <img className="team-ava" src={m.avatar_url} alt="" width={56} height={56} loading="lazy" />
-              : <span className="team-ava" aria-hidden="true">{(m.name[0] || '?').toUpperCase()}</span>}
+            <Ava url={m.avatar_url} name={m.name} />
             <div className="team-who">
               <b>{m.name}</b>
               {m.title && <span className="team-role">{m.title}</span>}
@@ -42,4 +41,12 @@ export default function TeamBlock() {
         <DiscordMark size={16} />Хочеш у команду? Пиши в Discord<span className="vh"> (відкриється в новій вкладці)</span></a>}
     </section>
   );
+}
+
+/* аватар з Discord; посилання застаріло (картинка не вантажиться) — перша літера ніку, а не значок зламаної картинки */
+function Ava({ url, name }: { url: string | null; name: string }) {
+  const [bad, setBad] = useState(false);
+  return url && !bad
+    ? <img className="team-ava" src={url} alt="" width={52} height={52} loading="lazy" onError={() => setBad(true)} />
+    : <span className="team-ava" aria-hidden="true">{(name[0] || '?').toUpperCase()}</span>;
 }

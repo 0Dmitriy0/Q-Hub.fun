@@ -236,7 +236,7 @@ function PriceBoard() {
           </li>))}</ul>}
     </div>
     <div className="bd">
-      <div className="bd-head"><h2>Щойно оновили</h2><Link className="bd-more" to="/tsiny">Оновити ціни</Link></div>
+      <div className="bd-head"><h2>Хто оновлював ціни</h2><Link className="bd-more" to="/tsiny">Оновити ціни</Link></div>
       {!d ? <p className="bd-empty">Завантажуємо…</p> : !groups.length ? <p className="bd-empty">Гравці ще не оновлювали ціни. Будь першим — це займає хвилину.</p> :
         <ul className="ug">{groups.map(g => (
           <li key={g.key}>
