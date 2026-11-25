@@ -83,7 +83,7 @@ for (const p of routes) {
 }
 for (const g of guides) {
   const p = `/wiki/gaidy/${g.id}`;
-  write(p, page(p, { title: `${g.name} — гайди · Q-Hub`, desc: g.summary || descOf('/wiki/gaidy'), h1: g.name, body: blocks(g.blocks) }));
+  write(p, page(p, { title: `${g.name} — гайди Quant RP · Q-Hub`, desc: g.summary || descOf('/wiki/gaidy'), h1: g.name, body: blocks(g.blocks) }));
 }
 
 /* sitemap: статичні розділи + усі гайди з бази (новий гайд потрапляє в пошук сам, без правки файлу) */
