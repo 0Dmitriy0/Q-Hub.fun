@@ -158,6 +158,7 @@ export default function Transport() {
       {loaded && !err && !list.length && <div className="card empty">Каталог транспорту ще порожній — його саме заповнюємо.</div>}
       {list.length > 0 && <div className="wiki-count"><span>Знайдено <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span>
         {wiki && <span className="row"><Leaderboard /><button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати транспорт</button></span>}</div>}
+      {shown.length > 0 && <h2 className="vh">Моделі транспорту</h2>}
       {shown.length > 0 && (
         <div className="vgrid">{shown.slice(0, limit).map(v => {
           const sc = scores[v.id];

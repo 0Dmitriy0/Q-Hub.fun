@@ -1865,7 +1865,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 
 /* WIKI «Івенти» (specs/055): плитки, банер батл пасу, сторінка івенту, міні-мапа, форма */
 .ev-bar { align-items: center; justify-content: space-between; margin: 4px 0 14px; }
-.ev-bar .seg { flex: 0 1 420px; }
+.ev-bar .seg { flex: 0 0 auto; }
 .ev-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 @media (min-width: 720px) { .ev-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1080px) { .ev-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -2151,7 +2151,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 @media (pointer: coarse) {
   .foot-nav { row-gap: 0; }
   .foot-nav a { display: inline-flex; align-items: center; min-height: 44px; }
-  .foot-by, .wiki-crumbs a, .h-more { padding-block: 15px; margin-block: -15px; }
+  .foot-by, .wiki-crumbs a, .h-more, .bd-more { padding-block: 15px; margin-block: -15px; }
   .h-cards .card p a { padding-block: 14px; }
 }
 
@@ -2323,7 +2323,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 .skip { position: absolute; left: 12px; top: -48px; z-index: 100; padding: 10px 16px; border-radius: var(--rc); background: var(--accent); color: var(--accent-fg); font-weight: 600; text-decoration: none; transition: top var(--t-fast) ease-out; }
 .skip:focus { top: 12px; }
 main:focus { outline: none; }
-html { scroll-padding-top: 76px; }
+html { scroll-padding-top: 76px; scroll-padding-bottom: calc(var(--tabbar) + 12px); }   /* фокус не ховається під шапкою й нижнім меню (WCAG 2.4.11) */
 
 /* шкала «де ціна між мінімумом і максимумом»: від 80 % — зелена (вигідно), 50–79 % — жовта, нижче — сіра */
 .rtrack { width: 140px; height: 6px; border-radius: 3px; }
