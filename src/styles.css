@@ -23,21 +23,27 @@
   --lift: inset 0 1px 0 rgba(255, 255, 255, .035);   /* верхня крайка піднятої панелі вночі — замість тіні */
   --pop: 0 18px 48px -12px rgba(0, 0, 0, .6);       /* лише для того, що спливає: меню, вікна */
   --tabbar: 0px;
+  --slab: var(--accent); --slab-fg: var(--accent-fg); --slab-code: var(--accent-fg); --slab-muted: rgba(26, 10, 0, .78); --slab-line: rgba(26, 10, 0, .35);
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --bg: #f3f4f6; --surface: #ffffff; --surface2: #eceef1; --sea: #dfe9f1; --sea2: #cfdde8;
-  --line: rgba(19, 20, 23, .09); --line2: rgba(19, 20, 23, .17);
-  --fg: #131417; --muted: #4f5560; --faint: #5f6570;
-  --accent: #ff6b00; --accent-hi: #b23c0a; --accent-fg: #1a0a00; --accent-soft: rgba(255, 107, 0, .12); --accent-press: #f26300;
-  --good: #04694c; --good-soft: rgba(4, 105, 76, .10); --warn: #9a4d06; --warn-soft: rgba(154, 77, 6, .10);
-  --bad: #b91c1c; --bad-soft: rgba(185, 28, 28, .08);
-  --hover: #e2e5ea; --shadow: 0 1px 2px rgba(19, 20, 23, .05); --lift: 0 1px 2px rgba(19, 20, 23, .04);
-  --pop: 0 18px 48px -16px rgba(19, 20, 23, .22);
+  /* день: світла палітра мапи, але приглушена — без чисто білих панелей і чорного тексту (власник 2026-11-25: «світла тема ріже очі»).
+     Полотно — сіро-кам'яне, панелі — ледь світліші, текст — м'який чорний; контраст тексту все одно ≥4,7:1 */
+  --bg: #e8e9eb; --surface: #f1f2f3; --surface2: #e1e3e6; --sea: #d8e2e9; --sea2: #cbd7e0;
+  --line: rgba(29, 32, 36, .10); --line2: rgba(29, 32, 36, .18);
+  --fg: #1d2024; --muted: #52575f; --faint: #5c6169;
+  --accent: #ff6b00; --accent-hi: #a8400f; --accent-fg: #1a0a00; --accent-soft: rgba(255, 107, 0, .14); --accent-press: #f06400;
+  --good: #056347; --good-soft: rgba(5, 99, 71, .10); --warn: #8f4708; --warn-soft: rgba(143, 71, 8, .10);
+  --bad: #b3271e; --bad-soft: rgba(179, 39, 30, .08);
+  --hover: #d9dce0; --shadow: none; --lift: 0 1px 0 rgba(29, 32, 36, .04);
+  --pop: 0 18px 48px -16px rgba(29, 32, 36, .25);
+  /* промокод удень — не суцільна яскрава пляма, а теплий персиковий блок з помаранчевим кодом */
+  --slab: #f6dcc5; --slab-fg: #1d2024; --slab-code: #a8400f; --slab-muted: #5a3a22; --slab-line: rgba(90, 58, 34, .35);
   color-scheme: light;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { overflow-x: clip; }   /* запобіжник: щось ширше за екран не робить ширшою всю сторінку (iOS тоді зменшує сайт) */
 body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.5 var(--sans); font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
 a { color: var(--accent-hi); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 b, strong { font-weight: 600; }
@@ -68,7 +74,7 @@ img.logo { background: none; }   /* фірмовий знак — public/brand/q
 .nav a .ico { display: none; }
 .nav a:hover { color: var(--fg); }
 .nav a.active { color: var(--fg); font-weight: 600; }
-.nav a.active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+.nav-line { position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); view-transition-name: nav-line; }
 .nav a:focus-visible { outline-offset: -4px; }
 .who { display: flex; align-items: center; gap: 8px; flex: none; margin-left: auto; }
 .who img { width: 26px; height: 26px; border-radius: 50%; }
@@ -95,7 +101,9 @@ main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 32px max(24px, e
   .tabbar a .ico { width: 22px; height: 22px; }
   .tabbar a.active { color: var(--fg); font-weight: 600; }
   .tabbar a.active .ico { color: var(--accent); }
-  .tabbar a.active::before { content: ''; position: absolute; top: -1px; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+  .tab-line { position: absolute; top: -1px; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); view-transition-name: tab-line; }
+  .tabbar a .ico { transition: transform var(--t-fast) var(--ease-out); }
+  .tabbar a:active .ico { transform: scale(.88); }
   .tabbar a:focus-visible { outline-offset: -4px; }
 }
 
@@ -218,9 +226,10 @@ label.btn { position: relative; cursor: pointer; }
 .prow.open { border-bottom-color: transparent; }
 .pdetail { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid var(--line); }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.stats div { background: var(--surface2); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.stats small { color: var(--muted); font-size: 12px; }
-.stats b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats div { padding: 4px 12px; border-left: 1px solid var(--line2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stats div:first-child { border-left: 0; padding-left: 0; }
+.stats small { color: var(--muted); font-size: 13px; }
+.stats b { font: 700 26px/1.1 var(--disp); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .note { margin: 0; font-size: 13px; }
 .chart { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .chart-box { position: relative; }
@@ -238,23 +247,24 @@ label.btn { position: relative; cursor: pointer; }
 .chart-table table { margin-top: 6px; }
 .lims { align-items: flex-end; flex-wrap: wrap; }
 @media (max-width: 520px) {
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; }
+  .stats div:nth-child(odd) { border-left: 0; padding-left: 0; }
   .spark { display: none; }
-  .prow { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .prow > label.btn { grid-column: 2 / -1; justify-self: start; }
 }
 
 /* цикл цін скупника, оновлення гравцями, рейтинг */
-.cycle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 4px; }
-.cycle div { background: var(--surface2); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.cycle small { color: var(--muted); font-size: 12px; }
-.cycle b { font-size: 15px; }
+/* стан скупника — смуга з трьох клітинок, розділених лініями */
+.cycle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 8px 0 4px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.cycle div { padding: 2px 16px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cycle div:first-child { border-left: 0; padding-left: 0; }
+.cycle small { color: var(--muted); font-size: 13px; }
+.cycle b { font: 700 24px/1.15 var(--disp); }
 .pval .btn.sm { margin-top: 4px; }
 .pval .err, .pval .pnote { max-width: 240px; text-align: right; font-size: 12.5px; }
 .upd { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .who-cell { gap: 8px; }
 .ava { width: 22px; height: 22px; border-radius: 50%; }
-@media (max-width: 520px) { .cycle { grid-template-columns: 1fr 1fr; } .cycle div:last-child { grid-column: 1 / -1; } }
+@media (max-width: 520px) { .cycle { grid-template-columns: 1fr 1fr; row-gap: 12px; } .cycle div:last-child { grid-column: 1 / -1; border-left: 0; padding-left: 0; padding-top: 12px; border-top: 1px solid var(--line); } }
 
 /* вікно рейтингу */
 .modal { border: 1px solid var(--line2); border-radius: var(--r); background: var(--surface); color: var(--fg); padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-shadow: 0 24px 64px -16px rgba(0, 0, 0, .5); }
@@ -303,7 +313,7 @@ h2.ih { display: flex; align-items: center; gap: 10px; }
 .nextc { gap: 4px !important; }
 .nextc small .ico { vertical-align: -2px; }
 .nextc .btn.sm { align-self: flex-start; margin-top: 4px; min-height: 36px; padding: 6px 12px; }
-.nextc.due { background: var(--warn-soft) !important; }
+.nextc.due b { color: var(--warn); }
 .nextc.due b { color: var(--warn); }
 .nextc .fld input { min-height: 40px; padding: 6px 10px; }
 
@@ -376,7 +386,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .modal.vmodal { width: min(980px, calc(100vw - 24px)); }
 .vd-real { font: 500 14px var(--sans); display: block; }
 #vd-title { flex-wrap: wrap; row-gap: 2px; }
-.vd-pic { aspect-ratio: 16 / 9; max-height: 380px; border-radius: var(--r); background: #fff; display: grid; place-items: center; overflow: hidden; color: var(--faint); }
+.vd-pic { aspect-ratio: 16 / 9; max-height: 380px; border-radius: var(--r); background: var(--surface2); display: grid; place-items: center; overflow: hidden; color: var(--faint); }
 :root:not([data-theme="light"]) .vd-pic:not(:has(img)) { background: var(--surface2); }
 .vd-pic img { width: 100%; height: 100%; object-fit: contain; }
 .vd-cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; }
@@ -492,8 +502,6 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jtag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--rc); background: var(--surface2); font: 600 12px var(--sans); color: var(--muted); }
 .jtag.ill { background: color-mix(in srgb, #8b5cf6 22%, transparent); color: #b79cff; }
 .jtag:not(.ill):not(.lvl) { background: color-mix(in srgb, #22c55e 18%, transparent); color: #4ade80; }
-:root[data-theme="light"] .jtag.ill { color: #6d28d9; }
-:root[data-theme="light"] .jtag:not(.ill):not(.lvl) { color: #15803d; }
 .jcorner { position: absolute; top: 8px; right: 8px; font-size: 12px; padding: 2px 7px; }
 .jprofit { display: inline-flex; gap: 2px; }
 .jprofit .ico { color: var(--faint); opacity: .45; }
@@ -1092,8 +1100,15 @@ fieldset .static-form .btn { align-self: end; }
 .h-promo-body span { color: rgba(255, 255, 255, .86); font-size: 15px; }
 .h-promo-body .h-promo-go { align-self: flex-start; margin-top: 8px; padding: 10px 16px; border-radius: var(--rc); background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 
+/* фон першого екрана: центр Лос-Сантоса з плиток мапи сайту, зшитий в одну картинку (src/assets/hero-map-*.webp, 1024×768,
+   краї вже розчинені в самій картинці — без CSS-масок). Текст лежить на чистому полотні ліворуч, промокод — на дорогах мапи */
+.hx-map { position: absolute; z-index: -1; top: -64px; right: -24px; width: min(1000px, 78%); aspect-ratio: 4 / 3; pointer-events: none; opacity: .38;
+  background: url(./assets/hero-map-dark.webp) center / 100% 100% no-repeat; animation: q-fade var(--t-in) var(--ease-out) both; }
+:root[data-theme="light"] .hx-map { opacity: .42; background-image: url(./assets/hero-map-light.webp); }
+@media (max-width: 900px) { .hx-map { top: -40px; right: -16px; width: 120%; opacity: .22; } :root[data-theme="light"] .hx-map { opacity: .3; } }
+
 /* 1. перший екран: що це — ліворуч, помаранчевий «знак» промокоду — праворуч */
-.hx { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 32px 48px; align-items: end; padding-top: 8px; }
+.hx { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 32px 48px; align-items: end; padding-top: 8px; }
 .hx-intro { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
 .hx-date { color: var(--muted); font-size: 15px; }
 .hx-time { color: var(--fg); font-weight: 600; }
@@ -1101,16 +1116,16 @@ fieldset .static-form .btn { align-self: end; }
 .hx-lead { color: var(--muted); font-size: 18px; line-height: 1.5; max-width: 54ch; }
 .hx-act { margin-top: 4px; }
 /* промокод Q-Hub (specs/022): суцільний помаранчевий прямокутник, як дорожній знак; код — найбільше на ньому */
-.qpromo { display: flex; flex-direction: column; gap: 16px; width: 100%; padding: 22px 24px; border-radius: var(--r); background: var(--accent); color: var(--accent-fg); }
+.qpromo { display: flex; flex-direction: column; gap: 16px; width: 100%; padding: 22px 24px; border-radius: var(--r); background: var(--slab); color: var(--slab-fg); }
 .qpromo.off { background: repeating-linear-gradient(135deg, var(--accent) 0 14px, #e65f00 14px 28px); }
 .qpromo-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .qpromo-tag { font: 600 15px/1.3 var(--sans); }
-.qpromo-code { font: 700 clamp(56px, 7vw, 76px)/.9 var(--disp); letter-spacing: .02em; user-select: all; margin: 4px 0 6px; }
+.qpromo-code { font: 700 clamp(56px, 7vw, 76px)/.9 var(--disp); letter-spacing: .02em; user-select: all; margin: 4px 0 6px; color: var(--slab-code); }
 .qpromo-reward { font: 600 18px/1.35 var(--sans); }
-.qpromo-note, .qpromo-how { color: rgba(26, 10, 0, .78); font-size: 14px; line-height: 1.45; }
-.qpromo-how code { font-weight: 600; color: var(--accent-fg); }
+.qpromo-note, .qpromo-how { color: var(--slab-muted); font-size: 14px; line-height: 1.45; }
+.qpromo-how code { font-weight: 600; color: var(--slab-fg); }
 .qpromo-act { display: flex; flex-wrap: wrap; gap: 8px; }
-.qpromo .btn { border-color: rgba(26, 10, 0, .35); background: transparent; color: var(--accent-fg); }
+.qpromo .btn { border-color: var(--slab-line); background: transparent; color: var(--slab-fg); }
 .qpromo .btn:hover { background: rgba(26, 10, 0, .08); }
 .qpromo .btn.acc { background: var(--accent-fg); border-color: var(--accent-fg); color: #fff4ec; }
 .qpromo .btn.acc:hover { background: #2e1606; }
@@ -1402,11 +1417,27 @@ fieldset .static-form .btn { align-self: end; }
 .bp-tabs a .pic { border-radius: var(--rs); }
 .bp-tabs .cnt { color: var(--faint); font-size: 13px; font-weight: 500; }
 .bp-tabs a.active .cnt { color: color-mix(in srgb, var(--bg) 65%, transparent); }
-.bp-buyer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 6px; }
+/* шапка скупника: хто він — ліворуч; налаштування адміна — згорнутим блоком, на телефоні — окремим рядком */
+.bp-buyer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 16px; padding-top: 6px; }
+.bp-buyer-id { flex: 1 1 260px; min-width: 0; flex-wrap: nowrap; align-items: flex-start; }
 .bp-buyer h2 { font-size: 32px; }
+.bp-admin { flex: 0 1 auto; max-width: 100%; border: 1px solid var(--line2); border-radius: var(--rc); background: var(--bg); }
+.bp-admin > summary { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; cursor: pointer; list-style: none; font: 600 14px var(--sans); color: var(--muted); }
+.bp-admin > summary::-webkit-details-marker { display: none; }
+.bp-admin > summary:hover, .bp-admin[open] > summary { color: var(--fg); }
+.bp-admin > summary .ico { color: var(--faint); transition: transform var(--t) var(--ease-out); }
+.bp-admin[open] > summary .ico { transform: rotate(60deg); }
+.bp-admin-body { display: grid; gap: 12px; padding: 4px 12px 12px; }
+/* рядок ціни: місця задані іменами — зайва клітинка (немає графіка, «Фото» адміна) не зсуває ціну в чужий стовпець */
+.bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) 120px minmax(150px, auto) auto; grid-template-areas: "pic name spark val act" "detail detail detail detail detail"; gap: 0 12px; }
+.prow > .pic { grid-area: pic; } .prow > .pname { grid-area: name; } .prow > .spark { grid-area: spark; } .prow > .pval { grid-area: val; }
+.prow > .prow-act { grid-area: act; } .prow > .pdetail { grid-area: detail; margin-top: 12px; }
+.prow-act .btn { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.stale { display: inline-flex; align-items: center; gap: 4px; color: var(--warn); }
+.stale .ico { flex: none; }
 .bp-th { display: grid; grid-template-columns: minmax(0, 1fr) 120px 150px; gap: 12px; padding: 8px 12px 8px 64px; border-bottom: 1px solid var(--line2); color: var(--faint); font: 500 13px var(--sans); }
 .bp-th span:nth-child(3) { text-align: right; }
-.bp-list .prow { grid-template-columns: 40px minmax(0, 1fr) 120px minmax(150px, auto) auto; padding: 12px; margin: 0 -6px; border-radius: var(--rc); border-bottom: 0; }
+.bp-list .prow { padding: 12px; margin: 0 -6px; border-radius: var(--rc); border-bottom: 0; }
 .bp-list .prow + .prow { box-shadow: 0 -1px 0 var(--line); }
 .bp-list .prow:hover, .bp-list .prow.open { background: var(--surface2); box-shadow: none; }
 .bp-list .prow:hover + .prow, .bp-list .prow.open + .prow { box-shadow: none; }
@@ -1441,8 +1472,18 @@ fieldset .static-form .btn { align-self: end; }
   .bp-head .row > .btn:not(.acc) { flex: 1 1 150px; }   /* дві другорядні дії — в один рядок під головною */
   .bp-th { display: none; }
   .bp-list { padding: 12px; }
-  .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr) minmax(96px, auto); margin: 0 -4px; padding: 10px 8px; }
-  .bp-list .prow > .spark, .bp-list .prow > svg { display: none; }
+  /* телефон: назва — на всю ширину, під нею ціна й «Оновити ціну» одним рядком (раніше кнопка стискала назву в три рядки) */
+  .bp-list .prow { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "pic name" "pic val" "pic act" "detail detail"; margin: 0 -4px; padding: 12px 8px; align-items: start; }
+  .bp-list .prow > .pic { margin-top: 2px; }
+  .bp-list .prow > .spark { display: none; }
+  .bp-list .pval { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 8px; margin-top: 8px; }
+  .bp-list .pval > .btn.sm { margin: 0 0 0 auto; align-self: center; }
+  .bp-list .pval > form.upd { width: 100%; justify-content: flex-start; }
+  .bp-list .pval .err, .bp-list .pval .pnote, .bp-list .pval > small.warn { text-align: left; max-width: none; flex-basis: 100%; }
+  .prow > .prow-act { justify-self: start; margin-top: 8px; }
+  .bp-buyer h2 { font-size: 28px; }
+  .bp-admin { flex: 1 1 100%; }
+  .bp-limit { flex-wrap: wrap; }
   .bp-calc-in { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .bp-lead { transition: none; } }
@@ -1461,7 +1502,9 @@ fieldset .static-form .btn { align-self: end; }
 .wiki-tabs a:hover { color: var(--fg); }
 .wiki-tabs a.active { color: var(--fg); }
 .wiki-tabs a.active .ico { color: var(--accent); }
-.wiki-tabs a.active::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+.wiki-tabs a.active::after, .wiki-line { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+.wiki-line { view-transition-name: wiki-line; }
+.wiki-tabs a.active:has(> .wiki-line)::after { display: none; }   /* у WIKI риска — елемент, що переїжджає; у кабінеті — як була */
 .wiki-tabs .cnt { color: var(--faint); font-size: 14px; font-weight: 500; }
 .wiki-tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
 /* шапка розділу: без панелі — заголовок, опис і кілька справжніх чисел праворуч */
@@ -1833,7 +1876,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .dmenu-btn svg:first-child { color: #5865f2; }
 .dmenu-pop { position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 30; width: min(340px, calc(100vw - 32px)); padding: 12px 8px 8px;
   border-radius: var(--r); background: var(--surface); border: 1px solid var(--line2); box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .6); }
-:root[data-theme="light"] .dmenu-pop { background: #fff; box-shadow: 0 18px 44px -18px rgba(20, 30, 45, .35); }
+:root[data-theme="light"] .dmenu-pop { background: var(--surface); box-shadow: var(--pop); }
 .dmenu-h { display: block; padding: 0 10px 8px; font-size: 12px; letter-spacing: .12em; color: var(--muted); }
 .dmenu-pop ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .dmenu-pop a { display: flex; align-items: flex-start; gap: 12px; padding: 10px; border-radius: var(--rc); color: var(--fg); text-decoration: none; }
@@ -2297,7 +2340,7 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 /* ---------- рух (2026-11-15): лише там, де він пояснює дію чи зміну стану ----------
    Токени: швидкий відгук 120 мс, звичайна зміна 200 мс, поява вікна 240 мс; вихід швидший за вхід.
    Зменшений рух (системне налаштування): замість зсувів і масштабу — лише коротке проявлення (q-fade), стан лишається видно */
-:root { --ease-out: cubic-bezier(.16, 1, .3, 1); --t-fast: 120ms; --t: 200ms; --t-in: 240ms; }
+:root { --ease-out: cubic-bezier(.16, 1, .3, 1); --ease-in: cubic-bezier(.7, 0, .84, 0); --t-fast: 150ms; --t: 200ms; --t-in: 300ms; }
 @keyframes q-fade { from { opacity: 0; } }
 @keyframes q-rise { from { opacity: 0; transform: translateY(10px); } }
 @keyframes q-dlg { from { opacity: 0; transform: translateY(10px) scale(.97); } }
@@ -2317,6 +2360,90 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   .modal[open], .adm-view[open], .mdlg[open] { animation: q-fade .16s ease-out both !important; }
   .btn:active:not(:disabled) { transform: none; }
+}
+
+/* ---------- рух сайту (редизайн 2026-11): «живе табло», але без метушні ----------
+   Тривалості — 150/200/300 мс; вхід — ease-out. Рухаються лише transform і opacity. Безкінечний рух — тільки там, де
+   він щось каже: «наживо» біля івенту, що йде, і мерехтіння заготовки, поки вантажаться дані.
+   Зі «зменшеним рухом» усе нижче вимикається (глобальне правило + блок наприкінці) */
+@keyframes q-tick { from { opacity: .25; transform: translateY(-38%); } }
+@keyframes q-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes q-live { 0% { transform: scale(1); opacity: .7; } 80%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes q-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* 1. перехід між розділами: помаранчева риска переїжджає на нову вкладку (src/lib/viewNav.ts); сама сторінка не схрещується —
+   вона з'являється своєю анімацією з Layout.tsx */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(nav-line), ::view-transition-group(tab-line), ::view-transition-group(wiki-line) { animation-duration: var(--t-in); animation-timing-function: var(--ease-out); }
+
+/* 2. перший екран головної — один короткий вхід: підпис → заголовок → текст → кнопки → промокод → табло (разом ≈ 0,6 с) */
+.hx-intro > *, .hx > .qpromo, .board > * { animation: q-rise var(--t-in) var(--ease-out) both; }
+.hx-intro > :nth-child(2) { animation-delay: 50ms; }
+.hx-intro > :nth-child(3) { animation-delay: 100ms; }
+.hx-intro > :nth-child(4) { animation-delay: 150ms; }
+.hx > .qpromo { animation-delay: 150ms; }
+.board > :nth-child(1) { animation-delay: 200ms; }
+.board > :nth-child(2) { animation-delay: 250ms; }
+.board > :nth-child(3) { animation-delay: 300ms; }
+
+/* 3. табло відліку: цифра, що змінилась, «перегортається» згори */
+.ne-cd { display: inline-flex; overflow: hidden; }
+.cd-d, .cd-sep { display: inline-block; }
+.cd-d { animation: q-tick var(--t) var(--ease-out); }
+.cd-sep { opacity: .55; margin: 0 .02em; }
+/* «наживо»: івент іде — біля заголовка пульсує зелена крапка */
+.live { position: relative; display: inline-block; width: 10px; height: 10px; margin-right: 10px; vertical-align: .18em; border-radius: 50%; background: var(--good); }
+.live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--good); animation: q-live 1.6s var(--ease-out) infinite; }
+
+/* 4. заготовка списку, поки вантажаться ціни */
+.sk { display: flex; flex-direction: column; }
+.sk-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 64px; gap: 12px; align-items: center; padding: 9px 0; }
+.sk-row + .sk-row { border-top: 1px solid var(--line); }
+.sk-row > span { display: flex; flex-direction: column; gap: 6px; }
+.sk-row i { position: relative; display: block; overflow: hidden; height: 12px; border-radius: 4px; background: var(--surface2); }
+.sk-row > i:first-child { height: 36px; border-radius: var(--rs); }
+.sk-row > span i:first-child { width: 70%; height: 14px; }
+.sk-row > span i:last-child { width: 45%; }
+.sk-row > i:last-child { height: 22px; }
+.sk-row i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--fg) 7%, transparent), transparent); animation: q-shimmer 1.4s ease-in-out infinite; }
+
+/* 5. поява під час прокрутки (Layout.tsx ставить data-in); без JS чи зі «зменшеним рухом» класу rv-on немає — нічого не сховано */
+html.rv-on :is(.h-sec, .band, .h-two, .ix > li, .vgrid > *, .jgrid > *, .gd-grid > *, .ev-grid > *, .team-grid > li, .p-feat, .p-req-i, .start-list > li, .bp-leaders > *, .bp-bottom > *, .recent, .gloss-item, .wiki-tiles > *) {
+  transition: opacity var(--t-in) var(--ease-out), transform var(--t-in) var(--ease-out);
+}
+html.rv-on :is(.h-sec, .band, .h-two, .ix > li, .vgrid > *, .jgrid > *, .gd-grid > *, .ev-grid > *, .team-grid > li, .p-feat, .p-req-i, .start-list > li, .bp-leaders > *, .bp-bottom > *, .recent, .gloss-item, .wiki-tiles > *):not([data-in]) { opacity: 0; transform: translateY(14px); }
+/* у сітках сусідні картки з'являються «драбинкою» */
+html.rv-on :is(.vgrid, .jgrid, .gd-grid, .ev-grid, .team-grid, .bp-leaders, .wiki-tiles) > :nth-child(4n + 2) { transition-delay: 50ms; }
+html.rv-on :is(.vgrid, .jgrid, .gd-grid, .ev-grid, .team-grid, .bp-leaders, .wiki-tiles) > :nth-child(4n + 3) { transition-delay: 100ms; }
+html.rv-on :is(.vgrid, .jgrid, .gd-grid, .ev-grid, .team-grid, .bp-leaders, .wiki-tiles) > :nth-child(4n + 4) { transition-delay: 150ms; }
+html.rv-on .ix > li:nth-child(2) { transition-delay: 40ms; } html.rv-on .ix > li:nth-child(3) { transition-delay: 80ms; }
+html.rv-on .ix > li:nth-child(4) { transition-delay: 120ms; } html.rv-on .ix > li:nth-child(5) { transition-delay: 160ms; }
+html.rv-on .ix > li:nth-child(6) { transition-delay: 200ms; }
+
+/* 6. відгук на наведення й натискання: фото авто трохи наближається, стрілка покажчика їде вправо, значок роботи підіймається */
+.wiki .vpic img { transition: transform var(--t-in) var(--ease-out); }
+.wiki .vcard:hover .vpic img { transform: scale(1.05); }
+.ix-row > .ico { transition: transform var(--t) var(--ease-out), color var(--t) ease-out; }
+.ix-row:hover > .ico { transform: rotate(-90deg) translateY(4px); color: var(--accent-hi); }
+.wiki .jico { transition: transform var(--t) var(--ease-out); }
+.wiki .jcard:hover .jico { transform: translateY(-3px); }
+.pb-row .pic { transition: transform var(--t) var(--ease-out); }
+.pb-row:hover .pic { transform: scale(1.08); }
+.bd-more, .h-more { transition: color var(--t-fast) ease-out; }
+
+/* 7. розгорнута ціна: картка відкривається з підйомом, лінія графіка «малюється» */
+.pdetail { animation: q-rise var(--t-in) var(--ease-out); }
+.chart .line { stroke-dasharray: 1; animation: q-draw var(--t-in) var(--ease-out) both; }
+.mini, .h-dl, .bd { transition: border-color var(--t) ease-out; }
+
+/* 8. перемикач теми: іконка повертається */
+.theme svg { transition: transform var(--t-in) var(--ease-out); }
+.theme:active svg { transform: rotate(-30deg) scale(.9); }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .live::after, .sk-row i::after { animation: none !important; }
+  .chart .line { stroke-dasharray: none; }
 }
 
 /* клавіатура: перше Tab — «До вмісту сторінки», щоб не проходити все меню; якорі (#mapa) не ховаються під липкою шапкою */
@@ -2581,13 +2708,14 @@ html { scroll-padding-top: 76px; scroll-padding-bottom: calc(var(--tabbar) + 12p
 .adm-gl-hist { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
 .adm-gl-hist .btn { margin-top: 4px; }
 
-/* Блок адміна скупника (specs/096): перемикач «Фіксовані ціни» й ліміт продажу одним рядком, однакової висоти 36 px */
-.bp-admin { display: grid; gap: 10px; justify-items: start; }
+/* Блок адміна скупника (specs/096): перемикач «Фіксовані ціни» й картинка скупника одним рядком, однакової висоти 36 px.
+   Сам блок — згортка <details> (вище, .bp-admin); елементи в тілі не розтягуються на всю ширину */
+.bp-admin-body { justify-items: start; }
 .bp-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
 .tgl { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font: 600 13px var(--sans); color: var(--fg); cursor: pointer; position: relative; }
 .tgl input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.tgl-track { width: 36px; height: 20px; border-radius: var(--rc); background: var(--surface2); border: 1px solid var(--line2); position: relative; transition: background .15s, border-color .15s; flex: none; }
-.tgl-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.tgl-track { width: 36px; height: 20px; border-radius: var(--rc); background: var(--surface2); border: 1px solid var(--line2); position: relative; transition: background var(--t-fast), border-color var(--t-fast); flex: none; }
+.tgl-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform var(--t-fast) var(--ease-out), background var(--t-fast); }
 .tgl input:checked + .tgl-track { background: var(--accent); border-color: var(--accent); }
 .tgl input:checked + .tgl-track::after { transform: translateX(16px); background: var(--accent-fg); }
 .tgl input:focus-visible + .tgl-track { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -15,6 +15,7 @@ import { STALE } from '../lib/pricestats';
 import { readCache, readSnapshot } from '../lib/priceCache';
 import { groupUpdates, type Update } from '../lib/updates';
 import { JOBS } from '../data/jobs';
+import CountUp from '../components/CountUp';
 
 /* мапа (Leaflet) — окремим файлом: вона нижче першого екрана, а перший кадр без неї легший */
 const MiniMap = lazy(() => import('../components/MiniMap'));
@@ -49,6 +50,8 @@ export default function Home() {
     <div className="home">
       {/* 1. що це за сайт — і промокод, по який часто приходять з Discord */}
       <section className="hx">
+        {/* фон першого екрана — справжня мапа центру Лос-Сантоса (плитки мапи сайту, styles.css .hx-map), притухла й розчинена до тексту */}
+        <div className="hx-map" aria-hidden="true" />
         <div className="hx-intro">
           <Dateline />
           <h1>Ціни, мапа й івенти Quant RP</h1>
@@ -169,10 +172,13 @@ function NextEvent() {
   const rest = soon.filter(s => !head || head.on || s.ev.name !== head.name).slice(0, 3);
   return (
     <div className={'bd ne' + (head?.on ? ' on' : '')}>
-      <div className="bd-head"><h2>{head?.on ? 'Зараз іде' : 'Наступний івент'}</h2><Link className="bd-more" to="/wiki/iventy">Розклад</Link></div>
+      <div className="bd-head"><h2>{head?.on && <span className="live" aria-hidden="true" />}{head?.on ? 'Зараз іде' : 'Наступний івент'}</h2><Link className="bd-more" to="/wiki/iventy">Розклад</Link></div>
       {head && <div className="ne-main">
         <b className="ne-name">{head.name}</b>
-        <span className="ne-cd" role="timer" aria-label={head.on ? `закінчиться о ${kyHM(head.at)}` : `почнеться о ${kyHM(head.at)}, через ${dur(head.at - now)}`}>{clock(head.at - now)}</span>
+        <span className="ne-cd" role="timer" aria-label={head.on ? `закінчиться о ${kyHM(head.at)}` : `почнеться о ${kyHM(head.at)}, через ${dur(head.at - now)}`}>
+          {/* цифра, що змінилась, заново монтується (новий key) і «перегортається», як на табло */}
+          {[...clock(head.at - now)].map((c, i, a) => <span key={(a.length - i) + c} className={c === ':' ? 'cd-sep' : 'cd-d'} aria-hidden="true">{c}</span>)}
+        </span>
         <span className="ne-when">{head.on ? `${kyHM(head.from)}–${kyHM(head.at)}, до кінця` : `о ${kyHM(head.at)}, до початку`}</span>
       </div>}
       <ul className="ne-next" aria-label="Далі за розкладом">
@@ -225,7 +231,7 @@ function PriceBoard() {
   return <>
     <div className="bd">
       <div className="bd-head"><h2>{best.length ? 'Вигідно здати зараз' : 'Останні ціни від гравців'}</h2><Link className="bd-more" to="/tsiny">Усі ціни</Link></div>
-      {!d ? <p className="bd-empty">Завантажуємо ціни…</p> : !rows.length ? <p className="bd-empty">Цін ще немає — внеси першу на сторінці цін.</p> :
+      {!d ? <Skeleton label="Завантажуємо ціни" /> : !rows.length ? <p className="bd-empty">Цін ще немає — внеси першу на сторінці цін.</p> :
         <ul className="pb">{rows.map(({ r, pos }) => (
           <li key={r.buyer_id + ':' + r.item_id}>
             <Link to={'/tsiny#' + r.buyer_id} className="pb-row">
@@ -237,7 +243,7 @@ function PriceBoard() {
     </div>
     <div className="bd">
       <div className="bd-head"><h2>Хто оновлював ціни</h2><Link className="bd-more" to="/tsiny">Оновити ціни</Link></div>
-      {!d ? <p className="bd-empty">Завантажуємо…</p> : !groups.length ? <p className="bd-empty">Гравці ще не оновлювали ціни. Будь першим — це займає хвилину.</p> :
+      {!d ? <Skeleton label="Завантажуємо оновлення" /> : !groups.length ? <p className="bd-empty">Гравці ще не оновлювали ціни. Будь першим — це займає хвилину.</p> :
         <ul className="ug">{groups.map(g => (
           <li key={g.key}>
             <span className="ug-who"><b>{g.who}</b><small>{ago(g.at)}</small></span>
@@ -249,10 +255,15 @@ function PriceBoard() {
   </>;
 }
 
+/* заготовка списку на час завантаження: 4 сірі рядки (мерехтять, якщо рух не вимкнено) */
+function Skeleton({ label }: { label: string }) {
+  return <div className="sk" role="status" aria-label={label}>{[0, 1, 2, 3].map(i => <span key={i} className="sk-row"><i /><span><i /><i /></span><i /></span>)}</div>;
+}
+
 function IxRow({ to, n, name, text }: { to: string; n?: number | null; name: string; text: string }) {
   return (
     <li><Link className="ix-row" to={to}>
-      <span className="ix-n" aria-hidden={n == null}>{n == null ? '' : fmt(n)}</span>
+      <span className="ix-n">{n == null ? '' : <CountUp n={n} />}</span>
       <span className="ix-t"><b>{name}</b><span>{text}</span></span>
       <Icon name="chev" size={18} />
     </Link></li>

@@ -22,8 +22,8 @@ const SITE: [string, string, string, string][] = [
 
 /* [шлях, назва, підзаголовок, іконка] — у програмі це плитки, на сайті — вкладки. Облік, угоди, склад і гараж прибрано (specs/040) */
 const TABS: [string, string, string, string][] = [
-  ['', 'Дашборд', 'Документи, ціни й івенти', 'home'],
-  ['dokumenty', 'Документи', 'Ліцензії й строки', 'book'],
+  /* дашборд і документи — лише в програмі; на сайті їх прибрано (рішення власника 2026-11-25) */
+  ...(desktop ? [['', 'Дашборд', 'Документи, ціни й івенти', 'home'], ['dokumenty', 'Документи', 'Ліцензії й строки', 'book']] as [string, string, string, string][] : []),
   ['zarobitok', 'Заробіток', 'За годину й по днях', 'chart'],
   /* зміни правил і законів з форуму — лише в програмі, поруч із пошуком по правилах у плашці */
   ...(desktop ? [['pravyla', 'Правила', 'Що змінилось у правилах', 'shield'] as [string, string, string, string]] : []),
@@ -51,11 +51,11 @@ export default function Cabinet() {
       <section className="wiki-hero">
         <div>
           <h1>Кабінет гравця</h1>
-          <p className="muted">Документи з нагадуванням про строк, персонажі й нік у Q-Hub. Бачиш їх лише ти — це перевіряє сама база.</p>
+          <p className="muted">Заробіток за годину й по днях, персонажі й нік у Q-Hub. Бачиш їх лише ти — це перевіряє сама база.</p>
           <div className="row"><button className="btn acc" onClick={signIn}><Icon name="user" />Увійти через Discord</button><Link className="btn ghost" to="/programa"><Icon name="download" />Програма Q-Hub</Link></div>
         </div>
       </section>
-      <div className="h-cards">{TABS.slice(1).map(([, l, d, ico]) => <div key={l} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{l}</h3><p className="muted">{d}</p></div>)}</div>
+      <div className="h-cards">{TABS.filter(t => t[0] !== '').map(([, l, d, ico]) => <div key={l} className="card"><span className="ibub"><Icon name={ico} /></span><h3>{l}</h3><p className="muted">{d}</p></div>)}</div>
     </div>
   );
 
@@ -73,12 +73,13 @@ export default function Cabinet() {
     {/* на сайті всі поля й кнопки кабінету вимкнено, форми додавання сховано (.ro у styles.css) */}
     <fieldset className={canEdit ? 'rw' : 'ro'} disabled={!canEdit}>
     <Routes>
-      <Route index element={<Dashboard c={current} />} />
+      {/* сайт: дашборду й документів немає — /kabinet веде на «Заробіток» */}
+      <Route index element={desktop ? <Dashboard c={current} /> : <Navigate to="zarobitok" replace />} />
       {/* у програмі дашборд — окремою кнопкою плашки, головна лишається з плитками й довідником */}
-      <Route path="dashbord" element={<Dashboard c={current} />} />
+      <Route path="dashbord" element={desktop ? <Dashboard c={current} /> : <Navigate to="/kabinet/zarobitok" replace />} />
       {/* розділи, яких більше немає (specs/040), — на головну кабінету */}
       {['oblik', 'uhody', 'sklad', 'harazh'].map(p => <Route key={p} path={p} element={<Navigate to="/kabinet" replace />} />)}
-      <Route path="dokumenty" element={<DocumentsPage c={current} />} />
+      <Route path="dokumenty" element={desktop ? <DocumentsPage c={current} /> : <Navigate to="/kabinet/zarobitok" replace />} />
       <Route path="zarobitok" element={<Earnings c={current} />} />
       <Route path="nalashtuvannya" element={<SettingsPage c={current} />} />
       <Route path="personazhi" element={<Navigate to="/kabinet/nalashtuvannya" replace />} />
@@ -106,7 +107,7 @@ export default function Cabinet() {
       </section>
       <nav className="wiki-tabs cab-tabs" aria-label="Кабінет">{TABS.filter(t => t[0] !== 'pravky' || wiki).map(([p, l, , ico]) => <NavLink key={p} to={'/kabinet' + (p ? '/' + p : '')} end><Icon name={ico} size={16} />{l}{p === 'pravky' && unseen > 0 && <span className="cnt" aria-label={`нових рішень: ${unseen}`}>{unseen}</span>}</NavLink>)}</nav>
       {!canEdit && (
-        <p className="card note" role="note">Персонажів можна додавати й видаляти тут, у <Link to="/kabinet/nalashtuvannya">Налаштуваннях</Link>. Решта кабінету на сайті — лише для перегляду: документи змінюй у програмі Q-Hub для Windows.</p>
+        <p className="card note" role="note">Персонажів можна додавати й видаляти тут, у <Link to="/kabinet/nalashtuvannya">Налаштуваннях</Link>. Решта кабінету на сайті — лише для перегляду: записи веде програма Q-Hub для Windows.</p>
       )}
       {body}
     </div>

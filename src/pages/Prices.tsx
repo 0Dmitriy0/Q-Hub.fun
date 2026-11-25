@@ -362,24 +362,29 @@ export default function Prices() {
               </a>))}</div>}
             {!q && buyer && (
               <div className="bp-buyer">
-                <div className="row"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span>
+                <div className="row bp-buyer-id"><Pic url={buyer.image_url} alt={buyer.name} size={48} /><div><h2>{buyer.name}</h2><span className="muted">{buyer.updated_at ? 'оновлено ' + when(buyer.updated_at) : 'ще не оновлювали'}</span>
                   {(bv.fixed || bv.limit) && <span className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                     {bv.fixed && <span className="pill acc" title="Ціни цього скупника не змінюються за розкладом — їх оновлює адміністрація, коли проєкт їх змінить">фіксовані ціни</span>}
                     {bv.limit && <span className="muted">Ліміт продажу: <b className="mono">{bv.limit}</b></span>}
                   </span>}</div></div>
-                {isAdmin && <PicUpload label={'Картинка скупника ' + buyer.name} path={`buyers/${buyer.id}.webp`} onDone={async url => {
-                  const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
-                }} />}
                 {isAdmin && (() => {
                   const nl = rows.filter(r => r.buyer_id === buyer.id && noLim(r)).length, un = unknown.filter(u => u.buyer_id === buyer.id);
                   const lr = rows.filter(r => r.buyer_id === buyer.id && limFor(r)).map(r => ({ r, l: limFor(r)! }));
+                  const todo = un.length + lr.length;
+                  /* налаштування адміна згорнуті, щоб список цін лишався чистим; є що розібрати — розгорнуті одразу */
                   return (
-                    <div className="bp-admin">
+                    <details className="bp-admin" open={todo > 0 || undefined}>
+                      <summary><Icon name="gear" size={16} />Налаштування скупника{todo > 0 && <span className="nav-count" aria-label={`треба розібрати: ${todo}`}>{todo}</span>}</summary>
+                      <div className="bp-admin-body">
                       <div className="bp-admin-row">
                         <label className="tgl" title="Ціни не змінюються за розкладом: ставить лише адміністрація, голоси гравців і програми не приймаються">
                           <input type="checkbox" role="switch" checked={bv.fixed} onChange={e => saveBuyerFlags(buyer.id, { fixed_prices: e.target.checked })} />
                           <span className="tgl-track" aria-hidden="true" /><span>Фіксовані ціни</span>
                         </label>
+                        <PicUpload label={'Картинка скупника ' + buyer.name} text="Картинка скупника" path={`buyers/${buyer.id}.webp`} onDone={async url => {
+                          const { error } = await supabase!.from('buyers').update({ image_url: url }).eq('id', buyer.id); if (error) throw error; load();
+                        }} />
+                      </div>
                         <form className="bp-limit" onSubmit={e => {
                           e.preventDefault(); const fd = new FormData(e.currentTarget), v = Number(String(fd.get('lim') || '').replace(/\s/g, ''));
                           saveBuyerFlags(buyer.id, v > 0 ? { sale_limit: v, sale_limit_unit: String(fd.get('unit') || 'кг') } : { sale_limit: null, sale_limit_unit: null });
@@ -389,7 +394,6 @@ export default function Prices() {
                           <select name="unit" aria-label="Одиниця ліміту" defaultValue={buyer.sale_limit_unit || 'кг'} key={'unit' + buyer.id + (buyer.sale_limit_unit ?? '')}><option>кг</option><option>шт</option></select>
                           <button className="btn sm ghost">Зберегти</button>
                         </form>
-                      </div>
                       {!bv.fixed && <label className="mcheck"><input type="checkbox" checked={noLimOnly} onChange={e => setNoLimOnly(e.target.checked)} /> Лише без меж цін ({nl}) — програма бере їх лише з двох зчиток</label>}
                       {un.length > 0 && <details><summary>Невідомі товари у скупника: {un.length}</summary>
                         <ul className="list">{un.map(u => (
@@ -412,7 +416,8 @@ export default function Prices() {
                               <button type="button" className="btn sm ghost" onClick={() => dropLimRep(l)} title="Це помилка розпізнавання — межі не змінювати">Відхилити</button>
                             </span></li>))}</ul>
                       </details>}
-                    </div>
+                      </div>
+                    </details>
                   );
                 })()}
               </div>
@@ -459,9 +464,9 @@ export default function Prices() {
                   <div className={'prow' + (isOpen ? ' open' : '')}>
                     <Pic url={r.items!.image_url} alt={r.items!.name} />
                     <button type="button" className="pname" aria-expanded={v.chart ? isOpen : undefined} aria-controls={v.chart ? 'pd-' + key : undefined} onClick={() => toggle(key, r)}><b>{r.items!.name}</b>
-                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <span className={old ? 'warn' : ''}>{when(r.at)} · {r.by}{old ? ' · може бути застаріла' : ''}</span> : 'ціни ще немає'}{v.fixed && <span> · фіксована</span>}{isAdmin && limFor(r) && <span className="warn"> · {v.fixed ? 'на екрані' : 'перевір межі: у грі'} {money(limFor(r)!.price)}</span>}</small>
+                      <small>{q ? (buyers.find(b => b.id === r.buyer_id)?.name || '') + ' · ' : ''}{r.at ? <>{old ? <span className="stale" title="Ціні понад 3 години — у грі вона могла змінитися"><Icon name="clock" size={13} />{when(r.at)}<span className="vh"> — може бути застаріла</span></span> : when(r.at)} · {r.by}</> : 'ціни ще немає'}{v.fixed && <span> · фіксована</span>}{isAdmin && limFor(r) && <span className="warn"> · {v.fixed ? 'на екрані' : 'перевір межі: у грі'} {money(limFor(r)!.price)}</span>}</small>
                       {v.limits && <RangeBar pos={pos} range={range} />}</button>
-                    {v.chart ? <Spark pts={pts} now={now} /> : <span aria-hidden="true" />}
+                    {v.chart ? <Spark pts={pts} now={now} /> : <span className="spark none" aria-hidden="true" />}
                     <div className="pval">
                       {editing
                         ? <form className="row upd" onSubmit={e => { e.preventDefault(); savePrice(r); }}>
@@ -478,9 +483,9 @@ export default function Prices() {
                       {!editing && note[key] && <small className="muted pnote">{note[key]}</small>}
                       {msg[key] && <small className="err" role="alert">{msg[key]}</small>}
                     </div>
-                    {isAdmin && <PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
+                    {isAdmin && <span className="prow-act"><PicUpload label={'Картинка товару ' + r.items!.name} path={`items/${r.item_id}.webp`} onDone={async url => {
                       const { error } = await supabase!.from('items').update({ image_url: url }).eq('id', r.item_id); if (error) throw error; load();
-                    }} />}
+                    }} /></span>}
                     {isOpen && v.chart && (
                       <div className="pdetail" id={'pd-' + key}>
                         {v.limits && <><div className="stats">

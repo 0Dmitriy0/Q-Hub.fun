@@ -108,7 +108,7 @@ export function PriceChart({ raw, range, name, onDelete }: { raw: Pt[]; range: R
             <line className="lim" x1={L} x2={W - R} y1={y(range.min)} y2={y(range.min)} /><text className="ax lab" x={W - R - 4} y={y(range.min) + 15} textAnchor="end">мін {money(range.min)}</text>
           </>}
           <path className="area" d={area} />
-          <path className="line" d={line} />
+          <path className="line" d={line} pathLength={1} />
           {h && <line className="cross" x1={x(h.t)} x2={x(h.t)} y1={T} y2={H - B} />}
           {changes.map((p, i) => <circle key={p.t} className={'pt' + (i === hov ? ' on' : '')} cx={x(p.t)} cy={y(p.p)} r={i === hov ? 7 : 5} />)}
         </svg>}

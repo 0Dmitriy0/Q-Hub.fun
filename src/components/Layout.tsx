@@ -9,11 +9,16 @@ import NickGate from './NickGate';
 import Icon from './Icon';
 import DiscordMenu from './DiscordMenu';
 import NotificationBell from './NotificationBell';
+import { reducedMotion, useViewNav } from '../lib/viewNav';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
   ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
 ];
+
+/* що проявляється під час прокрутки (рух сайту, 2026-11): блоки головної, картки довідника й цін, кроки, пункти словника.
+   Кожен — раз, коли вперше заходить на екран; зі «зменшеним рухом» нічого не ховається (styles.css, html.rv-on) */
+const REVEAL = '.h-sec, .band, .h-two, .ix > li, .vgrid > *, .jgrid > *, .gd-grid > *, .ev-grid > *, .team-grid > li, .p-feat, .p-req-i, .start-list > li, .bp-leaders > *, .bp-bottom > *, .recent, .gloss-item, .wiki-tiles > *';
 
 /* назва вкладки браузера й опис для пошуку кожного розділу — src/data/pages.json (спільний зі статичними сторінками для
    Google, scripts/static-pages.mjs); опису немає — загальний з index.html */
@@ -44,6 +49,28 @@ export default function Layout() {
   }, [section]);
   const [{ family_url }] = useLinks();
   const family = familyLink(family_url);   // «by CORE» — завжди на Discord сім'ї
+  const vnav = useViewNav();
+  /* поява під час прокрутки: один спостерігач на весь main; нові картки (фільтр, «Показати ще») підхоплює MutationObserver.
+     Позначки — data-атрибути, а не класи: React перезаписує className (відкрив пункт словника — клас змінився), а чужих data-* не чіпає */
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root || reducedMotion() || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(es => {
+      for (const e of es) if (e.isIntersecting) { (e.target as HTMLElement).dataset.in = '1'; io.unobserve(e.target); }
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
+    let raf = 0;
+    const scan = () => {
+      raf = 0;
+      root.querySelectorAll<HTMLElement>(REVEAL).forEach(el => { if (!el.dataset.rv) { el.dataset.rv = '1'; io.observe(el); } });
+    };
+    /* те, що вже на екрані при першому показі, вважається показаним — нічого не блимає; ховається лише нижче екрана */
+    root.querySelectorAll<HTMLElement>(REVEAL).forEach(el => { if (el.getBoundingClientRect().top < innerHeight) { el.dataset.in = '1'; el.dataset.rv = '1'; } });
+    document.documentElement.classList.add('rv-on');
+    scan();
+    const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(scan); });
+    mo.observe(root, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); cancelAnimationFrame(raf); };
+  }, []);
   /* модератору — скільки пропозицій від гравців чекає (specs/061); оновлюється при переході між сторінками */
   const [waiting, setWaiting] = useState(0);
   useEffect(() => {
@@ -63,7 +90,8 @@ export default function Layout() {
       <header className="top">
         <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></NavLink>
         <nav className="nav" aria-label="Розділи">
-          {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
+          {/* риска активного розділу — окремий елемент: View Transitions переносить її на нову вкладку (src/lib/viewNav.ts) */}
+          {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'} onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{isActive && <span className="nav-line" aria-hidden="true" />}</>}</NavLink>)}
         </nav>
         <div className="who">
           <ThemeToggle />
@@ -103,7 +131,7 @@ export default function Layout() {
       </footer>
       {/* телефон: розділи — нижнім меню під великим пальцем (на ширших екранах — у шапці) */}
       <nav className="tabbar" aria-label="Розділи">
-        {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={22} />{label}</NavLink>)}
+        {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'} onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={22} />{label}{isActive && <span className="tab-line" aria-hidden="true" />}</>}</NavLink>)}
       </nav>
     </div>
   );

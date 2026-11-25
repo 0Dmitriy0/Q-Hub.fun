@@ -1,13 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { JOBS } from '../data/jobs';
 import Icon from '../components/Icon';
 import { kyivDay, phase } from '../lib/seasons';
+import { useViewNav } from '../lib/viewNav';
 
 /* WIKI: довідник гравця — роботи, транспорт і івенти під одним розділом, перемикач угорі (design/stitch/wikijob.html, wikicar.html) */
 export default function Wiki() {
   const { pathname } = useLocation();
+  const vnav = useViewNav();
+  /* вкладка з рискою: риска — окремий елемент, View Transitions переносить її на нову вкладку */
+  const tab = (to: string, ico: string, label: string, extra?: ReactNode) => (
+    <NavLink to={to} role="tab" onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{extra}{isActive && <span className="wiki-line" aria-hidden="true" />}</>}</NavLink>
+  );
   const [cars, setCars] = useState<number | null>(null);
   /* скільки сезонних івентів триває зараз (specs/055); 0 не показуємо */
   const [live, setLive] = useState(0);
@@ -25,11 +31,11 @@ export default function Wiki() {
       <div className="wiki-top">
         <nav className="wiki-crumbs mono" aria-label="Де ти зараз"><Link to="/">Q-Hub</Link><span aria-hidden="true">/</span><Link to="/wiki">WIKI</Link><span aria-hidden="true">/</span><span aria-current="page">{here}</span></nav>
         <div className="wiki-tabs" role="tablist" aria-label="Розділ WIKI">
-          <NavLink to="/wiki/roboty" role="tab"><Icon name="jobs" size={16} />Роботи<span className="cnt mono">{JOBS.length}</span></NavLink>
-          <NavLink to="/wiki/transport" role="tab"><Icon name="car" size={16} />Транспорт{cars != null && <span className="cnt mono">{cars}</span>}</NavLink>
-          <NavLink to="/wiki/iventy" role="tab"><Icon name="spark" size={16} />Івенти{live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>}</NavLink>
-          <NavLink to="/wiki/gaidy" role="tab"><Icon name="book" size={16} />Гайди</NavLink>
-          <NavLink to="/wiki/glosariy" role="tab"><Icon name="tag" size={16} />Глосарій</NavLink>
+          {tab('/wiki/roboty', 'jobs', 'Роботи', <span className="cnt mono">{JOBS.length}</span>)}
+          {tab('/wiki/transport', 'car', 'Транспорт', cars != null && <span className="cnt mono">{cars}</span>)}
+          {tab('/wiki/iventy', 'spark', 'Івенти', live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>)}
+          {tab('/wiki/gaidy', 'book', 'Гайди')}
+          {tab('/wiki/glosariy', 'tag', 'Глосарій')}
         </div>
       </div>
       <Outlet />
