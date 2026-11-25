@@ -10,9 +10,10 @@ import { useViewNav } from '../lib/viewNav';
 export default function Wiki() {
   const { pathname } = useLocation();
   const vnav = useViewNav();
-  /* вкладка з рискою: риска — окремий елемент, View Transitions переносить її на нову вкладку */
+  /* вкладка з рискою: риска — окремий елемент, View Transitions переносить її на нову вкладку.
+     Це переходи між сторінками, тож звичайні посилання в <nav> (NavLink сам ставить aria-current), а не role=tab */
   const tab = (to: string, ico: string, label: string, extra?: ReactNode) => (
-    <NavLink to={to} role="tab" onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{extra}{isActive && <span className="wiki-line" aria-hidden="true" />}</>}</NavLink>
+    <NavLink to={to} onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{extra}{isActive && <span className="wiki-line" aria-hidden="true" />}</>}</NavLink>
   );
   const [cars, setCars] = useState<number | null>(null);
   /* робіт — стільки ж, скільки на сторінці «Роботи» (довідник у базі, з доданими гравцями); бази немає — вбудований список */
@@ -33,13 +34,13 @@ export default function Wiki() {
     <div className="wiki">
       <div className="wiki-top">
         <nav className="wiki-crumbs mono" aria-label="Де ти зараз"><Link to="/">Q-Hub</Link><span aria-hidden="true">/</span><Link to="/wiki">WIKI</Link><span aria-hidden="true">/</span><span aria-current="page">{here}</span></nav>
-        <div className="wiki-tabs" role="tablist" aria-label="Розділ WIKI">
+        <nav className="wiki-tabs" aria-label="Розділ WIKI">
           {tab('/wiki/roboty', 'jobs', 'Роботи', <span className="cnt mono">{jobsN}</span>)}
           {tab('/wiki/transport', 'car', 'Транспорт', cars != null && <span className="cnt mono">{cars}</span>)}
           {tab('/wiki/iventy', 'spark', 'Івенти', live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>)}
           {tab('/wiki/gaidy', 'book', 'Гайди')}
           {tab('/wiki/glosariy', 'tag', 'Глосарій')}
-        </div>
+        </nav>
       </div>
       <Outlet />
     </div>
