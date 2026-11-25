@@ -1,0 +1,47 @@
+name: Preview shots
+
+# Знімки сторінок гілки редизайну — нікуди не викладає й живий сайт не чіпає.
+# Збирає сайт, запускає його тут же (vite preview, дані — з живої бази) і знімає сторінки на телефоні й ПК.
+# Знімки — артефакт «preview-shots» цього запуску.
+# Позначки в повідомленні коміту: [old] — ще й знімки живого сайту для порівняння, [light] — ще й світла тема,
+# [routes:/,/tsiny] — лише ці сторінки, [noshots] — без знімків.
+
+on:
+  push:
+    branches: [site-redesign]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-shots
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    if: ${{ !contains(github.event.head_commit.message, '[noshots]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/snapshot.mjs   # знімок цін для головної, як у справжній збірці
+      - run: npx tsc --noEmit
+      - run: npx vite build
+      - name: Screenshots
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          SHOT_BASE: http://localhost:4173
+        run: |
+          npx vite preview --port 4173 --strictPort >/tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173/ >/dev/null && break; sleep 1; done
+          npm i --no-save --no-audit --no-fund playwright-core@1 >/dev/null 2>&1
+          node scripts/preview-shots.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-shots
+          path: shots/
+          retention-days: 5
