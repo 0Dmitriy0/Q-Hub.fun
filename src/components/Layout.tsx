@@ -7,14 +7,18 @@ import { FAMILY, familyLink, useLinks } from '../lib/brand';
 import ThemeToggle from './ThemeToggle';
 import NickGate from './NickGate';
 import Icon from './Icon';
-import Backdrop from './Backdrop';
 import DiscordMenu from './DiscordMenu';
 import NotificationBell from './NotificationBell';
+import { reducedMotion, useViewNav } from '../lib/viewNav';
 
 const NAV: [string, string, string][] = [
   ['/', 'Головна', 'home'], ['/tsiny', 'Скупник', 'buyer'], ['/wiki', 'WIKI', 'book'],
   ['/mapa', 'Мапа', 'map'], ['/programa', 'Програма', 'download']
 ];
+
+/* що проявляється під час прокрутки (рух сайту, 2026-11): блоки головної, картки довідника й цін, кроки, пункти словника.
+   Кожен — раз, коли вперше заходить на екран; зі «зменшеним рухом» нічого не ховається (styles.css, html.rv-on) */
+const REVEAL = '.h-sec, .band, .h-two, .ix > li, .vgrid > *, .jgrid > *, .gd-grid > *, .ev-grid > *, .team-grid > li, .p-feat, .p-req-i, .start-list > li, .bp-leaders > *, .bp-bottom > *, .recent, .gloss-item, .wiki-tiles > *';
 
 /* назва вкладки браузера й опис для пошуку кожного розділу — src/data/pages.json (спільний зі статичними сторінками для
    Google, scripts/static-pages.mjs); опису немає — загальний з index.html */
@@ -43,11 +47,30 @@ export default function Layout() {
     mainRef.current?.animate(reduce ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
       { duration: reduce ? 120 : 220, easing: 'cubic-bezier(.16, 1, .3, 1)' });
   }, [section]);
-  /* меню на вузьких екранах: кнопка-«гамбургер» розгортає список розділів; закривається переходом або Esc */
-  const [menu, setMenu] = useState(false);
   const [{ family_url }] = useLinks();
   const family = familyLink(family_url);   // «by CORE» — завжди на Discord сім'ї
-  useEffect(() => setMenu(false), [pathname]);
+  const vnav = useViewNav();
+  /* поява під час прокрутки: один спостерігач на весь main; нові картки (фільтр, «Показати ще») підхоплює MutationObserver.
+     Позначки — data-атрибути, а не класи: React перезаписує className (відкрив пункт словника — клас змінився), а чужих data-* не чіпає */
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root || reducedMotion() || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(es => {
+      for (const e of es) if (e.isIntersecting) { (e.target as HTMLElement).dataset.in = '1'; io.unobserve(e.target); }
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
+    let raf = 0;
+    const scan = () => {
+      raf = 0;
+      root.querySelectorAll<HTMLElement>(REVEAL).forEach(el => { if (!el.dataset.rv) { el.dataset.rv = '1'; io.observe(el); } });
+    };
+    /* те, що вже на екрані при першому показі, вважається показаним — нічого не блимає; ховається лише нижче екрана */
+    root.querySelectorAll<HTMLElement>(REVEAL).forEach(el => { if (el.getBoundingClientRect().top < innerHeight) { el.dataset.in = '1'; el.dataset.rv = '1'; } });
+    document.documentElement.classList.add('rv-on');
+    scan();
+    const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(scan); });
+    mo.observe(root, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); cancelAnimationFrame(raf); };
+  }, []);
   /* модератору — скільки пропозицій від гравців чекає (specs/061); оновлюється при переході між сторінками */
   const [waiting, setWaiting] = useState(0);
   useEffect(() => {
@@ -55,11 +78,6 @@ export default function Layout() {
     supabase.from('wiki_proposals').select('id', { count: 'exact', head: true }).in('status', ['pending', 'conflict'])
       .then(({ count }) => setWaiting(count ?? 0));
   }, [role, pathname]);
-  useEffect(() => {
-    if (!menu) return;
-    const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
-    addEventListener('keydown', f); return () => removeEventListener('keydown', f);
-  }, [menu]);
   /* useLayoutEffect — раніше за звичайні ефекти сторінок: стаття (гайд, івент) ставить свою назву після цього, а не навпаки */
   useLayoutEffect(() => {
     const key = '/' + (pathname.split('/')[1] || '');
@@ -69,23 +87,20 @@ export default function Layout() {
   return (
     <div className="app">
       <a className="skip" href="#main">До вмісту сторінки</a>
-      <Backdrop />
-      <header className={'top' + (menu ? ' menu-open' : '')}>
-        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={36} height={36} /><b>Q-Hub</b></NavLink>
-        <nav className="nav" id="site-nav" aria-label="Розділи">
-          {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'}><Icon name={ico} size={16} />{label}</NavLink>)}
+      <header className="top">
+        <NavLink to="/" className="brand" aria-label="Q-Hub — головна"><img className="logo" src="/brand/q-hub-logo.svg?v=2" alt="" width={32} height={32} /><b>Q-Hub</b></NavLink>
+        <nav className="nav" aria-label="Розділи">
+          {/* риска активного розділу — окремий елемент: View Transitions переносить її на нову вкладку (src/lib/viewNav.ts) */}
+          {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'} onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{isActive && <span className="nav-line" aria-hidden="true" />}</>}</NavLink>)}
         </nav>
-        <button type="button" className="burger" aria-expanded={menu} aria-controls="site-nav" aria-label={menu ? 'Закрити меню' : 'Відкрити меню'} onClick={() => setMenu(v => !v)}>
-          <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
-        </button>
         <div className="who">
           <ThemeToggle />
-          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={16} />Адмінка</NavLink>}
-          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Розбір пропозицій від гравців і твої інструменти"><Icon name="shield" size={16} />{role === 'moderator' ? 'Модерація' : 'Інструменти'}{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
+          {role === 'admin' && <NavLink to="/admin" className="btn ghost sm" title="Адмін-панель для розробників"><Icon name="shield" size={18} /><span className="wide-only">Адмінка</span></NavLink>}
+          {(role === 'moderator' || role === 'editor') && <NavLink to="/panel" className="btn ghost sm" title="Розбір пропозицій від гравців і твої інструменти"><Icon name="shield" size={18} /><span className="wide-only">{role === 'moderator' ? 'Модерація' : 'Інструменти'}</span>{waiting > 0 && <span className="nav-count" aria-label={`на розгляді: ${waiting}`}>{waiting}</span>}</NavLink>}
           <NotificationBell />
           {session
-            ? <NavLink to="/kabinet" className="btn acc sm">{avatar && <img src={avatar} alt="" width={22} height={22} style={{ width: 22, height: 22 }} />}{name || 'Кабінет'}</NavLink>
-            : <button className="btn acc sm" onClick={signIn}>Увійти через Discord</button>}
+            ? <NavLink to="/kabinet" className="btn sm who-me">{avatar && <img src={avatar} alt="" width={26} height={26} />}<span className="who-name">{name || 'Кабінет'}</span></NavLink>
+            : <button className="btn acc sm" onClick={signIn}><span>Увійти<span className="wide-only"> через Discord</span></span></button>}
         </div>
       </header>
       {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
@@ -114,6 +129,10 @@ export default function Layout() {
           </div>
         </div>
       </footer>
+      {/* телефон: розділи — нижнім меню під великим пальцем (на ширших екранах — у шапці) */}
+      <nav className="tabbar" aria-label="Розділи">
+        {NAV.map(([to, label, ico]) => <NavLink key={to} to={to} end={to === '/'} onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={22} />{label}{isActive && <span className="tab-line" aria-hidden="true" />}</>}</NavLink>)}
+      </nav>
     </div>
   );
 }

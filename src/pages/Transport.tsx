@@ -21,6 +21,7 @@ const KINDS: [Kind | 'all', string, string][] = [['all', 'Усі', 'car'], ['aut
 const SORT_ICON: Record<Sort, string> = { price: 'tag', speed: 'speed', trunk: 'box', rating: 'star', name: 'search' };
 const SORTS: [Sort, string][] = [['price', 'Ціна'], ['speed', 'Швидкість'], ['trunk', 'Багажник'], ['rating', 'Оцінка гравців'], ['name', 'Назва']];
 
+const PAGE = 48;   // скільки карток транспорту за раз
 const seatsWord = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'місце' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'місця' : 'місць'; };
 
 /* середня оцінка всіх гравців — зірки з дробовим заповненням (3,5 = три з половиною) */
@@ -110,6 +111,10 @@ export default function Transport() {
     if (data) setScores(sc => ({ ...sc, [id]: { vehicle_id: id, avg: Number(data.avg), votes: Number(data.votes) } }));
   }
 
+  /* 400+ моделей одним списком — це 160 000 px прокрутки на телефоні: показуємо порціями, нова порція — кнопкою.
+     Будь-яка зміна фільтра чи пошуку починає з першої порції */
+  const [limit, setLimit] = useState(PAGE);
+  useEffect(() => setLimit(PAGE), [kind, q, sort, fuel, cur]);
   const topSpeed = useMemo(() => list.reduce((m, v) => Math.max(m, v.speed || 0), 0), [list]);
   const counts = useMemo(() => ({ all: list.length, auto: list.filter(v => v.kind === 'auto').length, moto: list.filter(v => v.kind === 'moto').length, avia: list.filter(v => v.kind === 'avia').length, boat: list.filter(v => v.kind === 'boat').length }), [list]);
   const shown = useMemo(() => {
@@ -151,10 +156,11 @@ export default function Transport() {
       </div>
       {!session && list.length > 0 && <div className="card row between"><span>Увійди через Discord, щоб оцінювати транспорт.</span><button className="btn acc sm" onClick={signIn}>Увійти</button></div>}
       {loaded && !err && !list.length && <div className="card empty">Каталог транспорту ще порожній — його саме заповнюємо.</div>}
-      {list.length > 0 && <div className="wiki-count"><span>Показано <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span>
+      {list.length > 0 && <div className="wiki-count"><span>Знайдено <b className="mono">{shown.length}</b> з {list.length}</span><span className="muted">Натисни на картку — відкриється тюнінг</span>
         {wiki && <span className="row"><Leaderboard /><button type="button" className="btn ghost sm" onClick={() => propose(null, 'new')}><Icon name="plus" size={15} />Додати транспорт</button></span>}</div>}
+      {shown.length > 0 && <h2 className="vh">Моделі транспорту</h2>}
       {shown.length > 0 && (
-        <div className="vgrid">{shown.map(v => {
+        <div className="vgrid">{shown.slice(0, limit).map(v => {
           const sc = scores[v.id];
           return (
             /* уся плитка відкриває вікно транспорту; кнопки всередині (оцінка, фото) працюють як і раніше */
@@ -182,6 +188,7 @@ export default function Transport() {
             </article>);
         })}</div>
       )}
+      {shown.length > limit && <button type="button" className="btn more-btn" onClick={() => setLimit(l => l + PAGE)}>Показати ще {Math.min(PAGE, shown.length - limit)}<span className="muted"> — лишилось {shown.length - limit}</span></button>}
       <VehicleDialog v={list.find(x => x.id === openId) ?? null} onClose={() => setOpenId(null)} canEdit={isAdmin}
         onPropose={wiki ? () => { const v = list.find(x => x.id === openId); if (v) { setOpenId(null); propose(v, 'edit'); } } : undefined}
         onChanged={load}

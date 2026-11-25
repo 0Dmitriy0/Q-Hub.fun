@@ -1,0 +1,89 @@
+name: Preview
+
+# Превʼю редизайну на q-hub.fun/preview/ (рішення власника 2026-11-25) — живий сайт не чіпає.
+# Та сама збірка, лише з base /preview/; картинки, мапа й знімок цін беруться з кореня живого сайту за абсолютними адресами,
+# тож public/ не копіюється. Після викладання — знімки сторінок (телефон і ПК) у гілку preview-shots (перезаписується щоразу).
+# Позначки в повідомленні коміту: [old] — ще й знімки живого сайту для порівняння, [light] — ще й світла тема,
+# [routes:/,/tsiny] — лише ці сторінки, [noshots] — без знімків.
+
+on:
+  push:
+    branches: [site-redesign]
+
+permissions:
+  contents: write   # знімки — у гілку preview-shots (артефакти Actions звідси не завантажити)
+
+concurrency:
+  group: preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      QHUB_PREVIEW: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vite build
+      - name: Preview extras (.htaccess, noindex, no analytics)
+        run: |
+          sed -i '/cloud.umami.is/d; /Umami:/d' dist/index.html
+          sed -i 's#<head>#<head>\n    <meta name="robots" content="noindex, nofollow" />#' dist/index.html
+          cat > dist/.htaccess <<'EOF'
+          # Превʼю редизайну: усі шляхи — index.html цієї теки. Правила кореня сюди не доходять (RewriteEngine у теці їх замінює)
+          Options -MultiViews
+          RewriteEngine On
+          RewriteBase /preview/
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule ^ index.html [L]
+          <IfModule mod_headers.c>
+            Header always set X-Robots-Tag "noindex, nofollow"
+            <FilesMatch "\.(html)$">
+              Header set Cache-Control "no-cache, must-revalidate"
+            </FilesMatch>
+          </IfModule>
+          EOF
+          # запобіжник: лише збірка під /preview/ і без public/ (мапа, іконки) може йти далі
+          grep -q '/preview/assets/' dist/index.html || { echo "::error::збірка не з base /preview/ — зупиняю"; exit 1; }
+          [ ! -d dist/map ] && [ ! -d dist/icons ] || { echo "::error::у збірці є public/ — зупиняю"; exit 1; }
+          du -sh dist; ls dist
+      # Тека превʼю задана буквально: жодне налаштування не покладе превʼю в корінь живого сайту
+      - name: Deploy to q-hub.fun/preview/ (FTP)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME || secrets.FTP_USER || vars.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD || secrets.FTP_PASS }}
+          protocol: ftps
+          local-dir: ./dist/
+          server-dir: ./preview/
+      - name: Check preview is live
+        run: |
+          built=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html | head -1)
+          live=$(curl -s "https://q-hub.fun/preview/?v=$RANDOM" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+          echo "збірка: $built | превʼю: $live"
+          echo "/preview/tsiny -> $(curl -s -o /dev/null -w '%{http_code}' https://q-hub.fun/preview/tsiny)"
+          echo "живий сайт: $(curl -s https://q-hub.fun/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)"
+      - name: Screenshots
+        if: ${{ !contains(github.event.head_commit.message, '[noshots]') }}
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          SHOT_BASE: https://q-hub.fun/preview
+        run: |
+          npm i --no-save --no-audit --no-fund playwright-core@1 >/dev/null 2>&1
+          node scripts/preview-shots.mjs
+      - name: Publish screenshots (branch preview-shots)
+        if: ${{ !contains(github.event.head_commit.message, '[noshots]') }}
+        run: |
+          cd shots
+          git init -q && git checkout -q -b preview-shots
+          git add -A
+          git -c user.name=preview -c user.email=preview@q-hub.fun commit -qm "shots ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" preview-shots

@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { money, parseMoney } from '../../lib/format';
 import { MAX_CHARACTERS, parseCharacter } from '../../lib/character';
+import { desktop } from '../../lib/app';
 
 /* персонажі акаунта: у кожного свої Ім'я_Прізвище і статік (specs/025), не більше трьох; статік видно лише власнику */
 export default function Characters({ first }: { first?: boolean }) {
@@ -47,7 +48,7 @@ export default function Characters({ first }: { first?: boolean }) {
     <div className="grid side">
       <section className="card">
         <h2>{first ? 'Додай свого персонажа' : 'Новий персонаж'}</h2>
-        {first && <p className="muted">У кожного персонажа свої Ім’я_Прізвище, статік і документи.</p>}
+        {first && <p className="muted">У кожного персонажа свої Ім’я_Прізвище, статік і {desktop ? 'документи' : 'заробіток'}.</p>}
         {full ? <p className="muted">В акаунті вже {MAX_CHARACTERS} персонажі — більше не можна. Щоб додати нового, видали одного в списку «Твої персонажі».</p> : <>
           <form className="form cols addchar" onSubmit={add}>
             <label className="fld">Ім'я_Прізвище, як у грі<input value={name} onChange={e => setName(e.target.value)} placeholder="Dmitriy_Core" maxLength={40} spellCheck={false} /></label>

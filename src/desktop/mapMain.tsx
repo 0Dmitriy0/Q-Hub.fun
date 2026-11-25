@@ -5,7 +5,7 @@ import { AuthProvider } from '../lib/auth';
 import MapPage from '../pages/MapPage';
 import type { Where } from './MapWhere';
 import Icon from '../components/Icon';
-import '../styles.css';
+import './legacy.css';   // програма — на старому стилі сайту (див. legacy.css)
 import './bar.css';
 
 /* мапа Q-Hub поверх гри (map.html → desktop/src/ui/map.html, specs/014): та сама сторінка мапи, що на сайті, лише перегляд.
