@@ -15,11 +15,14 @@ export default function Wiki() {
     <NavLink to={to} role="tab" onClick={vnav(to)}>{({ isActive }) => <><Icon name={ico} size={16} />{label}{extra}{isActive && <span className="wiki-line" aria-hidden="true" />}</>}</NavLink>
   );
   const [cars, setCars] = useState<number | null>(null);
+  /* робіт — стільки ж, скільки на сторінці «Роботи» (довідник у базі, з доданими гравцями); бази немає — вбудований список */
+  const [jobsN, setJobsN] = useState(JOBS.length);
   /* скільки сезонних івентів триває зараз (specs/055); 0 не показуємо */
   const [live, setLive] = useState(0);
   useEffect(() => {
     if (!supabase) return;
     supabase.from('vehicles').select('id', { count: 'exact', head: true }).then(({ count, error }) => { if (!error && count != null) setCars(count); });
+    supabase.from('jobs').select('*', { count: 'exact', head: true }).then(({ count, error }) => { if (!error && count) setJobsN(count); });
     const today = kyivDay(Date.now());
     supabase.from('season_events').select('starts_on,ends_on').then(({ data }) =>
       setLive((data || []).filter(e => phase(e.starts_on, e.ends_on, today).kind === 'now').length));
@@ -31,7 +34,7 @@ export default function Wiki() {
       <div className="wiki-top">
         <nav className="wiki-crumbs mono" aria-label="Де ти зараз"><Link to="/">Q-Hub</Link><span aria-hidden="true">/</span><Link to="/wiki">WIKI</Link><span aria-hidden="true">/</span><span aria-current="page">{here}</span></nav>
         <div className="wiki-tabs" role="tablist" aria-label="Розділ WIKI">
-          {tab('/wiki/roboty', 'jobs', 'Роботи', <span className="cnt mono">{JOBS.length}</span>)}
+          {tab('/wiki/roboty', 'jobs', 'Роботи', <span className="cnt mono">{jobsN}</span>)}
           {tab('/wiki/transport', 'car', 'Транспорт', cars != null && <span className="cnt mono">{cars}</span>)}
           {tab('/wiki/iventy', 'spark', 'Івенти', live > 0 && <span className="cnt mono" title="Тривають зараз">{live}</span>)}
           {tab('/wiki/gaidy', 'book', 'Гайди')}

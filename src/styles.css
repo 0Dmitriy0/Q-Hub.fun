@@ -130,6 +130,9 @@ main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 32px max(24px, e
 .btn.acc:hover { background: var(--accent-press); border-color: var(--accent-press); }
 .btn.ghost { background: transparent; }
 .btn.ghost:hover { background: var(--surface2); }
+/* «зверни увагу» без повного помаранчевого тла: коли таких кнопок багато поспіль (застарілі ціни), список не стає стіною кольору */
+.btn.tint { background: transparent; border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--accent-hi); }
+.btn.tint:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .btn.sm { padding: 6px 12px; font-size: 14px; min-height: 36px; }
 .btn:disabled { opacity: .5; cursor: default; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1104,7 +1107,8 @@ fieldset .static-form .btn { align-self: end; }
    краї вже розчинені в самій картинці — без CSS-масок). Текст лежить на чистому полотні ліворуч, промокод — на дорогах мапи */
 .hx-map { position: absolute; z-index: -1; top: -64px; right: -24px; width: min(1000px, 78%); aspect-ratio: 4 / 3; pointer-events: none; opacity: .38;
   background: url(./assets/hero-map-dark.webp) center / 100% 100% no-repeat; animation: q-fade var(--t-in) var(--ease-out) both; }
-:root[data-theme="light"] .hx-map { opacity: .42; background-image: url(./assets/hero-map-light.webp); }
+/* світла: картинка вже «затемнена до тла» (усе світліше за #e8e9eb прибрано) — без білого прямокутника, лише дороги й квартали */
+:root[data-theme="light"] .hx-map { opacity: .45; background-image: url(./assets/hero-map-light.webp); }
 @media (max-width: 900px) { .hx-map { top: -40px; right: -16px; width: 120%; opacity: .22; } :root[data-theme="light"] .hx-map { opacity: .3; } }
 
 /* 1. перший екран: що це — ліворуч, помаранчевий «знак» промокоду — праворуч */
@@ -1469,7 +1473,7 @@ fieldset .static-form .btn { align-self: end; }
 @media (max-width: 640px) {
   .bp { gap: 28px; }
   .bp-head p { font-size: 16px; }
-  .bp-head .row > .btn:not(.acc) { flex: 1 1 150px; }   /* дві другорядні дії — в один рядок під головною */
+  .bp-head .row > .btn { flex: 1 1 auto; white-space: nowrap; }   /* напис кнопки не ламається на два рядки: не влазить — уся кнопка переходить нижче й тягнеться на ширину */
   .bp-th { display: none; }
   .bp-list { padding: 12px; }
   /* телефон: назва — на всю ширину, під нею ціна й «Оновити ціну» одним рядком (раніше кнопка стискала назву в три рядки) */
@@ -1651,7 +1655,9 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .cab-tabs a { flex: none; border-radius: var(--rc); }
 :is(.cab, .deck) .lbl { color: var(--faint); font: 600 12px/14px var(--mono); }
 :is(.cab, .deck) .card { border-radius: var(--r); }
-:is(.cab, .deck) .card.note { border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); }
+:is(.cab, .deck) .card.note { display: block; padding: 12px 16px; font-size: 14px; line-height: 1.5; border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); }   /* текст із посиланням — одним абзацом, а не стовпчиком */
+/* сайт: «Вийти» — праворуч від шляху, а не окремим рядком під ним */
+.cab > .wiki-top { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 :is(.cab, .deck) .big { font-weight: 700; letter-spacing: -.03em; }
 :is(.cab, .deck) .li small { color: var(--faint); }
 :is(.cab, .deck) .seg { background: var(--bg); border-color: var(--line2); }

@@ -60,6 +60,8 @@ export default function Cabinet() {
   );
 
   const seg = pathname.split('/')[2] || '';
+  /* сайт: дашборду й документів немає — і без персонажа (форма «Додай персонажа»), і з ним /kabinet відкриває «Заробіток» */
+  if (!desktop && (seg === '' || seg === 'dashbord' || seg === 'dokumenty')) return <Navigate to="/kabinet/zarobitok" replace />;
   const tab = TABS.find(t => t[0] === seg) ?? TABS[0];
   /* на сайті людину видно лише за ніком акаунта (specs/025 FR-011); поки ніка немає — ім'я Discord */
   const who = nick ? <b>{nick}</b> : <>{name}</>;

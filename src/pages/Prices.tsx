@@ -476,7 +476,7 @@ export default function Prices() {
                           </form>
                         : <b className="mono">{r.shown ? money(r.shown) : '—'}</b>}
                       {!editing && <small className="muted">за {r.items!.unit}</small>}
-                      {!editing && session && v.canUpdate && <button type="button" className={'btn sm ' + (old || !r.at ? 'acc' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
+                      {!editing && session && v.canUpdate && <button type="button" className={'btn sm ' + (!r.at ? 'acc' : old ? 'tint' : 'ghost')} onClick={() => setEdit({ ...edit, [key]: r.shown ? String(r.shown) : '' })}>Оновити ціну</button>}
                       {!editing && v.pending && pend.filter(p => p.buyer_id === r.buyer_id && p.item_id === r.item_id).sort((a, b) => b.votes - a.votes).slice(0, 2).map(p =>
                         <small key={p.price} className="warn" title="Цю ціну внесли не всі потрібні гравці: поточною вона стане, коли ту саму внесе ще хтось">нова: {money(p.price)} · {p.votes} з {p.need}
                           {isAdmin && <> · <button type="button" className="linkbtn" onClick={() => confirmPend(r, p)}>підтвердити</button></>}</small>)}

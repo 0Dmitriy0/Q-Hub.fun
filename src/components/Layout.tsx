@@ -100,7 +100,7 @@ export default function Layout() {
           <NotificationBell />
           {session
             ? <NavLink to="/kabinet" className="btn sm who-me">{avatar && <img src={avatar} alt="" width={26} height={26} />}<span className="who-name">{name || 'Кабінет'}</span></NavLink>
-            : <button className="btn acc sm" onClick={signIn}>Увійти<span className="wide-only"> через Discord</span></button>}
+            : <button className="btn acc sm" onClick={signIn}><span>Увійти<span className="wide-only"> через Discord</span></span></button>}
         </div>
       </header>
       {/* сторінки, крім головної, вантажаться окремими файлами (App.tsx) — поки вантажиться, місце під сторінку тримаємо, щоб підвал не стрибав */}
