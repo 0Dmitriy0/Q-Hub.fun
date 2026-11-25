@@ -422,7 +422,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 /* ексклюзивний транспорт: золота рамка й позначка */
 :root { --gold: #f5b301; --gold-soft: rgba(245, 179, 1, .12); }
 :root[data-theme="light"] { --gold: #b7791f; --gold-soft: rgba(183, 121, 31, .10); }
-.vcard.excl { border-color: var(--gold); background: linear-gradient(160deg, var(--gold-soft), transparent 45%), var(--surface); box-shadow: 0 0 0 1px var(--gold-soft), var(--shadow); }
+.vcard.excl { border-color: var(--gold); box-shadow: inset 0 3px 0 var(--gold); }
 .excl-badge { position: absolute; top: 8px; left: 8px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--rc); background: var(--gold); color: #1a1200; font: 700 12px var(--sans); }
 .excl-badge .ico { fill: currentColor; stroke: currentColor; }
 .excl-badge.inline { position: static; margin-left: 4px; vertical-align: middle; }
@@ -484,7 +484,7 @@ button.star:focus-visible { outline: 2px solid var(--accent); }
 .jcard { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 14px 16px; text-align: center; cursor: pointer; font: inherit; color: var(--fg); transition: border-color .15s, transform .15s; }
 .jcard:hover { border-color: var(--accent); transform: translateY(-2px); }
 .jcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.jcard.ill { background: linear-gradient(160deg, color-mix(in srgb, #8b5cf6 12%, transparent), transparent 50%), var(--surface); }
+.jcard.ill { box-shadow: inset 3px 0 0 var(--bad); }
 .jico { width: 64px; height: 64px; padding: 10px; box-sizing: content-box; border-radius: var(--r); background: var(--surface2); }
 .jname { font-weight: 600; font-size: 15px; line-height: 1.25; }
 .jmeta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
@@ -817,7 +817,7 @@ fieldset.ro, fieldset.rw { border: 0; padding: 0; margin: 0; min-width: 0; displ
 .dtiles { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
 .dtiles a { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); color: var(--fg); text-decoration: none; transition: border-color .15s, background .15s; }
 .dtiles a:hover { background: var(--surface2); }
-.dtiles a.active { border-color: rgba(255, 107, 0, .55); background: linear-gradient(180deg, rgba(255, 107, 0, .08), transparent), var(--surface); }
+.dtiles a.active { border-color: var(--accent); background: var(--surface2); }
 .dtiles a > span:nth-child(2) { flex: 1; min-width: 0; }
 .dtiles b { display: block; font-size: 15px; }
 .dtiles small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -892,7 +892,7 @@ input.search:focus { border-color: var(--accent); outline: 0; }
 .cars { display: grid; gap: 14px; }
 @media (min-width: 900px) { .cars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .car { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
-.cph { position: relative; aspect-ratio: 16 / 9; display: grid; place-items: center; color: var(--faint); background: radial-gradient(90% 120% at 15% 0%, rgba(255, 106, 31, .2), transparent 60%), linear-gradient(165deg, #1f1a16, #0e0c0a); border-bottom: 1px solid var(--line); }
+.cph { position: relative; aspect-ratio: 16 / 9; display: grid; place-items: center; color: var(--faint); background: var(--surface2); border-bottom: 1px solid var(--line); }
 .cph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cph .cpos { position: absolute; left: 12px; top: 10px; font: 600 12px var(--mono); background: rgba(0, 0, 0, .55); color: #fff; padding: 3px 8px; border-radius: 7px; }
 .cph .plate { position: absolute; right: 12px; top: 10px; font: 700 12.5px var(--mono); background: #f3efe7; color: #16120e; padding: 3px 9px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px #16120e, 0 2px 8px rgba(0, 0, 0, .4); }
@@ -1074,6 +1074,23 @@ fieldset .static-form .btn { align-self: end; }
 .h-more { font-weight: 600; font-size: 15px; }
 .mdot.good { background: var(--good); }
 
+/* плитки-пояснення (кабінет без входу) і рядок «хто ти» над заголовком кабінету */
+.h-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .h-cards { grid-template-columns: minmax(0, 1fr); } }
+.h-pill { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 15px; }
+.h-pill .mdot { display: none; }
+/* сезонний банер (HalloweenBanner): фото івенту, текст — на темному переході знизу (світлий в обох темах, під ним фото) */
+.h-promo { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 260px; border-radius: var(--r); overflow: hidden; text-decoration: none; color: #fff; background: #0a0e11; border: 1px solid var(--line2); }
+.h-promo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 30%; }
+.h-promo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 14, 17, 0) 30%, rgba(10, 14, 17, .82) 70%, rgba(10, 14, 17, .95) 100%); }
+.h-promo:hover { border-color: var(--accent); }
+.h-promo:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.h-promo-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; padding: 22px 24px; max-width: 70ch; }
+.h-promo-body .h-promo-tag { color: #ffb37a; font: 600 14px var(--sans); }
+.h-promo-body b { font: 700 clamp(30px, 4vw, 44px)/1 var(--disp); color: #fff; }
+.h-promo-body span { color: rgba(255, 255, 255, .86); font-size: 15px; }
+.h-promo-body .h-promo-go { align-self: flex-start; margin-top: 8px; padding: 10px 16px; border-radius: var(--rc); background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+
 /* 1. перший екран: що це — ліворуч, помаранчевий «знак» промокоду — праворуч */
 .hx { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 32px 48px; align-items: end; padding-top: 8px; }
 .hx-intro { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
@@ -1211,6 +1228,13 @@ fieldset .static-form .btn { align-self: end; }
   .start-list li { padding-left: 52px; }
   .start-list li::before { width: 36px; font-size: 44px; }
 }
+
+/* сторінки немає (src/pages/NotFound.tsx): «404» — як номер на дорожньому знаку, поруч — куди піти */
+.nf { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px 48px; align-items: center; min-height: 52vh; }
+.nf-code { font: 700 clamp(120px, 22vw, 240px)/.8 var(--disp); color: var(--accent); }
+.nf-txt { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+.nf-txt p { font-size: 18px; max-width: 46ch; }
+@media (max-width: 640px) { .nf { grid-template-columns: 1fr; min-height: 0; padding-top: 12px; } }
 
 /* мапа-прев'ю на головній (src/components/MiniMap.tsx) */
 .mini { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--lift); min-width: 0; }
@@ -1477,7 +1501,7 @@ fieldset .static-form .btn { align-self: end; }
 .wiki .jmeta { justify-content: flex-start; gap: 8px; }
 .jhour { font-size: 14px; color: var(--muted); }
 .jhour b { color: var(--fg); font: 700 20px/1 var(--disp); }
-.wiki .jcorner { position: absolute; top: 12px; right: 14px; padding: 0; background: none; color: var(--bad); font: 600 13px var(--sans); }
+.wiki .jcorner { position: absolute; top: auto; bottom: 12px; right: 14px; padding: 0; background: none; color: var(--bad); font: 600 13px var(--sans); }   /* знизу праворуч — там вільно, довга назва не налазить */
 /* теги робіт: легальна — зелений, нелегальна — червоний (як статуси всюди на сайті) */
 .jtag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--rs); background: var(--surface2); font: 500 13px var(--sans); color: var(--muted); }
 .jtag.ill { background: var(--bad-soft); color: var(--bad); }
@@ -1509,6 +1533,7 @@ fieldset .static-form .btn { align-self: end; }
   .wiki .vspec { font-size: 13px; gap: 2px 10px; }
   .wiki .vspec li:nth-child(n + 3) { display: none; }   /* на вузькій картці — швидкість і багажник; решта у вікні авто */
   .wiki .stars .avg-stars .ico { width: 14px; height: 14px; }
+  .wiki .vcard .avg > span:not(.avg-stars) { display: none; }   /* на вузькій картці — лише зірки; число й кількість оцінок — у вікні авто */
   .more-btn { align-self: stretch; }
 }
 /* вікна роботи й транспорту — однаковий заголовок і блоки */
@@ -1527,7 +1552,7 @@ fieldset .static-form .btn { align-self: end; }
 .wdlg .jd-sec li::marker { color: var(--accent-hi); }
 .wdlg-f { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line2); }
 .wdlg-f .jd-src { margin: 0; }
-.wdlg .vd-pic { position: relative; background: radial-gradient(70% 90% at 50% 100%, rgba(255, 107, 0, .18), transparent 70%), linear-gradient(180deg, #141b24, #0a0e14); border: 1px solid var(--line2); }
+.wdlg .vd-pic { position: relative; background: var(--sea); border: 1px solid var(--line2); }
 .vd-chip { position: absolute; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: var(--rc); background: rgba(7, 10, 14, .8); border: 1px solid #263344; color: #f4f7fb; font-size: 12px; font-weight: 600; }
 .wdlg .vd-cols > section { padding: 16px; border-radius: var(--r); background: var(--bg); border: 1px solid var(--line2); }
 .wdlg .vd-cols h3 { font-size: 15px; border-color: var(--line2); }
@@ -1575,7 +1600,7 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .cab { display: flex; flex-direction: column; gap: 18px; }
 .cab-hero { align-items: center; }
 .cab-hero h1 { font-size: clamp(26px, 3.6vw, 36px); }
-.cab-ava { width: 72px; height: 72px; border-radius: var(--r); object-fit: cover; border: 2px solid rgba(255, 107, 0, .4); }
+.cab-ava { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line2); }
 .cab-tabs { align-self: flex-start; max-width: 100%; overflow-x: auto; scrollbar-width: none; border-radius: var(--r); }
 .cab-tabs::-webkit-scrollbar { display: none; }
 .cab-tabs a { flex: none; border-radius: var(--rc); }
@@ -1861,12 +1886,12 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 
 .ev-banner { position: relative; display: block; aspect-ratio: 21 / 9; border-radius: var(--r); overflow: hidden; margin-bottom: 14px; background: var(--surface2); color: #fff; text-decoration: none; border: 1px solid var(--gold); }
 .ev-banner img { width: 100%; height: 100%; object-fit: cover; }
-.ev-banner-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); background: linear-gradient(135deg, var(--gold-soft), transparent); }
+.ev-banner-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); background: var(--gold-soft); }
 /* затемнення під текстом — контраст білого тексту на будь-якому фото */
 .ev-banner-txt { position: absolute; inset: auto 0 0 0; padding: 40px 20px 18px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
   background: linear-gradient(to top, rgba(0, 0, 0, .86) 0%, rgba(0, 0, 0, .6) 60%, transparent 100%); }
-.ev-banner-txt small { font: 600 12px var(--mono); color: #ffd772; }
-.ev-banner-txt h2 { font-size: clamp(20px, 3vw, 30px); color: #fff; }
+.ev-banner-txt small { font: 600 14px var(--sans); color: #ffd772; }
+.ev-banner-txt h2 { font-size: clamp(28px, 4vw, 44px); color: #fff; }
 .ev-banner-txt p { color: rgba(255, 255, 255, .88); font-size: 14px; }
 .ev-banner-txt .btn { margin-top: 6px; }
 @media (max-width: 640px) { .ev-banner { aspect-ratio: 4 / 3; } }
@@ -1875,21 +1900,20 @@ a.foot-by:hover { color: var(--fg); text-decoration: underline; }
 .ev-back svg { transform: rotate(90deg); }
 .ev-head { display: grid; gap: 16px; }
 @media (min-width: 820px) { .ev-head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; } }
-.ev-head h1 { font-size: clamp(24px, 4vw, 36px); margin: 4px 0 8px; }
+.ev-head h1 { font-size: clamp(38px, 5.6vw, 60px); margin: 4px 0 8px; }
 /* шапка сторінки івенту: фото на всю ширину, текст поверх з затемненням (контраст білого на будь-якому фото) */
 .ev-hero { position: relative; min-height: 340px; border-radius: var(--r); overflow: hidden; display: flex; align-items: flex-end;
   background: var(--surface2); border: 1px solid var(--line); }
 .ev-hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ev-hero.no-pic { background: radial-gradient(ellipse 70% 90% at 85% 10%, rgba(255, 107, 0, .32), transparent 60%),
-  radial-gradient(ellipse 60% 80% at 0% 100%, rgba(124, 58, 237, .28), transparent 60%), var(--surface2); }
+.ev-hero.no-pic { background: var(--sea); }
 .ev-hero.bp { border-color: var(--gold); }
 .ev-hero-ico { position: absolute; right: 6%; top: 50%; transform: translateY(-50%); color: var(--accent); opacity: .22; }
 .ev-hero-txt { position: relative; width: 100%; padding: 64px 28px 24px; display: flex; flex-direction: column; gap: 10px;
   background: linear-gradient(to top, rgba(0, 0, 0, .88) 0%, rgba(0, 0, 0, .55) 55%, transparent 100%); }
 .ev-hero.no-pic .ev-hero-txt { background: none; }
-.ev-hero-txt h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.02; color: #fff; text-shadow: 0 4px 24px rgba(0, 0, 0, .45); }
+.ev-hero-txt h1 { font-size: clamp(40px, 6vw, 68px); line-height: .95; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .45); }
 .ev-hero.no-pic .ev-hero-txt h1 { color: var(--fg); text-shadow: none; }
-.ev-hero-txt p { display: inline-flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, .88); font: 600 15px var(--mono); }
+.ev-hero-txt p { display: inline-flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, .9); font: 500 16px var(--sans); }
 .ev-hero.no-pic .ev-hero-txt p { color: var(--muted); }
 .ev-hero-txt .ev-tag { box-shadow: none; }
 .ev-chip { padding: 4px 12px; border-radius: 99px; font: 600 12px var(--mono);
@@ -2133,8 +2157,8 @@ button.ev-stat:hover, a.ev-stat:hover { border-color: var(--accent); }
    Плашка в програмі завжди темна — і на світлій темі сайту лишається такою */
 .p-bar-lead { margin: -4px 0 12px; max-width: 760px; }
 .p-bar-ex { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.p-bar-ex button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: var(--rc); border: 1px solid var(--line2); background: var(--surface); color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
-.p-bar-ex button:hover { border-color: var(--accent); }
+.p-bar-ex button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px; border-radius: var(--rc); border: 1px solid var(--line2); background: transparent; color: var(--fg); font: 500 15px var(--sans); cursor: pointer; }
+.p-bar-ex button:hover { background: var(--surface2); }
 .p-bar-ex button .ico { color: var(--accent); }
 .p-bar-screen { min-height: 0; justify-content: center; padding: 28px 20px; }
 .p-bar { padding: 0; width: 100%; max-width: 1120px; margin: 0 auto;
